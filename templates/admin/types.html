@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Типы устройств</h2>
+
+<!-- Форма создания/редактирования -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form action="{{ url_for('admin.edit_type', id=edit_type.id) if edit_type else url_for('admin.create_type') }}"
+              method="POST" enctype="multipart/form-data" class="row g-3">
+            <div class="col-md-5">
+                <input type="text" name="name" class="form-control"
+                       placeholder="Название типа"
+                       value="{{ edit_type.name if edit_type else '' }}" required>
+            </div>
+            <div class="col-md-5">
+                <input type="file" name="icon" class="form-control" accept="image/*">
+                {% if edit_type and edit_type.icon_filename %}
+                <small class="text-muted">
+                    Текущая: <img src="{{ url_for('static', filename='uploads/icons/' + edit_type.icon_filename) }}" width="24">
+                </small>
+                {% endif %}
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-success w-100">
+                    {{ 'Обновить' if edit_type else 'Добавить' }}
+                </button>
+            </div>
+        </form>
+        {% if edit_type %}
+        <div class="mt-2">
+            <a href="{{ url_for('admin.types') }}" class="btn btn-secondary btn-sm">Отмена</a>
+            <a href="{{ url_for('admin.delete_type', id=edit_type.id) }}"
+               class="btn btn-danger btn-sm" onclick="return confirm('Удалить тип? Все устройства этого типа потеряют иконку.')">
+                Удалить тип
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Список типов -->
+<table class="table table-striped shadow-sm">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Иконка</th>
+            <th>Устройств</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for type in types %}
+        <tr class="{{ 'table-warning' if edit_type and edit_type.id == type.id else '' }}">
+            <td>{{ type.id }}</td>
+            <td>{{ type.name }}</td>
+            <td>
+                {% if type.icon_filename %}
+                    <img src="{{ url_for('static', filename='uploads/icons/' + type.icon_filename) }}" width="32" alt="icon">
+                {% else %}
+                    <span class="text-muted">—</span>
+                {% endif %}
+            </td>
+            <td>{{ type.devices.count() }}</td>
+            <td>
+                <a href="{{ url_for('admin.edit_type', id=type.id) }}" class="btn btn-sm btn-outline-primary">✏️</a>
+                <a href="{{ url_for('admin.delete_type', id=type.id) }}"
+                   class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить?')">🗑️</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

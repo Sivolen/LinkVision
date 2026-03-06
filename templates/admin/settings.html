@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Настройки мониторинга</h2>
+<div class="card col-md-6 shadow-sm">
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Количество пакетов (ping count)</label>
+                <input type="number" name="ping_count" class="form-control" value="{{ count }}" min="1" max="10">
+                <small class="text-muted">Сколько пакетов отправлять при проверке</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Интервал опроса (секунды)</label>
+                <input type="number" name="ping_interval" class="form-control" value="{{ interval }}" min="5" max="300">
+                <small class="text-muted">Как часто проверять устройства</small>
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+        </form>
+        <div class="alert alert-info mt-3">
+            <small>Изменения вступят в силу в течение следующего цикла опроса.</small>
+        </div>
+    </div>
+</div>
+{% endblock %}

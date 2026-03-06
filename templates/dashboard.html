@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Мои карты</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createMapModal">
+        <i class="bi bi-plus-circle"></i> Создать карту
+    </button>
+</div>
+
+<div class="row">
+    {% for map in maps %}
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">{{ map.name }}</h5>
+                <p class="card-text text-muted">
+                    <small>Владелец: {{ map.owner.username }}</small><br>
+                    <small>Создана: {{ map.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                </p>
+                <a href="{{ url_for('main.map_view', map_id=map.id) }}" class="btn btn-outline-primary">Открыть</a>
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('admin.delete_map', id=map.id) }}" class="btn btn-outline-danger" onclick="return confirm('Удалить карту и все устройства?')">Удалить</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5>У вас пока нет карт</h5>
+            <p>Создайте первую карту для начала работы с мониторингом сети.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="modal fade" id="createMapModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('main.create_map') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Новая карта</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Название карты</label>
+                        <input type="text" name="name" class="form-control" placeholder="Например: Офис Москва" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
