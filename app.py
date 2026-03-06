@@ -1,0 +1,68 @@
+from flask import Flask
+from config import Config
+from extensions import db, login_manager, socketio, init_extensions
+from models import User, Map, DeviceType, Settings, Device
+from blueprints.auth import auth_bp
+from blueprints.admin import admin_bp
+from blueprints.main import main_bp
+from blueprints.api import api_bp
+from monitor import init_monitor, start_monitor
+import os
+
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+    init_extensions(app)
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(main_bp)
+    app.register_blueprint(api_bp)
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+
+    with app.app_context():
+        db.create_all()
+
+        if not User.query.filter_by(username='admin').first():
+            admin = User(username='admin', is_admin=True)
+            admin.set_password('admin')
+            db.session.add(admin)
+
+            db.session.add(Settings(key='ping_count', value='4'))
+            db.session.add(Settings(key='ping_interval', value='10'))
+
+            db.session.add(DeviceType(name='Router', icon_filename=''))
+            db.session.add(DeviceType(name='Switch', icon_filename=''))
+            db.session.add(DeviceType(name='Server', icon_filename=''))
+            db.session.add(DeviceType(name='PC', icon_filename=''))
+
+            db.session.commit()
+            print("✅ Admin created: admin / admin")
+
+    # Инициализируем монитор с приложением
+    init_monitor(app)
+    start_monitor()
+    @app.route('/static/uploads/icons/<path:filename>')
+    def serve_icon(filename):
+        """Явная раздача иконок устройств в обход стандартного static"""
+        from flask import send_from_directory
+        import os
+        # Указываем абсолютный путь к папке с иконками
+        icons_dir = os.path.join(app.root_path, 'static', 'uploads', 'icons')
+        return send_from_directory(icons_dir, filename)
+    # =====================================================
+    return app
+
+
+if __name__ == '__main__':
+    os.makedirs('static/uploads/icons', exist_ok=True)
+    app = create_app()
+    # Убран параметр allow_unsafe_werkzeug (не совместим с eventlet)
+    socketio.run(app, debug=True, port=5000)

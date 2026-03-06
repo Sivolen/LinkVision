@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    /* Заглушка для устройств без иконки */
+    .cy-node-noicon {
+        background-color: #e9ecef !important;
+        border: 2px solid #6c757d !important;
+    }
+</style>
+<div class="row">
+    <div class="col-md-12 d-flex justify-content-between align-items-center mb-2">
+        <h3>{{ map.name }}</h3>
+        <div>
+            <button class="btn btn-primary" onclick="openDeviceModal()">+ Устройство</button>
+            <button class="btn btn-secondary" onclick="startLinkMode()">+ Связь</button>
+            <button class="btn btn-success" onclick="saveLayout()">Сохранить</button>
+        </div>
+    </div>
+    <div class="col-md-12">
+        <div id="cy" style="width: 100%; height: 80vh; border: 1px solid #ccc;"></div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="deviceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Устройство</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="dev_id">
+                <div class="mb-3">
+                    <label class="form-label">Имя *</label>
+                    <input type="text" id="dev_name" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">IP адрес</label>
+                    <input type="text" id="dev_ip" class="form-control" placeholder="8.8.8.8">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Тип устройства *</label>
+                    <select id="dev_type" class="form-select" required>
+                        <option value="">-- Выберите тип --</option>
+                        <!-- Заполняется через JS -->
+                    </select>
+                </div>
+                <div class="alert alert-info mb-0">
+                    <small>💡 Иконка устройства берётся из выбранного типа</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="saveDevice()">Сохранить</button>
+                <button type="button" class="btn btn-danger" id="deleteDeviceBtn" style="display:none;" onclick="deleteDevice()">Удалить</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Модальное окно для создания/редактирования связи -->
+<div class="modal fade" id="linkModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="linkModalTitle">Настройка связи</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="link_id">
+                <input type="hidden" id="link_source">
+                <input type="hidden" id="link_target">
+
+                <div class="mb-3">
+                    <label class="form-label small">Интерфейс источника</label>
+                    <input type="text" id="link_src_iface" class="form-control form-control-sm" placeholder="eth0">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">Интерфейс назначения</label>
+                    <input type="text" id="link_tgt_iface" class="form-control form-control-sm" placeholder="eth0">
+                </div>
+
+                <div class="alert alert-info mb-0 py-2 small">
+                    🔗 <span id="link_preview">eth0 ↔ eth0</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger btn-sm" id="linkDeleteBtn" style="display:none;" onclick="deleteLink()">Удалить</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="confirmCreateLink()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+    // Глобальные переменные для map.js
+    window.currentMapId = {{ map.id }};
+
+    // Инициализация после загрузки DOM
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof initMap === 'function') {
+            initMap(window.currentMapId);
+        }
+    });
+</script>
+{% endblock %}

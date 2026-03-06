@@ -1,0 +1,44 @@
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#cy {
+    background-color: #ffffff;
+    background-image: radial-gradient(#ddd 1px, transparent 1px);
+    background-size: 20px 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 4px;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.card {
+    border: none;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.btn {
+    border-radius: 4px;
+}
+
+#cy node {
+    transition: all 0.3s ease;
+}
+
+.status-up {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 10px #28a745;
+}
+
+.status-down {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 10px #dc3545;
+}
