@@ -1,44 +1,468 @@
+/* ============================================================================
+   WebNetMap Pro - Стили (Тёмная тема + Сайдбар)
+   ============================================================================ */
+
+:root {
+    /* Светлая тема (по умолчанию) */
+    --bg-primary: #f8f9fa;
+    --bg-secondary: #ffffff;
+    --bg-sidebar: #2c3e50;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --text-sidebar: #ecf0f1;
+    --border-color: #dee2e6;
+    --accent-color: #3498db;
+    --accent-hover: #2980b9;
+    --card-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    --cy-background: #ffffff;
+    --cy-grid: #e0e0e0;
+}
+
+[data-theme="dark"] {
+    /* Тёмная тема */
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-sidebar: #0f3460;
+    --text-primary: #eaeaea;
+    --text-secondary: #a0a0a0;
+    --text-sidebar: #ffffff;
+    --border-color: #2a2a4a;
+    --accent-color: #4fc3f7;
+    --accent-hover: #29b6f6;
+    --card-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    --cy-background: #1a1a2e;
+    --cy-grid: #2a2a4a;
+}
+
+/* ============================================================================
+   БАЗОВЫЕ СТИЛИ
+   ============================================================================ */
 body {
-    background-color: #f8f9fa;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+    overflow-x: hidden;
 }
 
-#cy {
-    background-color: #ffffff;
-    background-image: radial-gradient(#ddd 1px, transparent 1px);
-    background-size: 20px 20px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    border-radius: 4px;
+/* ============================================================================
+   САЙДБАР
+   ============================================================================ */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    background: var(--bg-sidebar);
+    color: var(--text-sidebar);
+    z-index: 1000;
+    transition: width 0.3s ease;
+    overflow-y: auto;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
 }
 
-.navbar-brand {
-    font-weight: bold;
-    letter-spacing: 1px;
+/* Свёрнутый сайдбар */
+.sidebar.collapsed {
+    width: 70px;
+}
+/* Скрываем бейдж администратора в свёрнутом режиме */
+.sidebar.collapsed .sidebar-user .badge {
+    display: none;
+}
+/* Корректируем отступы для иконки пользователя */
+.sidebar.collapsed .sidebar-user i {
+    font-size: 1.5rem;
+    margin: 0;
+}
+/* Скрываем текстовые элементы внутри свёрнутого сайдбара */
+.sidebar.collapsed span:not(.badge) {
+    display: none;
 }
 
-.card {
+/* Корректировка отображения иконок */
+.sidebar.collapsed .sidebar-header h4 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+.sidebar.collapsed .sidebar-header h4 i {
+    font-size: 1.5rem;
+}
+.sidebar.collapsed .sidebar-user {
+    text-align: center;
+    padding: 5px 0;
+}
+.sidebar.collapsed .sidebar-user i {
+    font-size: 1.5rem;
+}
+.sidebar.collapsed .sidebar-maps h5 {
+    text-align: center;
+    margin-bottom: 5px;
+}
+.sidebar.collapsed .sidebar-maps h5 i {
+    font-size: 1.2rem;
+}
+.sidebar.collapsed .sidebar-maps .btn {
+    width: auto;
+    padding: 0.5rem;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sidebar.collapsed .sidebar-maps .btn i {
+    margin: 0;
+    font-size: 1rem;
+}
+.sidebar.collapsed .map-item {
+    padding: 8px;
+    justify-content: center;
+}
+.sidebar.collapsed .map-item .map-item-icon {
+    margin-right: 0;
+    font-size: 1.2rem;
+}
+.sidebar.collapsed .map-item .map-item-name,
+.sidebar.collapsed .map-item .map-item-actions {
+    display: none;
+}
+.sidebar.collapsed .sidebar-user .badge {
+    display: none;
+}
+/* Футер */
+.sidebar.collapsed .sidebar-footer .d-flex {
+    flex-direction: column;
+    gap: 5px;
+}
+.sidebar.collapsed .sidebar-footer .theme-toggle {
+    width: auto;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sidebar.collapsed .sidebar-footer .theme-toggle i {
+    margin: 0;
+    font-size: 1rem;
+}
+/* Админ-меню в свёрнутом виде */
+.sidebar.collapsed .admin-menu small {
+    display: none;
+}
+.sidebar.collapsed .admin-menu a {
+    width: auto;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+.sidebar.collapsed .admin-menu a i {
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* Шапка сайдбара */
+.sidebar-header {
+    padding: 20px;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar-header h4 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+.sidebar-user {
+    font-size: 0.85rem;
+    opacity: 0.8;
+    margin-top: 5px;
+}
+
+/* Кнопка переключения внутри шапки */
+.sidebar-toggle {
+    background: transparent;
     border: none;
+    color: var(--text-sidebar);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 5px;
     transition: transform 0.2s;
 }
+.sidebar-toggle:hover {
+    transform: scale(1.1);
+}
 
-.card:hover {
+/* Контейнер карт */
+.sidebar-maps {
+    padding: 15px;
+}
+.sidebar-maps h5 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.7;
+    margin-bottom: 15px;
+}
+
+.map-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.map-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: var(--text-sidebar);
+}
+.map-item:hover {
+    background: rgba(255,255,255,0.15);
+    transform: translateX(5px);
+}
+.map-item.active {
+    background: var(--accent-color);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
+}
+.map-item-icon {
+    margin-right: 12px;
+    font-size: 1.2rem;
+}
+.map-item-name {
+    flex: 1;
+    font-size: 0.95rem;
+}
+.map-item-actions {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.map-item:hover .map-item-actions {
+    opacity: 1;
+}
+.btn-map-action {
+    background: transparent;
+    border: none;
+    color: var(--text-sidebar);
+    padding: 5px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+.btn-map-action:hover {
+    opacity: 1;
+    color: #fff;
+}
+
+/* Футер сайдбара */
+.sidebar-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px;
+    background: rgba(0,0,0,0.2);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    box-sizing: border-box;
+}
+
+/* ============================================================================
+   ОСНОВНОЙ КОНТЕНТ
+   ============================================================================ */
+.main-content {
+    margin-left: 280px;
+    padding: 20px;
+    transition: margin-left 0.3s ease;
+    min-height: 100vh;
+}
+.sidebar.collapsed + .main-content {
+    margin-left: 70px;
+}
+
+/* ============================================================================
+   КАРТА
+   ============================================================================ */
+#cy {
+    background-color: var(--cy-background);
+    background-image:
+        radial-gradient(var(--cy-grid) 1px, transparent 1px);
+    background-size: 25px 25px;
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    width: 100%;
+    height: calc(100vh - 140px);
+}
+
+/* ============================================================================
+   ПАНЕЛЬ ИНСТРУМЕНТОВ
+   ============================================================================ */
+.toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.toolbar-group {
+    display: flex;
+    gap: 8px;
+    background: var(--bg-secondary);
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+}
+.toolbar-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+}
+.toolbar-btn:hover {
+    background: var(--accent-color);
+    color: #fff;
+    border-color: var(--accent-color);
     transform: translateY(-2px);
 }
-
-.btn {
-    border-radius: 4px;
+.toolbar-btn.active {
+    background: var(--accent-color);
+    color: #fff;
+    border-color: var(--accent-color);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
+}
+.toolbar-btn i {
+    font-size: 1rem;
 }
 
-#cy node {
-    transition: all 0.3s ease;
+/* ============================================================================
+   МОДАЛЬНЫЕ ОКНА
+   ============================================================================ */
+.modal-content {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+}
+.btn-close {
+    filter: var(--text-primary) 1;
 }
 
-.status-up {
-    border-color: #28a745 !important;
-    box-shadow: 0 0 10px #28a745;
+/* ============================================================================
+   ФОРМЫ
+   ============================================================================ */
+.form-control, .form-select {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+.form-control:focus, .form-select:focus {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
 }
 
-.status-down {
-    border-color: #dc3545 !important;
-    box-shadow: 0 0 10px #dc3545;
+/* ============================================================================
+   КАРТОЧКИ
+   ============================================================================ */
+.card {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+}
+
+/* ============================================================================
+   УВЕДОМЛЕНИЯ
+   ============================================================================ */
+.alert {
+    border-radius: 8px;
+    border: none;
+}
+
+/* ============================================================================
+   ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ
+   ============================================================================ */
+.theme-toggle {
+    background: transparent;
+    border: 1px solid var(--text-sidebar);
+    color: var(--text-sidebar);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+.theme-toggle:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+/* ============================================================================
+   АДАПТИВНОСТЬ
+   ============================================================================ */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-280px);
+    }
+    .sidebar.show {
+        transform: translateX(0);
+    }
+    .main-content {
+        margin-left: 0;
+    }
+    .toolbar {
+        flex-direction: column;
+    }
+    .toolbar-group {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ============================================================================
+   CYTOSCAPE СТИЛИ (дополнительно)
+   ============================================================================ */
+.cy-node-selected {
+    box-shadow: 0 0 15px var(--accent-color);
+}
+.cy-edge-selected {
+    stroke-width: 4px;
+}
+
+/* Анимация появления */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.sidebar, .main-content {
+    animation: fadeIn 0.3s ease;
 }

@@ -25,7 +25,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
 
     with app.app_context():
         db.create_all()
@@ -49,6 +49,16 @@ def create_app():
     # Инициализируем монитор с приложением
     init_monitor(app)
     start_monitor()
+
+    @app.route('/static/uploads/maps/<path:filename>')
+    def serve_map_background(filename):
+        """Раздача фоновых изображений карт"""
+        from flask import send_from_directory
+        import os
+        maps_dir = os.path.join(app.root_path, 'static', 'uploads', 'maps')
+        return send_from_directory(maps_dir, filename)
+
+
     @app.route('/static/uploads/icons/<path:filename>')
     def serve_icon(filename):
         """Явная раздача иконок устройств в обход стандартного static"""
