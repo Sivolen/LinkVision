@@ -1,27 +1,51 @@
 {% extends "base.html" %}
+
 {% block content %}
-<style>
-    /* Заглушка для устройств без иконки */
-    .cy-node-noicon {
-        background-color: #e9ecef !important;
-        border: 2px solid #6c757d !important;
-    }
-</style>
-<div class="row">
-    <div class="col-md-12 d-flex justify-content-between align-items-center mb-2">
-        <h3>{{ map.name }}</h3>
-        <div>
-            <button class="btn btn-primary" onclick="openDeviceModal()">+ Устройство</button>
-            <button class="btn btn-secondary" onclick="startLinkMode()">+ Связь</button>
-            <button class="btn btn-success" onclick="saveLayout()">Сохранить</button>
-        </div>
+<div class="toolbar">
+    <div class="toolbar-group">
+        <button class="toolbar-btn" onclick="openDeviceModal()">
+            <i class="fas fa-plus"></i> Устройство
+        </button>
+        <button class="toolbar-btn" onclick="startLinkMode()">
+            <i class="fas fa-link"></i> Связь
+        </button>
     </div>
-    <div class="col-md-12">
-        <div id="cy" style="width: 100%; height: 80vh; border: 1px solid #ccc;"></div>
+
+    <div class="toolbar-group">
+        <button class="toolbar-btn" id="panMode" onclick="setMode('pan')" title="Перемещение карты">
+            <i class="fas fa-hand-paper"></i> Пан
+        </button>
+        <button class="toolbar-btn" id="selectMode" onclick="setMode('select')" title="Выделение нескольких устройств">
+            <i class="fas fa-vector-square"></i> Выделение
+        </button>
+    </div>
+
+    <div class="toolbar-group">
+        <button class="toolbar-btn" onclick="zoomIn()">
+            <i class="fas fa-search-plus"></i>
+        </button>
+        <button class="toolbar-btn" onclick="zoomOut()">
+            <i class="fas fa-search-minus"></i>
+        </button>
+        <button class="toolbar-btn" onclick="resetZoom()">
+            <i class="fas fa-compress-arrows-alt"></i>
+        </button>
+    </div>
+
+    <div class="toolbar-group">
+        <button class="toolbar-btn" onclick="saveLayout()">
+            <i class="fas fa-save"></i> Сохранить
+        </button>
     </div>
 </div>
 
-
+<div id="cy"
+     data-pan-x="{{ map.pan_x or 0 }}"
+     data-pan-y="{{ map.pan_y or 0 }}"
+     data-zoom="{{ map.zoom or 1 }}"
+     data-background="{{ map.background_image or '' }}">
+</div>
+<!-- Модальное окно устройства -->
 <div class="modal fade" id="deviceModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -43,11 +67,7 @@
                     <label class="form-label">Тип устройства *</label>
                     <select id="dev_type" class="form-select" required>
                         <option value="">-- Выберите тип --</option>
-                        <!-- Заполняется через JS -->
                     </select>
-                </div>
-                <div class="alert alert-info mb-0">
-                    <small>💡 Иконка устройства берётся из выбранного типа</small>
                 </div>
             </div>
             <div class="modal-footer">
@@ -58,7 +78,8 @@
         </div>
     </div>
 </div>
-<!-- Модальное окно для создания/редактирования связи -->
+
+<!-- Модальное окно связи -->
 <div class="modal fade" id="linkModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
@@ -97,10 +118,7 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script>
-    // Глобальные переменные для map.js
     window.currentMapId = {{ map.id }};
-
-    // Инициализация после загрузки DOM
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof initMap === 'function') {
             initMap(window.currentMapId);

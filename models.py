@@ -62,3 +62,17 @@ class Link(db.Model):
 class Settings(db.Model):
     key = db.Column(db.String(64), primary_key=True)
     value = db.Column(db.String(256))
+
+
+class Map(db.Model):
+    __table_args__ = {'extend_existing': True}
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128))
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    background_image = db.Column(db.String(256), nullable=True)  # новое поле
+    devices = db.relationship('Device', backref='map', cascade="all, delete-orphan", lazy='dynamic')
+    links = db.relationship('Link', backref='map', cascade="all, delete-orphan", lazy='dynamic')
+    pan_x = db.Column(db.Float, default=0)
+    pan_y = db.Column(db.Float, default=0)
+    zoom = db.Column(db.Float, default=1)

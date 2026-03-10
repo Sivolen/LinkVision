@@ -1,5 +1,5 @@
 // ============================================================================
-// WebNetMap Pro - Карта сети (ФИНАЛЬНАЯ ВЕРСИЯ С МОДАЛКАМИ)
+// WebNetMap Pro - Карта сети (ПОЛНАЯ ВЕРСИЯ С САЙДБАРОМ И ТЁМНОЙ ТЕМОЙ)
 // ============================================================================
 
 // Глобальные переменные
@@ -10,6 +10,8 @@ let linkMode = false;
 let sourceNode = null;
 let socket = null;
 let dragTimeout = null;
+let clickTimeout = null;
+let currentMode = 'pan'; // 'pan' или 'select'
 
 function getMapId() {
     return window.currentMapId;
@@ -27,8 +29,13 @@ function initMap(mapId) {
 
     socket.on('connect', () => {
         socket.emit('join_room', `map_${mapId}`);
+        console.log('📡 Connected to room:', `map_${mapId}`);
     });
-
+    // Установка фона
+    const cyEl = document.getElementById('cy');
+    const initialBg = cyEl.getAttribute('data-background');
+    applyMapBackground(initialBg);
+    // === Обновление статуса через WebSocket ===
     socket.on('device_status', (data) => {
         if (data.map_id === mapId && cy) {
             const node = cy.getElementById(String(data.id));
@@ -51,22 +58,24 @@ function initMap(mapId) {
         }
     });
 
+    // === Cytoscape инициализация ===
     cy = cytoscape({
         container: document.getElementById('cy'),
         elements: [],
-
+        // === СТИЛИ ===
         style: [
+            // === УЗЛЫ С ИКОНКОЙ ===
             {
-                selector: 'node[iconUrl][iconUrl != ""]',
+            selector: 'node[iconUrl][iconUrl != ""]',
                 style: {
                     'shape': 'round-rectangle',
                     'width': 54,
                     'height': 54,
-                    'background-color': 'rgba(255, 255, 255, 0.95)',
+                    'background-color': '#000000',
+                    'background-opacity': 0,
                     'background-image': 'data(iconUrl)',
                     'background-fit': 'contain',
                     'background-clip': 'node',
-                    'background-opacity': 1,
                     'border-width': 3,
                     'border-color': '#28a745',
                     'border-style': 'solid',
@@ -76,11 +85,14 @@ function initMap(mapId) {
                     'font-size': '10px',
                     'text-wrap': 'wrap',
                     'text-max-width': '80px',
-                    'color': '#333',
-                    'text-outline-color': '#fff',
-                    'text-outline-width': 1
+                    'color': '#000000',                          // чёрный текст
+                    'text-background-color': '#ffffff',          // белый фон
+                    'text-background-opacity': 0.7,              // полупрозрачный
+                    'text-background-padding': '2px',             // отступы
+                    'text-background-shape': 'roundrectangle'     // скруглённые углы
                 }
             },
+            // === УЗЛЫ С ИКОНКОЙ + СТАТУС DOWN ===
             {
                 selector: 'node[iconUrl][iconUrl != ""][status = "false"]',
                 style: {
@@ -89,6 +101,7 @@ function initMap(mapId) {
                     'opacity': 0.85
                 }
             },
+            // === УЗЛЫ БЕЗ ИКОНКИ + СТАТУС UP ===
             {
                 selector: 'node[!iconUrl][status = "true"], node[iconUrl = ""][status = "true"]',
                 style: {
@@ -105,6 +118,7 @@ function initMap(mapId) {
                     'font-weight': 'bold'
                 }
             },
+            // === УЗЛЫ БЕЗ ИКОНКИ + СТАТУС DOWN ===
             {
                 selector: 'node[!iconUrl][status = "false"], node[iconUrl = ""][status = "false"]',
                 style: {
@@ -122,14 +136,18 @@ function initMap(mapId) {
                     'opacity': 0.9
                 }
             },
+            // === ВЫДЕЛЕНИЕ ===
             {
                 selector: 'node:selected',
                 style: {
                     'border-color': '#007bff',
                     'border-width': 5,
-                    'background-color': 'rgba(0,123,255,0.2)'
+                    'background-color': 'rgba(0,123,255,0.1)',
+                    'overlay-padding': '0px',
+                    'overlay-opacity': 0.1
                 }
             },
+            // === СВЯЗИ ===
             {
                 selector: 'edge',
                 style: {
@@ -157,12 +175,16 @@ function initMap(mapId) {
             }
         ],
 
+        // === НАСТРОЙКИ ===
         layout: { name: 'preset' },
-        boxSelectionEnabled: true,
+        boxSelectionEnabled: false, // Включается в режиме select
+        autounselectify: true,
         minZoom: 0.25,
-        maxZoom: 4
+        maxZoom: 4,
+        wheelSensitivity: 0.5,  // уменьшаем чувствительность колеса
     });
-
+    // Сохранение позиции камеры
+    cy.on('pan zoom', saveViewport);
     // === Инициализация модальных окон ===
     const deviceModalEl = document.getElementById('deviceModal');
     if (deviceModalEl && !deviceModal) {
@@ -173,31 +195,72 @@ function initMap(mapId) {
     if (linkModalEl && !linkModal) {
         linkModal = new bootstrap.Modal(linkModalEl);
 
-        // Обновление превью при вводе
         ['link_src_iface', 'link_tgt_iface'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', updateLinkPreview);
         });
     }
 
+    // === Загрузка элементов ===
     loadElements();
     loadDeviceTypes();
 
-    // === Drag & Drop ===
+    // === Drag & Drop для одиночных устройств ===
     cy.on('dragfree', 'node', function(evt) {
         const node = evt.target;
         const pos = node.position();
         clearTimeout(dragTimeout);
         dragTimeout = setTimeout(() => {
+            console.log(`📤 Сохраняю позицию узла ${node.id()} (карта ${getMapId()}): x=${pos.x}, y=${pos.y}`);
             fetch(`/api/device/${node.id()}/position`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({x: pos.x, y: pos.y})
-            }).catch(err => console.error('Save position error:', err));
+            })
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
+                return res.json();
+            })
+            .then(data => console.log('✅ Позиция сохранена:', data))
+            .catch(err => console.error('❌ Ошибка сохранения позиции:', err.message));
         }, 500);
     });
 
-    // === Клик по узлу ===
+    // === Перемещение выделенной группы устройств ===
+    cy.on('dragfree', 'node:selected', function(evt) {
+        const selectedNodes = cy.nodes(':selected');
+        if (selectedNodes.length <= 1) return; // Если одно - обрабатывается выше
+
+        const draggedNode = evt.target;
+        const oldPos = draggedNode._private.scratch._dragStartPos || draggedNode.position();
+        const newPos = draggedNode.position();
+        const deltaX = newPos.x - oldPos.x;
+        const deltaY = newPos.y - oldPos.y;
+
+        clearTimeout(dragTimeout);
+        dragTimeout = setTimeout(() => {
+            selectedNodes.forEach(node => {
+                if (node.id() !== draggedNode.id()) {
+                    const nodePos = node.position();
+                    fetch(`/api/device/${node.id()}/position`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            x: nodePos.x + deltaX,
+                            y: nodePos.y + deltaY
+                        })
+                    }).catch(err => console.error('Save position error:', err));
+                }
+            });
+        }, 500);
+    });
+
+    // === Сохранение позиции перед перетаскиванием ===
+    cy.on('drag', 'node', function(evt) {
+        evt.target._private.scratch._dragStartPos = evt.target.position();
+    });
+
+    // === Клик по узлу (ОДИНАРНЫЙ = выделение, ДВОЙНОЙ = редактирование) ===
     cy.on('tap', 'node', function(evt){
         const node = evt.target;
 
@@ -220,15 +283,30 @@ function initMap(mapId) {
             return;
         }
 
-        openDeviceModal(node);
+        // Одинарный клик - выделение
+        if (currentMode !== 'select') {
+            cy.nodes().selected(false);
+        }
+        node.selected(true);
     });
 
-    // === Клик по связи (редактирование) ===
+    // === Двойной клик по узлу - редактирование ===
+    cy.on('dbltap', 'node', function(evt){
+        openDeviceModal(evt.target);
+    });
+
+    // === Клик по связи (ОДИНАРНЫЙ = выделение, ДВОЙНОЙ = редактирование) ===
     cy.on('tap', 'edge', function(evt){
-        if (!linkMode) {
-            const edge = evt.target;
-            openLinkModalForEdit(edge);
+        const edge = evt.target;
+        if (currentMode !== 'select') {
+            cy.edges().selected(false);
         }
+        edge.selected(true);
+    });
+
+    // === Двойной клик по связи - редактирование ===
+    cy.on('dbltap', 'edge', function(evt){
+        openLinkModalForEdit(evt.target);
     });
 
     // === Клик по фону ===
@@ -240,6 +318,9 @@ function initMap(mapId) {
             cy.elements().deselect();
         }
     });
+
+    // === Инициализация режима ===
+    setMode('pan');
 
     console.log('✅ Карта инициализирована');
 }
@@ -269,6 +350,15 @@ function loadElements() {
                 cy.add(validEdges);
                 cy.layout({name: 'preset'}).run();
 
+                // === ВОССТАНОВЛЕНИЕ VIEWPORT ИЗ DATA-АТРИБУТОВ ===
+                const cyEl = document.getElementById('cy');
+                const panX = parseFloat(cyEl.dataset.panX) || 0;
+                const panY = parseFloat(cyEl.dataset.panY) || 0;
+                const zoom = parseFloat(cyEl.dataset.zoom) || 1;
+                cy.viewport({ pan: { x: panX, y: panY }, zoom: zoom });
+                console.log(`🖼️ Восстановлен viewport: pan=(${panX}, ${panY}), zoom=${zoom}`);
+
+                // Загрузка иконок (без изменений)
                 validNodes.forEach(n => {
                     if (n.data.iconUrl && n.data.iconUrl !== '') {
                         const img = new Image();
@@ -300,20 +390,30 @@ function loadElements() {
 // ============================================================================
 function loadDeviceTypes() {
     fetch('/api/types')
-        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
+            return res.json();
+        })
         .then(types => {
             const select = document.getElementById('dev_type');
-            if (select) {
-                select.innerHTML = '<option value="">-- Выберите тип --</option>';
-                types.forEach(t => {
-                    const option = document.createElement('option');
-                    option.value = t.id;
-                    option.text = t.name;
-                    select.appendChild(option);
-                });
-            }
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Выберите тип --</option>';
+            types.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t.id;
+                option.text = t.name;
+                select.appendChild(option);
+            });
+            console.log('✅ Типы устройств загружены:', types.length);
         })
-        .catch(err => console.error('Error loading types:', err));
+        .catch(err => {
+            console.error('❌ Ошибка загрузки типов:', err.message);
+            // Если нужно, покажите сообщение пользователю
+            const select = document.getElementById('dev_type');
+            if (select) {
+                select.innerHTML = '<option value="">Ошибка загрузки типов</option>';
+            }
+        });
 }
 
 // ============================================================================
@@ -379,14 +479,33 @@ function saveDevice() {
         }).then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'));
     } else {
         body.map_id = getMapId();
-        body.x = cy ? cy.width()/2 : 100;
-        body.y = cy ? cy.height()/2 : 100;
+        if (cy) {
+            const extent = cy.extent();
+            body.x = (extent.x1 + extent.x2) / 2;
+            body.y = (extent.y1 + extent.y2) / 2;
+            console.log(`📍 Новое устройство появится в центре экрана: (${body.x}, ${body.y})`);
+        } else {
+            body.x = 100;
+            body.y = 100;
+        }
 
         fetch('/api/device', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(body)
-        }).then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'));
+        })
+        .then(res => {
+            if (res.ok) {
+                deviceModal?.hide();
+                location.reload();
+            } else {
+                alert('❌ Ошибка при создании устройства');
+            }
+        })
+        .catch(err => {
+            console.error('Ошибка сети:', err);
+            alert('❌ Ошибка соединения');
+        });
     }
 }
 
@@ -411,14 +530,12 @@ function updateLinkPreview() {
 // ОТКРЫТИЕ МОДАЛКИ ДЛЯ НОВОЙ СВЯЗИ
 // ============================================================================
 function openLinkModal(sourceId, targetId) {
-    // Сброс формы для новой связи
     document.getElementById('link_id').value = '';
     document.getElementById('link_source').value = sourceId;
     document.getElementById('link_target').value = targetId;
     document.getElementById('link_src_iface').value = 'eth0';
     document.getElementById('link_tgt_iface').value = 'eth0';
 
-    // Обновляем заголовок и кнопки
     document.getElementById('linkModalTitle').textContent = 'Новая связь';
     document.getElementById('linkDeleteBtn').style.display = 'none';
 
@@ -435,21 +552,16 @@ function openLinkModal(sourceId, targetId) {
 function openLinkModalForEdit(edge) {
     const data = edge.data();
 
-    // Заполняем форму данными связи
     document.getElementById('link_id').value = data.id;
     document.getElementById('link_source').value = data.source;
     document.getElementById('link_target').value = data.target;
 
-    // Парсим интерфейсы из подписи (формат: "src↔tgt")
     const labelParts = (data.label || 'eth0↔eth0').split('↔');
     document.getElementById('link_src_iface').value = labelParts[0] || 'eth0';
     document.getElementById('link_tgt_iface').value = labelParts[1] || 'eth0';
 
-    // Обновляем заголовок и кнопки
     document.getElementById('linkModalTitle').textContent = 'Редактировать связь';
     document.getElementById('linkDeleteBtn').style.display = 'inline-block';
-
-    // Сохраняем ссылку на ребро для удаления
     document.getElementById('linkDeleteBtn').onclick = () => deleteLink(data.id);
 
     updateLinkPreview();
@@ -460,7 +572,7 @@ function openLinkModalForEdit(edge) {
 }
 
 // ============================================================================
-// СОХРАНЕНИЕ СВЯЗИ (создание или обновление)
+// СОХРАНЕНИЕ СВЯЗИ
 // ============================================================================
 function confirmCreateLink() {
     const linkId = document.getElementById('link_id').value;
@@ -474,10 +586,8 @@ function confirmCreateLink() {
     if (linkModal) linkModal.hide();
 
     if (linkId) {
-        // Обновление существующей связи
         updateLink(linkId, srcIface, tgtIface);
     } else {
-        // Создание новой связи
         createLinkWithInterfaces(src, tgt, srcIface, tgtIface);
     }
 }
@@ -515,6 +625,10 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface) {
     .then(data => {
         console.log('✅ Link created:', data);
         if (data.id && cy) {
+            // Сохраняем текущий viewport
+            const currentPan = cy.pan();
+            const currentZoom = cy.zoom();
+
             cy.add({
                 group: 'edges',
                 data: {
@@ -524,7 +638,10 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface) {
                     label: `${srcIface}↔${tgtIface}`
                 }
             });
-            cy.layout({name: 'preset'}).run();
+
+            // Восстанавливаем viewport
+            cy.viewport({ pan: currentPan, zoom: currentZoom });
+
             resetLinkMode();
         }
     })
@@ -535,10 +652,9 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface) {
 }
 
 // ============================================================================
-// ОБНОВЛЕНИЕ СУЩЕСТВУЮЩЕЙ СВЯЗИ
+// ОБНОВЛЕНИЕ СВЯЗИ
 // ============================================================================
 function updateLink(linkId, srcIface, tgtIface) {
-    // Извлекаем числовой ID из строки "link_123"
     const numericId = linkId.startsWith('link_') ? linkId.replace('link_', '') : linkId;
 
     console.log(`✏️ Updating link ${numericId}: ${srcIface} ↔ ${tgtIface}`);
@@ -559,12 +675,11 @@ function updateLink(linkId, srcIface, tgtIface) {
     .then(data => {
         console.log('✅ Link updated:', data);
         if (cy) {
-            // Обновляем подпись на карте
             const edge = cy.getElementById(linkId);
             if (edge.length) {
                 edge.data('label', `${srcIface}↔${tgtIface}`);
             }
-            location.reload(); // Перезагружаем для надёжности
+            location.reload();
         }
     })
     .catch(err => {
@@ -576,13 +691,9 @@ function updateLink(linkId, srcIface, tgtIface) {
 // ============================================================================
 // УДАЛЕНИЕ СВЯЗИ
 // ============================================================================
-// ============================================================================
-// УДАЛЕНИЕ СВЯЗИ (исправлено)
-// ============================================================================
 function deleteLink(linkId) {
     if (!confirm('⚠️ Удалить эту связь?')) return;
 
-    // Извлекаем числовой ID (убираем префикс "link_" если есть)
     const numericId = String(linkId).startsWith('link_')
         ? String(linkId).replace('link_', '')
         : String(linkId);
@@ -599,19 +710,25 @@ function deleteLink(linkId) {
         console.log('✅ Link deleted:', data);
 
         if (cy) {
-            // ✅ Удаляем ребро из Cytoscape по нескольким возможным ID
             const edgeIds = [
-                `link_${numericId}`,  // Наш формат
-                numericId,            // На случай если ID без префикса
-                String(numericId)     // На всякий случай как строка
+                `link_${numericId}`,
+                numericId,
+                String(numericId)
             ];
 
             let removed = false;
             for (const eid of edgeIds) {
                 const edge = cy.getElementById(eid);
                 if (edge.length) {
-                    edge.remove();
-                    console.log(`🎨 Edge removed from cytoscape: ${eid}`);
+                    edge.animate({
+                        style: { 'opacity': 0, 'width': 0 },
+                        duration: 200
+                    }, {
+                        complete: function() {
+                            edge.remove();
+                            console.log(`🎨 Edge removed: ${eid}`);
+                        }
+                    });
                     removed = true;
                     break;
                 }
@@ -619,17 +736,14 @@ function deleteLink(linkId) {
 
             if (!removed) {
                 console.warn('⚠️ Edge not found in cytoscape, reloading...');
-                // Если не нашли — перезагружаем карту
                 location.reload();
             }
         }
 
-        // ✅ Закрываем модальное окно
         if (linkModal) {
             linkModal.hide();
         }
 
-        // ✅ Сбрасываем режим связи если был активен
         if (linkMode) {
             resetLinkMode();
         }
@@ -684,6 +798,109 @@ function startLinkMode() {
     document.body.appendChild(info);
 }
 
+// ============================================================================
+// ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ (ПАН / ВЫДЕЛЕНИЕ)
+// ============================================================================
+// ============================================================================
+// ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ (исправлено)
+// ============================================================================
+function setMode(mode) {
+    currentMode = mode;
+
+    // Обновляем визуальное состояние кнопок
+    const panBtn = document.getElementById('panMode');
+    const selectBtn = document.getElementById('selectMode');
+
+    if (panBtn) panBtn.classList.toggle('active', mode === 'pan');
+    if (selectBtn) selectBtn.classList.toggle('active', mode === 'select');
+
+    if (cy) {
+        if (mode === 'select') {
+            // Режим выделения: можно рисовать рамку, выделять несколько
+            cy.boxSelectionEnabled(true);
+            cy.autounselectify(false);
+            cy.autolock(false);
+            cy.panningEnabled(false);      // отключаем панорамирование, чтобы рамка работала
+            cy.userPanningEnabled(false);
+            cy.userZoomingEnabled(true);   // зум оставляем
+            document.body.style.cursor = 'crosshair';
+        } else {
+            // Режим пан: только перемещение карты, клик = выделение одного
+            cy.boxSelectionEnabled(false);
+            cy.autounselectify(true);
+            cy.autolock(false);
+            cy.panningEnabled(true);       // включаем панорамирование
+            cy.userPanningEnabled(true);
+            cy.userZoomingEnabled(true);
+            document.body.style.cursor = 'default';
+        }
+
+        cy.style().update();
+    }
+
+    console.log(`🎯 Режим: ${mode}`, {
+        boxSelection: cy.boxSelectionEnabled(),
+        autounselectify: cy.autounselectify()
+    });
+}
+
+// ============================================================================
+// ZOOM
+// ============================================================================
+function zoomIn() {
+    if (!cy) return;
+    cy.zoom({
+        level: cy.zoom() * 1.2,
+        renderedPosition: { x: cy.width()/2, y: cy.height()/2 }
+    });
+}
+
+function zoomOut() {
+    if (!cy) return;
+    cy.zoom({
+        level: cy.zoom() * 0.8,
+        renderedPosition: { x: cy.width()/2, y: cy.height()/2 }
+    });
+}
+
+function resetZoom() {
+    if (!cy) return;
+    cy.fit(null, 50);
+}
+
+// ============================================================================
+// СОХРАНЕНИЕ
+// ============================================================================
 function saveLayout() {
-    alert('ℹ️ Координаты сохраняются автоматически');
+    alert('ℹ️ Координаты сохраняются автоматически при перетаскивании');
+}
+function applyMapBackground(background) {
+    const cyEl = document.getElementById('cy');
+    if (!cyEl) return;
+    if (background) {
+        cyEl.style.backgroundImage = `url(/static/uploads/maps/${background}), radial-gradient(var(--cy-grid) 1px, transparent 1px)`;
+        cyEl.style.backgroundSize = 'contain, 25px 25px';
+        cyEl.style.backgroundPosition = 'center, 0 0';
+        cyEl.style.backgroundRepeat = 'no-repeat, repeat';
+    } else {
+        cyEl.style.backgroundImage = `radial-gradient(var(--cy-grid) 1px, transparent 1px)`;
+        cyEl.style.backgroundSize = '25px 25px';
+        cyEl.style.backgroundPosition = '0 0';
+        cyEl.style.backgroundRepeat = 'repeat';
+    }
+}
+
+let viewportTimeout = null;
+function saveViewport() {
+    if (!cy) return;
+    const pan = cy.pan();
+    const zoom = cy.zoom();
+    clearTimeout(viewportTimeout);
+    viewportTimeout = setTimeout(() => {
+        fetch(`/api/map/${getMapId()}/viewport`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({pan_x: pan.x, pan_y: pan.y, zoom: zoom})
+        }).catch(err => console.error('Ошибка сохранения viewport:', err));
+    }, 500);
 }

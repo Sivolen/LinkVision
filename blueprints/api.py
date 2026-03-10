@@ -1,5 +1,8 @@
-from flask import Blueprint, request, jsonify, url_for
+import os
+
+from flask import Blueprint, request, jsonify, url_for, current_app
 from flask_login import login_required, current_user
+from werkzeug.utils import secure_filename
 from extensions import db
 from models import Map, Device, DeviceType, Link
 
@@ -238,3 +241,88 @@ def manage_link(id):
 def get_types():
     types = DeviceType.query.all()
     return jsonify([{'id': t.id, 'name': t.name} for t in types])
+
+
+@api_bp.route('/map/<int:id>', methods=['PUT'])
+@login_required
+def update_map(id):
+    map_obj = Map.query.get_or_404(id)
+    if not current_user.is_admin and map_obj.owner_id != current_user.id:
+        return jsonify({'error': 'Доступ запрещён'}), 403
+
+    data = request.form
+    name = data.get('name')
+    if name:
+        map_obj.name = name
+
+    # Обработка загружаемого фона
+    if 'background' in request.files:
+        file = request.files['background']
+        if file and file.filename:
+            print(f"📎 Получен файл: {file.filename}")
+            filename = secure_filename(f"map_{id}_{file.filename}")
+            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'maps')
+            os.makedirs(upload_folder, exist_ok=True)
+            full_path = os.path.join(upload_folder, filename)
+
+            # Проверка прав на запись
+            if not os.access(upload_folder, os.W_OK):
+                print(f"❌ Нет прав на запись в {upload_folder}")
+                return jsonify({'error': 'Нет прав на запись'}), 500
+
+            print(f"💾 Сохраняю файл фона: {full_path}")
+            try:
+                file.save(full_path)
+                if os.path.exists(full_path):
+                    file_size = os.path.getsize(full_path)
+                    print(f"✅ Файл сохранён, размер: {file_size} байт")
+                else:
+                    print(f"❌ Файл не найден после сохранения!")
+                    return jsonify({'error': 'Ошибка сохранения файла'}), 500
+            except Exception as e:
+                print(f"❌ Исключение при сохранении: {e}")
+                return jsonify({'error': str(e)}), 500
+
+            # Удаление старого фона (только если имя отличается)
+            if map_obj.background_image and map_obj.background_image != filename:
+                old_path = os.path.join(upload_folder, map_obj.background_image)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+                    print(f"🗑️ Удалён старый фон: {old_path}")
+
+            map_obj.background_image = filename
+        else:
+            print("⚠️ Файл не содержит имени или пустой")
+    else:
+        print("ℹ️ Поле 'background' отсутствует в запросе")
+
+    # Удаление фона (если отмечен чекбокс)
+    if data.get('remove_background') == 'true':
+        if map_obj.background_image:
+            old_path = os.path.join(current_app.root_path, 'static', 'uploads', 'maps', map_obj.background_image)
+            if os.path.exists(old_path):
+                os.remove(old_path)
+                print(f"🗑️ Удалён фон по запросу: {old_path}")
+            map_obj.background_image = None
+
+    db.session.commit()
+    return jsonify({
+        'id': map_obj.id,
+        'name': map_obj.name,
+        'background': map_obj.background_image
+    })
+
+
+@api_bp.route('/map/<int:id>/viewport', methods=['PUT'])
+@login_required
+def update_viewport(id):
+    map_obj = Map.query.get_or_404(id)
+    if not current_user.is_admin and map_obj.owner_id != current_user.id:
+        return jsonify({'error': 'Доступ запрещён'}), 403
+
+    data = request.json
+    map_obj.pan_x = data.get('pan_x', 0)
+    map_obj.pan_y = data.get('pan_y', 0)
+    map_obj.zoom = data.get('zoom', 1)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
