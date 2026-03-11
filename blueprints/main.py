@@ -1,4 +1,6 @@
-from flask import Blueprint, render_template, redirect, url_for, request, jsonify
+import os
+
+from flask import Blueprint, render_template, redirect, url_for, request, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models import Map

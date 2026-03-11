@@ -294,17 +294,52 @@ body {
 /* ============================================================================
    КАРТА
    ============================================================================ */
-#cy {
-    background-color: var(--cy-background);
-    background-image:
-        radial-gradient(var(--cy-grid) 1px, transparent 1px);
-    background-size: 25px 25px;
-    border-radius: 12px;
-    box-shadow: var(--card-shadow);
+.map-container {
+    position: relative;
     width: 100%;
     height: calc(100vh - 140px);
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
 }
 
+.cy-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* Убрано width: 100%, height: 100% - размеры задаются в JS */
+    background-color: var(--cy-background);
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    transform-origin: 0 0;
+    will-change: transform;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.cy-background.has-image {
+    /* Когда изображение загружено, размеры задаются в JS */
+}
+
+.cy-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    background: transparent;
+    background-image: radial-gradient(circle at 1px 1px, var(--cy-grid) 1px, transparent 1px);
+    background-size: 25px 25px;
+    background-position: 0 0;
+    background-repeat: repeat;
+}
+
+#cy {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
 /* ============================================================================
    ПАНЕЛЬ ИНСТРУМЕНТОВ
    ============================================================================ */

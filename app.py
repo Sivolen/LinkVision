@@ -1,4 +1,6 @@
 from flask import Flask
+from flask_socketio import join_room
+
 from config import Config
 from extensions import db, login_manager, socketio, init_extensions
 from models import User, Map, DeviceType, Settings, Device
@@ -48,6 +50,10 @@ def create_app():
 
     # Инициализируем монитор с приложением
     init_monitor(app)
+    @socketio.on('join_room')
+    def handle_join_room(room):
+        join_room(room)
+        print(f"✅ Клиент присоединился к комнате {room}")
     start_monitor()
 
     @app.route('/static/uploads/maps/<path:filename>')
