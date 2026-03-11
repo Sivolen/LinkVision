@@ -226,9 +226,9 @@ body {
     background: rgba(255,255,255,0.05);
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s;
     text-decoration: none;
     color: var(--text-sidebar);
+    transition: background-color 0.3s ease-out, transform 0.3s ease-out, box-shadow 0.3s ease-out;
 }
 .map-item:hover {
     background: rgba(255,255,255,0.15);
@@ -247,11 +247,16 @@ body {
     font-size: 0.95rem;
 }
 .map-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.25s ease 0.05s; /* чуть медленнее и с задержкой */
+    pointer-events: none;
 }
 .map-item:hover .map-item-actions {
     opacity: 1;
+    pointer-events: auto;
 }
 .btn-map-action {
     background: transparent;
@@ -485,7 +490,7 @@ body {
 
 /* ============================================================================
    CYTOSCAPE СТИЛИ (дополнительно)
-   ============================================================================ */
+============================================================================ */
 .cy-node-selected {
     box-shadow: 0 0 15px var(--accent-color);
 }
@@ -500,4 +505,60 @@ body {
 }
 .sidebar, .main-content {
     animation: fadeIn 0.3s ease;
+}
+/* ============================================================================
+   Badge СТИЛИ (дополнительно)
+============================================================================ */
+/* В свёрнутом сайдбаре бейдж позиционируется поверх иконки */
+.sidebar.collapsed .map-item .badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.6rem;
+    padding: 0.1rem 0.3rem;
+    margin-left: 0;
+    border-radius: 10px;
+}
+/* Контейнер для правой части (кнопки + бейдж) */
+.map-item-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto; /* прижимает к правому краю */
+}
+/* Кнопки действий по умолчанию скрыты */
+.map-item-actions {
+    display: none;
+    align-items: center;
+    gap: 4px;
+}
+/* Действия скрыты по умолчанию, появляются при наведении на весь элемент */
+.map-item .map-item-actions {
+    display: none;
+}
+/* При наведении на весь элемент показываем кнопки */
+.map-item:hover .map-item-actions {
+    display: flex;
+}
+/* Бейдж всегда виден и выровнен по центру */
+.map-item .badge {
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 10px;
+}
+/* В свёрнутом сайдбаре правый блок скрыт, бейдж позиционируется абсолютно */
+.sidebar.collapsed .map-item-right {
+    display: none;
+}
+/* Абсолютное позиционирование бейджа в свёрнутом режиме (уже есть, но убедимся) */
+.sidebar.collapsed .map-item .badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.6rem;
+    padding: 0.1rem 0.3rem;
 }

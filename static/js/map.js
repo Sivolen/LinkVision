@@ -1,5 +1,5 @@
 // ============================================================================
-// WebNetMap Pro - Карта сети (ИСПРАВЛЕННАЯ ВЕРСИЯ + ДИАГНОСТИКА)
+// WebNetMap Pro - Карта сети (ФИНАЛЬНАЯ ВЕРСИЯ)
 // ============================================================================
 let cy = null;
 let deviceModal = null;
@@ -15,6 +15,95 @@ let viewportTimeout = null;
 let pendingFit = false;
 let elementsLoaded = false;
 let backgroundLoaded = false;
+
+// Для пульсации красных узлов
+let pulsingNodes = new Set();         // множество id красных узлов
+let pulsingInterval = null;           // общий интервал
+let pulsePhase = 0;                    // фаза для плавного изменения (0..1)
+const pulseStep = 0.015;               // шаг изменения фазы
+const pulseMinOpacity = 0.15;           // мин. прозрачность overlay
+const pulseMaxOpacity = 0.4;            // макс. прозрачность overlay
+
+// Запуск пульсации для красного узла
+function addPulsingNode(node) {
+    const nodeId = node.id();
+    if (!pulsingNodes.has(nodeId)) {
+        pulsingNodes.add(nodeId);
+        // Если интервал ещё не запущен, запускаем
+        if (!pulsingInterval) {
+            pulsePhase = 0;
+            pulsingInterval = setInterval(() => {
+                // Обновляем фазу
+                pulsePhase += pulseStep;
+                if (pulsePhase > 1) pulsePhase -= 2; // будем использовать sin
+                // Вычисляем текущую прозрачность по синусоиде
+                const opacity = pulseMinOpacity + (pulseMaxOpacity - pulseMinOpacity) * (0.5 + 0.5 * Math.sin(pulsePhase * Math.PI));
+                // Применяем ко всем красным узлам
+                pulsingNodes.forEach(id => {
+                    const n = cy.getElementById(id);
+                    if (n.length) {
+                        n.style('overlay-opacity', opacity);
+                    }
+                });
+            }, 50); // ~20 кадров/сек, достаточно плавно
+        }
+    }
+}
+
+// Удаление красного узла из пульсации
+function removePulsingNode(node) {
+    const nodeId = node.id();
+    if (pulsingNodes.has(nodeId)) {
+        pulsingNodes.delete(nodeId);
+        node.style('overlay-opacity', null); // сброс к стилевому значению (0.15)
+        if (pulsingNodes.size === 0 && pulsingInterval) {
+            clearInterval(pulsingInterval);
+            pulsingInterval = null;
+        }
+    }
+}
+
+// Очистка всех пульсаций (при перезагрузке карты)
+function clearAllPulsing() {
+    if (pulsingInterval) {
+        clearInterval(pulsingInterval);
+        pulsingInterval = null;
+    }
+    pulsingNodes.clear();
+}
+
+// Функция обновления счётчика DOWN в сайдбаре
+function updateSidebarCounter(mapId, becameDown) {
+    const mapLink = document.querySelector(`.map-item[href="/map/${mapId}"]`);
+    if (!mapLink) return;
+
+    let badge = mapLink.querySelector('.badge');
+    let currentCount = badge ? parseInt(badge.textContent) : 0;
+
+    if (becameDown) {
+        currentCount++;
+    } else {
+        currentCount--;
+    }
+
+    if (currentCount <= 0) {
+        if (badge) badge.remove();
+    } else {
+        if (badge) {
+            badge.textContent = currentCount;
+        } else {
+            badge = document.createElement('span');
+            badge.className = 'badge bg-danger ms-2';
+            badge.textContent = currentCount;
+            const nameSpan = mapLink.querySelector('.map-item-name');
+            if (nameSpan) {
+                nameSpan.insertAdjacentElement('afterend', badge);
+            } else {
+                mapLink.appendChild(badge);
+            }
+        }
+    }
+}
 
 function getMapId() {
     return window.currentMapId;
@@ -97,7 +186,6 @@ function checkReadyAndFit() {
 function initMap(mapId) {
     console.log('🗺️ Инициализация карты:', mapId);
     const MAX_RECONNECT_ATTEMPTS = 5;
-    let reconnectAttempts = 0;
 
     if (!socket) {
         socket = io({
@@ -136,7 +224,6 @@ function initMap(mapId) {
         socket.emit('join_room', roomName);
     });
 
-    // ✅ ИСПРАВЛЕНО: Корректная обработка строки статуса 'true'/'false'
     socket.on('device_status', (data) => {
         console.log('📡 [RAW] device_status получен:', data);
 
@@ -157,7 +244,6 @@ function initMap(mapId) {
         }
 
         try {
-            // Правильное преобразование: сравниваем со строкой 'true'
             const statusValue = data.status === 'true' ? 'true' : 'false';
             const oldStatus = node.data('status');
 
@@ -170,11 +256,19 @@ function initMap(mapId) {
             }
 
             node.data('status', statusValue);
+
+            // Управление пульсацией
+            if (statusValue === 'false') {
+                addPulsingNode(node);
+            } else {
+                removePulsingNode(node);
+            }
+
             cy.style().update();
 
-            if (typeof pulseNode === 'function') {
-                pulseNode(node);
-            }
+            // Обновляем счётчик в сайдбаре
+            const becameDown = (statusValue === 'false');
+            updateSidebarCounter(data.map_id, becameDown);
 
             const computedBorderColor = node.style('border-color');
             console.log(`   Применённый border-color: ${computedBorderColor}`);
@@ -224,7 +318,9 @@ function initMap(mapId) {
                 style: {
                     'border-color': '#28a745',
                     'border-style': 'solid',
+                    'border-width': 3,
                     'opacity': 1
+                    // БЕЗ overlay
                 }
             },
             {
@@ -232,7 +328,11 @@ function initMap(mapId) {
                 style: {
                     'border-color': '#dc3545',
                     'border-style': 'dashed',
-                    'opacity': 0.85
+                    'border-width': 3,
+                    'opacity': 0.85,
+                    'overlay-color': '#dc3545',
+                    'overlay-opacity': 0.15,          // базовое значение, будет меняться пульсацией
+                    'overlay-padding': '4px'           // компактное свечение
                 }
             },
             {
@@ -259,6 +359,7 @@ function initMap(mapId) {
                     'text-background-opacity': 0.8,
                     'text-background-padding': '3px',
                     'text-background-shape': 'roundrectangle'
+                    // без overlay
                 }
             },
             {
@@ -285,7 +386,10 @@ function initMap(mapId) {
                     'text-background-opacity': 0.8,
                     'text-background-padding': '3px',
                     'text-background-shape': 'roundrectangle',
-                    'opacity': 0.9
+                    'opacity': 0.9,
+                    'overlay-color': '#dc3545',
+                    'overlay-opacity': 0.15,
+                    'overlay-padding': '4px'
                 }
             },
             {
@@ -523,6 +627,13 @@ function loadElements(mapId) {
             elementsLoaded = true;
             console.log('✅ Элементы загружены:', validNodes.length, 'узлов,', validEdges.length, 'связей');
             checkReadyAndFit();
+
+            // Запускаем пульсацию для всех красных узлов
+            cy.nodes().forEach(node => {
+                if (node.data('status') === 'false') {
+                    addPulsingNode(node);
+                }
+            });
         });
         layout.run();
         validNodes.forEach(n => {
@@ -778,11 +889,9 @@ function deleteLink(linkId) {
     .then(res => res.ok ? location.reload() : alert('❌ Ошибка'));
 }
 
-// ✅ Сброс всех inline-стилей
 function resetLinkMode() {
     linkMode = false;
     if (sourceNode && cy) {
-        // Удаляем все inline-стили, возвращая управление таблице стилей
         sourceNode.style({});
     }
     sourceNode = null;
