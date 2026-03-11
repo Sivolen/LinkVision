@@ -6,9 +6,13 @@ from flask_migrate import Migrate
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
-
-# ✅ ИСПРАВЛЕНО: Добавлен async_mode='threading' для совместимости
-socketio = SocketIO(cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(
+    cors_allowed_origins="*",
+    async_mode='threading',
+    ping_interval=30,
+    ping_timeout=100,
+    max_http_buffer_size=1e8
+)
 migrate = Migrate()
 
 def init_extensions(app):

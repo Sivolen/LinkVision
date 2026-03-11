@@ -1,5 +1,4 @@
 import os
-
 from flask import Blueprint, request, jsonify, url_for, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
@@ -66,7 +65,7 @@ def get_elements(map_id):
             'group': 'edges',
             'data': {
                 'id': str(link.id),
-                'source': str(link.source_device_id),  # Теперь точно строка числа
+                'source': str(link.source_device_id),
                 'target': str(link.target_device_id),
                 'label': f"{link.source_interface or 'eth0'}↔{link.target_interface or 'eth0'}"
             }
@@ -82,7 +81,6 @@ def get_device(id):
     device = Device.query.get_or_404(id)
     if not current_user.is_admin and device.map.owner_id != current_user.id:
         return jsonify({'error': 'Доступ запрещён'}), 403
-
     return jsonify({
         'id': device.id,
         'name': device.name,
@@ -134,7 +132,6 @@ def manage_device(id):
         return jsonify({'status': 'ok', 'id': device.id})
 
 
-# В api.py, внутри @api_bp.route('/device/<int:id>/position', methods=['PUT'])
 @api_bp.route('/device/<int:id>/position', methods=['PUT'])
 @login_required
 def update_position(id):
@@ -166,7 +163,7 @@ def update_position(id):
 def create_link():
     try:
         data = request.get_json()
-        print(f"🔗 Creating link: {data}")  # Лог для отладки
+        print(f"🔗 Creating link: {data}")
 
         # Валидация данных
         if not all(k in data for k in ['map_id', 'source_id', 'target_id']):
@@ -204,7 +201,6 @@ def create_link():
 @login_required
 def update_link(id):
     link = Link.query.get_or_404(id)
-
     if not current_user.is_admin and link.map.owner_id != current_user.id:
         return jsonify({'error': 'Доступ запрещён'}), 403
 
@@ -223,7 +219,6 @@ def update_link(id):
 @login_required
 def delete_link(id):
     link = Link.query.get_or_404(id)
-
     if not current_user.is_admin and link.map.owner_id != current_user.id:
         return jsonify({'error': 'Доступ запрещён'}), 403
 
@@ -335,6 +330,7 @@ def update_viewport(id):
     map_obj = Map.query.get_or_404(id)
     if not current_user.is_admin and map_obj.owner_id != current_user.id:
         return jsonify({'error': 'Доступ запрещён'}), 403
+
     data = request.json
     map_obj.pan_x = data.get('pan_x', 0)
     map_obj.pan_y = data.get('pan_y', 0)
@@ -342,13 +338,14 @@ def update_viewport(id):
     db.session.commit()
     return jsonify({'status': 'ok'})
 
+
 @api_bp.route('/test_emit/<int:device_id>/<int:status>')
 def test_emit(device_id, status):
     from extensions import socketio
     print(f"📤 Тестовая отправка device_status: id={device_id}, status={bool(status)}, map_id=1")
     socketio.emit('device_status', {
         'id': device_id,
-        'status': False,
+        'status': bool(status),
         'map_id': 1
     })
     return 'ok'

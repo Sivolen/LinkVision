@@ -1,5 +1,5 @@
 // ============================================================================
-// WebNetMap Pro - Карта сети
+// WebNetMap Pro - Карта сети (ИСПРАВЛЕННАЯ ВЕРСИЯ + ДИАГНОСТИКА)
 // ============================================================================
 let cy = null;
 let deviceModal = null;
@@ -96,11 +96,21 @@ function checkReadyAndFit() {
 
 function initMap(mapId) {
     console.log('🗺️ Инициализация карты:', mapId);
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    let reconnectAttempts = 0;
+
     if (!socket) {
-        socket = io();
+        socket = io({
+            reconnection: true,
+            reconnectionDelay: 5000,
+            reconnectionDelayMax: 10000,
+            reconnectionAttempts: MAX_RECONNECT_ATTEMPTS
+        });
+
         socket.on('connect_error', (error) => {
             console.error('❌ Socket connection error:', error);
         });
+
         socket.on('disconnect', (reason) => {
             console.warn('⚠️ Socket disconnected:', reason);
             setTimeout(() => {
@@ -108,53 +118,73 @@ function initMap(mapId) {
                 socket.connect();
             }, 3000);
         });
+
         socket.on('reconnect', (attemptNumber) => {
             console.log('✅ Socket reconnected after', attemptNumber, 'attempts');
             socket.emit('join_room', `map_${mapId}`);
         });
     }
+
     socket.onAny((event, ...args) => {
         console.log(`📨 Событие сокета: ${event}`, args);
     });
+
     socket.on('connect', () => {
         console.log('✅ Socket connected');
         const roomName = `map_${mapId}`;
         console.log('🚪 Присоединяемся к комнате:', roomName);
         socket.emit('join_room', roomName);
     });
+
+    // ✅ ИСПРАВЛЕНО: Корректная обработка строки статуса 'true'/'false'
     socket.on('device_status', (data) => {
-        console.log('📡 Получен device_status:', data);
-        if (Number(data.map_id) === Number(mapId) && cy) {
-            const node = cy.getElementById(String(data.id));
-            if (node.length) {
-                const statusValue = data.status ? 'true' : 'false';
-                node.data('status', statusValue);
-                console.log('🔄 Узел:', node.data('name'), 'Статус:', statusValue);
-                if (node.data('iconUrl')) {
-                    node.style({
-                        'border-color': data.status ? '#28a745' : '#dc3545',
-                        'border-style': data.status ? 'solid' : 'dashed',
-                        'opacity': data.status ? 1 : 0.85
-                    });
-                } else {
-                    node.style({
-                        'background-color': data.status ? '#d4edda' : '#f8d7da',
-                        'border-color': data.status ? '#28a745' : '#dc3545',
-                        'border-style': data.status ? 'solid' : 'dashed',
-                        'color': data.status ? '#155724' : '#721c24'
-                    });
-                }
-                cy.style().update();
-                if (typeof pulseNode === 'function') {
-                    pulseNode(node);
-                }
-                console.log('✅ Применено:', {
-                    'border-color': node.style('border-color'),
-                    'border-style': node.style('border-style')
-                });
+        console.log('📡 [RAW] device_status получен:', data);
+
+        if (Number(data.map_id) !== Number(mapId)) {
+            console.log('⏭️ Событие для другой карты, игнорируем');
+            return;
+        }
+
+        if (!cy) {
+            console.log('⏭️ Cytoscape ещё не инициализирован');
+            return;
+        }
+
+        const node = cy.getElementById(String(data.id));
+        if (!node.length) {
+            console.log(`⚠️ Узел с id ${data.id} не найден на карте`);
+            return;
+        }
+
+        try {
+            // Правильное преобразование: сравниваем со строкой 'true'
+            const statusValue = data.status === 'true' ? 'true' : 'false';
+            const oldStatus = node.data('status');
+
+            console.log(`🔄 Узел: ${node.data('name')} (id=${data.id})`);
+            console.log(`   Старый статус: ${oldStatus}, новый: ${statusValue}`);
+
+            if (oldStatus === statusValue) {
+                console.log('   Статус не изменился, пропускаем обновление');
+                return;
             }
+
+            node.data('status', statusValue);
+            cy.style().update();
+
+            if (typeof pulseNode === 'function') {
+                pulseNode(node);
+            }
+
+            const computedBorderColor = node.style('border-color');
+            console.log(`   Применённый border-color: ${computedBorderColor}`);
+
+            console.log('✅ Статус успешно обновлён');
+        } catch (e) {
+            console.error('❌ Ошибка в обработчике device_status:', e);
         }
     });
+
     cy = cytoscape({
         container: document.getElementById('cy'),
         elements: [],
@@ -298,15 +328,18 @@ function initMap(mapId) {
         wheelSensitivity: 0.5,
         fit: false
     });
+
     cy.on('pan zoom', () => {
         updateBackgroundTransform();
         enforcePanBounds();
         saveViewportToServer();
     });
+
     const deviceModalEl = document.getElementById('deviceModal');
     if (deviceModalEl && !deviceModal) {
         deviceModal = new bootstrap.Modal(deviceModalEl);
     }
+
     const linkModalEl = document.getElementById('linkModal');
     if (linkModalEl && !linkModal) {
         linkModal = new bootstrap.Modal(linkModalEl);
@@ -315,6 +348,7 @@ function initMap(mapId) {
             if (el) el.addEventListener('input', updateLinkPreview);
         });
     }
+
     const bgEl = document.getElementById('cy-background');
     if (bgEl && bgEl.dataset.background) {
         loadBackground(bgEl.dataset.background);
@@ -322,8 +356,10 @@ function initMap(mapId) {
         backgroundLoaded = true;
         checkReadyAndFit();
     }
+
     loadElements(mapId);
     loadDeviceTypes();
+
     window.addEventListener('resize', () => {
         if (cy) {
             cy.resize();
@@ -331,6 +367,7 @@ function initMap(mapId) {
             enforcePanBounds();
         }
     });
+
     cy.on('dragfree', 'node', function(evt) {
         const node = evt.target;
         let pos = node.position();
@@ -348,9 +385,11 @@ function initMap(mapId) {
             });
         }, 500);
     });
+
     cy.on('drag', 'node', function(evt) {
         evt.target._private.scratch._dragStartPos = evt.target.position();
     });
+
     cy.on('dragfree', 'node:selected', function(evt) {
         const selectedNodes = cy.nodes(':selected');
         if (selectedNodes.length <= 1) return;
@@ -375,6 +414,7 @@ function initMap(mapId) {
             });
         }, 500);
     });
+
     cy.on('tap', 'node', function(evt) {
         const node = evt.target;
         if (linkMode) {
@@ -393,6 +433,7 @@ function initMap(mapId) {
         if (currentMode !== 'select') cy.nodes().selected(false);
         node.selected(true);
     });
+
     cy.on('dbltap', 'node', function(evt) { openDeviceModal(evt.target); });
     cy.on('tap', 'edge', function(evt) {
         if (currentMode !== 'select') cy.edges().selected(false);
@@ -403,6 +444,7 @@ function initMap(mapId) {
         if (event.target === cy && linkMode) resetLinkMode();
         if (event.target === cy) cy.elements().deselect();
     });
+
     setMode('pan');
 }
 
@@ -579,8 +621,8 @@ function openDeviceModal(node) {
         devName.value = node.data('name') || '';
         devIp.value = node.data('ip') || '';
         fetch(`/api/device/${node.id()}`)
-            .then(res => res.ok ? res.json() : null)
-            .then(data => { if (data && devType) devType.value = data.type_id; });
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { if (data && devType) devType.value = data.type_id; });
         if (deleteBtn) {
             deleteBtn.style.display = 'inline-block';
             deleteBtn.onclick = () => deleteDevice(node.id());
@@ -736,15 +778,12 @@ function deleteLink(linkId) {
     .then(res => res.ok ? location.reload() : alert('❌ Ошибка'));
 }
 
+// ✅ Сброс всех inline-стилей
 function resetLinkMode() {
     linkMode = false;
     if (sourceNode && cy) {
-        const status = sourceNode.data('status');
-        sourceNode.style({
-            'border-color': status !== 'false' ? '#28a745' : '#dc3545',
-            'border-style': status !== 'false' ? 'solid' : 'dashed',
-            'border-width': 3
-        });
+        // Удаляем все inline-стили, возвращая управление таблице стилей
+        sourceNode.style({});
     }
     sourceNode = null;
     document.body.style.cursor = 'default';
