@@ -1,7 +1,6 @@
 // ============================================================================
-// WebNetMap Pro - Карта сети (ИСПРАВЛЕНИЕ: ЗАГРУЗКА + ЛЕЙБЛЫ)
+// WebNetMap Pro - Карта сети
 // ============================================================================
-
 let cy = null;
 let deviceModal = null;
 let linkModal = null;
@@ -14,8 +13,8 @@ let bgImageWidth = null;
 let bgImageHeight = null;
 let viewportTimeout = null;
 let pendingFit = false;
-let elementsLoaded = false; // Флаг: элементы загружены
-let backgroundLoaded = false; // Флаг: фон загружен
+let elementsLoaded = false;
+let backgroundLoaded = false;
 
 function getMapId() {
     return window.currentMapId;
@@ -25,22 +24,14 @@ function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
 }
 
-// ============================================================================
-// ОГРАНИЧЕНИЕ ПАНОРАМИРОВАНИЯ
-// ============================================================================
-
 function enforcePanBounds() {
     if (!cy || !bgImageWidth || !bgImageHeight) return;
-
     const zoom = cy.zoom();
     const containerWidth = cy.width();
     const containerHeight = cy.height();
-
     const scaledImgWidth = bgImageWidth * zoom;
     const scaledImgHeight = bgImageHeight * zoom;
-
     let minPanX, maxPanX, minPanY, maxPanY;
-
     if (scaledImgWidth > containerWidth) {
         minPanX = containerWidth - scaledImgWidth;
         maxPanX = 0;
@@ -48,7 +39,6 @@ function enforcePanBounds() {
         minPanX = (containerWidth - scaledImgWidth) / 2;
         maxPanX = (containerWidth - scaledImgWidth) / 2;
     }
-
     if (scaledImgHeight > containerHeight) {
         minPanY = containerHeight - scaledImgHeight;
         maxPanY = 0;
@@ -56,23 +46,16 @@ function enforcePanBounds() {
         minPanY = (containerHeight - scaledImgHeight) / 2;
         maxPanY = (containerHeight - scaledImgHeight) / 2;
     }
-
     const currentPan = cy.pan();
     const newPanX = clamp(currentPan.x, minPanX, maxPanX);
     const newPanY = clamp(currentPan.y, minPanY, maxPanY);
-
     if (Math.abs(newPanX - currentPan.x) > 0.5 || Math.abs(newPanY - currentPan.y) > 0.5) {
         cy.pan({ x: newPanX, y: newPanY });
     }
 }
 
-// ============================================================================
-// ОГРАНИЧЕНИЕ ПОЗИЦИИ УЗЛА
-// ============================================================================
-
 function boundNodePosition(pos) {
     if (!bgImageWidth || !bgImageHeight) return pos;
-
     const margin = 30;
     return {
         x: clamp(pos.x, margin, bgImageWidth - margin),
@@ -80,40 +63,26 @@ function boundNodePosition(pos) {
     };
 }
 
-// ============================================================================
-// ПОДГОНКА ИЗОБРАЖЕНИЯ (вызывается когда всё готово)
-// ============================================================================
-
 function fitImageToView() {
     if (!cy || !bgImageWidth || !bgImageHeight) return;
-
     const container = document.getElementById('cy').getBoundingClientRect();
     const containerW = container.width;
     const containerH = container.height;
-
     const zoom = Math.min(containerW / bgImageWidth, containerH / bgImageHeight) * 0.95;
     const panX = (containerW / zoom - bgImageWidth) / 2;
     const panY = (containerH / zoom - bgImageHeight) / 2;
-
     cy.viewport({ pan: { x: panX, y: panY }, zoom: zoom });
     updateBackgroundTransform();
     enforcePanBounds();
-
     console.log('📐 Изображение подогнано:', zoom.toFixed(2), 'pan:', panX.toFixed(0), panY.toFixed(0));
 }
 
-// ============================================================================
-// ПРОВЕРКА ГОТОВНОСТИ (фон + элементы)
-// ============================================================================
-
 function checkReadyAndFit() {
     if (backgroundLoaded && elementsLoaded && !pendingFit) {
-        // Проверяем, есть ли сохранённый viewport
         const cyEl = document.getElementById('cy');
         const panX = parseFloat(cyEl.dataset.panX) || 0;
         const panY = parseFloat(cyEl.dataset.panY) || 0;
         const zoom = parseFloat(cyEl.dataset.zoom) || 1;
-
         if (panX !== 0 || panY !== 0 || zoom !== 1) {
             cy.viewport({ pan: { x: panX, y: panY }, zoom: zoom });
             console.log('🖼️ Viewport восстановлен из БД');
@@ -125,67 +94,71 @@ function checkReadyAndFit() {
     }
 }
 
-// ============================================================================
-// ИНИЦИАЛИЗАЦИЯ КАРТЫ
-// ============================================================================
-
 function initMap(mapId) {
     console.log('🗺️ Инициализация карты:', mapId);
-
     if (!socket) {
         socket = io();
+        socket.on('connect_error', (error) => {
+            console.error('❌ Socket connection error:', error);
+        });
+        socket.on('disconnect', (reason) => {
+            console.warn('⚠️ Socket disconnected:', reason);
+            setTimeout(() => {
+                console.log('🔄 Попытка переподключения...');
+                socket.connect();
+            }, 3000);
+        });
+        socket.on('reconnect', (attemptNumber) => {
+            console.log('✅ Socket reconnected after', attemptNumber, 'attempts');
+            socket.emit('join_room', `map_${mapId}`);
+        });
     }
     socket.onAny((event, ...args) => {
         console.log(`📨 Событие сокета: ${event}`, args);
     });
     socket.on('connect', () => {
         console.log('✅ Socket connected');
-        socket.emit('join_room', `map_${mapId}`);
+        const roomName = `map_${mapId}`;
+        console.log('🚪 Присоединяемся к комнате:', roomName);
+        socket.emit('join_room', roomName);
     });
-
-socket.on('device_status', (data) => {
-    console.log('📡 Получен device_status:', data);
-    if (data.map_id === mapId && cy) {
-        const node = cy.getElementById(String(data.id));
-        if (node.length) {
-            // Обновляем данные статуса (для будущих селекторов)
-            node.data('status', data.status ? 'true' : 'false');
-
-            // Принудительно применяем стили в зависимости от наличия иконки
-            if (node.data('iconUrl')) {
-                // Узлы с иконкой
-                node.style({
-                    'border-color': data.status ? '#28a745' : '#dc3545',
-                    'border-style': data.status ? 'solid' : 'dashed',
-                    'opacity': data.status ? 1 : 0.85
+    socket.on('device_status', (data) => {
+        console.log('📡 Получен device_status:', data);
+        if (Number(data.map_id) === Number(mapId) && cy) {
+            const node = cy.getElementById(String(data.id));
+            if (node.length) {
+                const statusValue = data.status ? 'true' : 'false';
+                node.data('status', statusValue);
+                console.log('🔄 Узел:', node.data('name'), 'Статус:', statusValue);
+                if (node.data('iconUrl')) {
+                    node.style({
+                        'border-color': data.status ? '#28a745' : '#dc3545',
+                        'border-style': data.status ? 'solid' : 'dashed',
+                        'opacity': data.status ? 1 : 0.85
+                    });
+                } else {
+                    node.style({
+                        'background-color': data.status ? '#d4edda' : '#f8d7da',
+                        'border-color': data.status ? '#28a745' : '#dc3545',
+                        'border-style': data.status ? 'solid' : 'dashed',
+                        'color': data.status ? '#155724' : '#721c24'
+                    });
+                }
+                cy.style().update();
+                if (typeof pulseNode === 'function') {
+                    pulseNode(node);
+                }
+                console.log('✅ Применено:', {
+                    'border-color': node.style('border-color'),
+                    'border-style': node.style('border-style')
                 });
-            } else {
-                // Узлы без иконки
-                node.style({
-                    'background-color': data.status ? '#d4edda' : '#f8d7da',
-                    'border-color': data.status ? '#28a745' : '#dc3545',
-                    'border-style': data.status ? 'solid' : 'dashed',
-                    'color': data.status ? '#155724' : '#721c24'
-                });
-            }
-
-            // Пересчитываем все стили для согласованности
-            cy.style().update();
-
-            // Пульсация (если функция определена)
-            if (typeof pulseNode === 'function') {
-                pulseNode(node);
             }
         }
-    }
-});
-
-    // === Cytoscape инициализация ===
+    });
     cy = cytoscape({
         container: document.getElementById('cy'),
         elements: [],
         style: [
-            // Узлы с иконкой
             {
                 selector: 'node[iconUrl][iconUrl != ""]',
                 style: {
@@ -200,7 +173,6 @@ socket.on('device_status', (data) => {
                     'border-width': 3,
                     'border-color': '#28a745',
                     'border-style': 'solid',
-                    // Имя устройства
                     'label': function(node) {
                         return node.data('name') + '\n' + (node.data('ip') || '');
                     },
@@ -217,18 +189,24 @@ socket.on('device_status', (data) => {
                     'text-background-shape': 'roundrectangle'
                 }
             },
-            // Узлы с иконкой + статус DOWN
             {
-                selector: 'node[iconUrl][iconUrl != ""][status = "false"]',
+                selector: 'node[iconUrl][iconUrl != ""][status="true"]',
+                style: {
+                    'border-color': '#28a745',
+                    'border-style': 'solid',
+                    'opacity': 1
+                }
+            },
+            {
+                selector: 'node[iconUrl][iconUrl != ""][status="false"]',
                 style: {
                     'border-color': '#dc3545',
                     'border-style': 'dashed',
                     'opacity': 0.85
                 }
             },
-            // Узлы без иконки + статус UP
             {
-                selector: 'node[!iconUrl][status = "true"], node[iconUrl = ""][status = "true"]',
+                selector: 'node[!iconUrl][status="true"], node[iconUrl=""][status="true"]',
                 style: {
                     'shape': 'round-rectangle',
                     'width': 60,
@@ -237,11 +215,9 @@ socket.on('device_status', (data) => {
                     'border-width': 3,
                     'border-color': '#28a745',
                     'border-style': 'solid',
-                    // Имя + IP адрес (разделены переносом строки)
-                    // 'label': 'data(name) "\A" data(ip)',
                     'label': function(node) {
                         return node.data('name') + '\n' + (node.data('ip') || '');
-                        },
+                    },
                     'text-wrap': 'wrap',
                     'text-max-width': '70px',
                     'font-size': '10px',
@@ -255,9 +231,8 @@ socket.on('device_status', (data) => {
                     'text-background-shape': 'roundrectangle'
                 }
             },
-            // Узлы без иконки + статус DOWN
             {
-                selector: 'node[!iconUrl][status = "false"], node[iconUrl = ""][status = "false"]',
+                selector: 'node[!iconUrl][status="false"], node[iconUrl=""][status="false"]',
                 style: {
                     'shape': 'round-rectangle',
                     'width': 60,
@@ -266,7 +241,6 @@ socket.on('device_status', (data) => {
                     'border-width': 3,
                     'border-color': '#dc3545',
                     'border-style': 'dashed',
-                    //'label': 'data(name) "\A" data(ip)',
                     'label': function(node) {
                         return node.data('name') + '\n' + (node.data('ip') || '');
                     },
@@ -284,7 +258,6 @@ socket.on('device_status', (data) => {
                     'opacity': 0.9
                 }
             },
-            // Выделение
             {
                 selector: 'node:selected',
                 style: {
@@ -293,7 +266,6 @@ socket.on('device_status', (data) => {
                     'background-color': 'rgba(0,123,255,0.1)'
                 }
             },
-            // Связи
             {
                 selector: 'edge',
                 style: {
@@ -326,20 +298,15 @@ socket.on('device_status', (data) => {
         wheelSensitivity: 0.5,
         fit: false
     });
-
-    // Подписка на pan/zoom
     cy.on('pan zoom', () => {
         updateBackgroundTransform();
         enforcePanBounds();
         saveViewportToServer();
     });
-
-    // Модальные окна
     const deviceModalEl = document.getElementById('deviceModal');
     if (deviceModalEl && !deviceModal) {
         deviceModal = new bootstrap.Modal(deviceModalEl);
     }
-
     const linkModalEl = document.getElementById('linkModal');
     if (linkModalEl && !linkModal) {
         linkModal = new bootstrap.Modal(linkModalEl);
@@ -348,22 +315,15 @@ socket.on('device_status', (data) => {
             if (el) el.addEventListener('input', updateLinkPreview);
         });
     }
-
-    // Загрузка фона
     const bgEl = document.getElementById('cy-background');
     if (bgEl && bgEl.dataset.background) {
         loadBackground(bgEl.dataset.background);
     } else {
-        // Фона нет - считаем что фон "загружен"
         backgroundLoaded = true;
         checkReadyAndFit();
     }
-
-    // Загрузка элементов
     loadElements(mapId);
     loadDeviceTypes();
-
-    // Resize
     window.addEventListener('resize', () => {
         if (cy) {
             cy.resize();
@@ -371,18 +331,14 @@ socket.on('device_status', (data) => {
             enforcePanBounds();
         }
     });
-
-    // Drag & Drop с ограничением
     cy.on('dragfree', 'node', function(evt) {
         const node = evt.target;
         let pos = node.position();
-
         const boundedPos = boundNodePosition(pos);
         if (boundedPos.x !== pos.x || boundedPos.y !== pos.y) {
             node.position(boundedPos);
             pos = boundedPos;
         }
-
         clearTimeout(dragTimeout);
         dragTimeout = setTimeout(() => {
             fetch(`/api/device/${node.id()}/position`, {
@@ -392,22 +348,17 @@ socket.on('device_status', (data) => {
             });
         }, 500);
     });
-
-    // Групповое перемещение
     cy.on('drag', 'node', function(evt) {
         evt.target._private.scratch._dragStartPos = evt.target.position();
     });
-
     cy.on('dragfree', 'node:selected', function(evt) {
         const selectedNodes = cy.nodes(':selected');
         if (selectedNodes.length <= 1) return;
-
         const draggedNode = evt.target;
         const oldPos = draggedNode._private.scratch._dragStartPos || draggedNode.position();
         const newPos = draggedNode.position();
         const deltaX = newPos.x - oldPos.x;
         const deltaY = newPos.y - oldPos.y;
-
         clearTimeout(dragTimeout);
         dragTimeout = setTimeout(() => {
             selectedNodes.forEach(node => {
@@ -415,7 +366,6 @@ socket.on('device_status', (data) => {
                     const nodePos = node.position();
                     const boundedPos = boundNodePosition({ x: nodePos.x + deltaX, y: nodePos.y + deltaY });
                     node.position(boundedPos);
-
                     fetch(`/api/device/${node.id()}/position`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -425,8 +375,6 @@ socket.on('device_status', (data) => {
             });
         }, 500);
     });
-
-    // Клик по узлу
     cy.on('tap', 'node', function(evt) {
         const node = evt.target;
         if (linkMode) {
@@ -445,27 +393,18 @@ socket.on('device_status', (data) => {
         if (currentMode !== 'select') cy.nodes().selected(false);
         node.selected(true);
     });
-
     cy.on('dbltap', 'node', function(evt) { openDeviceModal(evt.target); });
-
     cy.on('tap', 'edge', function(evt) {
         if (currentMode !== 'select') cy.edges().selected(false);
         evt.target.selected(true);
     });
-
     cy.on('dbltap', 'edge', function(evt) { openLinkModalForEdit(evt.target); });
-
     cy.on('tap', function(event) {
         if (event.target === cy && linkMode) resetLinkMode();
         if (event.target === cy) cy.elements().deselect();
     });
-
     setMode('pan');
 }
-
-// ============================================================================
-// ЗАГРУЗКА ФОНА
-// ============================================================================
 
 function loadBackground(bgUrl) {
     if (!bgUrl) {
@@ -473,12 +412,10 @@ function loadBackground(bgUrl) {
         checkReadyAndFit();
         return;
     }
-
     const img = new Image();
     img.onload = () => {
         bgImageWidth = img.naturalWidth;
         bgImageHeight = img.naturalHeight;
-
         const bgEl = document.getElementById('cy-background');
         if (bgEl) {
             bgEl.style.backgroundImage = `url(/static/uploads/maps/${bgUrl})`;
@@ -487,49 +424,33 @@ function loadBackground(bgUrl) {
             bgEl.style.height = `${bgImageHeight}px`;
             bgEl.classList.add('has-image');
         }
-
         backgroundLoaded = true;
         console.log('🖼️ Фон загружен:', bgImageWidth, 'x', bgImageHeight);
-
         checkReadyAndFit();
     };
-
     img.onerror = () => {
         console.error('❌ Не удалось загрузить фон');
         backgroundLoaded = true;
         checkReadyAndFit();
     };
-
     img.src = `/static/uploads/maps/${bgUrl}`;
 }
-
-// ============================================================================
-// УПРАВЛЕНИЕ ФОНОМ
-// ============================================================================
 
 function updateBackgroundTransform() {
     if (!cy) return;
     const bgEl = document.getElementById('cy-background');
     if (!bgEl) return;
-
     if (!bgImageWidth || !bgImageHeight) {
         bgEl.style.transform = 'none';
         return;
     }
-
     const pan = cy.pan();
     const zoom = cy.zoom();
-
     const x = pan.x;
     const y = pan.y;
-
     bgEl.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
     bgEl.style.transformOrigin = '0 0';
 }
-
-// ============================================================================
-// ЗАГРУЗКА ЭЛЕМЕНТОВ
-// ============================================================================
 
 function loadElements(mapId) {
     fetch(`/api/map/${mapId}/elements`)
@@ -539,14 +460,11 @@ function loadElements(mapId) {
     })
     .then(data => {
         if (!cy) return;
-
         const validNodes = data.nodes.filter(n => n.data && n.data.id);
         const validEdges = data.edges.filter(e =>
             e.data && e.data.source && e.data.target &&
             e.data.source !== 'None' && e.data.target !== 'None'
         );
-
-        // Ограничиваем позиции при загрузке
         if (bgImageWidth && bgImageHeight) {
             validNodes.forEach(n => {
                 if (n.data.x !== undefined && n.data.y !== undefined) {
@@ -556,10 +474,8 @@ function loadElements(mapId) {
                 }
             });
         }
-
         cy.add(validNodes);
         cy.add(validEdges);
-
         const layout = cy.layout({ name: 'preset' });
         layout.one('layoutstop', () => {
             elementsLoaded = true;
@@ -567,8 +483,6 @@ function loadElements(mapId) {
             checkReadyAndFit();
         });
         layout.run();
-
-        // Загрузка иконок
         validNodes.forEach(n => {
             if (n.data.iconUrl && n.data.iconUrl !== '') {
                 const img = new Image();
@@ -583,17 +497,13 @@ function loadElements(mapId) {
     });
 }
 
-// ============================================================================
-// ЗАГРУЗКА ТИПОВ УСТРОЙСТВ
-// ============================================================================
-
 function loadDeviceTypes() {
     fetch('/api/types')
     .then(res => res.ok ? res.json() : Promise.reject())
     .then(types => {
         const select = document.getElementById('dev_type');
         if (!select) return;
-        select.innerHTML = '<option value="">-- Выберите тип --</option>';
+        select.innerHTML = '-- Выберите тип --';
         types.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
@@ -603,10 +513,6 @@ function loadDeviceTypes() {
     })
     .catch(err => console.error('❌ Ошибка типов:', err));
 }
-
-// ============================================================================
-// СОХРАНЕНИЕ VIEWPORT
-// ============================================================================
 
 function saveViewportToServer() {
     if (!cy) return;
@@ -638,38 +544,21 @@ function updateMapBackground(background) {
         checkReadyAndFit();
     }
 }
-// ============================================================================
-// ПУЛЬСАЦИЯ УЗЛА ПРИ ИЗМЕНЕНИИ СТАТУСА (через overlay)
-// ============================================================================
+
 function pulseNode(node) {
     if (!node) return;
-
-    // Сохраняем текущие значения overlay (по умолчанию 0)
-    const originalOverlayOpacity = node.style('overlay-opacity');
-    const originalOverlayPadding = node.style('overlay-padding');
-    const originalOverlayColor = node.style('overlay-color');
-
-    // Устанавливаем яркий overlay
     node.style({
         'overlay-color': '#ffff00',
         'overlay-opacity': 0.6,
-        'overlay-padding': '10px',
-        'transition': 'overlay-opacity 0.1s, overlay-padding 0.1s'
+        'overlay-padding': '10px'
     });
-
-    // Через 200 мс возвращаем исходные значения (скрываем overlay)
     setTimeout(() => {
         node.style({
-            'overlay-opacity': originalOverlayOpacity,
-            'overlay-padding': originalOverlayPadding,
-            'overlay-color': originalOverlayColor,
-            'transition': ''
+            'overlay-opacity': 0,
+            'overlay-padding': '0px'
         });
     }, 200);
 }
-// ============================================================================
-// МОДАЛКИ И УПРАВЛЕНИЕ
-// ============================================================================
 
 function openDeviceModal(node) {
     if (!deviceModal) {
@@ -684,7 +573,6 @@ function openDeviceModal(node) {
     const devIp = document.getElementById('dev_ip');
     const devType = document.getElementById('dev_type');
     const deleteBtn = document.getElementById('deleteDeviceBtn');
-
     if (node) {
         title.textContent = 'Редактировать устройство';
         devId.value = node.id();
@@ -713,12 +601,9 @@ function saveDevice() {
     const name = document.getElementById('dev_name').value;
     const ip = document.getElementById('dev_ip').value;
     const type_id = document.getElementById('dev_type').value;
-
     if (!name) { alert('⚠️ Введите имя'); return; }
     if (!type_id) { alert('⚠️ Выберите тип'); return; }
-
     const body = { name, ip_address: ip, type_id: parseInt(type_id) };
-
     if (id) {
         fetch(`/api/device/${id}`, {
             method: 'PUT',
@@ -793,10 +678,8 @@ function confirmCreateLink() {
     const tgt = document.getElementById('link_target')?.value;
     const srcIface = document.getElementById('link_src_iface')?.value || 'eth0';
     const tgtIface = document.getElementById('link_tgt_iface')?.value || 'eth0';
-
     if (!src || !tgt) { alert('⚠️ Ошибка: не выбраны устройства'); return; }
     if (linkModal) linkModal.hide();
-
     if (linkId) {
         updateLink(linkId, srcIface, tgtIface);
     } else {
@@ -807,9 +690,7 @@ function confirmCreateLink() {
 function createLinkWithInterfaces(src, tgt, srcIface, tgtIface) {
     const sourceId = typeof src === 'number' ? src : parseInt(src);
     const targetId = typeof tgt === 'number' ? tgt : parseInt(tgt);
-
     if (isNaN(sourceId) || isNaN(targetId)) { alert('⚠️ Ошибка: неверные ID'); return; }
-
     fetch('/api/link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -891,10 +772,8 @@ function setMode(mode) {
     currentMode = mode;
     const panBtn = document.getElementById('panMode');
     const selectBtn = document.getElementById('selectMode');
-
     if (panBtn) panBtn.classList.toggle('active', mode === 'pan');
     if (selectBtn) selectBtn.classList.toggle('active', mode === 'select');
-
     if (cy) {
         if (mode === 'select') {
             cy.boxSelectionEnabled(true);
