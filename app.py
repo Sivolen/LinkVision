@@ -10,12 +10,10 @@ from blueprints.api import api_bp
 from monitor import init_monitor, start_monitor
 import os
 
-
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
     init_extensions(app)
 
     app.register_blueprint(auth_bp)
@@ -46,8 +44,7 @@ def create_app():
             db.session.commit()
             print("✅ Admin created: admin / admin")
 
-    # Инициализируем монитор с приложением
-    init_monitor(app)
+        init_monitor(app)
 
     @socketio.on('join_room')
     def handle_join_room(room):
@@ -62,7 +59,6 @@ def create_app():
     def handle_disconnect():
         print(f"❌ Клиент отключился: {request.sid}")
 
-    # ✅ start_monitor() вызывается ПОСЛЕ создания app
     start_monitor()
 
     @app.route('/static/uploads/maps/<path:filename>')
@@ -79,9 +75,8 @@ def create_app():
 
     return app
 
-
 if __name__ == '__main__':
     os.makedirs('static/uploads/icons', exist_ok=True)
     app = create_app()
-    # ✅ Запуск через socketio.run() для корректной работы веб-сокетов
-    socketio.run(app, debug=True, port=5000, allow_unsafe_werkzeug=True)
+    # ✅ Отключаем reloader, чтобы избежать двух процессов мониторинга
+    socketio.run(app, debug=True, use_reloader=False, port=5000, allow_unsafe_werkzeug=True)
