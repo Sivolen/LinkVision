@@ -3,7 +3,7 @@ import os
 from flask import Blueprint, render_template, redirect, url_for, request, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
-from models import Map
+from models import Map, Device
 
 main_bp = Blueprint('main', __name__)
 
@@ -48,17 +48,21 @@ def map_view(map_id):
 @main_bp.route('/api/sidebar-maps')
 @login_required
 def get_sidebar_maps():
-    """API для загрузки карт в сайдбар"""
     if current_user.is_admin:
         maps = Map.query.all()
     else:
         maps = Map.query.filter_by(owner_id=current_user.id).all()
 
-    return jsonify([{
-        'id': m.id,
-        'name': m.name,
-        'owner_id': m.owner_id
-    } for m in maps])
+    result = []
+    for m in maps:
+        down_count = Device.query.filter_by(map_id=m.id, status=False).count()
+        result.append({
+            'id': m.id,
+            'name': m.name,
+            'owner_id': m.owner_id,
+            'down_count': down_count
+        })
+    return jsonify(result)
 
 
 @main_bp.route('/api/map/<int:map_id>', methods=['DELETE'])

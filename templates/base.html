@@ -240,15 +240,11 @@
                     const list = document.getElementById('sidebarMapList');
                     if (!list) return;
 
-                    // ID текущего пользователя (передаётся из шаблона)
                     const currentUserId = {{ current_user.id if current_user.is_authenticated else 0 }};
-
                     list.innerHTML = '';
+
                     maps.forEach(map => {
                         const isActive = window.currentMapId && window.currentMapId == map.id;
-                        const li = document.createElement('li');
-
-                        // Кнопки действий (только для владельца)
                         let actionsHtml = '';
                         if (map.owner_id == currentUserId) {
                             actionsHtml = `
@@ -261,11 +257,17 @@
                             `;
                         }
 
+                        const badgeHtml = map.down_count > 0 ? `<span class="badge bg-danger">${map.down_count}</span>` : '';
+
+                        const li = document.createElement('li');
                         li.innerHTML = `
                             <a href="/map/${map.id}" class="map-item ${isActive ? 'active' : ''}">
                                 <span class="map-item-icon"><i class="fas fa-map-marked-alt"></i></span>
                                 <span class="map-item-name">${map.name}</span>
-                                <div class="map-item-actions">${actionsHtml}</div>
+                                <div class="map-item-right">
+                                    <div class="map-item-actions">${actionsHtml}</div>
+                                    ${badgeHtml}
+                                </div>
                             </a>
                         `;
                         list.appendChild(li);
