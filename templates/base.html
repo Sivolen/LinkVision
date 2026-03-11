@@ -337,7 +337,7 @@
 
                 // Если текущая карта открыта, обновить фон
                 if (window.currentMapId == mapId) {
-                    applyMapBackground(data.background);
+                    updateMapBackground(data.background);
                 }
 
                 bootstrap.Modal.getInstance(document.getElementById('editMapModal')).hide();

@@ -134,13 +134,29 @@ def manage_device(id):
         return jsonify({'status': 'ok', 'id': device.id})
 
 
+# В api.py, внутри @api_bp.route('/device/<int:id>/position', methods=['PUT'])
 @api_bp.route('/device/<int:id>/position', methods=['PUT'])
 @login_required
 def update_position(id):
     dev = Device.query.get_or_404(id)
     data = request.json
+
+    # Получаем размеры фона, если он есть
+    max_x = None
+    max_y = None
+    if dev.map.background_image:
+        # Здесь можно кэшировать размеры или читать из метаданных
+        # Для простоты пока пропускаем, ограничение на клиенте (JS) основное
+        pass
+
+    # Применяем координаты
     dev.pos_x = data['x']
     dev.pos_y = data['y']
+
+    # Опционально: проверка на отрицательные значения
+    if dev.pos_x < 0: dev.pos_x = 0
+    if dev.pos_y < 0: dev.pos_y = 0
+
     db.session.commit()
     return jsonify({'status': 'ok'})
 
@@ -319,10 +335,20 @@ def update_viewport(id):
     map_obj = Map.query.get_or_404(id)
     if not current_user.is_admin and map_obj.owner_id != current_user.id:
         return jsonify({'error': 'Доступ запрещён'}), 403
-
     data = request.json
     map_obj.pan_x = data.get('pan_x', 0)
     map_obj.pan_y = data.get('pan_y', 0)
     map_obj.zoom = data.get('zoom', 1)
     db.session.commit()
     return jsonify({'status': 'ok'})
+
+@api_bp.route('/test_emit/<int:device_id>/<int:status>')
+def test_emit(device_id, status):
+    from extensions import socketio
+    print(f"📤 Тестовая отправка device_status: id={device_id}, status={bool(status)}, map_id=1")
+    socketio.emit('device_status', {
+        'id': device_id,
+        'status': False,
+        'map_id': 1
+    })
+    return 'ok'

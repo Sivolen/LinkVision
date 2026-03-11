@@ -38,12 +38,13 @@
         </button>
     </div>
 </div>
-
-<div id="cy"
-     data-pan-x="{{ map.pan_x or 0 }}"
-     data-pan-y="{{ map.pan_y or 0 }}"
-     data-zoom="{{ map.zoom or 1 }}"
-     data-background="{{ map.background_image or '' }}">
+<div class="map-container">
+    <div id="cy-background" class="cy-background"
+         data-background="{{ map.background_image or '' }}"></div>
+    <div id="cy" class="cy-canvas"
+         data-pan-x="{{ map.pan_x or 0 }}"
+         data-pan-y="{{ map.pan_y or 0 }}"
+         data-zoom="{{ map.zoom or 1 }}"></div>
 </div>
 <!-- Модальное окно устройства -->
 <div class="modal fade" id="deviceModal" tabindex="-1">
