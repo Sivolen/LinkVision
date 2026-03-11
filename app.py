@@ -1,6 +1,5 @@
-from flask import Flask
+from flask import Flask, request
 from flask_socketio import join_room
-
 from config import Config
 from extensions import db, login_manager, socketio, init_extensions
 from models import User, Map, DeviceType, Settings, Device
@@ -15,7 +14,6 @@ import os
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     init_extensions(app)
@@ -50,35 +48,40 @@ def create_app():
 
     # Инициализируем монитор с приложением
     init_monitor(app)
+
     @socketio.on('join_room')
     def handle_join_room(room):
         join_room(room)
         print(f"✅ Клиент присоединился к комнате {room}")
+
+    @socketio.on('connect')
+    def handle_connect():
+        print(f"✅ Клиент подключился: {request.sid}")
+
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        print(f"❌ Клиент отключился: {request.sid}")
+
+    # ✅ start_monitor() вызывается ПОСЛЕ создания app
     start_monitor()
 
     @app.route('/static/uploads/maps/<path:filename>')
     def serve_map_background(filename):
-        """Раздача фоновых изображений карт"""
         from flask import send_from_directory
-        import os
         maps_dir = os.path.join(app.root_path, 'static', 'uploads', 'maps')
         return send_from_directory(maps_dir, filename)
 
-
     @app.route('/static/uploads/icons/<path:filename>')
     def serve_icon(filename):
-        """Явная раздача иконок устройств в обход стандартного static"""
         from flask import send_from_directory
-        import os
-        # Указываем абсолютный путь к папке с иконками
         icons_dir = os.path.join(app.root_path, 'static', 'uploads', 'icons')
         return send_from_directory(icons_dir, filename)
-    # =====================================================
+
     return app
 
 
 if __name__ == '__main__':
     os.makedirs('static/uploads/icons', exist_ok=True)
     app = create_app()
-    # Убран параметр allow_unsafe_werkzeug (не совместим с eventlet)
-    socketio.run(app, debug=True, port=5000)
+    # ✅ Запуск через socketio.run() для корректной работы веб-сокетов
+    socketio.run(app, debug=True, port=5000, allow_unsafe_werkzeug=True)
