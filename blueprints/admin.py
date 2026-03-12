@@ -146,3 +146,28 @@ def delete_type(id):
     db.session.commit()
     flash('Тип устройства удалён')
     return redirect(url_for('admin.types'))
+
+
+@admin_bp.route('/users/edit/<int:id>', methods=['GET', 'POST'])
+def edit_user(id):
+    user = User.query.get_or_404(id)
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        is_admin = request.form.get('is_admin') == 'on'
+
+        if username:
+            # Проверяем уникальность имени, если оно меняется
+            if username != user.username and User.query.filter_by(username=username).first():
+                flash('Пользователь с таким именем уже существует')
+                return redirect(url_for('admin.edit_user', id=id))
+            user.username = username
+        if password:  # Если пароль введён, обновляем
+            user.set_password(password)
+        user.is_admin = is_admin
+        db.session.commit()
+        flash('Пользователь обновлён')
+        return redirect(url_for('admin.users'))
+
+    # GET-запрос — передаём данные пользователя в шаблон
+    return render_template('admin/users.html', edit_user=user, users=User.query.all())
