@@ -4,48 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Link Vision</title>
-<!--    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">-->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
-<!--    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">-->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <!-- Фавиконки (локальные, из папки static/images/) -->
+    <!-- Фавиконки -->
     <link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='images/favicon-96x96.png') }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
-
-    <!-- Manifest (если файл site.webmanifest лежит в static/images/ или в корне static) -->
     <link rel="manifest" href="{{ url_for('static', filename='images/site.webmanifest') }}">
-    <!-- Если файл лежит в корне static, используйте: -->
-    <!-- <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}"> -->
 </head>
 <body>
     <!-- ====================================================================
-         САЙДБАР
+         САЙДБАР (только для авторизованных)
          ==================================================================== -->
     {% if current_user.is_authenticated %}
     <nav class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h4 class="sidebar-logo">
-                    <img src="{{ url_for('static', filename='images/logo_small.png') }}" alt="LinkVision">
-                    <span class="logo-text">LinkVision</span>
-                </h4>
-                <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
-                    <i class="fas fa-bars"></i>
-                </button>
-            </div>
-            {% if current_user.is_authenticated %}
-            <div class="sidebar-user">
-                <i class="fas fa-user-circle"></i> <span>{{ current_user.username }}</span>
-                {% if current_user.is_admin %}
-                <span class="badge bg-warning text-dark ms-2">Admin</span>
-                {% endif %}
-            </div>
+        <div class="sidebar-header">
+            <h4 class="sidebar-logo">
+                <img src="{{ url_for('static', filename='images/logo_small.png') }}" alt="LinkVision">
+                <span class="logo-text">LinkVision</span>
+            </h4>
+            <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        <div class="sidebar-user">
+            <i class="fas fa-user-circle"></i> <span>{{ current_user.username }}</span>
+            {% if current_user.is_admin %}
+            <span class="badge bg-warning text-dark ms-2">Admin</span>
             {% endif %}
         </div>
 
-        {% if current_user.is_authenticated %}
         <div class="sidebar-maps">
             <h5><i class="fas fa-map"></i> <span>Карты</span></h5>
             <ul class="map-list" id="sidebarMapList">
@@ -78,20 +68,21 @@
                     <i class="fas fa-cog"></i> <span>Настройки</span>
                 </a>
             </div>
-            <div class="status-indicator">
-    <div class="status-dot" id="backend-status-dot"></div>
-    <span id="backend-status-text">Проверка...</span>
-    <span class="version-badge">v{{ app_version }}</span>
-</div>
             {% endif %}
+            <!-- Индикатор состояния бэкенда и версия -->
+            <div class="status-indicator">
+                <div class="status-dot" id="backend-status-dot"></div>
+                <span id="backend-status-text">Проверка...</span>
+                <span class="version-badge">v{{ app_version }}</span>
+            </div>
         </div>
-        {% endif %}
     </nav>
     {% endif %}
+
     <!-- ====================================================================
          ОСНОВНОЙ КОНТЕНТ
          ==================================================================== -->
-    <div class="main-content">
+    <div class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %}">
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 {% for message in messages %}
@@ -106,9 +97,7 @@
         {% block content %}{% endblock %}
     </div>
 
-    <!-- ====================================================================
-         МОДАЛЬНОЕ ОКНО СОЗДАНИЯ КАРТЫ
-         ==================================================================== -->
+    <!-- Модальные окна -->
     <div class="modal fade" id="createMapModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -131,45 +120,42 @@
             </div>
         </div>
     </div>
-<!-- Модальное окно редактирования карты -->
-<div class="modal fade" id="editMapModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="editMapForm" enctype="multipart/form-data">
-                <div class="modal-header">
-                    <h5 class="modal-title">Редактировать карту</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="edit_map_id">
-                    <div class="mb-3">
-                        <label class="form-label">Название карты</label>
-                        <input type="text" id="edit_map_name" class="form-control" required>
+    <div class="modal fade" id="editMapModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="editMapForm" enctype="multipart/form-data">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Редактировать карту</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Фоновое изображение</label>
-                        <input type="file" id="edit_map_background" class="form-control" accept="image/*">
-                        <div class="form-text">Оставьте пустым, чтобы не менять</div>
+                    <div class="modal-body">
+                        <input type="hidden" id="edit_map_id">
+                        <div class="mb-3">
+                            <label class="form-label">Название карты</label>
+                            <input type="text" id="edit_map_name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Фоновое изображение</label>
+                            <input type="file" id="edit_map_background" class="form-control" accept="image/*">
+                            <div class="form-text">Оставьте пустым, чтобы не менять</div>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="edit_map_remove_bg">
+                            <label class="form-check-label">Удалить текущий фон</label>
+                        </div>
                     </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="edit_map_remove_bg">
-                        <label class="form-check-label">Удалить текущий фон</label>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary">Сохранить</button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
-</div>
+
     <!-- Скрипты -->
-<!--    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>-->
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>-->
     <script src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
-<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.23.0/cytoscape.min.js"></script>-->
     <script src="{{ url_for('static', filename='js/cytoscape.min.js') }}"></script>
     <script>
         // ====================================================================
@@ -188,7 +174,6 @@
                 icon.classList.remove('fa-chevron-right');
                 icon.classList.add('fa-bars');
             }
-
             localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
 
@@ -199,10 +184,8 @@
             const html = document.documentElement;
             const currentTheme = html.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
             html.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-
             const icon = document.querySelector('.theme-toggle i');
             if (newTheme === 'dark') {
                 icon.classList.remove('fa-moon');
@@ -217,7 +200,6 @@
         // ЗАГРУЗКА СОХРАНЁННЫХ НАСТРОЕК
         // ====================================================================
         document.addEventListener('DOMContentLoaded', function() {
-            // Сайдбар
             const savedSidebar = localStorage.getItem('sidebarCollapsed');
             if (savedSidebar === 'true') {
                 document.getElementById('sidebar').classList.add('collapsed');
@@ -225,8 +207,6 @@
                 icon.classList.remove('fa-bars');
                 icon.classList.add('fa-chevron-right');
             }
-
-            // Тема
             const savedTheme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', savedTheme);
             if (savedTheme === 'dark') {
@@ -234,21 +214,18 @@
                 icon.classList.remove('fa-moon');
                 icon.classList.add('fa-sun');
             }
-
-            // Загрузка списка карт в сайдбар
             if (typeof loadSidebarMaps === 'function') {
                 loadSidebarMaps();
             }
-                // Установка иконки на кнопке в зависимости от состояния
-    const sidebar = document.getElementById('sidebar');
-    const toggleIcon = document.querySelector('.sidebar-toggle i');
-    if (sidebar.classList.contains('collapsed')) {
-        toggleIcon.classList.remove('fa-bars');
-        toggleIcon.classList.add('fa-chevron-right');
-    } else {
-        toggleIcon.classList.remove('fa-chevron-right');
-        toggleIcon.classList.add('fa-bars');
-    }
+            const sidebar = document.getElementById('sidebar');
+            const toggleIcon = document.querySelector('.sidebar-toggle i');
+            if (sidebar && sidebar.classList.contains('collapsed')) {
+                toggleIcon.classList.remove('fa-bars');
+                toggleIcon.classList.add('fa-chevron-right');
+            } else if (sidebar) {
+                toggleIcon.classList.remove('fa-chevron-right');
+                toggleIcon.classList.add('fa-bars');
+            }
         });
 
         // ====================================================================
@@ -260,15 +237,12 @@
                 .then(maps => {
                     const list = document.getElementById('sidebarMapList');
                     if (!list) return;
-
                     const currentUserId = {{ current_user.id if current_user.is_authenticated else 0 }};
                     const isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
                     list.innerHTML = '';
-
                     maps.forEach(map => {
                         const isActive = window.currentMapId && window.currentMapId == map.id;
                         let actionsHtml = '';
-                        // Показываем кнопки, если пользователь владелец или админ
                         if (map.owner_id == currentUserId || isAdmin) {
                             actionsHtml = `
                                 <button class="btn-map-action" onclick="editMap(event, ${map.id}, '${map.name.replace(/'/g, "\\'")}')">
@@ -279,9 +253,7 @@
                                 </button>
                             `;
                         }
-
                         const badgeHtml = map.down_count > 0 ? `<span class="badge bg-danger">${map.down_count}</span>` : '';
-
                         const li = document.createElement('li');
                         li.innerHTML = `
                             <a href="/map/${map.id}" class="map-item ${isActive ? 'active' : ''}">
@@ -298,8 +270,9 @@
                 })
                 .catch(err => console.error('Error loading maps:', err));
         }
+
         // ====================================================================
-        // УДАЛЕНИЕ КАРТЫ
+        // УДАЛЕНИЕ И РЕДАКТИРОВАНИЕ КАРТЫ
         // ====================================================================
         function deleteMap(event, mapId) {
             event.preventDefault();
@@ -318,7 +291,6 @@
                     });
             }
         }
-        // Открыть модалку редактирования
         function editMap(event, mapId, mapName) {
             event.preventDefault();
             event.stopPropagation();
@@ -329,15 +301,12 @@
             const modal = new bootstrap.Modal(document.getElementById('editMapModal'));
             modal.show();
         }
-
-        // Отправка формы редактирования
         document.getElementById('editMapForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const mapId = document.getElementById('edit_map_id').value;
             const name = document.getElementById('edit_map_name').value;
             const fileInput = document.getElementById('edit_map_background');
             const removeBg = document.getElementById('edit_map_remove_bg').checked;
-
             const formData = new FormData();
             formData.append('name', name);
             if (fileInput.files[0]) {
@@ -346,7 +315,6 @@
             if (removeBg) {
                 formData.append('remove_background', 'true');
             }
-
             fetch(`/api/map/${mapId}`, {
                 method: 'PUT',
                 body: formData
@@ -356,15 +324,11 @@
                 return res.json();
             })
             .then(data => {
-                // Обновить название в сайдбаре
                 const mapItem = document.querySelector(`.map-item[href="/map/${mapId}"] .map-item-name`);
                 if (mapItem) mapItem.textContent = data.name;
-
-                // Если текущая карта открыта, обновить фон
                 if (window.currentMapId == mapId) {
-                    updateMapBackground(data.background);
+                    if (typeof updateMapBackground === 'function') updateMapBackground(data.background);
                 }
-
                 bootstrap.Modal.getInstance(document.getElementById('editMapModal')).hide();
             })
             .catch(err => {
@@ -372,6 +336,24 @@
                 alert('Ошибка при сохранении');
             });
         });
+
+        // ====================================================================
+        // Функция обновления индикатора состояния (вызывается из map.js)
+        // ====================================================================
+        function updateBackendStatus(isConnected) {
+            const dot = document.getElementById('backend-status-dot');
+            const text = document.getElementById('backend-status-text');
+            if (!dot || !text) return;
+            if (isConnected) {
+                dot.className = 'status-dot online';
+                text.textContent = 'Сервер доступен';
+            } else {
+                dot.className = 'status-dot offline';
+                text.textContent = 'Сервер недоступен';
+            }
+        }
+        // Начальное состояние – офлайн
+        updateBackendStatus(false);
     </script>
 
     {% block scripts %}{% endblock %}

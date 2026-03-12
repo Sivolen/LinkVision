@@ -2,7 +2,6 @@ import os
 from datetime import timedelta
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-VERSION = '1.0.0'
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-me'
@@ -15,3 +14,5 @@ class Config:
 
     SESSION_COOKIE_SECURE = False
     PERMANENT_SESSION_LIFETIME = timedelta(days=1)
+
+    VERSION = '1.0.0'  # Версия приложения
