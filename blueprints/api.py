@@ -454,3 +454,143 @@ def get_device_details(id):
     data['neighbors'] = neighbors
 
     return jsonify(data)
+
+
+@api_bp.route('/map/<int:id>/export', methods=['GET'])
+@login_required
+def export_map(id):
+    map_obj = Map.query.get_or_404(id)
+    if not current_user.is_admin and map_obj.owner_id != current_user.id:
+        return jsonify({'error': 'Доступ запрещён'}), 403
+
+    devices = []
+    for dev in map_obj.devices:
+        devices.append({
+            'id': dev.id,
+            'name': dev.name,
+            'ip_address': dev.ip_address,
+            'type_id': dev.type_id,
+            'type_name': dev.type.name if dev.type else None,
+            'pos_x': dev.pos_x,
+            'pos_y': dev.pos_y,
+            'status': dev.status,
+            'icon_filename': dev.type.icon_filename if dev.type else None,
+            'width': dev.type.width if dev.type else None,
+            'height': dev.type.height if dev.type else None
+        })
+
+    links = []
+    for link in map_obj.links:
+        links.append({
+            'id': link.id,
+            'source_device_id': link.source_device_id,
+            'target_device_id': link.target_device_id,
+            'source_interface': link.source_interface,
+            'target_interface': link.target_interface,
+            'link_type': link.link_type,
+            'line_color': link.line_color,
+            'line_width': link.line_width,
+            'line_style': link.line_style
+        })
+
+    data = {
+        'id': map_obj.id,
+        'name': map_obj.name,
+        'background_image': map_obj.background_image,
+        'pan_x': map_obj.pan_x,
+        'pan_y': map_obj.pan_y,
+        'zoom': map_obj.zoom,
+        'owner_id': map_obj.owner_id,
+        'devices': devices,
+        'links': links
+    }
+    return jsonify(data)
+
+
+@api_bp.route('/map/import', methods=['POST'])
+@login_required
+def import_map():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    map_id = data.get('id')
+    if map_id:
+        map_obj = Map.query.get(map_id)
+        if not map_obj:
+            return jsonify({'error': 'Map not found'}), 404
+        if not current_user.is_admin and map_obj.owner_id != current_user.id:
+            return jsonify({'error': 'Access denied'}), 403
+        # Удаляем старые устройства и связи (связи удаляются первыми)
+        Link.query.filter_by(map_id=map_id).delete()
+        Device.query.filter_by(map_id=map_id).delete()
+        db.session.flush()  # Принудительно применяем удаление
+        print(f"🗑️ Удалены все устройства и связи карты {map_id}")
+    else:
+        map_obj = Map(name=data.get('name', 'Imported Map'), owner_id=current_user.id)
+        db.session.add(map_obj)
+        db.session.flush()
+
+    # Обновляем свойства карты
+    map_obj.name = data.get('name', map_obj.name)
+    map_obj.background_image = data.get('background_image')
+    map_obj.pan_x = data.get('pan_x', 0)
+    map_obj.pan_y = data.get('pan_y', 0)
+    map_obj.zoom = data.get('zoom', 1)
+
+    device_id_map = {}
+    devices_created = 0
+    for dev_data in data.get('devices', []):
+        type_id = None
+        type_name = dev_data.get('type_name')
+        if type_name:
+            dtype = DeviceType.query.filter_by(name=type_name).first()
+            if not dtype:
+                dtype = DeviceType(name=type_name, icon_filename='')
+                db.session.add(dtype)
+                db.session.flush()
+            type_id = dtype.id
+        else:
+            type_id = dev_data.get('type_id')
+
+        dev = Device(
+            map_id=map_obj.id,
+            type_id=type_id,
+            name=dev_data['name'],
+            ip_address=dev_data.get('ip_address'),
+            pos_x=dev_data.get('pos_x', 100),
+            pos_y=dev_data.get('pos_y', 100),
+            status=dev_data.get('status', True)
+        )
+        db.session.add(dev)
+        db.session.flush()
+        device_id_map[dev_data['id']] = dev.id
+        devices_created += 1
+    print(f"✅ Создано устройств: {devices_created}")
+
+    links_created = 0
+    links_skipped = 0
+    for link_data in data.get('links', []):
+        src_id = device_id_map.get(link_data['source_device_id'])
+        tgt_id = device_id_map.get(link_data['target_device_id'])
+        if not src_id or not tgt_id:
+            links_skipped += 1
+            print(f"⚠️ Пропущена связь: source {link_data['source_device_id']} -> target {link_data['target_device_id']} (нет в device_id_map)")
+            continue
+        link = Link(
+            map_id=map_obj.id,
+            source_device_id=src_id,
+            target_device_id=tgt_id,
+            source_interface=link_data.get('source_interface', 'eth0'),
+            target_interface=link_data.get('target_interface', 'eth0'),
+            link_type=link_data.get('link_type'),
+            line_color=link_data.get('line_color', '#6c757d'),
+            line_width=link_data.get('line_width', 2),
+            line_style=link_data.get('line_style', 'solid')
+        )
+        db.session.add(link)
+        links_created += 1
+    print(f"✅ Создано связей: {links_created}, пропущено (битых): {links_skipped}")
+
+    db.session.commit()
+    return jsonify({'id': map_obj.id, 'status': 'imported'})

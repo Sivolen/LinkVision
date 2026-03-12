@@ -48,8 +48,9 @@ class Device(db.Model):
     status = db.Column(db.Boolean, default=True)
     last_check = db.Column(db.DateTime, default=datetime.utcnow)
 
-    source_links = db.relationship('Link', foreign_keys='Link.source_device_id', backref='source', lazy='dynamic')
-    target_links = db.relationship('Link', foreign_keys='Link.target_device_id', backref='target', lazy='dynamic')
+    source_links = db.relationship('Link', foreign_keys='Link.source_device_id', backref='source', lazy='dynamic', cascade='all, delete-orphan')
+    target_links = db.relationship('Link', foreign_keys='Link.target_device_id', backref='target', lazy='dynamic', cascade='all, delete-orphan')
+
 
 
 class Link(db.Model):
