@@ -31,7 +31,20 @@
             <i class="fas fa-compress-arrows-alt"></i>
         </button>
     </div>
-
+    <div class="search-filter-bar toolbar-group">
+        <div class="input-group">
+            <span class="input-group-text bg-secondary text-white"><i class="fas fa-search"></i></span>
+            <input type="text" id="searchInput" class="form-control" placeholder="Поиск по имени, IP или типу...">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Фильтр</button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" onclick="filterByStatus('all')">Все устройства</a></li>
+                <li><a class="dropdown-item" href="#" onclick="filterByStatus('true')">Только UP</a></li>
+                <li><a class="dropdown-item" href="#" onclick="filterByStatus('false')">Только DOWN</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" onclick="clearSearch()">Сбросить поиск</a></li>
+            </ul>
+        </div>
+    </div>
 <!--    <div class="toolbar-group">-->
 <!--        <button class="toolbar-btn" onclick="saveLayout()">-->
 <!--            <i class="fas fa-save"></i> Сохранить-->
@@ -52,7 +65,12 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Устройство</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="historyDeviceBtn" style="display:none;" title="История изменений">
+                        <i class="fas fa-history"></i>
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="dev_id">
@@ -148,6 +166,34 @@
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
                 <button type="button" class="btn btn-danger btn-sm" id="linkDeleteBtn" style="display:none;" onclick="deleteLink()">Удалить</button>
                 <button type="button" class="btn btn-primary btn-sm" onclick="confirmCreateLink()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Модальное окно истории устройства -->
+<div class="modal fade" id="deviceHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">История изменений статуса</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Время</th>
+                            <th>Старый статус</th>
+                            <th>Новый статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="device-history-body">
+                        <!-- Данные будут загружаться через JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
             </div>
         </div>
     </div>

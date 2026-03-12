@@ -3,7 +3,7 @@ import threading
 import concurrent.futures
 import os
 from extensions import db, socketio
-from models import Device, Settings
+from models import Device, Settings, DeviceHistory
 
 # Попытка импорта ping3; если нет, будет использован fallback с subprocess
 try:
@@ -111,6 +111,7 @@ def monitor_loop():
                             print(f"❌ Ошибка при проверке {future_to_dev[future].id}: {e}")
 
                 # Последовательная обработка результатов (обновление БД, отправка событий)
+                # Последовательная обработка результатов (обновление БД, отправка событий)
                 for device, is_up in results:
                     import time as time_module
                     current_time = time_module.time()
@@ -122,6 +123,24 @@ def monitor_loop():
                             room_name = f'map_{device.map_id}'
                             status_str = 'true' if is_up else 'false'
 
+                            # Сохраняем старый статус до обновления
+                            old_status = device.status
+
+                            # Обновляем БД
+                            device.status = is_up
+                            device.last_check = db.func.now()
+
+                            # Запись в историю
+                            history_entry = DeviceHistory(
+                                device_id=device.id,
+                                old_status=old_status,
+                                new_status=is_up
+                            )
+                            db.session.add(history_entry)
+
+                            db.session.commit()
+
+                            # Отправка события
                             socketio.emit('device_status', {
                                 'id': device.id,
                                 'status': status_str,
@@ -129,12 +148,8 @@ def monitor_loop():
                             }, room=room_name)
 
                             status_display = "UP ✅" if is_up else "DOWN ❌"
-                            print(f"📤 [{status_display}] Отправлено: id={device.id}, status={status_str}, room={room_name}")
-
-                            # Обновляем БД
-                            device.status = is_up
-                            device.last_check = db.func.now()
-                            db.session.commit()
+                            print(
+                                f"📤 [{status_display}] Отправлено: id={device.id}, status={status_str}, room={room_name}")
 
                             last_emit_time[device.id] = current_time
 
