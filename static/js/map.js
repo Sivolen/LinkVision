@@ -1,5 +1,5 @@
 // ============================================================================
-// WebNetMap Pro - Карта сети (ФИНАЛЬНАЯ ВЕРСИЯ)
+// LinkVision - Карта сети (ФИНАЛЬНАЯ ВЕРСИЯ С ОБРАБОТКОЙ ОШИБОК)
 // ============================================================================
 let cy = null;
 let deviceModal = null;
@@ -16,7 +16,39 @@ let pendingFit = false;
 let elementsLoaded = false;
 let backgroundLoaded = false;
 
-// Для пульсации красных узлов
+// ============================================================================
+// УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ FETCH С ПОВТОРНЫМИ ПОПЫТКАМИ
+// ============================================================================
+/**
+ * Выполняет fetch с повторными попытками при ошибках сети.
+ * @param {string} url - URL запроса
+ * @param {object} options - опции fetch (method, headers, body и т.д.)
+ * @param {number} retries - количество повторных попыток (по умолчанию 3)
+ * @param {number} delay - начальная задержка между попытками в мс (по умолчанию 500)
+ * @returns {Promise<Response>}
+ */
+async function fetchWithRetry(url, options = {}, retries = 3, delay = 500) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, options);
+            // Если ответ успешный, возвращаем его
+            return response;
+        } catch (error) {
+            const isLastAttempt = i === retries - 1;
+            if (isLastAttempt) {
+                throw error; // пробрасываем ошибку, если попытки кончились
+            }
+            console.warn(`⚠️ fetch failed (attempt ${i+1}/${retries}), retrying in ${delay}ms...`, error);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            // Увеличиваем задержку для следующей попытки (экспоненциально)
+            delay *= 2;
+        }
+    }
+}
+
+// ============================================================================
+// ПУЛЬСАЦИЯ КРАСНЫХ УЗЛОВ
+// ============================================================================
 let pulsingNodes = new Set();         // множество id красных узлов
 let pulsingInterval = null;           // общий интервал
 let pulsePhase = 0;                    // фаза для плавного изменения (0..1)
@@ -486,6 +518,8 @@ function initMap(mapId) {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
+            }).catch(err => {
+                console.error('Ошибка при сохранении позиции:', err);
             });
         }, 500);
     });
@@ -513,6 +547,8 @@ function initMap(mapId) {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ x: Math.round(boundedPos.x), y: Math.round(boundedPos.y) })
+                    }).catch(err => {
+                        console.error('Ошибка при сохранении позиции:', err);
                     });
                 }
             });
@@ -599,7 +635,7 @@ function updateBackgroundTransform() {
 }
 
 function loadElements(mapId) {
-    fetch(`/api/map/${mapId}/elements`)
+    fetchWithRetry(`/api/map/${mapId}/elements`)
     .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -651,7 +687,7 @@ function loadElements(mapId) {
 }
 
 function loadDeviceTypes() {
-    fetch('/api/types')
+    fetchWithRetry('/api/types')
     .then(res => res.ok ? res.json() : Promise.reject())
     .then(types => {
         const select = document.getElementById('dev_type');
@@ -677,6 +713,8 @@ function saveViewportToServer() {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pan_x: pan.x, pan_y: pan.y, zoom: zoom })
+        }).catch(err => {
+            console.error('Ошибка сохранения viewport:', err);
         });
     }, 500);
 }
@@ -733,7 +771,8 @@ function openDeviceModal(node) {
         devIp.value = node.data('ip') || '';
         fetch(`/api/device/${node.id()}`)
         .then(res => res.ok ? res.json() : null)
-        .then(data => { if (data && devType) devType.value = data.type_id; });
+        .then(data => { if (data && devType) devType.value = data.type_id; })
+        .catch(err => console.error('Ошибка загрузки данных устройства:', err));
         if (deleteBtn) {
             deleteBtn.style.display = 'inline-block';
             deleteBtn.onclick = () => deleteDevice(node.id());
@@ -762,7 +801,12 @@ function saveDevice() {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
-        }).then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'));
+        })
+        .then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'))
+        .catch(err => {
+            console.error('Ошибка при сохранении устройства:', err);
+            alert('❌ Ошибка сети при сохранении');
+        });
     } else {
         body.map_id = getMapId();
         if (cy) {
@@ -780,14 +824,23 @@ function saveDevice() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
-        }).then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'));
+        })
+        .then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'))
+        .catch(err => {
+            console.error('Ошибка при создании устройства:', err);
+            alert('❌ Ошибка сети при создании');
+        });
     }
 }
 
 function deleteDevice(id) {
     if (confirm('⚠️ Удалить?')) {
         fetch(`/api/device/${id}`, { method: 'DELETE' })
-        .then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'));
+        .then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'))
+        .catch(err => {
+            console.error('Ошибка при удалении устройства:', err);
+            alert('❌ Ошибка сети при удалении');
+        });
     }
 }
 
@@ -870,7 +923,10 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface) {
             resetLinkMode();
         }
     })
-    .catch(err => alert('❌ Ошибка: ' + err.message));
+    .catch(err => {
+        console.error('Ошибка создания связи:', err);
+        alert('❌ Ошибка: ' + err.message);
+    });
 }
 
 function updateLink(linkId, srcIface, tgtIface) {
@@ -879,14 +935,23 @@ function updateLink(linkId, srcIface, tgtIface) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source_interface: srcIface, target_interface: tgtIface })
-    }).then(res => res.ok ? location.reload() : alert('❌ Ошибка'));
+    })
+    .then(res => res.ok ? location.reload() : alert('❌ Ошибка'))
+    .catch(err => {
+        console.error('Ошибка обновления связи:', err);
+        alert('❌ Ошибка сети при обновлении');
+    });
 }
 
 function deleteLink(linkId) {
     if (!confirm('⚠️ Удалить эту связь?')) return;
     const numericId = String(linkId).replace('link_', '');
     fetch(`/api/link/${numericId}`, { method: 'DELETE' })
-    .then(res => res.ok ? location.reload() : alert('❌ Ошибка'));
+    .then(res => res.ok ? location.reload() : alert('❌ Ошибка'))
+    .catch(err => {
+        console.error('Ошибка удаления связи:', err);
+        alert('❌ Ошибка сети при удалении');
+    });
 }
 
 function resetLinkMode() {

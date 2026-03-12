@@ -66,136 +66,129 @@ body {
 .sidebar.collapsed {
     width: 70px;
 }
-/* Скрываем бейдж администратора в свёрнутом режиме */
-.sidebar.collapsed .sidebar-user .badge {
-    display: none;
+.sidebar.collapsed .sidebar-header {
+    padding: 0 5px; /* в свёрнутом состоянии оставляем небольшой отступ по бокам */
+    height: 50px;
 }
-/* Корректируем отступы для иконки пользователя */
-.sidebar.collapsed .sidebar-user i {
-    font-size: 1.5rem;
-    margin: 0;
+/* В свёрнутом сайдбаре все иконки одного размера */
+.sidebar.collapsed i {
+    font-size: 1.2rem !important;
 }
-/* Скрываем текстовые элементы внутри свёрнутого сайдбара */
+
+/* В свёрнутом сайдбаре скрываем весь текст, кроме бейджей */
 .sidebar.collapsed span:not(.badge) {
     display: none;
 }
-
-/* Корректировка отображения иконок */
-.sidebar.collapsed .sidebar-header h4 {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-}
-.sidebar.collapsed .sidebar-header h4 i {
-    font-size: 1.5rem;
-}
-.sidebar.collapsed .sidebar-user {
-    text-align: center;
-    padding: 5px 0;
-}
-.sidebar.collapsed .sidebar-user i {
-    font-size: 1.5rem;
-}
+/* Свёрнутый сайдбар: заголовок "Карты" */
 .sidebar.collapsed .sidebar-maps h5 {
-    text-align: center;
-    margin-bottom: 5px;
+    justify-content: center;
+    gap: 0; /* убираем промежуток между иконкой и текстом */
+    margin-bottom: 10px;
 }
 .sidebar.collapsed .sidebar-maps h5 i {
-    font-size: 1.2rem;
-}
-.sidebar.collapsed .sidebar-maps .btn {
-    width: auto;
-    padding: 0.5rem;
-    aspect-ratio: 1/1;
-    border-radius: 50%;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.sidebar.collapsed .sidebar-maps .btn i {
-    margin: 0;
-    font-size: 1rem;
-}
-.sidebar.collapsed .map-item {
-    padding: 8px;
-    justify-content: center;
-}
-.sidebar.collapsed .map-item .map-item-icon {
-    margin-right: 0;
-    font-size: 1.2rem;
-}
-.sidebar.collapsed .map-item .map-item-name,
-.sidebar.collapsed .map-item .map-item-actions {
-    display: none;
+    font-size: 1.2rem; /* единый размер иконок */
 }
 .sidebar.collapsed .sidebar-user .badge {
     display: none;
 }
-/* Футер */
-.sidebar.collapsed .sidebar-footer .d-flex {
-    flex-direction: column;
-    gap: 5px;
-}
-.sidebar.collapsed .sidebar-footer .theme-toggle {
-    width: auto;
-    aspect-ratio: 1/1;
-    border-radius: 50%;
-    padding: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.sidebar.collapsed .sidebar-footer .theme-toggle i {
-    margin: 0;
-    font-size: 1rem;
-}
-/* Админ-меню в свёрнутом виде */
-.sidebar.collapsed .admin-menu small {
-    display: none;
-}
-.sidebar.collapsed .admin-menu a {
-    width: auto;
-    aspect-ratio: 1/1;
-    border-radius: 50%;
-    padding: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 5px;
-}
-.sidebar.collapsed .admin-menu a i {
-    margin: 0;
-    font-size: 1rem;
-}
-
 /* Шапка сайдбара */
 .sidebar-header {
-    padding: 20px;
+    display: flex;
+    align-items: center;
+    padding: 10px 0 10px 15px; /* правый отступ 0, кнопка будет у края */
     background: rgba(0,0,0,0.2);
     border-bottom: 1px solid rgba(255,255,255,0.1);
+    height: 60px;
+    box-sizing: border-box;
 }
 .sidebar-header h4 {
     margin: 0;
     font-size: 1.2rem;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
-.sidebar-user {
-    font-size: 0.85rem;
-    opacity: 0.8;
-    margin-top: 5px;
+.sidebar-header h4 i {
+    font-size: 1.5rem;
+}
+/* Логотип и название */
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 100%;
+    /* margin-right: auto;  не обязательно, но оставим для ясности */
+}
+.sidebar-logo img {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+}
+.sidebar-logo .logo-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-sidebar);
+    white-space: nowrap;
 }
 
-/* Кнопка переключения внутри шапки */
+/* Свёрнутый сайдбар */
+.sidebar.collapsed .sidebar-logo {
+    flex: none;
+    width: 40px;
+    justify-content: center;
+}
+.sidebar.collapsed .sidebar-logo img {
+    height: 30px;
+}
+.sidebar.collapsed .sidebar-logo .logo-text {
+    display: none;           /* текст скрыт */
+}
+.sidebar.collapsed .sidebar-toggle {
+    margin-left: 0; /* в свёрнутом виде центрируем кнопку вместе с логотипом */
+    width: 30px;
+    padding: 0;
+    text-align: center;
+}
+.sidebar.collapsed .logo-text {
+    display: none; /* скрыть текст */
+}
+.sidebar-user {
+    padding: 10px 15px;
+    font-size: 0.85rem;
+    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border-bottom: 1px solid rgba(255,255,255,0.1); /* визуальное отделение */
+}
+.sidebar-user i {
+    font-size: 1.2rem;
+}
+.sidebar-user .badge {
+    display: inline-block; /* гарантия видимости */
+}
+.sidebar.collapsed .sidebar-user {
+    justify-content: center;
+    padding: 5px 0;
+    border-bottom: none; /* убираем линию */
+}
+.sidebar.collapsed .sidebar-user i {
+    margin: 0;
+    font-size: 1.2rem;
+}
+/* Кнопка переключения */
 .sidebar-toggle {
     background: transparent;
     border: none;
     color: var(--text-sidebar);
     font-size: 1.2rem;
     cursor: pointer;
-    padding: 0 5px;
+    padding: 0 5px; /* небольшой отступ для кликабельности */
     transition: transform 0.2s;
+    line-height: 1;
+    margin-left: auto; /* магия: прижимает кнопку к правому краю */
+    flex-shrink: 0;
 }
 .sidebar-toggle:hover {
     transform: scale(1.1);
@@ -211,13 +204,43 @@ body {
     letter-spacing: 1px;
     opacity: 0.7;
     margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
+.sidebar-maps h5 i {
+    font-size: 1rem;
+}
+
+/* Кнопка "Новая карта" */
+.sidebar-maps .btn {
+    width: 100%;
+}
+
+/* Свёрнутый сайдбар: кнопка "Новая карта" становится круглой */
+.sidebar.collapsed .sidebar-maps .btn {
+    width: auto;
+    padding: 0.5rem;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sidebar.collapsed .sidebar-maps .btn i {
+    margin: 0;
+    font-size: 1rem;
+}
+/* Текст кнопки скрыт общим правилом для span */
 
 .map-list {
     list-style: none;
     padding: 0;
     margin: 0;
 }
+
+/* Элемент карты */
 .map-item {
     display: flex;
     align-items: center;
@@ -228,7 +251,9 @@ body {
     cursor: pointer;
     text-decoration: none;
     color: var(--text-sidebar);
-    transition: background-color 0.3s ease-out, transform 0.3s ease-out, box-shadow 0.3s ease-out;
+    transition: background-color 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                box-shadow 0.4s ease;
 }
 .map-item:hover {
     background: rgba(255,255,255,0.15);
@@ -246,18 +271,29 @@ body {
     flex: 1;
     font-size: 0.95rem;
 }
+
+/* Правая часть карты (кнопки действий + бейдж) */
+.map-item-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* Кнопки действий (появляются при наведении) */
 .map-item-actions {
     display: flex;
     align-items: center;
     gap: 4px;
     opacity: 0;
-    transition: opacity 0.25s ease 0.05s; /* чуть медленнее и с задержкой */
+    transition: opacity 0.3s ease 0.1s;
     pointer-events: none;
 }
 .map-item:hover .map-item-actions {
     opacity: 1;
     pointer-events: auto;
 }
+
 .btn-map-action {
     background: transparent;
     border: none;
@@ -265,13 +301,95 @@ body {
     padding: 5px;
     cursor: pointer;
     opacity: 0.7;
+    transition: opacity 0.2s;
 }
 .btn-map-action:hover {
     opacity: 1;
     color: #fff;
 }
 
-/* Футер сайдбара */
+/* Бейдж с количеством недоступных устройств */
+.map-item .badge {
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 10px;
+}
+
+/* Свёрнутый сайдбар: элементы карты */
+.sidebar.collapsed .map-item {
+    padding: 8px;
+    justify-content: center;
+}
+.sidebar.collapsed .map-item .map-item-icon {
+    margin-right: 0;
+}
+.sidebar.collapsed .map-item .map-item-name,
+.sidebar.collapsed .map-item-actions,
+.sidebar.collapsed .map-item-right {
+    display: none;
+}
+.sidebar.collapsed .map-item .badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.6rem;
+    padding: 0.1rem 0.3rem;
+}
+
+/* Админ-меню */
+.admin-menu {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+.admin-menu small {
+    display: block;
+    margin-bottom: 10px;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.admin-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    color: var(--text-sidebar);
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+.admin-menu-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+.admin-menu-item i {
+    margin-right: 12px;
+    font-size: 1.2rem;
+    width: 20px;
+    text-align: center;
+}
+.admin-menu-item span {
+    font-size: 0.95rem;
+}
+
+/* Свёрнутый сайдбар: админ-меню */
+.sidebar.collapsed .admin-menu small {
+    display: none;
+}
+.sidebar.collapsed .admin-menu-item {
+    padding: 8px;
+    justify-content: center;
+}
+.sidebar.collapsed .admin-menu-item i {
+    margin-right: 0;
+}
+
+/* Футер сайдбара (кнопки темы и выхода) */
 .sidebar-footer {
     position: absolute;
     bottom: 0;
@@ -282,6 +400,54 @@ body {
     border-top: 1px solid rgba(255,255,255,0.1);
     box-sizing: border-box;
 }
+.sidebar-footer .d-flex {
+    display: flex;
+    gap: 10px;
+}
+
+/* Кнопки темы и выхода */
+.theme-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-sidebar);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    flex: 1;
+    justify-content: center;
+}
+.theme-toggle:hover {
+    background: rgba(255,255,255,0.1);
+}
+.theme-toggle i {
+    font-size: 1.1rem;
+}
+.theme-toggle span {
+    font-size: 0.9rem;
+}
+
+/* Свёрнутый сайдбар: кнопки становятся круглыми */
+.sidebar.collapsed .sidebar-footer .d-flex {
+    flex-direction: column;
+    gap: 5px;
+}
+.sidebar.collapsed .theme-toggle {
+    padding: 0.5rem;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    justify-content: center;
+    flex: none;
+    width: auto;
+}
+.sidebar.collapsed .theme-toggle i {
+    margin: 0;
+}
+/* Текст кнопок скрыт общим правилом для span */
 
 /* ============================================================================
    ОСНОВНОЙ КОНТЕНТ
@@ -312,7 +478,6 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    /* Убрано width: 100%, height: 100% - размеры задаются в JS */
     background-color: var(--cy-background);
     background-repeat: no-repeat;
     background-position: 0 0;
@@ -320,10 +485,6 @@ body {
     will-change: transform;
     pointer-events: none;
     z-index: 1;
-}
-
-.cy-background.has-image {
-    /* Когда изображение загружено, размеры задаются в JS */
 }
 
 .cy-canvas {
@@ -345,6 +506,7 @@ body {
     height: 100%;
     position: relative;
 }
+
 /* ============================================================================
    ПАНЕЛЬ ИНСТРУМЕНТОВ
    ============================================================================ */
@@ -409,7 +571,7 @@ body {
     border-top: 1px solid var(--border-color);
 }
 .btn-close {
-    filter: var(--text-primary) 1;
+    filter: invert(1) grayscale(100%) brightness(200%);
 }
 
 /* ============================================================================
@@ -447,26 +609,6 @@ body {
 }
 
 /* ============================================================================
-   ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ
-   ============================================================================ */
-.theme-toggle {
-    background: transparent;
-    border: 1px solid var(--text-sidebar);
-    color: var(--text-sidebar);
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
-}
-.theme-toggle:hover {
-    background: rgba(255,255,255,0.1);
-}
-
-/* ============================================================================
    АДАПТИВНОСТЬ
    ============================================================================ */
 @media (max-width: 768px) {
@@ -489,8 +631,8 @@ body {
 }
 
 /* ============================================================================
-   CYTOSCAPE СТИЛИ (дополнительно)
-============================================================================ */
+   CYTOSCAPE ДОПОЛНИТЕЛЬНЫЕ СТИЛИ
+   ============================================================================ */
 .cy-node-selected {
     box-shadow: 0 0 15px var(--accent-color);
 }
@@ -505,60 +647,4 @@ body {
 }
 .sidebar, .main-content {
     animation: fadeIn 0.3s ease;
-}
-/* ============================================================================
-   Badge СТИЛИ (дополнительно)
-============================================================================ */
-/* В свёрнутом сайдбаре бейдж позиционируется поверх иконки */
-.sidebar.collapsed .map-item .badge {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 0.6rem;
-    padding: 0.1rem 0.3rem;
-    margin-left: 0;
-    border-radius: 10px;
-}
-/* Контейнер для правой части (кнопки + бейдж) */
-.map-item-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: auto; /* прижимает к правому краю */
-}
-/* Кнопки действий по умолчанию скрыты */
-.map-item-actions {
-    display: none;
-    align-items: center;
-    gap: 4px;
-}
-/* Действия скрыты по умолчанию, появляются при наведении на весь элемент */
-.map-item .map-item-actions {
-    display: none;
-}
-/* При наведении на весь элемент показываем кнопки */
-.map-item:hover .map-item-actions {
-    display: flex;
-}
-/* Бейдж всегда виден и выровнен по центру */
-.map-item .badge {
-    line-height: 1.2;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    padding: 0.2rem 0.4rem;
-    border-radius: 10px;
-}
-/* В свёрнутом сайдбаре правый блок скрыт, бейдж позиционируется абсолютно */
-.sidebar.collapsed .map-item-right {
-    display: none;
-}
-/* Абсолютное позиционирование бейджа в свёрнутом режиме (уже есть, но убедимся) */
-.sidebar.collapsed .map-item .badge {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 0.6rem;
-    padding: 0.1rem 0.3rem;
 }
