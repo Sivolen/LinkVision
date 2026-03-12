@@ -448,8 +448,9 @@ function initMap(mapId) {
             {
                 selector: 'edge',
                 style: {
-                    'width': 2,
-                    'line-color': '#6c757d',
+                    'width': function(edge) { return edge.data('width') || 2; },
+                    'line-color': function(edge) { return edge.data('color') || '#6c757d'; },
+                    'line-style': function(edge) { return edge.data('style') || 'solid'; },
                     'curve-style': 'bezier',
                     'label': 'data(label)',
                     'font-size': '8px',
@@ -599,6 +600,25 @@ function initMap(mapId) {
     });
 
     setMode('pan');
+}
+
+// Заполнение полей цвета, толщины и стиля в зависимости от типа связи
+function applyLinkTypePreset(type) {
+    const presets = {
+        '100m':  { color: '#FFA500', width: 2, style: 'solid' },
+        '1G':    { color: '#00FF00', width: 3, style: 'solid' },
+        '10G':   { color: '#0000FF', width: 4, style: 'solid' },
+        '25G':   { color: '#FF00FF', width: 5, style: 'solid' },
+        '100G':  { color: '#800080', width: 6, style: 'solid' },
+        '400G':  { color: '#800080', width: 8, style: 'solid' },
+        'vlan':  { color: '#A9A9A9', width: 2, style: 'dashed' },
+        'radio': { color: '#00FFFF', width: 2, style: 'dotted' }
+    };
+    if (type && presets[type]) {
+        document.getElementById('link_line_color').value = presets[type].color;
+        document.getElementById('link_line_width').value = presets[type].width;
+        document.getElementById('link_line_style').value = presets[type].style;
+    }
 }
 
 function loadBackground(bgUrl) {
@@ -870,6 +890,11 @@ function openLinkModal(sourceId, targetId) {
     document.getElementById('link_target').value = targetId;
     document.getElementById('link_src_iface').value = 'eth0';
     document.getElementById('link_tgt_iface').value = 'eth0';
+    // Сброс новых полей
+    document.getElementById('link_type').value = '';
+    document.getElementById('link_line_color').value = '#6c757d';
+    document.getElementById('link_line_width').value = 2;
+    document.getElementById('link_line_style').value = 'solid';
     document.getElementById('linkModalTitle').textContent = 'Новая связь';
     document.getElementById('linkDeleteBtn').style.display = 'none';
     updateLinkPreview();
@@ -884,6 +909,11 @@ function openLinkModalForEdit(edge) {
     const labelParts = (data.label || 'eth0↔eth0').split('↔');
     document.getElementById('link_src_iface').value = labelParts[0] || 'eth0';
     document.getElementById('link_tgt_iface').value = labelParts[1] || 'eth0';
+    // Новые поля
+    document.getElementById('link_type').value = data.link_type || '';
+    document.getElementById('link_line_color').value = data.color || '#6c757d';
+    document.getElementById('link_line_width').value = data.width || 2;
+    document.getElementById('link_line_style').value = data.style || 'solid';
     document.getElementById('linkModalTitle').textContent = 'Редактировать связь';
     document.getElementById('linkDeleteBtn').style.display = 'inline-block';
     document.getElementById('linkDeleteBtn').onclick = () => deleteLink(data.id);
@@ -897,16 +927,22 @@ function confirmCreateLink() {
     const tgt = document.getElementById('link_target')?.value;
     const srcIface = document.getElementById('link_src_iface')?.value || 'eth0';
     const tgtIface = document.getElementById('link_tgt_iface')?.value || 'eth0';
+    // Новые поля
+    const linkType = document.getElementById('link_type')?.value;
+    const lineColor = document.getElementById('link_line_color')?.value;
+    const lineWidth = parseInt(document.getElementById('link_line_width')?.value) || 2;
+    const lineStyle = document.getElementById('link_line_style')?.value;
+
     if (!src || !tgt) { alert('⚠️ Ошибка: не выбраны устройства'); return; }
     if (linkModal) linkModal.hide();
     if (linkId) {
-        updateLink(linkId, srcIface, tgtIface);
+        updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle);
     } else {
-        createLinkWithInterfaces(src, tgt, srcIface, tgtIface);
+        createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle);
     }
 }
 
-function createLinkWithInterfaces(src, tgt, srcIface, tgtIface) {
+function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle) {
     const sourceId = typeof src === 'number' ? src : parseInt(src);
     const targetId = typeof tgt === 'number' ? tgt : parseInt(tgt);
     if (isNaN(sourceId) || isNaN(targetId)) { alert('⚠️ Ошибка: неверные ID'); return; }
@@ -918,7 +954,11 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface) {
             source_id: sourceId,
             target_id: targetId,
             src_iface: srcIface,
-            tgt_iface: tgtIface
+            tgt_iface: tgtIface,
+            link_type: linkType || null,
+            line_color: lineColor,
+            line_width: lineWidth,
+            line_style: lineStyle
         })
     })
     .then(res => res.ok ? res.json() : Promise.reject())
@@ -930,7 +970,11 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface) {
                     id: `link_${data.id}`,
                     source: String(sourceId),
                     target: String(targetId),
-                    label: `${srcIface}↔${tgtIface}`
+                    label: `${srcIface}↔${tgtIface}`,
+                    link_type: linkType,
+                    color: lineColor,
+                    width: lineWidth,
+                    style: lineStyle
                 }
             });
             resetLinkMode();
@@ -942,12 +986,19 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface) {
     });
 }
 
-function updateLink(linkId, srcIface, tgtIface) {
+function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle) {
     const numericId = linkId.replace('link_', '');
     fetch(`/api/link/${numericId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source_interface: srcIface, target_interface: tgtIface })
+        body: JSON.stringify({
+            source_interface: srcIface,
+            target_interface: tgtIface,
+            link_type: linkType || null,
+            line_color: lineColor,
+            line_width: lineWidth,
+            line_style: lineStyle
+        })
     })
     .then(res => res.ok ? location.reload() : alert('❌ Ошибка'))
     .catch(err => {

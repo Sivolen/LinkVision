@@ -74,7 +74,12 @@ def get_elements(map_id):
                 'id': str(link.id),
                 'source': str(link.source_device_id),
                 'target': str(link.target_device_id),
-                'label': f"{link.source_interface or 'eth0'}↔{link.target_interface or 'eth0'}"
+                'label': f"{link.source_interface or 'eth0'}↔{link.target_interface or 'eth0'}",
+                # Новые поля
+                'link_type': link.link_type,
+                'color': link.line_color,
+                'width': link.line_width,
+                'style': link.line_style
             }
         })
 
@@ -172,31 +177,31 @@ def create_link():
         data = request.get_json()
         print(f"🔗 Creating link: {data}")
 
-        # Валидация данных
         if not all(k in data for k in ['map_id', 'source_id', 'target_id']):
             return jsonify({'error': 'Missing required fields'}), 400
 
-        # Проверка существования устройств
         source = Device.query.get(data['source_id'])
         target = Device.query.get(data['target_id'])
-
         if not source or not target:
             return jsonify({'error': 'Source or target device not found'}), 404
 
-        # Создание связи
         link = Link(
             map_id=data['map_id'],
             source_device_id=data['source_id'],
             target_device_id=data['target_id'],
             source_interface=data.get('src_iface', 'eth0'),
-            target_interface=data.get('tgt_iface', 'eth0')
+            target_interface=data.get('tgt_iface', 'eth0'),
+            # Новые поля
+            link_type=data.get('link_type'),
+            line_color=data.get('line_color', '#6c757d'),
+            line_width=data.get('line_width', 2),
+            line_style=data.get('line_style', 'solid')
         )
         db.session.add(link)
         db.session.commit()
 
         print(f"✅ Link created: ID={link.id}")
         return jsonify({'id': link.id}), 201
-
     except Exception as e:
         db.session.rollback()
         print(f"❌ Error creating link: {e}")
@@ -216,6 +221,15 @@ def update_link(id):
         link.source_interface = data['source_interface']
     if 'target_interface' in data:
         link.target_interface = data['target_interface']
+    # Новые поля
+    if 'link_type' in data:
+        link.link_type = data['link_type']
+    if 'line_color' in data:
+        link.line_color = data['line_color']
+    if 'line_width' in data:
+        link.line_width = data['line_width']
+    if 'line_style' in data:
+        link.line_style = data['line_style']
 
     db.session.commit()
     return jsonify({'id': link.id, 'status': 'updated'})
