@@ -53,13 +53,20 @@ def types():
 @admin_bp.route('/types/create', methods=['POST'])
 def create_type():
     name = request.form.get('name')
+    width = request.form.get('width')
+    height = request.form.get('height')
     icon = request.files.get('icon')
     filename = None
     if icon and icon.filename:
         filename = secure_filename(icon.filename)
         icon.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
 
-    dtype = DeviceType(name=name, icon_filename=filename)
+    dtype = DeviceType(
+        name=name,
+        icon_filename=filename,
+        width=int(width) if width else None,
+        height=int(height) if height else None
+    )
     db.session.add(dtype)
     db.session.commit()
     return redirect(url_for('admin.types'))
@@ -102,8 +109,12 @@ def edit_type(id):
     dtype = DeviceType.query.get_or_404(id)
     if request.method == 'POST':
         name = request.form.get('name')
+        width = request.form.get('width')
+        height = request.form.get('height')
         if name:
             dtype.name = name
+        dtype.width = int(width) if width else None
+        dtype.height = int(height) if height else None
 
         icon = request.files.get('icon')
         if icon and icon.filename:
@@ -119,7 +130,6 @@ def edit_type(id):
         flash('Тип устройства обновлён')
         return redirect(url_for('admin.types'))
 
-    # Передаём edit_type в шаблон
     all_types = DeviceType.query.all()
     return render_template('admin/types.html', types=all_types, edit_type=dtype)
 

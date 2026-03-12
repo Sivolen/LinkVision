@@ -7,12 +7,22 @@
     <div class="card-body">
         <form action="{{ url_for('admin.edit_type', id=edit_type.id) if edit_type else url_for('admin.create_type') }}"
               method="POST" enctype="multipart/form-data" class="row g-3">
-            <div class="col-md-5">
+            <div class="col-md-4">
                 <input type="text" name="name" class="form-control"
                        placeholder="Название типа"
                        value="{{ edit_type.name if edit_type else '' }}" required>
             </div>
-            <div class="col-md-5">
+            <div class="col-md-2">
+                <input type="number" name="width" class="form-control"
+                       placeholder="Ширина (px)"
+                       value="{{ edit_type.width if edit_type else '' }}">
+            </div>
+            <div class="col-md-2">
+                <input type="number" name="height" class="form-control"
+                       placeholder="Высота (px)"
+                       value="{{ edit_type.height if edit_type else '' }}">
+            </div>
+            <div class="col-md-3">
                 <input type="file" name="icon" class="form-control" accept="image/*">
                 {% if edit_type and edit_type.icon_filename %}
                 <small class="text-muted">
@@ -20,7 +30,7 @@
                 </small>
                 {% endif %}
             </div>
-            <div class="col-md-2">
+            <div class="col-md-1">
                 <button type="submit" class="btn btn-success w-100">
                     {{ 'Обновить' if edit_type else 'Добавить' }}
                 </button>
@@ -44,6 +54,8 @@
         <tr>
             <th>ID</th>
             <th>Название</th>
+            <th>Ширина</th>
+            <th>Высота</th>
             <th>Иконка</th>
             <th>Устройств</th>
             <th>Действия</th>
@@ -54,6 +66,8 @@
         <tr class="{{ 'table-warning' if edit_type and edit_type.id == type.id else '' }}">
             <td>{{ type.id }}</td>
             <td>{{ type.name }}</td>
+            <td>{{ type.width or '—' }}</td>
+            <td>{{ type.height or '—' }}</td>
             <td>
                 {% if type.icon_filename %}
                     <img src="{{ url_for('static', filename='uploads/icons/' + type.icon_filename) }}" width="32" alt="icon">

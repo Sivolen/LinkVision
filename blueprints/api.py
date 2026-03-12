@@ -28,9 +28,14 @@ def get_elements(map_id):
     # 1. Собираем узлы
     for dev in map_obj.devices:
         icon_url = None
-        if dev.type and dev.type.icon_filename:
-            icon_url = url_for('static', filename=f'uploads/icons/{dev.type.icon_filename}')
-            icon_url += f'?v={dev.type.id}'
+        width = None
+        height = None
+        if dev.type:
+            if dev.type.icon_filename:
+                icon_url = url_for('static', filename=f'uploads/icons/{dev.type.icon_filename}')
+                icon_url += f'?v={dev.type.id}'
+            width = dev.type.width
+            height = dev.type.height
 
         nodes.append({
             'group': 'nodes',
@@ -41,7 +46,9 @@ def get_elements(map_id):
                 'iconUrl': icon_url or '',
                 'name': dev.name,
                 'ip': dev.ip_address,
-                'type': dev.type.name if dev.type else 'Unknown'
+                'type': dev.type.name if dev.type else 'Unknown',
+                'width': width,
+                'height': height
             },
             'position': {'x': dev.pos_x or 100, 'y': dev.pos_y or 100}
         })
@@ -251,7 +258,12 @@ def manage_link(id):
 @login_required
 def get_types():
     types = DeviceType.query.all()
-    return jsonify([{'id': t.id, 'name': t.name} for t in types])
+    return jsonify([{
+        'id': t.id,
+        'name': t.name,
+        'width': t.width,
+        'height': t.height
+    } for t in types])
 
 
 @api_bp.route('/map/<int:id>', methods=['PUT'])

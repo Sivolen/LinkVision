@@ -32,6 +32,8 @@ class DeviceType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
     icon_filename = db.Column(db.String(256))
+    width = db.Column(db.Integer, nullable=True)   # ширина иконки в пикселях
+    height = db.Column(db.Integer, nullable=True)  # высота иконки в пикселях
     devices = db.relationship('Device', backref='type', lazy='dynamic')
 
 

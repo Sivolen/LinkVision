@@ -109,9 +109,15 @@ function updateSidebarCounter(mapId, becameDown) {
     const mapLink = document.querySelector(`.map-item[href="/map/${mapId}"]`);
     if (!mapLink) return;
 
-    let badge = mapLink.querySelector('.badge');
+    // Ищем правый контейнер (в нём должны быть кнопки и бейдж)
+    const rightDiv = mapLink.querySelector('.map-item-right');
+    if (!rightDiv) return; // если структура не та, выходим
+
+    // Ищем существующий бейдж внутри правого контейнера
+    let badge = rightDiv.querySelector('.badge');
     let currentCount = badge ? parseInt(badge.textContent) : 0;
 
+    // Изменяем счётчик
     if (becameDown) {
         currentCount++;
     } else {
@@ -119,19 +125,24 @@ function updateSidebarCounter(mapId, becameDown) {
     }
 
     if (currentCount <= 0) {
+        // Если счётчик стал 0 или меньше, удаляем бейдж
         if (badge) badge.remove();
     } else {
         if (badge) {
+            // Обновляем текст существующего бейджа
             badge.textContent = currentCount;
         } else {
+            // Создаём новый бейдж
             badge = document.createElement('span');
             badge.className = 'badge bg-danger ms-2';
             badge.textContent = currentCount;
-            const nameSpan = mapLink.querySelector('.map-item-name');
-            if (nameSpan) {
-                nameSpan.insertAdjacentElement('afterend', badge);
+
+            // Вставляем бейдж после блока с кнопками (или в конец правого контейнера)
+            const actionsDiv = rightDiv.querySelector('.map-item-actions');
+            if (actionsDiv) {
+                actionsDiv.insertAdjacentElement('afterend', badge);
             } else {
-                mapLink.appendChild(badge);
+                rightDiv.appendChild(badge);
             }
         }
     }
@@ -319,8 +330,10 @@ function initMap(mapId) {
                 selector: 'node[iconUrl][iconUrl != ""]',
                 style: {
                     'shape': 'round-rectangle',
-                    'width': 54,
-                    'height': 54,
+                    //'width': 54,
+                    //'height': 54,
+                    'width': function(node) { return node.data('width') || 54; },
+                    'height': function(node) { return node.data('height') || 54; },
                     'background-color': '#000000',
                     'background-opacity': 0,
                     'background-image': 'data(iconUrl)',
