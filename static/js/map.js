@@ -397,6 +397,18 @@ function initMap(mapId) {
                     'background-color': 'rgba(0,123,255,0.1)'
                 }
             },
+                // Новый селектор для подсветки при поиске
+            {
+                selector: '.cy-node-highlight',
+                style: {
+                    'border-color': '#007bff',
+                    'border-width': 4,
+                    'border-style': 'solid',
+                    'box-shadow': '0 0 12px #007bff',
+                    'overlay-opacity': 0,
+                    'z-index': 10
+                }
+            },
             {
                 selector: 'edge',
                 style: {
@@ -725,6 +737,8 @@ function openDeviceModal(node) {
     const devIp = document.getElementById('dev_ip');
     const devType = document.getElementById('dev_type');
     const deleteBtn = document.getElementById('deleteDeviceBtn');
+    const historyBtn = document.getElementById('historyDeviceBtn');
+
     if (node) {
         title.textContent = 'Редактировать устройство';
         devId.value = node.id();
@@ -738,6 +752,10 @@ function openDeviceModal(node) {
             deleteBtn.style.display = 'inline-block';
             deleteBtn.onclick = () => deleteDevice(node.id());
         }
+        if (historyBtn) {
+            historyBtn.style.display = 'inline-block';
+            historyBtn.onclick = () => openDeviceHistory(node.id());
+        }
     } else {
         title.textContent = 'Новое устройство';
         devId.value = '';
@@ -745,6 +763,7 @@ function openDeviceModal(node) {
         devIp.value = '';
         if (devType) devType.value = '';
         if (deleteBtn) deleteBtn.style.display = 'none';
+        if (historyBtn) historyBtn.style.display = 'none';
     }
     deviceModal.show();
 }
@@ -1010,4 +1029,132 @@ function resetZoom() {
         cy.fit(null, 50);
     }
 }
-// Функция saveLayout удалена, так как не нужна
+// Открытие истории изменений устройства
+function openDeviceHistory(deviceId) {
+    if (!deviceId) return;
+    fetch(`/api/device/${deviceId}/history`)
+        .then(res => {
+            if (!res.ok) throw new Error('Ошибка загрузки истории');
+            return res.json();
+        })
+        .then(history => {
+            const tbody = document.getElementById('device-history-body');
+            tbody.innerHTML = '';
+            if (history.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет записей</td></tr>';
+            } else {
+                history.forEach(entry => {
+                    const row = tbody.insertRow();
+                    row.insertCell().textContent = new Date(entry.timestamp).toLocaleString();
+                    row.insertCell().innerHTML = entry.old_status === 'true' ? '<span class="badge bg-success">UP</span>' : '<span class="badge bg-danger">DOWN</span>';
+                    row.insertCell().innerHTML = entry.new_status === 'true' ? '<span class="badge bg-success">UP</span>' : '<span class="badge bg-danger">DOWN</span>';
+                });
+            }
+            const modal = new bootstrap.Modal(document.getElementById('deviceHistoryModal'));
+            modal.show();
+        })
+        .catch(err => {
+            console.error('Ошибка загрузки истории:', err);
+            alert('Не удалось загрузить историю');
+        });
+}
+// ============================================================================
+// ПОИСК И ФИЛЬТРАЦИЯ
+// ============================================================================
+let currentFilterStatus = 'all'; // 'all', 'true', 'false'
+let searchTimeout;
+
+// Фильтрация по статусу
+window.filterByStatus = function(status) {
+    console.log('Фильтр по статусу:', status);
+    currentFilterStatus = status;
+    applyFilterAndSearch();
+};
+
+// Применить фильтр и поиск
+function applyFilterAndSearch() {
+    console.log('applyFilterAndSearch вызван');
+    if (!cy) {
+        console.log('cy не инициализирован');
+        return;
+    }
+
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput) {
+        console.log('searchInput не найден');
+        return;
+    }
+
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    console.log('Поисковый запрос:', searchTerm);
+
+    // Сбрасываем подсветку
+    cy.nodes().removeClass('cy-node-highlight');
+
+    // Применяем фильтр по статусу
+    let visibleCount = 0;
+    cy.nodes().forEach(node => {
+        const nodeStatus = node.data('status');
+        const shouldShow = (currentFilterStatus === 'all' || nodeStatus === currentFilterStatus);
+        if (shouldShow) {
+            node.show();
+            visibleCount++;
+        } else {
+            node.hide();
+        }
+    });
+    console.log(`После фильтра видимо узлов: ${visibleCount}`);
+
+    // Применяем поиск (подсвечиваем совпадения среди ВСЕХ узлов, включая скрытые)
+    if (searchTerm) {
+        let matchCount = 0;
+        cy.nodes().forEach(node => {
+            const name = (node.data('name') || '').toLowerCase();
+            const ip = (node.data('ip') || '').toLowerCase();
+            const type = (node.data('type') || '').toLowerCase();
+            if (name.includes(searchTerm) || ip.includes(searchTerm) || type.includes(searchTerm)) {
+                node.addClass('cy-node-highlight');
+                matchCount++;
+            }
+        });
+        console.log(`Найдено совпадений: ${matchCount}`);
+    }
+}
+
+// Очистка поиска
+window.clearSearch = function() {
+    console.log('Очистка поиска');
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    if (cy) {
+        cy.nodes().removeClass('cy-node-highlight');
+        // Переприменяем фильтр (без поиска)
+        filterByStatus(currentFilterStatus);
+    }
+};
+
+// Инициализация после загрузки DOM
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM загружен, инициализация поиска');
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        // Обработка ввода с задержкой (debounce)
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(applyFilterAndSearch, 300);
+        });
+        // Обработка нажатия Enter
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(searchTimeout);
+                applyFilterAndSearch();
+            }
+        });
+        console.log('Слушатели навешены');
+    } else {
+        console.error('searchInput не найден при инициализации');
+    }
+});

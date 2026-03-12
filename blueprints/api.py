@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify, url_for, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from extensions import db
-from models import Map, Device, DeviceType, Link
+from models import Map, Device, DeviceType, Link, DeviceHistory
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -375,3 +375,19 @@ def test_emit(device_id, status):
         'map_id': 1
     })
     return 'ok'
+
+
+@api_bp.route('/device/<int:id>/history')
+@login_required
+def get_device_history(id):
+    device = Device.query.get_or_404(id)
+    if not current_user.is_admin and device.map.owner_id != current_user.id:
+        return jsonify({'error': 'Доступ запрещён'}), 403
+
+    history = DeviceHistory.query.filter_by(device_id=id).order_by(DeviceHistory.timestamp.desc()).limit(50).all()
+    return jsonify([{
+        'id': h.id,
+        'old_status': 'true' if h.old_status else 'false',
+        'new_status': 'true' if h.new_status else 'false',
+        'timestamp': h.timestamp.isoformat()
+    } for h in history])

@@ -83,3 +83,13 @@ class Map(db.Model):
     pan_x = db.Column(db.Float, default=0)
     pan_y = db.Column(db.Float, default=0)
     zoom = db.Column(db.Float, default=1)
+
+
+class DeviceHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
+    old_status = db.Column(db.Boolean)
+    new_status = db.Column(db.Boolean)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    device = db.relationship('Device', backref='history')

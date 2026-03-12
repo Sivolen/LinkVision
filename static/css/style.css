@@ -894,3 +894,14 @@ body {
 .sidebar.collapsed .status-indicator {
     display: none; /* скрываем в свёрнутом сайдбаре */
 }
+/* Подсветка найденных узлов */
+.cy-node-highlight {
+    border-color: #007bff !important;  /* синий */
+    border-width: 4px !important;
+    box-shadow: 0 0 12px #007bff;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+.search-filter-bar {
+    max-width: 500px;
+}
