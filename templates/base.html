@@ -44,6 +44,9 @@
             <button class="btn btn-sm btn-outline-light w-100 mt-2" data-bs-toggle="modal" data-bs-target="#createMapModal">
                 <i class="fas fa-plus"></i> <span>Новая карта</span>
             </button>
+            <button class="btn btn-sm btn-outline-light w-100 mt-2" onclick="importMapNew()">
+                <i class="fas fa-file-import"></i> <span>Импорт карты</span>
+            </button>
         </div>
 
         <div class="sidebar-footer">
@@ -145,6 +148,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
+                        <button type="button" class="btn btn-info" onclick="exportMap()">Экспорт</button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                         <button type="submit" class="btn btn-primary">Сохранить</button>
                     </div>
@@ -336,7 +340,75 @@
                 alert('Ошибка при сохранении');
             });
         });
-
+        // Экспорт карты
+        function exportMap() {
+            const mapId = document.getElementById('edit_map_id').value;
+            if (!mapId) {
+                alert('Сначала выберите карту');
+                return;
+            }
+            fetch(`/api/map/${mapId}/export`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Ошибка экспорта');
+                    return res.json();
+                })
+                .then(data => {
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `map_${mapId}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Не удалось экспортировать карту');
+                });
+        }
+        // Импорт карты (всегда создаёт новую)
+        function importMapNew() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        // Удаляем id, чтобы создать новую карту
+                        data.id = null;
+                        fetch('/api/map/import', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        })
+                        .then(res => {
+                            if (!res.ok) throw new Error('Ошибка импорта');
+                            return res.json();
+                        })
+                        .then(result => {
+                            alert('Импорт выполнен');
+                            if (result.id) {
+                                window.location.href = `/map/${result.id}`;
+                            } else {
+                                location.reload();
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            alert('Ошибка при импорте');
+                        });
+                    } catch (ex) {
+                        alert('Некорректный JSON-файл');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
         // ====================================================================
         // Функция обновления индикатора состояния (вызывается из map.js)
         // ====================================================================
