@@ -1,5 +1,5 @@
 /* ============================================================================
-   WebNetMap Pro - Стили (Тёмная тема + Сайдбар)
+   LinkVision - Основные стили (Тёмная тема + Сайдбар)
    ============================================================================ */
 
 :root {
@@ -48,6 +48,9 @@ body {
 /* ============================================================================
    САЙДБАР
    ============================================================================ */
+.main-content.no-sidebar {
+    margin-left: 0 !important;
+}
 .sidebar {
     position: fixed;
     top: 0;
@@ -67,35 +70,32 @@ body {
     width: 70px;
 }
 .sidebar.collapsed .sidebar-header {
-    padding: 0 5px; /* в свёрнутом состоянии оставляем небольшой отступ по бокам */
+    padding: 0 5px;
     height: 50px;
 }
-/* В свёрнутом сайдбаре все иконки одного размера */
 .sidebar.collapsed i {
     font-size: 1.2rem !important;
 }
-
-/* В свёрнутом сайдбаре скрываем весь текст, кроме бейджей */
 .sidebar.collapsed span:not(.badge) {
     display: none;
 }
-/* Свёрнутый сайдбар: заголовок "Карты" */
 .sidebar.collapsed .sidebar-maps h5 {
     justify-content: center;
-    gap: 0; /* убираем промежуток между иконкой и текстом */
+    gap: 0;
     margin-bottom: 10px;
 }
 .sidebar.collapsed .sidebar-maps h5 i {
-    font-size: 1.2rem; /* единый размер иконок */
+    font-size: 1.2rem;
 }
 .sidebar.collapsed .sidebar-user .badge {
     display: none;
 }
+
 /* Шапка сайдбара */
 .sidebar-header {
     display: flex;
     align-items: center;
-    padding: 10px 0 10px 15px; /* правый отступ 0, кнопка будет у края */
+    padding: 10px 0 10px 15px;
     background: rgba(0,0,0,0.2);
     border-bottom: 1px solid rgba(255,255,255,0.1);
     height: 60px;
@@ -112,13 +112,13 @@ body {
 .sidebar-header h4 i {
     font-size: 1.5rem;
 }
+
 /* Логотип и название */
 .sidebar-logo {
     display: flex;
     align-items: center;
     gap: 10px;
     height: 100%;
-    /* margin-right: auto;  не обязательно, но оставим для ясности */
 }
 .sidebar-logo img {
     height: 40px;
@@ -132,7 +132,7 @@ body {
     white-space: nowrap;
 }
 
-/* Свёрнутый сайдбар */
+/* Свёрнутый сайдбар: логотип */
 .sidebar.collapsed .sidebar-logo {
     flex: none;
     width: 40px;
@@ -141,18 +141,18 @@ body {
 .sidebar.collapsed .sidebar-logo img {
     height: 30px;
 }
-.sidebar.collapsed .sidebar-logo .logo-text {
-    display: none;           /* текст скрыт */
+.sidebar.collapsed .sidebar-logo .logo-text,
+.sidebar.collapsed .logo-text {
+    display: none;
 }
 .sidebar.collapsed .sidebar-toggle {
-    margin-left: 0; /* в свёрнутом виде центрируем кнопку вместе с логотипом */
+    margin-left: 0;
     width: 30px;
     padding: 0;
     text-align: center;
 }
-.sidebar.collapsed .logo-text {
-    display: none; /* скрыть текст */
-}
+
+/* Пользователь */
 .sidebar-user {
     padding: 10px 15px;
     font-size: 0.85rem;
@@ -160,23 +160,23 @@ body {
     display: flex;
     align-items: center;
     gap: 5px;
-    border-bottom: 1px solid rgba(255,255,255,0.1); /* визуальное отделение */
+    border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 .sidebar-user i {
     font-size: 1.2rem;
 }
 .sidebar-user .badge {
-    display: inline-block; /* гарантия видимости */
+    display: inline-block;
 }
 .sidebar.collapsed .sidebar-user {
     justify-content: center;
     padding: 5px 0;
-    border-bottom: none; /* убираем линию */
+    border-bottom: none;
 }
 .sidebar.collapsed .sidebar-user i {
     margin: 0;
-    font-size: 1.2rem;
 }
+
 /* Кнопка переключения */
 .sidebar-toggle {
     background: transparent;
@@ -184,10 +184,10 @@ body {
     color: var(--text-sidebar);
     font-size: 1.2rem;
     cursor: pointer;
-    padding: 0 5px; /* небольшой отступ для кликабельности */
+    padding: 0 5px;
     transition: transform 0.2s;
     line-height: 1;
-    margin-left: auto; /* магия: прижимает кнопку к правому краю */
+    margin-left: auto;
     flex-shrink: 0;
 }
 .sidebar-toggle:hover {
@@ -216,8 +216,6 @@ body {
 .sidebar-maps .btn {
     width: 100%;
 }
-
-/* Свёрнутый сайдбар: кнопка "Новая карта" становится круглой */
 .sidebar.collapsed .sidebar-maps .btn {
     width: auto;
     padding: 0.5rem;
@@ -232,7 +230,6 @@ body {
     margin: 0;
     font-size: 1rem;
 }
-/* Текст кнопки скрыт общим правилом для span */
 
 .map-list {
     list-style: none;
@@ -376,17 +373,22 @@ body {
 .admin-menu-item span {
     font-size: 0.95rem;
 }
-
-/* Свёрнутый сайдбар: админ-меню */
 .sidebar.collapsed .admin-menu small {
     display: none;
 }
 .sidebar.collapsed .admin-menu-item {
-    padding: 8px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
     justify-content: center;
+    border-radius: 8px;
+    margin-bottom: 4px;
 }
 .sidebar.collapsed .admin-menu-item i {
-    margin-right: 0;
+    margin: 0;
+    font-size: 1.2rem;
 }
 
 /* Футер сайдбара (кнопки темы и выхода) */
@@ -430,25 +432,38 @@ body {
 .theme-toggle span {
     font-size: 0.9rem;
 }
-
-/* Свёрнутый сайдбар: кнопки становятся круглыми */
 .sidebar.collapsed .sidebar-footer .d-flex {
     flex-direction: column;
     gap: 5px;
+    align-items: center; /* центрируем по горизонтали */
 }
 .sidebar.collapsed .theme-toggle {
-    padding: 0.5rem;
-    aspect-ratio: 1/1;
-    border-radius: 50%;
+    width: 36px !important;  /* фиксированный размер, переопределяем w-50 */
+    height: 36px;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
     justify-content: center;
+    border-radius: 50%;
     flex: none;
-    width: auto;
+    margin: 0 auto; /* дополнительное центрирование */
 }
 .sidebar.collapsed .theme-toggle i {
     margin: 0;
+    font-size: 1.2rem;
 }
-/* Текст кнопок скрыт общим правилом для span */
-
+.sidebar.collapsed .theme-toggle span {
+    display: none;
+}
+/* Админ-меню в свёрнутом виде */
+.sidebar.collapsed .admin-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* центрируем пункты */
+}
+.sidebar.collapsed .admin-menu-item span {
+    display: none;
+}
 /* ============================================================================
    ОСНОВНОЙ КОНТЕНТ
    ============================================================================ */
@@ -473,7 +488,6 @@ body {
     border-radius: 12px;
     box-shadow: var(--card-shadow);
 }
-
 .cy-background {
     position: absolute;
     top: 0;
@@ -486,7 +500,6 @@ body {
     pointer-events: none;
     z-index: 1;
 }
-
 .cy-canvas {
     position: absolute;
     top: 0;
@@ -500,7 +513,6 @@ body {
     background-position: 0 0;
     background-repeat: repeat;
 }
-
 #cy {
     width: 100%;
     height: 100%;
@@ -647,4 +659,238 @@ body {
 }
 .sidebar, .main-content {
     animation: fadeIn 0.3s ease;
+}
+
+/* ============================================================================
+   СОВРЕМЕННЫЙ ДИЗАЙН АДМИНКИ
+   ============================================================================ */
+/* Заголовки страниц */
+.page-title {
+    font-size: 2rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1.5rem;
+    position: relative;
+    display: inline-block;
+}
+.page-title::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent-color), transparent);
+    border-radius: 2px;
+}
+
+/* Карточки админки */
+.admin-card {
+    border: none;
+    border-radius: 20px;
+    background: var(--bg-secondary);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    transition: box-shadow 0.3s ease;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    width: 100%; /* без max-width */
+}
+.admin-card:hover {
+    box-shadow: 0 16px 32px rgba(0,0,0,0.15);
+}
+.admin-card .card-header {
+    background: linear-gradient(135deg, #1e2b38 0%, #2c3e50 100%);
+    color: white;
+    border-bottom: none;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    font-size: 1rem;
+}
+.admin-card .card-header i {
+    margin-right: 6px;
+    font-size: 1.1rem;
+}
+.admin-card .card-body {
+    padding: 1.25rem;
+}
+[data-theme="dark"] .admin-card .card-header {
+    background: linear-gradient(135deg, #0a1a2a 0%, #1a2a3a 100%);
+}
+
+/* Современные таблицы (остаётся без изменений) */
+.modern-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 12px;
+    margin-top: 1rem;
+}
+.modern-table thead th {
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    padding: 0 1rem 0.5rem 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+.modern-table tbody tr {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    transition: box-shadow 0.2s;
+    animation: fadeInUp 0.3s ease forwards;
+    animation-delay: calc(0.03s * var(--i, 0));
+}
+.modern-table tbody tr:hover {
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+.modern-table td {
+    padding: 1rem;
+    border: none;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    vertical-align: middle;
+}
+.modern-table td:first-child {
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+    padding-left: 1.5rem;
+}
+.modern-table td:last-child {
+    border-top-right-radius: 16px;
+    border-bottom-right-radius: 16px;
+    padding-right: 1.5rem;
+}
+.modern-table td strong {
+    font-weight: 600;
+    color: var(--accent-color);
+}
+.modern-table .badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 30px;
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+.modern-table .badge.bg-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+.modern-table .badge.bg-secondary {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+}
+.modern-table .badge.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #fd7e14);
+    color: #212529;
+}
+.modern-table .badge.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+.modern-table .badge.bg-info {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+}
+
+/* Кнопки действий в таблице */
+.table-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+.btn-action {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+}
+.btn-action:hover {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+    transform: translateY(-2px);
+}
+.btn-action i {
+    font-size: 1rem;
+}
+
+/* Поле с иконкой глаза */
+.password-field {
+    position: relative;
+}
+.password-field .toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--text-secondary);
+    z-index: 10;
+    font-size: 1.1rem;
+    transition: color 0.2s;
+}
+.password-field .toggle-password:hover {
+    color: var(--accent-color);
+}
+
+/* Анимация появления */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Для модального окна редактирования */
+.modal .password-field .toggle-password {
+    top: 50%;
+    transform: translateY(-50%);
+}
+/* Индикатор состояния бэкенда и версия */
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 15px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    font-size: 0.85rem;
+    color: var(--text-sidebar);
+}
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #6c757d; /* серый по умолчанию */
+    transition: background-color 0.3s;
+}
+.status-dot.online {
+    background-color: #28a745; /* зелёный */
+    box-shadow: 0 0 5px #28a745;
+}
+.status-dot.offline {
+    background-color: #dc3545; /* красный */
+    box-shadow: 0 0 5px #dc3545;
+}
+.version-badge {
+    font-size: 0.7rem;
+    opacity: 0.6;
+    margin-left: auto;
+    background: rgba(255,255,255,0.1);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+.sidebar.collapsed .status-indicator {
+    display: none; /* скрываем в свёрнутом сайдбаре */
 }

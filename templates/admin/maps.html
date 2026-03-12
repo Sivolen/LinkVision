@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Все карты системы</h2>
-<table class="table table-striped shadow-sm">
-    <thead class="table-dark">
+<h2 class="page-title">🗺️ Все карты системы</h2>
+
+<table class="modern-table">
+    <thead>
         <tr>
             <th>ID</th>
             <th>Название</th>
@@ -13,14 +14,20 @@
     </thead>
     <tbody>
         {% for map in maps %}
-        <tr>
-            <td>{{ map.id }}</td>
+        <tr style="--i: {{ loop.index }}">
+            <td><strong>#{{ map.id }}</strong></td>
             <td>{{ map.name }}</td>
             <td>{{ map.owner.username }}</td>
             <td>{{ map.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             <td>
-                <a href="{{ url_for('main.map_view', map_id=map.id) }}" class="btn btn-sm btn-outline-primary">Открыть</a>
-                <a href="{{ url_for('admin.delete_map', id=map.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Удалить карту и все устройства?')">Удалить</a>
+                <div class="table-actions">
+                    <a href="{{ url_for('main.map_view', map_id=map.id) }}" class="btn-action" title="Открыть">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                    <a href="{{ url_for('admin.delete_map', id=map.id) }}" class="btn-action" onclick="return confirm('Удалить карту и все устройства?')" title="Удалить">
+                        <i class="fas fa-trash"></i>
+                    </a>
+                </div>
             </td>
         </tr>
         {% endfor %}

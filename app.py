@@ -73,10 +73,15 @@ def create_app():
         icons_dir = os.path.join(app.root_path, 'static', 'uploads', 'icons')
         return send_from_directory(icons_dir, filename)
 
+    @app.context_processor
+    def inject_globals():
+        from config import Config
+        return {'app_version': Config.VERSION}
+
     return app
 
 if __name__ == '__main__':
     os.makedirs('static/uploads/icons', exist_ok=True)
     app = create_app()
     # ✅ Отключаем reloader, чтобы избежать двух процессов мониторинга
-    socketio.run(app, debug=True, use_reloader=False, port=5000, allow_unsafe_werkzeug=True)
+    socketio.run(app, debug=True, use_reloader=False, port=5000, host="0.0.0.0", allow_unsafe_werkzeug=True)

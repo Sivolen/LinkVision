@@ -24,63 +24,70 @@
     <!-- ====================================================================
          САЙДБАР
          ==================================================================== -->
-<nav class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h4 class="sidebar-logo">
-                <img src="{{ url_for('static', filename='images/logo_small.png') }}" alt="LinkVision">
-                <span class="logo-text">LinkVision</span>
-            </h4>
-            <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
+    {% if current_user.is_authenticated %}
+    <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h4 class="sidebar-logo">
+                    <img src="{{ url_for('static', filename='images/logo_small.png') }}" alt="LinkVision">
+                    <span class="logo-text">LinkVision</span>
+                </h4>
+                <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            {% if current_user.is_authenticated %}
+            <div class="sidebar-user">
+                <i class="fas fa-user-circle"></i> <span>{{ current_user.username }}</span>
+                {% if current_user.is_admin %}
+                <span class="badge bg-warning text-dark ms-2">Admin</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if current_user.is_authenticated %}
+        <div class="sidebar-maps">
+            <h5><i class="fas fa-map"></i> <span>Карты</span></h5>
+            <ul class="map-list" id="sidebarMapList">
+                <!-- Загружается через JS -->
+            </ul>
+            <button class="btn btn-sm btn-outline-light w-100 mt-2" data-bs-toggle="modal" data-bs-target="#createMapModal">
+                <i class="fas fa-plus"></i> <span>Новая карта</span>
             </button>
         </div>
-        {% if current_user.is_authenticated %}
-        <div class="sidebar-user">
-            <i class="fas fa-user-circle"></i> <span>{{ current_user.username }}</span>
+
+        <div class="sidebar-footer">
+            <div class="d-flex gap-2">
+                <button class="theme-toggle w-50" onclick="toggleTheme()">
+                    <i class="fas fa-moon"></i> <span>Тема</span>
+                </button>
+                <a href="{{ url_for('auth.logout') }}" class="theme-toggle w-50">
+                    <i class="fas fa-sign-out-alt"></i> <span>Выход</span>
+                </a>
+            </div>
             {% if current_user.is_admin %}
-            <span class="badge bg-warning text-dark ms-2">Admin</span>
+            <div class="admin-menu mt-3 pt-3 border-top border-secondary">
+                <small class="text-muted d-block mb-2"><span>Администрирование</span></small>
+                <a href="{{ url_for('admin.users') }}" class="admin-menu-item">
+                    <i class="fas fa-users"></i> <span>Пользователи</span>
+                </a>
+                <a href="{{ url_for('admin.types') }}" class="admin-menu-item">
+                    <i class="fas fa-shapes"></i> <span>Типы устройств</span>
+                </a>
+                <a href="{{ url_for('admin.settings') }}" class="admin-menu-item">
+                    <i class="fas fa-cog"></i> <span>Настройки</span>
+                </a>
+            </div>
+            <div class="status-indicator">
+    <div class="status-dot" id="backend-status-dot"></div>
+    <span id="backend-status-text">Проверка...</span>
+    <span class="version-badge">v{{ app_version }}</span>
+</div>
             {% endif %}
         </div>
         {% endif %}
-    </div>
-
-    {% if current_user.is_authenticated %}
-    <div class="sidebar-maps">
-        <h5><i class="fas fa-map"></i> <span>Карты</span></h5>
-        <ul class="map-list" id="sidebarMapList">
-            <!-- Загружается через JS -->
-        </ul>
-        <button class="btn btn-sm btn-outline-light w-100 mt-2" data-bs-toggle="modal" data-bs-target="#createMapModal">
-            <i class="fas fa-plus"></i> <span>Новая карта</span>
-        </button>
-    </div>
-
-    <div class="sidebar-footer">
-        <div class="d-flex gap-2">
-            <button class="theme-toggle w-50" onclick="toggleTheme()">
-                <i class="fas fa-moon"></i> <span>Тема</span>
-            </button>
-            <a href="{{ url_for('auth.logout') }}" class="theme-toggle w-50">
-                <i class="fas fa-sign-out-alt"></i> <span>Выход</span>
-            </a>
-        </div>
-        {% if current_user.is_admin %}
-        <div class="admin-menu mt-3 pt-3 border-top border-secondary">
-            <small class="text-muted d-block mb-2"><span>Администрирование</span></small>
-            <a href="{{ url_for('admin.users') }}" class="admin-menu-item">
-                <i class="fas fa-users"></i> <span>Пользователи</span>
-            </a>
-            <a href="{{ url_for('admin.types') }}" class="admin-menu-item">
-                <i class="fas fa-shapes"></i> <span>Типы устройств</span>
-            </a>
-            <a href="{{ url_for('admin.settings') }}" class="admin-menu-item">
-                <i class="fas fa-cog"></i> <span>Настройки</span>
-            </a>
-        </div>
-        {% endif %}
-    </div>
+    </nav>
     {% endif %}
-</nav>
     <!-- ====================================================================
          ОСНОВНОЙ КОНТЕНТ
          ==================================================================== -->
@@ -255,12 +262,14 @@
                     if (!list) return;
 
                     const currentUserId = {{ current_user.id if current_user.is_authenticated else 0 }};
+                    const isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
                     list.innerHTML = '';
 
                     maps.forEach(map => {
                         const isActive = window.currentMapId && window.currentMapId == map.id;
                         let actionsHtml = '';
-                        if (map.owner_id == currentUserId) {
+                        // Показываем кнопки, если пользователь владелец или админ
+                        if (map.owner_id == currentUserId || isAdmin) {
                             actionsHtml = `
                                 <button class="btn-map-action" onclick="editMap(event, ${map.id}, '${map.name.replace(/'/g, "\\'")}')">
                                     <i class="fas fa-edit"></i>
