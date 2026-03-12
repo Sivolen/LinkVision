@@ -82,7 +82,7 @@
 
 <!-- Модальное окно связи -->
 <div class="modal fade" id="linkModal" tabindex="-1">
-    <div class="modal-dialog modal-sm">
+    <div class="modal-dialog modal-md"> <!-- изменено с modal-sm на modal-md -->
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="linkModalTitle">Настройка связи</h5>
@@ -93,6 +93,7 @@
                 <input type="hidden" id="link_source">
                 <input type="hidden" id="link_target">
 
+                <!-- Интерфейсы -->
                 <div class="mb-3">
                     <label class="form-label small">Интерфейс источника</label>
                     <input type="text" id="link_src_iface" class="form-control form-control-sm" placeholder="eth0">
@@ -102,8 +103,45 @@
                     <input type="text" id="link_tgt_iface" class="form-control form-control-sm" placeholder="eth0">
                 </div>
 
-                <div class="alert alert-info mb-0 py-2 small">
+                <!-- Предпросмотр связи -->
+                <div class="alert alert-info mb-3 py-2 small">
                     🔗 <span id="link_preview">eth0 ↔ eth0</span>
+                </div>
+
+                <!-- Тип линии (предустановки) -->
+                <div class="mb-3">
+                    <label class="form-label small">Тип линии (предустановки)</label>
+                    <select id="link_type" class="form-select form-select-sm" onchange="applyLinkTypePreset(this.value)">
+                        <option value="">-- Ручная настройка --</option>
+                        <option value="100m">100m</option>
+                        <option value="1G">1G</option>
+                        <option value="10G">10G</option>
+                        <option value="25G">25G</option>
+                        <option value="100G">100G</option>
+                        <option value="400G">400G</option>
+                        <option value="vlan">vlan</option>
+                        <option value="radio">radio</option>
+                    </select>
+                </div>
+
+                <!-- Тонкая настройка линии -->
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label small">Цвет линии</label>
+                        <input type="color" id="link_line_color" class="form-control form-control-sm" value="#6c757d">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Толщина (px)</label>
+                        <input type="number" id="link_line_width" class="form-control form-control-sm" min="1" max="10" value="2">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Стиль линии</label>
+                        <select id="link_line_style" class="form-select form-select-sm">
+                            <option value="solid">Сплошная</option>
+                            <option value="dashed">Пунктирная</option>
+                            <option value="dotted">Точечная</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

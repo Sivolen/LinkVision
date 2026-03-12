@@ -59,6 +59,11 @@ class Link(db.Model):
     target_device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     source_interface = db.Column(db.String(32), default="eth0")
     target_interface = db.Column(db.String(32), default="eth0")
+    # Новые поля для кастомизации линии
+    link_type = db.Column(db.String(20), nullable=True)  # например: '100m', '1G', 'vlan', 'radio'
+    line_color = db.Column(db.String(7), default="#6c757d")  # hex-код цвета
+    line_width = db.Column(db.Integer, default=2)            # толщина линии в пикселях
+    line_style = db.Column(db.String(10), default="solid")   # solid, dashed, dotted
 
 
 class Settings(db.Model):
