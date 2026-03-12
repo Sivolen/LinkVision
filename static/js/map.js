@@ -1,12 +1,11 @@
 // ============================================================================
-// LinkVision - Карта сети (ФИНАЛЬНАЯ ВЕРСИЯ С ОБРАБОТКОЙ ОШИБОК)
+// LinkVision - Карта сети (ФИНАЛЬНАЯ ВЕРСИЯ С ИСПРАВЛЕНИЯМИ)
 // ============================================================================
 let cy = null;
 let deviceModal = null;
 let linkModal = null;
 let linkMode = false;
 let sourceNode = null;
-let socket = null;
 let dragTimeout = null;
 let currentMode = 'pan';
 let bgImageWidth = null;
@@ -16,31 +15,22 @@ let pendingFit = false;
 let elementsLoaded = false;
 let backgroundLoaded = false;
 
+// Глобальный сокет (объявлен как window.socket)
+window.socket = null;
+
 // ============================================================================
 // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ FETCH С ПОВТОРНЫМИ ПОПЫТКАМИ
 // ============================================================================
-/**
- * Выполняет fetch с повторными попытками при ошибках сети.
- * @param {string} url - URL запроса
- * @param {object} options - опции fetch (method, headers, body и т.д.)
- * @param {number} retries - количество повторных попыток (по умолчанию 3)
- * @param {number} delay - начальная задержка между попытками в мс (по умолчанию 500)
- * @returns {Promise<Response>}
- */
 async function fetchWithRetry(url, options = {}, retries = 3, delay = 500) {
     for (let i = 0; i < retries; i++) {
         try {
             const response = await fetch(url, options);
-            // Если ответ успешный, возвращаем его
             return response;
         } catch (error) {
             const isLastAttempt = i === retries - 1;
-            if (isLastAttempt) {
-                throw error; // пробрасываем ошибку, если попытки кончились
-            }
+            if (isLastAttempt) throw error;
             console.warn(`⚠️ fetch failed (attempt ${i+1}/${retries}), retrying in ${delay}ms...`, error);
             await new Promise(resolve => setTimeout(resolve, delay));
-            // Увеличиваем задержку для следующей попытки (экспоненциально)
             delay *= 2;
         }
     }
@@ -49,45 +39,37 @@ async function fetchWithRetry(url, options = {}, retries = 3, delay = 500) {
 // ============================================================================
 // ПУЛЬСАЦИЯ КРАСНЫХ УЗЛОВ
 // ============================================================================
-let pulsingNodes = new Set();         // множество id красных узлов
-let pulsingInterval = null;           // общий интервал
-let pulsePhase = 0;                    // фаза для плавного изменения (0..1)
-const pulseStep = 0.015;               // шаг изменения фазы
-const pulseMinOpacity = 0.15;           // мин. прозрачность overlay
-const pulseMaxOpacity = 0.4;            // макс. прозрачность overlay
+let pulsingNodes = new Set();
+let pulsingInterval = null;
+let pulsePhase = 0;
+const pulseStep = 0.015;
+const pulseMinOpacity = 0.15;
+const pulseMaxOpacity = 0.4;
 
-// Запуск пульсации для красного узла
 function addPulsingNode(node) {
     const nodeId = node.id();
     if (!pulsingNodes.has(nodeId)) {
         pulsingNodes.add(nodeId);
-        // Если интервал ещё не запущен, запускаем
         if (!pulsingInterval) {
             pulsePhase = 0;
             pulsingInterval = setInterval(() => {
-                // Обновляем фазу
                 pulsePhase += pulseStep;
-                if (pulsePhase > 1) pulsePhase -= 2; // будем использовать sin
-                // Вычисляем текущую прозрачность по синусоиде
+                if (pulsePhase > 1) pulsePhase -= 2;
                 const opacity = pulseMinOpacity + (pulseMaxOpacity - pulseMinOpacity) * (0.5 + 0.5 * Math.sin(pulsePhase * Math.PI));
-                // Применяем ко всем красным узлам
                 pulsingNodes.forEach(id => {
                     const n = cy.getElementById(id);
-                    if (n.length) {
-                        n.style('overlay-opacity', opacity);
-                    }
+                    if (n.length) n.style('overlay-opacity', opacity);
                 });
-            }, 50); // ~20 кадров/сек, достаточно плавно
+            }, 50);
         }
     }
 }
 
-// Удаление красного узла из пульсации
 function removePulsingNode(node) {
     const nodeId = node.id();
     if (pulsingNodes.has(nodeId)) {
         pulsingNodes.delete(nodeId);
-        node.style('overlay-opacity', null); // сброс к стилевому значению (0.15)
+        node.style('overlay-opacity', null);
         if (pulsingNodes.size === 0 && pulsingInterval) {
             clearInterval(pulsingInterval);
             pulsingInterval = null;
@@ -95,49 +77,26 @@ function removePulsingNode(node) {
     }
 }
 
-// Очистка всех пульсаций (при перезагрузке карты)
-function clearAllPulsing() {
-    if (pulsingInterval) {
-        clearInterval(pulsingInterval);
-        pulsingInterval = null;
-    }
-    pulsingNodes.clear();
-}
-
-// Функция обновления счётчика DOWN в сайдбаре
+// ============================================================================
+// ОБНОВЛЕНИЕ СЧЁТЧИКА DOWN В САЙДБАРЕ
+// ============================================================================
 function updateSidebarCounter(mapId, becameDown) {
     const mapLink = document.querySelector(`.map-item[href="/map/${mapId}"]`);
     if (!mapLink) return;
-
-    // Ищем правый контейнер (в нём должны быть кнопки и бейдж)
     const rightDiv = mapLink.querySelector('.map-item-right');
-    if (!rightDiv) return; // если структура не та, выходим
-
-    // Ищем существующий бейдж внутри правого контейнера
+    if (!rightDiv) return;
     let badge = rightDiv.querySelector('.badge');
     let currentCount = badge ? parseInt(badge.textContent) : 0;
-
-    // Изменяем счётчик
-    if (becameDown) {
-        currentCount++;
-    } else {
-        currentCount--;
-    }
-
+    if (becameDown) currentCount++; else currentCount--;
     if (currentCount <= 0) {
-        // Если счётчик стал 0 или меньше, удаляем бейдж
         if (badge) badge.remove();
     } else {
         if (badge) {
-            // Обновляем текст существующего бейджа
             badge.textContent = currentCount;
         } else {
-            // Создаём новый бейдж
             badge = document.createElement('span');
             badge.className = 'badge bg-danger ms-2';
             badge.textContent = currentCount;
-
-            // Вставляем бейдж после блока с кнопками (или в конец правого контейнера)
             const actionsDiv = rightDiv.querySelector('.map-item-actions');
             if (actionsDiv) {
                 actionsDiv.insertAdjacentElement('afterend', badge);
@@ -148,13 +107,9 @@ function updateSidebarCounter(mapId, becameDown) {
     }
 }
 
-function getMapId() {
-    return window.currentMapId;
-}
+function getMapId() { return window.currentMapId; }
 
-function clamp(value, min, max) {
-    return Math.min(Math.max(value, min), max);
-}
+function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
 
 function enforcePanBounds() {
     if (!cy || !bgImageWidth || !bgImageHeight) return;
@@ -230,44 +185,48 @@ function initMap(mapId) {
     console.log('🗺️ Инициализация карты:', mapId);
     const MAX_RECONNECT_ATTEMPTS = 5;
 
-    if (!socket) {
-        socket = io({
+    if (!window.socket) {
+        window.socket = io({
             reconnection: true,
             reconnectionDelay: 5000,
             reconnectionDelayMax: 10000,
             reconnectionAttempts: MAX_RECONNECT_ATTEMPTS
         });
 
-        socket.on('connect_error', (error) => {
+        window.socket.on('connect_error', (error) => {
             console.error('❌ Socket connection error:', error);
+            if (typeof updateBackendStatus === 'function') updateBackendStatus(false);
         });
 
-        socket.on('disconnect', (reason) => {
+        window.socket.on('disconnect', (reason) => {
             console.warn('⚠️ Socket disconnected:', reason);
+            if (typeof updateBackendStatus === 'function') updateBackendStatus(false);
             setTimeout(() => {
                 console.log('🔄 Попытка переподключения...');
-                socket.connect();
+                window.socket.connect();
             }, 3000);
         });
 
-        socket.on('reconnect', (attemptNumber) => {
+        window.socket.on('reconnect', (attemptNumber) => {
             console.log('✅ Socket reconnected after', attemptNumber, 'attempts');
-            socket.emit('join_room', `map_${mapId}`);
+            window.socket.emit('join_room', `map_${mapId}`);
+            if (typeof updateBackendStatus === 'function') updateBackendStatus(true);
+        });
+
+        window.socket.on('connect', () => {
+            console.log('✅ Socket connected');
+            const roomName = `map_${mapId}`;
+            console.log('🚪 Присоединяемся к комнате:', roomName);
+            window.socket.emit('join_room', roomName);
+            if (typeof updateBackendStatus === 'function') updateBackendStatus(true);
+        });
+
+        window.socket.onAny((event, ...args) => {
+            console.log(`📨 Событие сокета: ${event}`, args);
         });
     }
 
-    socket.onAny((event, ...args) => {
-        console.log(`📨 Событие сокета: ${event}`, args);
-    });
-
-    socket.on('connect', () => {
-        console.log('✅ Socket connected');
-        const roomName = `map_${mapId}`;
-        console.log('🚪 Присоединяемся к комнате:', roomName);
-        socket.emit('join_room', roomName);
-    });
-
-    socket.on('device_status', (data) => {
+    window.socket.on('device_status', (data) => {
         console.log('📡 [RAW] device_status получен:', data);
 
         if (Number(data.map_id) !== Number(mapId)) {
@@ -300,7 +259,6 @@ function initMap(mapId) {
 
             node.data('status', statusValue);
 
-            // Управление пульсацией
             if (statusValue === 'false') {
                 addPulsingNode(node);
             } else {
@@ -309,13 +267,11 @@ function initMap(mapId) {
 
             cy.style().update();
 
-            // Обновляем счётчик в сайдбаре
             const becameDown = (statusValue === 'false');
             updateSidebarCounter(data.map_id, becameDown);
 
             const computedBorderColor = node.style('border-color');
             console.log(`   Применённый border-color: ${computedBorderColor}`);
-
             console.log('✅ Статус успешно обновлён');
         } catch (e) {
             console.error('❌ Ошибка в обработчике device_status:', e);
@@ -330,8 +286,6 @@ function initMap(mapId) {
                 selector: 'node[iconUrl][iconUrl != ""]',
                 style: {
                     'shape': 'round-rectangle',
-                    //'width': 54,
-                    //'height': 54,
                     'width': function(node) { return node.data('width') || 54; },
                     'height': function(node) { return node.data('height') || 54; },
                     'background-color': '#000000',
@@ -365,7 +319,6 @@ function initMap(mapId) {
                     'border-style': 'solid',
                     'border-width': 3,
                     'opacity': 1
-                    // БЕЗ overlay
                 }
             },
             {
@@ -376,8 +329,8 @@ function initMap(mapId) {
                     'border-width': 3,
                     'opacity': 0.85,
                     'overlay-color': '#dc3545',
-                    'overlay-opacity': 0.15,          // базовое значение, будет меняться пульсацией
-                    'overlay-padding': '4px'           // компактное свечение
+                    'overlay-opacity': 0.15,
+                    'overlay-padding': '4px'
                 }
             },
             {
@@ -404,7 +357,6 @@ function initMap(mapId) {
                     'text-background-opacity': 0.8,
                     'text-background-padding': '3px',
                     'text-background-shape': 'roundrectangle'
-                    // без overlay
                 }
             },
             {
@@ -532,9 +484,7 @@ function initMap(mapId) {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
-            }).catch(err => {
-                console.error('Ошибка при сохранении позиции:', err);
-            });
+            }).catch(err => console.error('Ошибка при сохранении позиции:', err));
         }, 500);
     });
 
@@ -561,9 +511,7 @@ function initMap(mapId) {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ x: Math.round(boundedPos.x), y: Math.round(boundedPos.y) })
-                    }).catch(err => {
-                        console.error('Ошибка при сохранении позиции:', err);
-                    });
+                    }).catch(err => console.error('Ошибка при сохранении позиции:', err));
                 }
             });
         }, 500);
@@ -602,7 +550,6 @@ function initMap(mapId) {
     setMode('pan');
 }
 
-// Заполнение полей цвета, толщины и стиля в зависимости от типа связи
 function applyLinkTypePreset(type) {
     const presets = {
         '100m':  { color: '#FFA500', width: 2, style: 'solid' },
@@ -696,8 +643,6 @@ function loadElements(mapId) {
             elementsLoaded = true;
             console.log('✅ Элементы загружены:', validNodes.length, 'узлов,', validEdges.length, 'связей');
             checkReadyAndFit();
-
-            // Запускаем пульсацию для всех красных узлов
             cy.nodes().forEach(node => {
                 if (node.data('status') === 'false') {
                     addPulsingNode(node);
@@ -746,9 +691,7 @@ function saveViewportToServer() {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pan_x: pan.x, pan_y: pan.y, zoom: zoom })
-        }).catch(err => {
-            console.error('Ошибка сохранения viewport:', err);
-        });
+        }).catch(err => console.error('Ошибка сохранения viewport:', err));
     }, 500);
 }
 
@@ -767,21 +710,6 @@ function updateMapBackground(background) {
         backgroundLoaded = true;
         checkReadyAndFit();
     }
-}
-
-function pulseNode(node) {
-    if (!node) return;
-    node.style({
-        'overlay-color': '#ffff00',
-        'overlay-opacity': 0.6,
-        'overlay-padding': '10px'
-    });
-    setTimeout(() => {
-        node.style({
-            'overlay-opacity': 0,
-            'overlay-padding': '0px'
-        });
-    }, 200);
 }
 
 function openDeviceModal(node) {
@@ -890,7 +818,6 @@ function openLinkModal(sourceId, targetId) {
     document.getElementById('link_target').value = targetId;
     document.getElementById('link_src_iface').value = 'eth0';
     document.getElementById('link_tgt_iface').value = 'eth0';
-    // Сброс новых полей
     document.getElementById('link_type').value = '';
     document.getElementById('link_line_color').value = '#6c757d';
     document.getElementById('link_line_width').value = 2;
@@ -909,7 +836,6 @@ function openLinkModalForEdit(edge) {
     const labelParts = (data.label || 'eth0↔eth0').split('↔');
     document.getElementById('link_src_iface').value = labelParts[0] || 'eth0';
     document.getElementById('link_tgt_iface').value = labelParts[1] || 'eth0';
-    // Новые поля
     document.getElementById('link_type').value = data.link_type || '';
     document.getElementById('link_line_color').value = data.color || '#6c757d';
     document.getElementById('link_line_width').value = data.width || 2;
@@ -927,7 +853,6 @@ function confirmCreateLink() {
     const tgt = document.getElementById('link_target')?.value;
     const srcIface = document.getElementById('link_src_iface')?.value || 'eth0';
     const tgtIface = document.getElementById('link_tgt_iface')?.value || 'eth0';
-    // Новые поля
     const linkType = document.getElementById('link_type')?.value;
     const lineColor = document.getElementById('link_line_color')?.value;
     const lineWidth = parseInt(document.getElementById('link_line_width')?.value) || 2;
@@ -1020,9 +945,7 @@ function deleteLink(linkId) {
 
 function resetLinkMode() {
     linkMode = false;
-    if (sourceNode && cy) {
-        sourceNode.style({});
-    }
+    if (sourceNode && cy) sourceNode.style({});
     sourceNode = null;
     document.body.style.cursor = 'default';
     const inf = document.getElementById('linkInfo');
@@ -1087,7 +1010,4 @@ function resetZoom() {
         cy.fit(null, 50);
     }
 }
-
-//function saveLayout() {
-//    alert('ℹ️ Координаты сохраняются автоматически при перетаскивании');
-//}
+// Функция saveLayout удалена, так как не нужна
