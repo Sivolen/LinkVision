@@ -731,43 +731,79 @@ function openDeviceModal(node) {
         else return;
     }
     const modal = document.getElementById('deviceModal');
-    const title = modal.querySelector('.modal-title');
     const devId = document.getElementById('dev_id');
     const devName = document.getElementById('dev_name');
     const devIp = document.getElementById('dev_ip');
     const devType = document.getElementById('dev_type');
     const deleteBtn = document.getElementById('deleteDeviceBtn');
-    const historyBtn = document.getElementById('historyDeviceBtn');
+    const historyBody = document.getElementById('device-history-body');
+    const neighborsBody = document.getElementById('device-neighbors-body');
 
     if (node) {
-        title.textContent = 'Редактировать устройство';
+        // Режим редактирования
         devId.value = node.id();
         devName.value = node.data('name') || '';
         devIp.value = node.data('ip') || '';
-        fetch(`/api/device/${node.id()}`)
-        .then(res => res.ok ? res.json() : null)
-        .then(data => { if (data && devType) devType.value = data.type_id; })
-        .catch(err => console.error('Ошибка загрузки данных устройства:', err));
-        if (deleteBtn) {
-            deleteBtn.style.display = 'inline-block';
-            deleteBtn.onclick = () => deleteDevice(node.id());
-        }
-        if (historyBtn) {
-            historyBtn.style.display = 'inline-block';
-            historyBtn.onclick = () => openDeviceHistory(node.id());
-        }
+        deleteBtn.style.display = 'inline-block';
+        deleteBtn.onclick = () => deleteDevice(node.id());
+
+        // Загружаем детальную информацию
+        fetch(`/api/device/${node.id()}/details`)
+            .then(res => res.ok ? res.json() : Promise.reject('Ошибка загрузки'))
+            .then(data => {
+                // Заполняем тип устройства
+                if (data.type_id && devType) {
+                    devType.value = data.type_id;
+                }
+                // Заполняем историю
+                if (data.history && data.history.length > 0) {
+                    historyBody.innerHTML = '';
+                    data.history.forEach(entry => {
+                        const row = historyBody.insertRow();
+                        row.insertCell().textContent = new Date(entry.timestamp).toLocaleString();
+                        row.insertCell().innerHTML = entry.old_status === 'true' ? '<span class="badge bg-success">UP</span>' : '<span class="badge bg-danger">DOWN</span>';
+                        row.insertCell().innerHTML = entry.new_status === 'true' ? '<span class="badge bg-success">UP</span>' : '<span class="badge bg-danger">DOWN</span>';
+                    });
+                } else {
+                    historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет записей</td></tr>';
+                }
+                // Заполняем соседей
+                if (data.neighbors && data.neighbors.length > 0) {
+                    neighborsBody.innerHTML = '';
+                    data.neighbors.forEach(n => {
+                        const row = neighborsBody.insertRow();
+                        row.insertCell().innerHTML = `<a href="#" onclick="goToDevice(${n.device_id})">${n.device_name}</a>`;
+                        row.insertCell().textContent = n.interface;
+                        row.insertCell().textContent = '↔';
+                        row.insertCell().textContent = n.neighbor_interface;
+                        row.insertCell().textContent = n.link_type || '—';
+                    });
+                } else {
+                    neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет связей</td></tr>';
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка загрузки деталей:', err);
+                historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Ошибка загрузки</td></tr>';
+                neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка загрузки</td></tr>';
+            });
     } else {
-        title.textContent = 'Новое устройство';
+        // Режим создания
         devId.value = '';
         devName.value = '';
         devIp.value = '';
         if (devType) devType.value = '';
-        if (deleteBtn) deleteBtn.style.display = 'none';
-        if (historyBtn) historyBtn.style.display = 'none';
+        deleteBtn.style.display = 'none';
+        historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет данных</td></tr>';
+        neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет данных</td></tr>';
     }
+
+    // Активируем первую вкладку
+    const tab = new bootstrap.Tab(document.querySelector('#deviceModal .nav-link.active'));
+    tab.show();
+
     deviceModal.show();
 }
-
 function saveDevice() {
     const id = document.getElementById('dev_id').value;
     const name = document.getElementById('dev_name').value;
@@ -1158,3 +1194,13 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('searchInput не найден при инициализации');
     }
 });
+function goToDevice(deviceId) {
+    const node = cy.getElementById(String(deviceId));
+    if (node.length) {
+        // Сбрасываем zoom до 1.0 и центрируем на узле
+        cy.zoom(1.0);
+        cy.center(node);
+        node.select();
+        bootstrap.Modal.getInstance(document.getElementById('deviceModal')).hide();
+    }
+}
