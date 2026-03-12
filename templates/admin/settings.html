@@ -1,22 +1,31 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Настройки мониторинга</h2>
-<div class="card col-md-6 shadow-sm">
+<h2 class="page-title">⚙️ Настройки мониторинга</h2>
+
+<div class="admin-card">
+    <div class="card-header">
+        <i class="fas fa-sliders-h"></i> Параметры опроса устройств
+    </div>
     <div class="card-body">
         <form method="POST">
             <div class="mb-3">
                 <label class="form-label">Количество пакетов (ping count)</label>
                 <input type="number" name="ping_count" class="form-control" value="{{ count }}" min="1" max="10">
-                <small class="text-muted">Сколько пакетов отправлять при проверке</small>
+                <small class="text-muted">Сколько ICMP-пакетов отправлять при проверке</small>
             </div>
             <div class="mb-3">
                 <label class="form-label">Интервал опроса (секунды)</label>
                 <input type="number" name="ping_interval" class="form-control" value="{{ interval }}" min="5" max="300">
-                <small class="text-muted">Как часто проверять устройства</small>
+                <small class="text-muted">Как часто проверять доступность устройств</small>
             </div>
-            <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+            <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Сохранить настройки
+                </button>
+            </div>
         </form>
-        <div class="alert alert-info mt-3">
+        <div class="alert alert-info mt-3 mb-0">
+            <i class="fas fa-info-circle me-2"></i>
             <small>Изменения вступят в силу в течение следующего цикла опроса.</small>
         </div>
     </div>
