@@ -61,32 +61,74 @@
 </div>
 <!-- Модальное окно устройства -->
 <div class="modal fade" id="deviceModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Устройство</h5>
-                <div class="d-flex align-items-center gap-2 ms-auto">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="historyDeviceBtn" style="display:none;" title="История изменений">
-                        <i class="fas fa-history"></i>
-                    </button>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#device-info">Информация</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#device-history">История</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#device-neighbors">Соседи</a>
+                    </li>
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <input type="hidden" id="dev_id">
-                <div class="mb-3">
-                    <label class="form-label">Имя *</label>
-                    <input type="text" id="dev_name" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">IP адрес</label>
-                    <input type="text" id="dev_ip" class="form-control" placeholder="8.8.8.8">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Тип устройства *</label>
-                    <select id="dev_type" class="form-select" required>
-                        <option value="">-- Выберите тип --</option>
-                    </select>
+                <div class="tab-content">
+                    <!-- Вкладка "Информация" (редактирование) -->
+                    <div class="tab-pane active" id="device-info">
+                        <input type="hidden" id="dev_id">
+                        <div class="mb-3">
+                            <label class="form-label">Имя *</label>
+                            <input type="text" id="dev_name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">IP адрес</label>
+                            <input type="text" id="dev_ip" class="form-control" placeholder="8.8.8.8">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Тип устройства *</label>
+                            <select id="dev_type" class="form-select" required>
+                                <option value="">-- Выберите тип --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Вкладка "История" -->
+                    <div class="tab-pane" id="device-history">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Время</th>
+                                    <th>Старый статус</th>
+                                    <th>Новый статус</th>
+                                </tr>
+                            </thead>
+                            <tbody id="device-history-body">
+                                <tr><td colspan="3" class="text-center text-muted">Загрузка...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Вкладка "Соседи" -->
+                    <div class="tab-pane" id="device-neighbors">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Устройство</th>
+                                    <th>Интерфейс</th>
+                                    <th>↔</th>
+                                    <th>Интерфейс соседа</th>
+                                    <th>Тип линии</th>
+                                </tr>
+                            </thead>
+                            <tbody id="device-neighbors-body">
+                                <tr><td colspan="5" class="text-center text-muted">Загрузка...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -97,7 +139,6 @@
         </div>
     </div>
 </div>
-
 <!-- Модальное окно связи -->
 <div class="modal fade" id="linkModal" tabindex="-1">
     <div class="modal-dialog modal-md"> <!-- изменено с modal-sm на modal-md -->

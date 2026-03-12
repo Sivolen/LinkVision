@@ -391,3 +391,66 @@ def get_device_history(id):
         'new_status': 'true' if h.new_status else 'false',
         'timestamp': h.timestamp.isoformat()
     } for h in history])
+
+
+@api_bp.route('/device/<int:id>/details', methods=['GET'])
+@login_required
+def get_device_details(id):
+    device = Device.query.get_or_404(id)
+    if not current_user.is_admin and device.map.owner_id != current_user.id:
+        return jsonify({'error': 'Доступ запрещён'}), 403
+
+    # Базовая информация
+    data = {
+        'id': device.id,
+        'name': device.name,
+        'ip_address': device.ip_address,
+        'type_id': device.type_id,
+        'type_name': device.type.name if device.type else None,
+        'pos_x': device.pos_x,
+        'pos_y': device.pos_y,
+        'status': device.status,
+        'last_check': device.last_check.isoformat() if device.last_check else None,
+        'map_id': device.map_id
+    }
+
+    # История изменений (последние 50 записей)
+    from models import DeviceHistory
+    history = DeviceHistory.query.filter_by(device_id=id).order_by(DeviceHistory.timestamp.desc()).limit(50).all()
+    data['history'] = [{
+        'old_status': 'true' if h.old_status else 'false',
+        'new_status': 'true' if h.new_status else 'false',
+        'timestamp': h.timestamp.isoformat()
+    } for h in history]
+
+    # Соседи (связи)
+    neighbors = []
+    # Исходящие связи
+    for link in device.source_links:
+        neighbor = link.target
+        neighbors.append({
+            'device_id': neighbor.id,
+            'device_name': neighbor.name,
+            'interface': link.source_interface,
+            'neighbor_interface': link.target_interface,
+            'link_type': link.link_type,
+            'color': link.line_color,
+            'width': link.line_width,
+            'style': link.line_style
+        })
+    # Входящие связи
+    for link in device.target_links:
+        neighbor = link.source
+        neighbors.append({
+            'device_id': neighbor.id,
+            'device_name': neighbor.name,
+            'interface': link.target_interface,
+            'neighbor_interface': link.source_interface,
+            'link_type': link.link_type,
+            'color': link.line_color,
+            'width': link.line_width,
+            'style': link.line_style
+        })
+    data['neighbors'] = neighbors
+
+    return jsonify(data)
