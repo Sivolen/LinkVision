@@ -1,5 +1,8 @@
 import os
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+import shutil
+from datetime import datetime
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort, send_file
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from extensions import db
@@ -171,3 +174,65 @@ def edit_user(id):
 
     # GET-запрос — передаём данные пользователя в шаблон
     return render_template('admin/users.html', edit_user=user, users=User.query.all())
+
+
+@admin_bp.route('/backups')
+@login_required
+def backups():
+    # Проверка прав администратора (уже есть в before_request)
+    db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+    if not db_path.startswith('/'):
+        db_path = os.path.join(current_app.root_path, db_path)
+
+    if os.path.exists(db_path):
+        db_size = os.path.getsize(db_path)
+        db_mtime = datetime.fromtimestamp(os.path.getmtime(db_path))
+    else:
+        db_size = 0
+        db_mtime = None
+
+    return render_template('admin/backups.html', db_size=db_size, db_mtime=db_mtime)
+
+
+@admin_bp.route('/backups/download')
+@login_required
+def download_backup():
+    db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+    if not db_path.startswith('/'):
+        db_path = os.path.join(current_app.root_path, db_path)
+
+    if not os.path.exists(db_path):
+        abort(404)
+
+    return send_file(db_path, as_attachment=True, download_name='webnetmap_backup.db')
+
+
+@admin_bp.route('/backups/restore', methods=['POST'])
+@login_required
+def restore_backup():
+    if 'backup_file' not in request.files:
+        flash('Файл не выбран')
+        return redirect(url_for('admin.backups'))
+
+    file = request.files['backup_file']
+    if file.filename == '':
+        flash('Пустой файл')
+        return redirect(url_for('admin.backups'))
+
+    if not file.filename.endswith('.db'):
+        flash('Допустимы только файлы .db')
+        return redirect(url_for('admin.backups'))
+
+    db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+    if not db_path.startswith('/'):
+        db_path = os.path.join(current_app.root_path, db_path)
+
+    # Создаём резервную копию текущей БД перед заменой
+    backup_path = db_path + '.bak'
+    if os.path.exists(db_path):
+        shutil.copy2(db_path, backup_path)
+
+    # Сохраняем загруженный файл
+    file.save(db_path)
+    flash('База данных восстановлена. Пожалуйста, перезапустите приложение для применения изменений.')
+    return redirect(url_for('admin.backups'))
