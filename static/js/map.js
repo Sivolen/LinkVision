@@ -404,9 +404,40 @@ function initMap(mapId) {
                     'border-color': '#007bff',
                     'border-width': 4,
                     'border-style': 'solid',
-                    'box-shadow': '0 0 12px #007bff',
-                    'overlay-opacity': 0,
+                    'overlay-color': '#007bff',
+                    'overlay-opacity': 0.4,
+                    'overlay-padding': '6px',
                     'z-index': 10
+                }
+            },
+            {
+                selector: 'node[isGroup]',
+                style: {
+                    'shape': 'rectangle',
+                    'background-color': 'data(color)',
+                    'background-opacity': 0.1,          // очень прозрачный фон
+                    'border-color': 'data(color)',
+                    'border-width': 1,                   // тонкая граница
+                    'border-opacity': 0.3,                // граница тоже полупрозрачная
+                    'border-style': 'dashed',              // пунктирная линия для большей незаметности
+                    'label': 'data(name)',
+                    'font-size': '11px',                   // мелкий шрифт
+                    'font-weight': 'normal',
+                    'color': '#888',                        // серый цвет текста
+                    'text-valign': 'top',
+                    'text-halign': 'center',
+                    'padding': '5px',
+                    'compound-sizing-wrt-labels': 'include',
+                    'min-zoomed-font-size': 8,
+                    'min-width': 30,
+                    'min-height': 30
+                }
+            },
+            {
+                selector: 'node[isGroup]:selected',
+                style: {
+                    'border-color': '#007bff',
+                    'border-width': 4
                 }
             },
             {
@@ -634,26 +665,67 @@ function loadElements(mapId) {
     })
     .then(data => {
         if (!cy) return;
+
+        // Обработка групп
+        const groupNodes = [];
+        const groupMap = {};
+        if (data.groups) {
+            data.groups.forEach(g => {
+                const groupNode = {
+                    group: 'nodes',
+                    data: {
+                        id: `group_${g.id}`,
+                        name: g.name,
+                        color: g.color,
+                        isGroup: true
+                    }
+                };
+                groupNodes.push(groupNode);
+                groupMap[g.id] = `group_${g.id}`;
+            });
+        }
+
+        // Обработка устройств
         const validNodes = data.nodes.filter(n => n.data && n.data.id);
-        const validEdges = data.edges.filter(e =>
-            e.data && e.data.source && e.data.target &&
-            e.data.source !== 'None' && e.data.target !== 'None'
-        );
-        if (bgImageWidth && bgImageHeight) {
-            validNodes.forEach(n => {
+        const deviceNodes = validNodes.map(n => {
+            // Устанавливаем parent, если устройство принадлежит группе
+            if (n.data.group_id && groupMap[n.data.group_id]) {
+                n.data.parent = groupMap[n.data.group_id];
+            }
+            // Корректировка позиции
+            if (bgImageWidth && bgImageHeight) {
                 if (n.data.x !== undefined && n.data.y !== undefined) {
                     const bounded = boundNodePosition({ x: n.data.x, y: n.data.y });
                     n.data.x = bounded.x;
                     n.data.y = bounded.y;
                 }
-            });
-        }
-        cy.add(validNodes);
+            }
+            return n;
+        });
+
+        // Отладка
+        console.log('Группы добавлены:', groupNodes.length);
+        deviceNodes.forEach(n => {
+            if (n.data.parent) {
+                console.log('Устройство', n.data.id, 'принадлежит группе', n.data.parent);
+            }
+        });
+
+        // Обработка рёбер
+        const validEdges = data.edges.filter(e =>
+            e.data && e.data.source && e.data.target &&
+            e.data.source !== 'None' && e.data.target !== 'None'
+        );
+
+        // Добавляем всё в cy
+        cy.add(groupNodes);
+        cy.add(deviceNodes);
         cy.add(validEdges);
+
         const layout = cy.layout({ name: 'preset' });
         layout.one('layoutstop', () => {
             elementsLoaded = true;
-            console.log('✅ Элементы загружены:', validNodes.length, 'узлов,', validEdges.length, 'связей');
+            console.log('✅ Элементы загружены:', deviceNodes.length, 'узлов,', validEdges.length, 'связей');
             checkReadyAndFit();
             cy.nodes().forEach(node => {
                 if (node.data('status') === 'false') {
@@ -662,6 +734,8 @@ function loadElements(mapId) {
             });
         });
         layout.run();
+
+        // Предзагрузка иконок
         validNodes.forEach(n => {
             if (n.data.iconUrl && n.data.iconUrl !== '') {
                 const img = new Image();
@@ -738,6 +812,7 @@ function openDeviceModal(node) {
     const deleteBtn = document.getElementById('deleteDeviceBtn');
     const historyBody = document.getElementById('device-history-body');
     const neighborsBody = document.getElementById('device-neighbors-body');
+    const devGroup = document.getElementById('dev_group');
 
     if (node) {
         // Режим редактирования
@@ -781,6 +856,28 @@ function openDeviceModal(node) {
                 } else {
                     neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет связей</td></tr>';
                 }
+
+                // Загружаем список групп для этой карты
+                fetch(`/api/map/${getMapId()}/groups`)
+                    .then(res => res.ok ? res.json() : [])
+                    .then(groups => {
+                        // Очищаем и наполняем select
+                        devGroup.innerHTML = '<option value="">-- Без группы --</option>';
+                        groups.forEach(g => {
+                            const option = document.createElement('option');
+                            option.value = g.id;
+                            option.textContent = g.name;
+                            option.style.backgroundColor = g.color; // можно добавить цвет
+                            devGroup.appendChild(option);
+                        });
+                        // Устанавливаем сохранённую группу, если есть
+                        if (data.group_id) {
+                            devGroup.value = data.group_id;
+                        } else {
+                            devGroup.value = '';
+                        }
+                    })
+                    .catch(err => console.error('Ошибка загрузки групп:', err));
             })
             .catch(err => {
                 console.error('Ошибка загрузки деталей:', err);
@@ -796,6 +893,21 @@ function openDeviceModal(node) {
         deleteBtn.style.display = 'none';
         historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет данных</td></tr>';
         neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет данных</td></tr>';
+
+        // Загружаем список групп (без установки значения)
+        fetch(`/api/map/${getMapId()}/groups`)
+            .then(res => res.ok ? res.json() : [])
+            .then(groups => {
+                devGroup.innerHTML = '<option value="">-- Без группы --</option>';
+                groups.forEach(g => {
+                    const option = document.createElement('option');
+                    option.value = g.id;
+                    option.textContent = g.name;
+                    option.style.backgroundColor = g.color;
+                    devGroup.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Ошибка загрузки групп:', err));
     }
 
     // Активируем первую вкладку
@@ -809,9 +921,18 @@ function saveDevice() {
     const name = document.getElementById('dev_name').value;
     const ip = document.getElementById('dev_ip').value;
     const type_id = document.getElementById('dev_type').value;
+    const group_id = document.getElementById('dev_group').value; // получение группы
+
     if (!name) { alert('⚠️ Введите имя'); return; }
     if (!type_id) { alert('⚠️ Выберите тип'); return; }
-    const body = { name, ip_address: ip, type_id: parseInt(type_id) };
+
+    const body = {
+        name,
+        ip_address: ip,
+        type_id: parseInt(type_id),
+        group_id: group_id ? parseInt(group_id) : null
+    };
+
     if (id) {
         fetch(`/api/device/${id}`, {
             method: 'PUT',
@@ -1203,4 +1324,84 @@ function goToDevice(deviceId) {
         node.select();
         bootstrap.Modal.getInstance(document.getElementById('deviceModal')).hide();
     }
+}
+
+// ============================================================================
+// УПРАВЛЕНИЕ ГРУППАМИ
+// ============================================================================
+function openGroupManager() {
+    loadGroups();
+    const modal = new bootstrap.Modal(document.getElementById('groupModal'));
+    modal.show();
+}
+
+function loadGroups() {
+    fetch(`/api/map/${getMapId()}/groups`)
+        .then(res => res.ok ? res.json() : [])
+        .then(groups => {
+            const tbody = document.getElementById('group-list-body');
+            tbody.innerHTML = '';
+            groups.forEach(g => {
+                const row = tbody.insertRow();
+                row.insertCell().textContent = g.name;
+                row.insertCell().innerHTML = `<span style="display:inline-block; width:20px; height:20px; background:${g.color}; border-radius:4px;"></span> ${g.color}`;
+                // Количество устройств в группе (можно получить отдельно или добавить в ответ API)
+                row.insertCell().textContent = g.device_count || 0;
+                const actions = row.insertCell();
+                actions.innerHTML = `
+                    <button class="btn btn-sm btn-outline-primary" onclick="editGroup(${g.id}, '${g.name}', '${g.color}')">✏️</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup(${g.id})">🗑️</button>
+                `;
+            });
+        })
+        .catch(err => console.error('Ошибка загрузки групп:', err));
+}
+
+document.getElementById('groupForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const id = document.getElementById('group_id').value;
+    const name = document.getElementById('group_name').value;
+    const color = document.getElementById('group_color').value;
+    const mapId = getMapId();
+
+    const url = id ? `/api/group/${id}` : '/api/group';
+    const method = id ? 'PUT' : 'POST';
+    const body = id ? { name, color } : { name, color, map_id: mapId };
+
+    fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(() => {
+        document.getElementById('groupForm').reset();
+        document.getElementById('group_id').value = '';
+        loadGroups();
+        reloadMapElements(); // обновить карту (перезагрузить элементы)
+    })
+    .catch(err => console.error('Ошибка сохранения группы:', err));
+});
+
+function editGroup(id, name, color) {
+    document.getElementById('group_id').value = id;
+    document.getElementById('group_name').value = name;
+    document.getElementById('group_color').value = color;
+}
+
+function deleteGroup(id) {
+    if (!confirm('Удалить группу? Устройства останутся без группы.')) return;
+    fetch(`/api/group/${id}`, { method: 'DELETE' })
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(() => {
+            loadGroups();
+            reloadMapElements();
+        })
+        .catch(err => console.error('Ошибка удаления группы:', err));
+}
+
+function reloadMapElements() {
+    // Функция для перезагрузки элементов карты
+    cy.elements().remove();
+    loadElements(getMapId());
 }

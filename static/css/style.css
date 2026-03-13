@@ -905,3 +905,32 @@ body {
 .search-filter-bar {
     max-width: 500px;
 }
+{
+    selector: 'node[parent]',
+    style: {
+        'border-color': 'data(color)',
+        'border-width': 2,
+        'border-style': 'solid',
+        'background-opacity': 0.1,
+        'background-color': 'data(color)',
+        'shape': 'round-rectangle',
+        'text-valign': 'top',
+        'text-halign': 'center',
+        'font-size': '12px',
+        'font-weight': 'bold',
+        'padding': '10px',
+        'compound-sizing-wrt-labels': 'include'
+    }
+},
+{
+    selector: 'node:parent',
+    style: {
+        'border-color': '#888',
+        'border-width': 2,
+        'border-style': 'dashed',
+        'background-opacity': 0.05,
+        'background-color': '#888',
+        'text-opacity': 1,
+        'label': 'data(name)'
+    }
+}

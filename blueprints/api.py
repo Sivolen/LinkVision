@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify, url_for, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from extensions import db
-from models import Map, Device, DeviceType, Link, DeviceHistory
+from models import Map, Device, DeviceType, Link, DeviceHistory, Group
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -48,7 +48,8 @@ def get_elements(map_id):
                 'ip': dev.ip_address,
                 'type': dev.type.name if dev.type else 'Unknown',
                 'width': width,
-                'height': height
+                'height': height,
+                'group_id': dev.group_id
             },
             'position': {'x': dev.pos_x or 100, 'y': dev.pos_y or 100}
         })
@@ -82,8 +83,8 @@ def get_elements(map_id):
                 'style': link.line_style
             }
         })
-
-    return jsonify({'nodes': nodes, 'edges': edges})
+    groups = [{'id': g.id, 'name': g.name, 'color': g.color} for g in map_obj.groups]
+    return jsonify({'nodes': nodes, 'edges': edges, 'groups': groups})
 
 
 # ✅ НОВЫЙ: Получение данных одного устройства (для редактирования)
@@ -114,7 +115,8 @@ def create_device():
         name=data['name'],
         ip_address=data.get('ip_address'),
         pos_x=data.get('x', 100),
-        pos_y=data.get('y', 100)
+        pos_y=data.get('y', 100),
+        group_id=data.get('group_id')
     )
     db.session.add(dev)
     db.session.commit()
@@ -140,6 +142,7 @@ def manage_device(id):
         if 'type_id' in data: device.type_id = data['type_id']
         if 'pos_x' in data: device.pos_x = data['pos_x']
         if 'pos_y' in data: device.pos_y = data['pos_y']
+        if 'group_id' in data: device.group_id = data['group_id']
         db.session.commit()
         return jsonify({'status': 'ok', 'id': device.id})
 
@@ -411,10 +414,11 @@ def get_device_details(id):
         'pos_y': device.pos_y,
         'status': device.status,
         'last_check': device.last_check.isoformat() if device.last_check else None,
-        'map_id': device.map_id
+        'map_id': device.map_id,
+        'group_id': device.group_id
     }
 
-    # История изменений (последние 50 записей)
+    # История изменений
     from models import DeviceHistory
     history = DeviceHistory.query.filter_by(device_id=id).order_by(DeviceHistory.timestamp.desc()).limit(50).all()
     data['history'] = [{
@@ -423,34 +427,36 @@ def get_device_details(id):
         'timestamp': h.timestamp.isoformat()
     } for h in history]
 
-    # Соседи (связи)
+    # Соседи (связи) с проверкой существования устройства
     neighbors = []
     # Исходящие связи
     for link in device.source_links:
         neighbor = link.target
-        neighbors.append({
-            'device_id': neighbor.id,
-            'device_name': neighbor.name,
-            'interface': link.source_interface,
-            'neighbor_interface': link.target_interface,
-            'link_type': link.link_type,
-            'color': link.line_color,
-            'width': link.line_width,
-            'style': link.line_style
-        })
+        if neighbor:  # проверка на None
+            neighbors.append({
+                'device_id': neighbor.id,
+                'device_name': neighbor.name,
+                'interface': link.source_interface,
+                'neighbor_interface': link.target_interface,
+                'link_type': link.link_type,
+                'color': link.line_color,
+                'width': link.line_width,
+                'style': link.line_style
+            })
     # Входящие связи
     for link in device.target_links:
         neighbor = link.source
-        neighbors.append({
-            'device_id': neighbor.id,
-            'device_name': neighbor.name,
-            'interface': link.target_interface,
-            'neighbor_interface': link.source_interface,
-            'link_type': link.link_type,
-            'color': link.line_color,
-            'width': link.line_width,
-            'style': link.line_style
-        })
+        if neighbor:
+            neighbors.append({
+                'device_id': neighbor.id,
+                'device_name': neighbor.name,
+                'interface': link.target_interface,
+                'neighbor_interface': link.source_interface,
+                'link_type': link.link_type,
+                'color': link.line_color,
+                'width': link.line_width,
+                'style': link.line_style
+            })
     data['neighbors'] = neighbors
 
     return jsonify(data)
@@ -476,7 +482,8 @@ def export_map(id):
             'status': dev.status,
             'icon_filename': dev.type.icon_filename if dev.type else None,
             'width': dev.type.width if dev.type else None,
-            'height': dev.type.height if dev.type else None
+            'height': dev.type.height if dev.type else None,
+            'group_id': dev.group_id  # добавляем ID группы
         })
 
     links = []
@@ -493,6 +500,14 @@ def export_map(id):
             'line_style': link.line_style
         })
 
+    groups = []
+    for g in map_obj.groups:
+        groups.append({
+            'id': g.id,
+            'name': g.name,
+            'color': g.color
+        })
+
     data = {
         'id': map_obj.id,
         'name': map_obj.name,
@@ -502,7 +517,8 @@ def export_map(id):
         'zoom': map_obj.zoom,
         'owner_id': map_obj.owner_id,
         'devices': devices,
-        'links': links
+        'links': links,
+        'groups': groups
     }
     return jsonify(data)
 
@@ -524,8 +540,10 @@ def import_map():
         # Удаляем старые устройства и связи (связи удаляются первыми)
         Link.query.filter_by(map_id=map_id).delete()
         Device.query.filter_by(map_id=map_id).delete()
-        db.session.flush()  # Принудительно применяем удаление
-        print(f"🗑️ Удалены все устройства и связи карты {map_id}")
+        # Удаляем старые группы
+        Group.query.filter_by(map_id=map_id).delete()
+        db.session.flush()
+        print(f"🗑️ Удалены все устройства, связи и группы карты {map_id}")
     else:
         map_obj = Map(name=data.get('name', 'Imported Map'), owner_id=current_user.id)
         db.session.add(map_obj)
@@ -538,6 +556,22 @@ def import_map():
     map_obj.pan_y = data.get('pan_y', 0)
     map_obj.zoom = data.get('zoom', 1)
 
+    # Маппинг старых ID групп на новые
+    group_id_map = {}
+    groups_created = 0
+    for g_data in data.get('groups', []):
+        group = Group(
+            name=g_data['name'],
+            color=g_data.get('color', '#3498db'),
+            map_id=map_obj.id
+        )
+        db.session.add(group)
+        db.session.flush()
+        group_id_map[g_data['id']] = group.id
+        groups_created += 1
+    print(f"✅ Создано групп: {groups_created}")
+
+    # Маппинг старых ID устройств на новые
     device_id_map = {}
     devices_created = 0
     for dev_data in data.get('devices', []):
@@ -553,6 +587,12 @@ def import_map():
         else:
             type_id = dev_data.get('type_id')
 
+        # Определяем новую группу для устройства, если была
+        new_group_id = None
+        old_group_id = dev_data.get('group_id')
+        if old_group_id:
+            new_group_id = group_id_map.get(old_group_id)
+
         dev = Device(
             map_id=map_obj.id,
             type_id=type_id,
@@ -560,7 +600,8 @@ def import_map():
             ip_address=dev_data.get('ip_address'),
             pos_x=dev_data.get('pos_x', 100),
             pos_y=dev_data.get('pos_y', 100),
-            status=dev_data.get('status', True)
+            status=dev_data.get('status', True),
+            group_id=new_group_id
         )
         db.session.add(dev)
         db.session.flush()
@@ -594,3 +635,61 @@ def import_map():
 
     db.session.commit()
     return jsonify({'id': map_obj.id, 'status': 'imported'})
+
+
+@api_bp.route('/map/<int:map_id>/groups', methods=['GET'])
+@login_required
+def get_groups(map_id):
+    map_obj = Map.query.get_or_404(map_id)
+    if not current_user.is_admin and map_obj.owner_id != current_user.id:
+        return jsonify({'error': 'Доступ запрещён'}), 403
+    groups = Group.query.filter_by(map_id=map_id).all()
+    return jsonify([{
+        'id': g.id,
+        'name': g.name,
+        'color': g.color,
+        'device_count': g.devices.count()
+    } for g in groups])
+
+
+@api_bp.route('/group', methods=['POST'])
+@login_required
+def create_group():
+    data = request.json
+    map_id = data.get('map_id')
+    if not map_id:
+        return jsonify({'error': 'map_id required'}), 400
+    map_obj = Map.query.get_or_404(map_id)
+    if not current_user.is_admin and map_obj.owner_id != current_user.id:
+        return jsonify({'error': 'Доступ запрещён'}), 403
+    group = Group(
+        name=data['name'],
+        color=data.get('color', '#3498db'),
+        map_id=map_id
+    )
+    db.session.add(group)
+    db.session.commit()
+    return jsonify({'id': group.id}), 201
+
+
+@api_bp.route('/group/<int:id>', methods=['PUT', 'DELETE'])
+@login_required
+def manage_group(id):
+    group = Group.query.get_or_404(id)
+    map_obj = group.map
+    if not current_user.is_admin and map_obj.owner_id != current_user.id:
+        return jsonify({'error': 'Доступ запрещён'}), 403
+    if request.method == 'DELETE':
+        # Перед удалением отвязать устройства
+        Device.query.filter_by(group_id=id).update({'group_id': None})
+        db.session.delete(group)
+        db.session.commit()
+        return jsonify({'status': 'deleted'})
+    elif request.method == 'PUT':
+        data = request.json
+        if 'name' in data:
+            group.name = data['name']
+        if 'color' in data:
+            group.color = data['color']
+        db.session.commit()
+        return jsonify({'status': 'updated'})

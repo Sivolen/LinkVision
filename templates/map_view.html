@@ -31,6 +31,11 @@
             <i class="fas fa-compress-arrows-alt"></i>
         </button>
     </div>
+    <div class="toolbar-group">
+        <button class="toolbar-btn" onclick="openGroupManager()">
+            <i class="fas fa-layer-group"></i> Группы
+        </button>
+    </div>
     <div class="search-filter-bar toolbar-group">
         <div class="input-group">
             <span class="input-group-text bg-secondary text-white"><i class="fas fa-search"></i></span>
@@ -94,6 +99,12 @@
                             <label class="form-label">Тип устройства *</label>
                             <select id="dev_type" class="form-select" required>
                                 <option value="">-- Выберите тип --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Группа</label>
+                            <select id="dev_group" class="form-select">
+                                <option value="">-- Без группы --</option>
                             </select>
                         </div>
                     </div>
@@ -230,6 +241,43 @@
                     </thead>
                     <tbody id="device-history-body">
                         <!-- Данные будут загружаться через JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Модальное окно управления группами -->
+<div class="modal fade" id="groupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Группы устройств</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="groupForm" class="mb-3">
+                    <input type="hidden" id="group_id">
+                    <div class="input-group">
+                        <input type="text" id="group_name" class="form-control" placeholder="Название группы" required>
+                        <input type="color" id="group_color" class="form-control form-control-color" value="#3498db">
+                        <button type="submit" class="btn btn-success">Сохранить</button>
+                    </div>
+                </form>
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Цвет</th>
+                            <th>Устройств</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="group-list-body">
+                        <!-- Загружается через JS -->
                     </tbody>
                 </table>
             </div>
