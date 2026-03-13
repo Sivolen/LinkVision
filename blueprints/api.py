@@ -84,7 +84,7 @@ def get_elements(map_id):
                 'style': link.line_style
             }
         })
-    groups = [{'id': g.id, 'name': g.name, 'color': g.color} for g in map_obj.groups]
+    groups = [{'id': g.id, 'name': g.name, 'color': g.color} for g in map_obj.groups if g.devices.count() > 0]
     return jsonify({'nodes': nodes, 'edges': edges, 'groups': groups})
 
 
