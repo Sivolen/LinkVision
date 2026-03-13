@@ -47,6 +47,7 @@ class Device(db.Model):
     pos_y = db.Column(db.Float, default=0)
     status = db.Column(db.Boolean, default=True)
     last_check = db.Column(db.DateTime, default=datetime.utcnow)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)
 
     source_links = db.relationship('Link', foreign_keys='Link.source_device_id', backref='source', lazy='dynamic', cascade='all, delete-orphan')
     target_links = db.relationship('Link', foreign_keys='Link.target_device_id', backref='target', lazy='dynamic', cascade='all, delete-orphan')
@@ -94,3 +95,12 @@ class DeviceHistory(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     device = db.relationship('Device', backref='history')
+
+
+class Group(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), nullable=False)
+    color = db.Column(db.String(7), default="#3498db")  # hex-код цвета
+    map_id = db.Column(db.Integer, db.ForeignKey('map.id'))
+    map = db.relationship('Map', backref='groups')
+    devices = db.relationship('Device', backref='group', lazy='dynamic')
