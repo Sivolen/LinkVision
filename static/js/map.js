@@ -463,6 +463,15 @@ function initMap(mapId) {
                     'line-color': '#007bff',
                     'text-background-color': '#e7f3ff'
                 }
+            },
+            {
+                selector: 'node[monitoring_enabled="false"]',
+                style: {
+                    'border-color': '#6c757d',
+                    'border-style': 'dotted',
+                    'border-width': 3,
+                    'opacity': 0.7
+                }
             }
         ],
         layout: { name: 'preset' },
@@ -479,7 +488,7 @@ function initMap(mapId) {
         enforcePanBounds();
         saveViewportToServer();
     });
-
+    cy.on('select unselect', updateBulkEditButton);
     const deviceModalEl = document.getElementById('deviceModal');
     if (deviceModalEl && !deviceModal) {
         deviceModal = new bootstrap.Modal(deviceModalEl);
@@ -813,6 +822,7 @@ function openDeviceModal(node) {
     const historyBody = document.getElementById('device-history-body');
     const neighborsBody = document.getElementById('device-neighbors-body');
     const devGroup = document.getElementById('dev_group');
+    const monitoringCheck = document.getElementById('dev_monitoring');
 
     if (node) {
         // Режим редактирования
@@ -856,7 +866,9 @@ function openDeviceModal(node) {
                 } else {
                     neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет связей</td></tr>';
                 }
-
+                if (monitoringCheck) {
+                    monitoringCheck.checked = data.monitoring_enabled;
+                }
                 // Загружаем список групп для этой карты
                 fetch(`/api/map/${getMapId()}/groups`)
                     .then(res => res.ok ? res.json() : [])
@@ -921,7 +933,8 @@ function saveDevice() {
     const name = document.getElementById('dev_name').value;
     const ip = document.getElementById('dev_ip').value;
     const type_id = document.getElementById('dev_type').value;
-    const group_id = document.getElementById('dev_group').value; // получение группы
+    const group_id = document.getElementById('dev_group').value;
+    const monitoring = document.getElementById('dev_monitoring')?.checked;
 
     if (!name) { alert('⚠️ Введите имя'); return; }
     if (!type_id) { alert('⚠️ Выберите тип'); return; }
@@ -930,7 +943,8 @@ function saveDevice() {
         name,
         ip_address: ip,
         type_id: parseInt(type_id),
-        group_id: group_id ? parseInt(group_id) : null
+        group_id: group_id ? parseInt(group_id) : null,
+        monitoring_enabled: monitoring
     };
 
     if (id) {
@@ -1465,4 +1479,126 @@ function applyLayout(layoutName) {
 
     const layout = cy.layout(layoutOptions);
     layout.run();
+}
+// ============================================================================
+// МАССОВОЕ РЕДАКТИРОВАНИЕ
+// ============================================================================
+
+// Обновление видимости кнопки при изменении выделения
+function updateBulkEditButton() {
+    const selectedCount = cy.nodes(':selected').filter(node => !node.data('isGroup')).length;
+    const group = document.getElementById('bulkEditGroup');
+    if (group) {
+        group.style.display = selectedCount > 0 ? 'flex' : 'none';
+    }
+}
+
+// Открыть модальное окно массового редактирования
+function openBulkEditModal() {
+    const selected = cy.nodes(':selected').filter(node => !node.data('isGroup'));
+    if (selected.length === 0) {
+        alert('Нет выбранных устройств');
+        return;
+    }
+    document.getElementById('selectedCount').textContent = selected.length;
+    document.getElementById('bulk_monitoring').value = '';
+    loadDeviceTypesForBulk();
+    loadGroupsForBulk();
+    const modal = new bootstrap.Modal(document.getElementById('bulkEditModal'));
+    modal.show();
+}
+
+// Загрузка типов для массового редактирования
+function loadDeviceTypesForBulk() {
+    fetchWithRetry('/api/types')
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(types => {
+            const select = document.getElementById('bulk_type');
+            select.innerHTML = '<option value="">-- Не изменять --</option>';
+            types.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t.id;
+                option.text = t.name;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Ошибка загрузки типов:', err));
+}
+
+// Загрузка групп для массового редактирования
+function loadGroupsForBulk() {
+    fetchWithRetry(`/api/map/${getMapId()}/groups`)
+        .then(res => res.ok ? res.json() : [])
+        .then(groups => {
+            const select = document.getElementById('bulk_group');
+            select.innerHTML = '<option value="">-- Не изменять --</option>';
+            groups.forEach(g => {
+                const option = document.createElement('option');
+                option.value = g.id;
+                option.text = g.name;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Ошибка загрузки групп:', err));
+}
+
+// Применить массовое редактирование
+function applyBulkEdit() {
+    const selected = cy.nodes(':selected').filter(node => !node.data('isGroup'));
+    if (selected.length === 0) return;
+
+    const typeId = document.getElementById('bulk_type').value;
+    const groupId = document.getElementById('bulk_group').value;
+    const center = document.getElementById('bulk_center').checked;
+    const monitoring = document.getElementById('bulk_monitoring').value;
+
+    // Определяем координаты центра видимой области
+    let centerX, centerY;
+    if (center) {
+        const container = document.getElementById('cy');
+        const pan = cy.pan();
+        const zoom = cy.zoom();
+        centerX = (-pan.x + container.clientWidth / 2 / zoom);
+        centerY = (-pan.y + container.clientHeight / 2 / zoom);
+    }
+
+    const promises = [];
+    selected.forEach(node => {
+        const update = {};
+        if (typeId) update.type_id = parseInt(typeId);
+        if (groupId !== '') update.group_id = parseInt(groupId);
+        if (center) {
+            update.pos_x = Math.round(centerX);
+            update.pos_y = Math.round(centerY);
+        }
+        if (monitoring !== '') update.monitoring_enabled = (monitoring === 'true');
+
+        if (Object.keys(update).length === 0) return;
+
+        promises.push(
+            fetch(`/api/device/${node.id()}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(update)
+            }).then(res => {
+                if (!res.ok) throw new Error(`Ошибка обновления устройства ${node.id()}`);
+                return res.json();
+            })
+        );
+    });
+
+    if (promises.length === 0) {
+        alert('Нет изменений для применения');
+        return;
+    }
+
+    Promise.all(promises)
+        .then(() => {
+            bootstrap.Modal.getInstance(document.getElementById('bulkEditModal')).hide();
+            reloadMapElements();
+        })
+        .catch(err => {
+            console.error('Ошибка массового редактирования:', err);
+            alert('Не удалось обновить все устройства');
+        });
 }
