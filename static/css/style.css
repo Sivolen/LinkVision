@@ -567,23 +567,119 @@ body {
 }
 
 /* ============================================================================
-   МОДАЛЬНЫЕ ОКНА
+   МОДАЛЬНЫЕ ОКНА (улучшенные стили)
    ============================================================================ */
 .modal-content {
     background: var(--bg-secondary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
+
 .modal-header {
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-primary);
+    padding: 1rem 1.5rem;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
+
+.modal-header .modal-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modal-header .btn-close {
+    filter: invert(0.5) grayscale(100%) brightness(0.5);
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+.modal-header .btn-close:hover {
+    opacity: 1;
+}
+
 .modal-footer {
     border-top: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    padding: 1rem 1.5rem;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
 }
-.btn-close {
+
+[data-theme="dark"] .modal-header .btn-close {
     filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Стили для вкладок внутри модального окна */
+.modal-header .nav-tabs {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+.modal-header .nav-tabs .nav-link {
+    color: var(--text-secondary);
+    border: none;
+    background: transparent;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+}
+.modal-header .nav-tabs .nav-link.active {
+    color: var(--accent-color);
+    background: transparent;
+    border-bottom: 2px solid var(--accent-color);
+}
+.modal-header .nav-tabs .nav-link:hover {
+    color: var(--accent-hover);
+    border-color: transparent;
+}
+[data-theme="dark"] .modal-header .nav-tabs .nav-link {
+    color: #adb5bd;
+}
+[data-theme="dark"] .modal-header .nav-tabs .nav-link.active {
+    color: #4fc3f7;
+}
+
+/* Таблицы в модальных окнах */
+.modal-content .table {
+    color: var(--text-primary);
+    background: transparent;
+    margin-bottom: 0;
+}
+.modal-content .table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+[data-theme="dark"] .modal-content .table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+.modal-content .table td,
+.modal-content .table th {
+    border-color: var(--border-color);
+    padding: 0.75rem;
+    vertical-align: middle;
+}
+.modal-content .table th {
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    border-bottom-width: 2px;
+}
+.modal-content .table a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+.modal-content .table a:hover {
+    text-decoration: underline;
+}
+.modal-content .table .badge {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 20px;
 }
 
 /* ============================================================================
@@ -695,7 +791,7 @@ body {
     transition: box-shadow 0.3s ease;
     overflow: hidden;
     margin-bottom: 1.5rem;
-    width: 100%; /* без max-width */
+    width: 100%;
 }
 .admin-card:hover {
     box-shadow: 0 16px 32px rgba(0,0,0,0.15);
@@ -720,7 +816,7 @@ body {
     background: linear-gradient(135deg, #0a1a2a 0%, #1a2a3a 100%);
 }
 
-/* Современные таблицы (остаётся без изменений) */
+/* Современные таблицы (используются в админке и могут применяться в модалках) */
 .modern-table {
     width: 100%;
     border-collapse: separate;
@@ -853,11 +949,12 @@ body {
     }
 }
 
-/* Для модального окна редактирования */
+/* Для модального окна редактирования (дублирует, но оставим для совместимости) */
 .modal .password-field .toggle-password {
     top: 50%;
     transform: translateY(-50%);
 }
+
 /* Индикатор состояния бэкенда и версия */
 .status-indicator {
     display: flex;
@@ -872,15 +969,15 @@ body {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background-color: #6c757d; /* серый по умолчанию */
+    background-color: #6c757d;
     transition: background-color 0.3s;
 }
 .status-dot.online {
-    background-color: #28a745; /* зелёный */
+    background-color: #28a745;
     box-shadow: 0 0 5px #28a745;
 }
 .status-dot.offline {
-    background-color: #dc3545; /* красный */
+    background-color: #dc3545;
     box-shadow: 0 0 5px #dc3545;
 }
 .version-badge {
@@ -892,11 +989,12 @@ body {
     border-radius: 10px;
 }
 .sidebar.collapsed .status-indicator {
-    display: none; /* скрываем в свёрнутом сайдбаре */
+    display: none;
 }
+
 /* Подсветка найденных узлов */
 .cy-node-highlight {
-    border-color: #007bff !important;  /* синий */
+    border-color: #007bff !important;
     border-width: 4px !important;
     box-shadow: 0 0 12px #007bff;
     transition: all 0.2s ease;
@@ -904,33 +1002,4 @@ body {
 }
 .search-filter-bar {
     max-width: 500px;
-}
-{
-    selector: 'node[parent]',
-    style: {
-        'border-color': 'data(color)',
-        'border-width': 2,
-        'border-style': 'solid',
-        'background-opacity': 0.1,
-        'background-color': 'data(color)',
-        'shape': 'round-rectangle',
-        'text-valign': 'top',
-        'text-halign': 'center',
-        'font-size': '12px',
-        'font-weight': 'bold',
-        'padding': '10px',
-        'compound-sizing-wrt-labels': 'include'
-    }
-},
-{
-    selector: 'node:parent',
-    style: {
-        'border-color': '#888',
-        'border-width': 2,
-        'border-style': 'dashed',
-        'background-opacity': 0.05,
-        'background-color': '#888',
-        'text-opacity': 1,
-        'label': 'data(name)'
-    }
 }

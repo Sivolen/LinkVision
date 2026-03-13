@@ -15,4 +15,4 @@ class Config:
     SESSION_COOKIE_SECURE = False
     PERMANENT_SESSION_LIFETIME = timedelta(days=1)
 
-    VERSION = '1.0.4'  # Версия приложения
+    VERSION = '1.0.5'  # Версия приложения
