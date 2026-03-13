@@ -36,6 +36,20 @@
             <i class="fas fa-layer-group"></i> Группы
         </button>
     </div>
+    <div class="toolbar-group">
+        <div class="dropdown">
+            <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-project-diagram"></i> Автораскладка
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('grid')">Сетка (grid)</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('circle')">Круг (circle)</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('concentric')">Концентрический (concentric)</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst')">Дерево (breadthfirst)</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('cose')">Силовой (cose)</a></li>
+            </ul>
+        </div>
+    </div>
     <div class="search-filter-bar toolbar-group">
         <div class="input-group">
             <span class="input-group-text bg-secondary text-white"><i class="fas fa-search"></i></span>
