@@ -1265,6 +1265,10 @@ function applyFilterAndSearch() {
     // Применяем фильтр по статусу
     let visibleCount = 0;
     cy.nodes().forEach(node => {
+        if (node.data('isGroup')) {
+            node.show(); // группы всегда видимы
+            return;
+        }
         const nodeStatus = node.data('status');
         const shouldShow = (currentFilterStatus === 'all' || nodeStatus === currentFilterStatus);
         if (shouldShow) {
@@ -1276,10 +1280,11 @@ function applyFilterAndSearch() {
     });
     console.log(`После фильтра видимо узлов: ${visibleCount}`);
 
-    // Применяем поиск (подсвечиваем совпадения среди ВСЕХ узлов, включая скрытые)
+    // Применяем поиск (подсвечиваем совпадения среди всех узлов, включая скрытые)
     if (searchTerm) {
         let matchCount = 0;
         cy.nodes().forEach(node => {
+            if (node.data('isGroup')) return; // группы не участвуют в поиске
             const name = (node.data('name') || '').toLowerCase();
             const ip = (node.data('ip') || '').toLowerCase();
             const type = (node.data('type') || '').toLowerCase();
