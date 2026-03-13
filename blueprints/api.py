@@ -43,6 +43,7 @@ def get_elements(map_id):
                 'id': str(dev.id),
                 'label': f"{dev.name}\n{dev.ip_address or ''}",
                 'status': 'true' if dev.status else 'false',
+                'monitoring_enabled': 'true' if dev.monitoring_enabled else 'false',
                 'iconUrl': icon_url or '',
                 'name': dev.name,
                 'ip': dev.ip_address,
@@ -101,7 +102,8 @@ def get_device(id):
         'type_id': device.type_id,
         'pos_x': device.pos_x,
         'pos_y': device.pos_y,
-        'status': device.status
+        'status': device.status,
+        'monitoring_enabled': device.monitoring_enabled
     })
 
 
@@ -116,7 +118,8 @@ def create_device():
         ip_address=data.get('ip_address'),
         pos_x=data.get('x', 100),
         pos_y=data.get('y', 100),
-        group_id=data.get('group_id')
+        group_id=data.get('group_id'),
+        monitoring_enabled=data.get('monitoring_enabled', True)  # по умолчанию True
     )
     db.session.add(dev)
     db.session.commit()
@@ -143,6 +146,7 @@ def manage_device(id):
         if 'pos_x' in data: device.pos_x = data['pos_x']
         if 'pos_y' in data: device.pos_y = data['pos_y']
         if 'group_id' in data: device.group_id = data['group_id']
+        if 'monitoring_enabled' in data: device.monitoring_enabled = data['monitoring_enabled']
         db.session.commit()
         return jsonify({'status': 'ok', 'id': device.id})
 
@@ -415,7 +419,8 @@ def get_device_details(id):
         'status': device.status,
         'last_check': device.last_check.isoformat() if device.last_check else None,
         'map_id': device.map_id,
-        'group_id': device.group_id
+        'group_id': device.group_id,
+        'monitoring_enabled': device.monitoring_enabled,
     }
 
     # История изменений

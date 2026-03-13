@@ -113,6 +113,8 @@ def monitor_loop():
                 # Последовательная обработка результатов (обновление БД, отправка событий)
                 # Последовательная обработка результатов (обновление БД, отправка событий)
                 for device, is_up in results:
+                    if not device.monitoring_enabled:
+                        continue  # пропускаем, если мониторинг отключён
                     import time as time_module
                     current_time = time_module.time()
                     with _lock:
