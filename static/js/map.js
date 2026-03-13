@@ -1405,3 +1405,64 @@ function reloadMapElements() {
     cy.elements().remove();
     loadElements(getMapId());
 }
+// ============================================================================
+// АВТОМАТИЧЕСКАЯ РАССТАНОВКА УЗЛОВ
+// ============================================================================
+function confirmLayout(layoutName) {
+    const layoutNames = {
+        'grid': 'Сетка',
+        'circle': 'Круг',
+        'concentric': 'Концентрический',
+        'breadthfirst': 'Дерево',
+        'cose': 'Силовой'
+    };
+    const name = layoutNames[layoutName] || layoutName;
+    if (confirm(`Применить автораскладку "${name}"? Текущее расположение будет изменено.`)) {
+        applyLayout(layoutName);
+    }
+}
+
+function applyLayout(layoutName) {
+    if (!cy) return;
+
+    // Параметры для разных лэйаутов
+    const layoutOptions = {
+        name: layoutName,
+        animate: true,
+        animationDuration: 500,
+        fit: true,
+        padding: 30
+    };
+
+    // Дополнительные настройки для конкретных лэйаутов
+    if (layoutName === 'grid') {
+        layoutOptions.rows = undefined; // авто
+    } else if (layoutName === 'circle') {
+        // стандартные настройки
+    } else if (layoutName === 'concentric') {
+        layoutOptions.minNodeSpacing = 50;
+    } else if (layoutName === 'breadthfirst') {
+        layoutOptions.directed = true;
+        layoutOptions.circle = false;
+        layoutOptions.spacingFactor = 1.5;
+    } else if (layoutName === 'cose') {
+        layoutOptions.idealEdgeLength = 100;
+        layoutOptions.nodeOverlap = 20;
+        layoutOptions.refresh = 20;
+        layoutOptions.fit = true;
+        layoutOptions.padding = 30;
+        layoutOptions.randomize = false;
+        layoutOptions.componentSpacing = 100;
+        layoutOptions.nodeRepulsion = 400000;
+        layoutOptions.edgeElasticity = 100;
+        layoutOptions.nestingFactor = 5;
+        layoutOptions.gravity = 80;
+        layoutOptions.numIter = 1000;
+        layoutOptions.initialTemp = 200;
+        layoutOptions.coolingFactor = 0.95;
+        layoutOptions.minTemp = 1.0;
+    }
+
+    const layout = cy.layout(layoutOptions);
+    layout.run();
+}
