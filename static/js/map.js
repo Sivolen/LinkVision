@@ -481,13 +481,8 @@ function initMap(mapId) {
         });
     }
 
-    // Обновление состояния кнопки блокировки и курсора
+    // Обновление состояния кнопки блокировки
     updateLockButton();
-    if (dragLocked) {
-        cy.nodes().style('cursor', 'not-allowed');
-    } else {
-        cy.nodes().style('cursor', 'move');
-    }
 
     // Загрузка фона
     const bgEl = document.getElementById('cy-background');
@@ -781,13 +776,6 @@ function loadElements(mapId) {
                 addPulsingNode(node);
             }
         });
-
-        // Обновляем курсор в зависимости от блокировки
-        if (dragLocked) {
-            cy.nodes().style('cursor', 'not-allowed');
-        } else {
-            cy.nodes().style('cursor', 'move');
-        }
 
         // Предзагрузка иконок
         validNodes.forEach(n => {
@@ -1742,7 +1730,6 @@ function updateLockButton() {
     if (!lockBtn) return;
 
     if (window.isOperator) {
-        // Оператору показываем замок всегда закрытым и неактивным
         lockBtn.disabled = true;
         lockBtn.classList.add('active');
         lockBtn.innerHTML = '<i class="fas fa-lock"></i>';
@@ -1769,11 +1756,4 @@ function toggleLock() {
     dragLocked = !dragLocked;
     localStorage.setItem('dragLocked', dragLocked);
     updateLockButton();
-    if (cy) {
-        if (dragLocked) {
-            cy.nodes().style('cursor', 'not-allowed');
-        } else {
-            cy.nodes().style('cursor', 'move');
-        }
-    }
 }
