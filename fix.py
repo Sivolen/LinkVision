@@ -1,7 +1,7 @@
 from app import create_app
 from extensions import db
 from models import Link, Device
-from logger import fix_logger
+from utils.logger import fix_logger
 
 app = create_app()
 

@@ -6,7 +6,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from extensions import db
 from models import User, DeviceType, Settings, Map
-from logger import admin_logger
+from utils.logger import admin_logger
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 

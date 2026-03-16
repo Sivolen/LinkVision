@@ -4,7 +4,7 @@ import concurrent.futures
 import os
 from extensions import db, socketio
 from models import Device, Settings, DeviceHistory
-from logger import monitor_logger
+from utils.logger import monitor_logger
 
 try:
     from ping3 import ping
@@ -109,7 +109,6 @@ def monitor_loop():
                             status_str = 'true' if is_up else 'false'
 
                             old_status = device.status
-
                             device.status = is_up
                             device.last_check = db.func.now()
 
@@ -119,7 +118,6 @@ def monitor_loop():
                                 new_status=is_up
                             )
                             db.session.add(history_entry)
-
                             db.session.commit()
 
                             socketio.emit('device_status', {
@@ -128,11 +126,9 @@ def monitor_loop():
                                 'map_id': device.map_id
                             }, room=room_name)
 
-                            status_display = "UP ✅" if is_up else "DOWN ❌"
                             monitor_logger.info(
-                                f"[{status_display}] Sent: id={device.id}, status={status_str}, room={room_name}"
+                                f"[{'UP' if is_up else 'DOWN'}] Sent: id={device.id}, status={status_str}, room={room_name}"
                             )
-
                             last_emit_time[device.id] = current_time
 
         except Exception as e:
