@@ -166,6 +166,27 @@
     <script src="{{ url_for('static', filename='js/cytoscape.min.js') }}"></script>
     <script>
         // ====================================================================
+        // Глобальный логер для клиентской части
+        // ====================================================================
+        window.Logger = {
+            enabledDebug: {{ 'true' if debug_mode else 'false' }},
+            info: function(...args) {
+                console.log('[INFO]', ...args);
+            },
+            warn: function(...args) {
+                console.warn('[WARN]', ...args);
+            },
+            error: function(...args) {
+                console.error('[ERROR]', ...args);
+            },
+            debug: function(...args) {
+                if (this.enabledDebug) {
+                    console.debug('[DEBUG]', ...args);
+                }
+            }
+        };
+
+        // ====================================================================
         // ПЕРЕКЛЮЧЕНИЕ САЙДБАРА
         // ====================================================================
         function toggleSidebar() {
@@ -275,7 +296,7 @@
                         list.appendChild(li);
                     });
                 })
-                .catch(err => console.error('Error loading maps:', err));
+                .catch(err => Logger.error('Error loading maps:', err));
         }
 
         // ====================================================================
@@ -295,7 +316,8 @@
                         } else {
                             alert('Ошибка удаления');
                         }
-                    });
+                    })
+                    .catch(err => Logger.error('Error deleting map:', err));
             }
         }
         function editMap(event, mapId, mapName) {
@@ -339,7 +361,7 @@
                 bootstrap.Modal.getInstance(document.getElementById('editMapModal')).hide();
             })
             .catch(err => {
-                console.error(err);
+                Logger.error(err);
                 alert('Ошибка при сохранении');
             });
         });
@@ -365,7 +387,7 @@
                     URL.revokeObjectURL(url);
                 })
                 .catch(err => {
-                    console.error(err);
+                    Logger.error(err);
                     alert('Не удалось экспортировать карту');
                 });
         }
@@ -381,7 +403,6 @@
                 reader.onload = function(ev) {
                     try {
                         const data = JSON.parse(ev.target.result);
-                        // Удаляем id, чтобы создать новую карту
                         data.id = null;
                         fetch('/api/map/import', {
                             method: 'POST',
@@ -401,7 +422,7 @@
                             }
                         })
                         .catch(err => {
-                            console.error(err);
+                            Logger.error(err);
                             alert('Ошибка при импорте');
                         });
                     } catch (ex) {
@@ -434,7 +455,7 @@
         // ====================================================================
         {% if current_user.is_authenticated %}
         (function initGlobalSocket() {
-            if (window.socket) return; // уже инициализирован
+            if (window.socket) return;
 
             window.socket = io({
                 reconnection: true,
@@ -444,8 +465,7 @@
             });
 
             window.socket.on('connect', () => {
-                console.log('✅ Socket connected (global)');
-                // Если мы на странице карты, присоединяемся к её комнате
+                Logger.info('Socket connected (global)');
                 if (window.currentMapId) {
                     window.socket.emit('join_room', `map_${window.currentMapId}`);
                 }
@@ -453,12 +473,12 @@
             });
 
             window.socket.on('disconnect', (reason) => {
-                console.warn('⚠️ Socket disconnected (global):', reason);
+                Logger.warn('Socket disconnected (global):', reason);
                 updateBackendStatus(false);
             });
 
             window.socket.on('reconnect', (attemptNumber) => {
-                console.log('✅ Socket reconnected after', attemptNumber, 'attempts');
+                Logger.info('Socket reconnected after', attemptNumber, 'attempts');
                 if (window.currentMapId) {
                     window.socket.emit('join_room', `map_${window.currentMapId}`);
                 }
@@ -466,7 +486,7 @@
             });
 
             window.socket.on('connect_error', (error) => {
-                console.error('❌ Socket connection error:', error);
+                Logger.error('Socket connection error:', error);
                 updateBackendStatus(false);
             });
         })();

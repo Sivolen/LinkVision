@@ -1,12 +1,12 @@
 import os
 import shutil
 from datetime import datetime
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort, send_file
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from extensions import db
 from models import User, DeviceType, Settings, Map
+from logger import admin_logger
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -33,6 +33,7 @@ def create_user():
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
+    admin_logger.info(f"User created: {username}, is_admin={is_admin}")
     return redirect(url_for('admin.users'))
 
 
@@ -44,6 +45,7 @@ def delete_user(id):
     else:
         db.session.delete(user)
         db.session.commit()
+        admin_logger.info(f"User deleted: ID={id}")
     return redirect(url_for('admin.users'))
 
 
@@ -72,6 +74,7 @@ def create_type():
     )
     db.session.add(dtype)
     db.session.commit()
+    admin_logger.info(f"Device type created: {name}")
     return redirect(url_for('admin.types'))
 
 
@@ -84,6 +87,7 @@ def settings():
         Settings.query.filter_by(key='ping_count').update({'value': ping_count})
         Settings.query.filter_by(key='ping_interval').update({'value': ping_interval})
         db.session.commit()
+        admin_logger.info(f"Settings updated: ping_count={ping_count}, ping_interval={ping_interval}")
         flash('Настройки сохранены')
 
     count = Settings.query.filter_by(key='ping_count').first()
@@ -94,7 +98,7 @@ def settings():
 
 
 @admin_bp.route('/maps')
-def maps_list():  # ⚠️ Важно: имя функции maps_list → endpoint будет admin.maps_list
+def maps_list():
     all_maps = Map.query.all()
     return render_template('admin/maps.html', maps=all_maps)
 
@@ -104,7 +108,8 @@ def delete_map(id):
     map_obj = Map.query.get_or_404(id)
     db.session.delete(map_obj)
     db.session.commit()
-    return redirect(url_for('admin.maps_list'))  # ⚠️ Исправлено: admin.maps_list
+    admin_logger.info(f"Map deleted: ID={id}")
+    return redirect(url_for('admin.maps_list'))
 
 
 @admin_bp.route('/types/<int:id>/edit', methods=['GET', 'POST'])
@@ -130,6 +135,7 @@ def edit_type(id):
             dtype.icon_filename = filename
 
         db.session.commit()
+        admin_logger.info(f"Device type updated: ID={id}")
         flash('Тип устройства обновлён')
         return redirect(url_for('admin.types'))
 
@@ -140,13 +146,13 @@ def edit_type(id):
 @admin_bp.route('/types/<int:id>/delete')
 def delete_type(id):
     dtype = DeviceType.query.get_or_404(id)
-    # Удаляем файл иконки если есть
     if dtype.icon_filename:
         icon_path = os.path.join(current_app.config['UPLOAD_FOLDER'], dtype.icon_filename)
         if os.path.exists(icon_path):
             os.remove(icon_path)
     db.session.delete(dtype)
     db.session.commit()
+    admin_logger.info(f"Device type deleted: ID={id}")
     flash('Тип устройства удалён')
     return redirect(url_for('admin.types'))
 
@@ -160,26 +166,24 @@ def edit_user(id):
         is_admin = request.form.get('is_admin') == 'on'
 
         if username:
-            # Проверяем уникальность имени, если оно меняется
             if username != user.username and User.query.filter_by(username=username).first():
                 flash('Пользователь с таким именем уже существует')
                 return redirect(url_for('admin.edit_user', id=id))
             user.username = username
-        if password:  # Если пароль введён, обновляем
+        if password:
             user.set_password(password)
         user.is_admin = is_admin
         db.session.commit()
+        admin_logger.info(f"User updated: ID={id}")
         flash('Пользователь обновлён')
         return redirect(url_for('admin.users'))
 
-    # GET-запрос — передаём данные пользователя в шаблон
     return render_template('admin/users.html', edit_user=user, users=User.query.all())
 
 
 @admin_bp.route('/backups')
 @login_required
 def backups():
-    # Проверка прав администратора (уже есть в before_request)
     db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
     if not db_path.startswith('/'):
         db_path = os.path.join(current_app.root_path, db_path)
@@ -204,6 +208,7 @@ def download_backup():
     if not os.path.exists(db_path):
         abort(404)
 
+    admin_logger.info(f"Backup downloaded")
     return send_file(db_path, as_attachment=True, download_name='webnetmap_backup.db')
 
 
@@ -227,12 +232,11 @@ def restore_backup():
     if not db_path.startswith('/'):
         db_path = os.path.join(current_app.root_path, db_path)
 
-    # Создаём резервную копию текущей БД перед заменой
     backup_path = db_path + '.bak'
     if os.path.exists(db_path):
         shutil.copy2(db_path, backup_path)
 
-    # Сохраняем загруженный файл
     file.save(db_path)
+    admin_logger.info("Database restored from uploaded file")
     flash('База данных восстановлена. Пожалуйста, перезапустите приложение для применения изменений.')
     return redirect(url_for('admin.backups'))

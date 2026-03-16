@@ -8,6 +8,7 @@ from blueprints.admin import admin_bp
 from blueprints.main import main_bp
 from blueprints.api import api_bp
 from monitor import init_monitor, start_monitor
+from logger import app_logger
 import os
 
 def create_app():
@@ -42,22 +43,22 @@ def create_app():
             db.session.add(DeviceType(name='PC', icon_filename=''))
 
             db.session.commit()
-            print("✅ Admin created: admin / admin")
+            app_logger.info("✅ Admin created: admin / admin")
 
         init_monitor(app)
 
     @socketio.on('join_room')
     def handle_join_room(room):
         join_room(room)
-        print(f"✅ Клиент присоединился к комнате {room}")
+        app_logger.info(f"✅ Клиент присоединился к комнате {room}")
 
     @socketio.on('connect')
     def handle_connect():
-        print(f"✅ Клиент подключился: {request.sid}")
+        app_logger.info(f"✅ Клиент подключился: {request.sid}")
 
     @socketio.on('disconnect')
     def handle_disconnect():
-        print(f"❌ Клиент отключился: {request.sid}")
+        app_logger.info(f"❌ Клиент отключился: {request.sid}")
 
     start_monitor()
 
@@ -76,7 +77,10 @@ def create_app():
     @app.context_processor
     def inject_globals():
         from config import Config
-        return {'app_version': Config.VERSION}
+        return {
+            'app_version': Config.VERSION,
+            'debug_mode': app.debug
+        }
 
     return app
 
