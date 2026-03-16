@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+
 {% block content %}
 <h2 class="page-title">⚙️ Настройки мониторинга</h2>
 
@@ -24,10 +25,34 @@
                 </button>
             </div>
         </form>
-        <div class="alert alert-info mt-3 mb-0">
-            <i class="fas fa-info-circle me-2"></i>
-            <small>Изменения вступят в силу в течение следующего цикла опроса.</small>
+    </div>
+</div>
+
+<!-- Резервное копирование -->
+<div class="admin-card mt-4">
+    <div class="card-header">
+        <i class="fas fa-database"></i> Резервное копирование
+    </div>
+    <div class="card-body">
+        <p><strong>Размер:</strong> {{ db_size }} байт ({{ (db_size / 1024)|round(2) }} KB)</p>
+        <p><strong>Последнее изменение:</strong> {{ db_mtime.strftime('%Y-%m-%d %H:%M:%S') if db_mtime else 'Неизвестно' }}</p>
+        <div class="d-flex gap-2 mb-3">
+            <a href="{{ url_for('admin.download_backup') }}" class="btn btn-primary">
+                <i class="fas fa-download"></i> Скачать базу данных
+            </a>
         </div>
+
+        <p class="text-danger">Внимание! Восстановление заменит текущую базу данных. Все текущие данные будут потеряны. Рекомендуется предварительно сделать резервную копию.</p>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="restore_backup" value="1">
+            <div class="mb-3">
+                <label class="form-label">Выберите файл базы данных (.db)</label>
+                <input type="file" name="backup_file" class="form-control" accept=".db" required>
+            </div>
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Вы уверены? Текущая база данных будет заменена.')">
+                <i class="fas fa-undo-alt"></i> Восстановить
+            </button>
+        </form>
     </div>
 </div>
 {% endblock %}

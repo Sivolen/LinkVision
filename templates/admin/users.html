@@ -2,44 +2,46 @@
 {% block content %}
 <h2 class="page-title">👥 Управление пользователями</h2>
 
-<!-- Форма создания пользователя -->
+<!-- Карточка создания нового пользователя -->
 <div class="admin-card">
     <div class="card-header">
-        <i class="fas fa-user-plus"></i> Добавить нового пользователя
+        <i class="fas fa-plus"></i> Добавить нового пользователя
     </div>
     <div class="card-body">
-        <form action="{{ url_for('admin.create_user') }}" method="POST" class="row g-2">
+        <form method="POST" action="{{ url_for('admin.create_user') }}" class="row g-2">
             <div class="col-md-4">
-                <input type="text" name="username" class="form-control" placeholder="Логин" required>
+                <input type="text" name="username" class="form-control" placeholder="Имя пользователя" required>
             </div>
             <div class="col-md-4">
-                <div class="password-field">
-                    <input type="password" name="password" class="form-control" placeholder="Пароль" required id="create_password">
+                <div class="password-field-wrapper">
+                    <input type="password" name="password" id="create_password" class="form-control" placeholder="Пароль" required>
                     <i class="fas fa-eye toggle-password" onclick="togglePassword('create_password')"></i>
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="form-check mt-2">
-                    <input class="form-check-input" type="checkbox" name="is_admin" id="isAdmin">
-                    <label class="form-check-label" for="isAdmin">Админ</label>
-                </div>
+            <div class="col-md-3">
+                <select name="role" class="form-select">
+                    <option value="user" selected>Пользователь</option>
+                    <option value="operator">Оператор</option>
+                    <option value="admin">Администратор</option>
+                </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-1">
                 <button type="submit" class="btn btn-success w-100">
-                    <i class="fas fa-plus"></i> Добавить
+                    <i class="fas fa-save"></i> Добавить
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Таблица пользователей -->
+<!-- Карточка со списком пользователей -->
 <table class="modern-table">
     <thead>
         <tr>
             <th>ID</th>
             <th>Имя пользователя</th>
-            <th>Права</th>
+            <th>Админ</th>
+            <th>Оператор</th>
             <th>Дата регистрации</th>
             <th>Действия</th>
         </tr>
@@ -51,18 +53,34 @@
             <td>{{ user.username }}</td>
             <td>
                 {% if user.is_admin %}
-                <span class="badge bg-success">Администратор</span>
+                <span class="badge bg-success">Да</span>
                 {% else %}
-                <span class="badge bg-secondary">Пользователь</span>
+                <span class="badge bg-secondary">Нет</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if user.is_operator %}
+                <span class="badge bg-info">Да</span>
+                {% else %}
+                <span class="badge bg-secondary">Нет</span>
                 {% endif %}
             </td>
             <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
             <td>
                 <div class="table-actions">
-                    <button class="btn-action" onclick="openEditUserModal({{ user.id }}, '{{ user.username }}', {{ 'true' if user.is_admin else 'false' }})" title="Редактировать">
+                    <button class="btn-action"
+                            onclick="openEditUserModal(
+                                {{ user.id }},
+                                '{{ user.username }}',
+                                '{% if user.is_admin %}admin{% elif user.is_operator %}operator{% else %}user{% endif %}'
+                            )"
+                            title="Редактировать">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <a href="{{ url_for('admin.delete_user', id=user.id) }}" class="btn-action" onclick="return confirm('Удалить пользователя?')" title="Удалить">
+                    <a href="{{ url_for('admin.delete_user', id=user.id) }}"
+                       class="btn-action"
+                       onclick="return confirm('Удалить пользователя?')"
+                       title="Удалить">
                         <i class="fas fa-trash"></i>
                     </a>
                 </div>
@@ -73,10 +91,10 @@
 </table>
 
 <!-- Модальное окно редактирования пользователя -->
-<div class="modal fade" id="editUserModal" tabindex="-1">
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="" method="POST" id="editUserForm">
+            <form method="POST" id="editUserForm">
                 <div class="modal-header">
                     <h5 class="modal-title">Редактировать пользователя</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -89,14 +107,25 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Новый пароль (оставьте пустым, чтобы не менять)</label>
-                        <div class="password-field">
-                            <input type="password" name="password" id="edit_password" class="form-control" placeholder="Новый пароль">
+                        <div class="password-field-wrapper">
+                            <input type="password" name="password" id="edit_password" class="form-control">
                             <i class="fas fa-eye toggle-password" onclick="togglePassword('edit_password')"></i>
                         </div>
                     </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" name="is_admin" id="edit_is_admin" class="form-check-input">
-                        <label class="form-check-label" for="edit_is_admin">Администратор</label>
+                    <div class="mb-3">
+                        <label class="form-label">Роль</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="role" id="edit_role_user" value="user">
+                            <label class="form-check-label" for="edit_role_user">Пользователь</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="role" id="edit_role_operator" value="operator">
+                            <label class="form-check-label" for="edit_role_operator">Оператор</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="role" id="edit_role_admin" value="admin">
+                            <label class="form-check-label" for="edit_role_admin">Администратор</label>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -111,7 +140,9 @@
 <script>
 function togglePassword(fieldId) {
     const field = document.getElementById(fieldId);
-    const icon = field.nextElementSibling;
+    // Ищем иконку внутри того же родительского контейнера
+    const wrapper = field.closest('.password-field-wrapper');
+    const icon = wrapper.querySelector('.toggle-password');
     if (field.type === "password") {
         field.type = "text";
         icon.classList.remove('fa-eye');
@@ -123,14 +154,53 @@ function togglePassword(fieldId) {
     }
 }
 
-function openEditUserModal(id, username, isAdmin) {
+function openEditUserModal(id, username, role) {
     document.getElementById('edit_user_id').value = id;
     document.getElementById('edit_username').value = username;
-    document.getElementById('edit_is_admin').checked = isAdmin;
     document.getElementById('edit_password').value = '';
+
+    // Сбрасываем радио-кнопки
+    document.getElementById('edit_role_user').checked = false;
+    document.getElementById('edit_role_operator').checked = false;
+    document.getElementById('edit_role_admin').checked = false;
+
+    // Устанавливаем нужную роль
+    if (role === 'admin') {
+        document.getElementById('edit_role_admin').checked = true;
+    } else if (role === 'operator') {
+        document.getElementById('edit_role_operator').checked = true;
+    } else {
+        document.getElementById('edit_role_user').checked = true;
+    }
+
+    // Устанавливаем action формы
     document.getElementById('editUserForm').action = `/admin/users/edit/${id}`;
+
+    // Показываем модальное окно
     const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
     modal.show();
 }
 </script>
+
+<style>
+/* Стили для обёртки поля с иконкой */
+.password-field-wrapper {
+    position: relative;
+}
+.password-field-wrapper .toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--text-secondary);
+    z-index: 10;
+    font-size: 1.1rem;
+    transition: color 0.2s;
+}
+.password-field-wrapper .toggle-password:hover {
+    color: var(--accent-color);
+}
+/* Для модального окна больше не нужны дополнительные корректировки */
+</style>
 {% endblock %}

@@ -28,12 +28,26 @@ def users():
 def create_user():
     username = request.form.get('username')
     password = request.form.get('password')
-    is_admin = request.form.get('is_admin') == 'on'
-    user = User(username=username, is_admin=is_admin)
+    role = request.form.get('role')  # 'user', 'operator', 'admin'
+
+    if not username or not password:
+        flash('Имя пользователя и пароль обязательны')
+        return redirect(url_for('admin.users'))
+
+    if User.query.filter_by(username=username).first():
+        flash('Пользователь с таким именем уже существует')
+        return redirect(url_for('admin.users'))
+
+    # Преобразуем роль в два булевых поля
+    is_admin = (role == 'admin')
+    is_operator = (role == 'operator')   # оператор, но не админ
+
+    user = User(username=username, is_admin=is_admin, is_operator=is_operator)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
-    admin_logger.info(f"User created: {username}, is_admin={is_admin}")
+    admin_logger.info(f"User created: {username}, role={role}")
+    flash('Пользователь создан')
     return redirect(url_for('admin.users'))
 
 
@@ -80,21 +94,38 @@ def create_type():
 
 @admin_bp.route('/settings', methods=['GET', 'POST'])
 def settings():
-    if request.method == 'POST':
-        ping_count = request.form.get('ping_count')
-        ping_interval = request.form.get('ping_interval')
+    db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+    if not db_path.startswith('/'):
+        db_path = os.path.join(current_app.root_path, db_path)
 
-        Settings.query.filter_by(key='ping_count').update({'value': ping_count})
-        Settings.query.filter_by(key='ping_interval').update({'value': ping_interval})
-        db.session.commit()
-        admin_logger.info(f"Settings updated: ping_count={ping_count}, ping_interval={ping_interval}")
-        flash('Настройки сохранены')
+    if os.path.exists(db_path):
+        db_size = os.path.getsize(db_path)
+        db_mtime = datetime.fromtimestamp(os.path.getmtime(db_path))
+    else:
+        db_size = 0
+        db_mtime = None
+
+    if request.method == 'POST':
+        if 'ping_count' in request.form:
+            ping_count = request.form.get('ping_count')
+            ping_interval = request.form.get('ping_interval')
+            Settings.query.filter_by(key='ping_count').update({'value': ping_count})
+            Settings.query.filter_by(key='ping_interval').update({'value': ping_interval})
+            db.session.commit()
+            admin_logger.info(f"Settings updated: ping_count={ping_count}, ping_interval={ping_interval}")
+            flash('Настройки сохранены')
+            return redirect(url_for('admin.settings'))
+        elif 'restore_backup' in request.form:
+            return restore_backup_action()
 
     count = Settings.query.filter_by(key='ping_count').first()
     interval = Settings.query.filter_by(key='ping_interval').first()
+
     return render_template('admin/settings.html',
                            count=count.value if count else 4,
-                           interval=interval.value if interval else 10)
+                           interval=interval.value if interval else 10,
+                           db_size=db_size,
+                           db_mtime=db_mtime)
 
 
 @admin_bp.route('/maps')
@@ -163,39 +194,62 @@ def edit_user(id):
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        is_admin = request.form.get('is_admin') == 'on'
+        role = request.form.get('role')
 
-        if username:
-            if username != user.username and User.query.filter_by(username=username).first():
-                flash('Пользователь с таким именем уже существует')
-                return redirect(url_for('admin.edit_user', id=id))
-            user.username = username
+        if not username:
+            flash('Имя пользователя обязательно')
+            return redirect(url_for('admin.edit_user', id=id))
+
+        existing = User.query.filter_by(username=username).first()
+        if existing and existing.id != id:
+            flash('Пользователь с таким именем уже существует')
+            return redirect(url_for('admin.edit_user', id=id))
+
+        user.username = username
         if password:
             user.set_password(password)
-        user.is_admin = is_admin
+
+        # Обновляем роли
+        user.is_admin = (role == 'admin')
+        user.is_operator = (role == 'operator')
+
         db.session.commit()
-        admin_logger.info(f"User updated: ID={id}")
+        admin_logger.info(f"User updated: ID={id}, role={role}")
         flash('Пользователь обновлён')
         return redirect(url_for('admin.users'))
 
     return render_template('admin/users.html', edit_user=user, users=User.query.all())
 
 
-@admin_bp.route('/backups')
-@login_required
-def backups():
+# ============================================================================
+# Вспомогательная функция для восстановления БД
+# ============================================================================
+def restore_backup_action():
+    if 'backup_file' not in request.files:
+        flash('Файл не выбран')
+        return redirect(url_for('admin.settings'))
+
+    file = request.files['backup_file']
+    if file.filename == '':
+        flash('Пустой файл')
+        return redirect(url_for('admin.settings'))
+
+    if not file.filename.endswith('.db'):
+        flash('Допустимы только файлы .db')
+        return redirect(url_for('admin.settings'))
+
     db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
     if not db_path.startswith('/'):
         db_path = os.path.join(current_app.root_path, db_path)
 
+    backup_path = db_path + '.bak'
     if os.path.exists(db_path):
-        db_size = os.path.getsize(db_path)
-        db_mtime = datetime.fromtimestamp(os.path.getmtime(db_path))
-    else:
-        db_size = 0
-        db_mtime = None
+        shutil.copy2(db_path, backup_path)
 
-    return render_template('admin/backups.html', db_size=db_size, db_mtime=db_mtime)
+    file.save(db_path)
+    admin_logger.info("Database restored from uploaded file")
+    flash('База данных восстановлена. Пожалуйста, перезапустите приложение для применения изменений.')
+    return redirect(url_for('admin.settings'))
 
 
 @admin_bp.route('/backups/download')
@@ -210,33 +264,3 @@ def download_backup():
 
     admin_logger.info(f"Backup downloaded")
     return send_file(db_path, as_attachment=True, download_name='webnetmap_backup.db')
-
-
-@admin_bp.route('/backups/restore', methods=['POST'])
-@login_required
-def restore_backup():
-    if 'backup_file' not in request.files:
-        flash('Файл не выбран')
-        return redirect(url_for('admin.backups'))
-
-    file = request.files['backup_file']
-    if file.filename == '':
-        flash('Пустой файл')
-        return redirect(url_for('admin.backups'))
-
-    if not file.filename.endswith('.db'):
-        flash('Допустимы только файлы .db')
-        return redirect(url_for('admin.backups'))
-
-    db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
-    if not db_path.startswith('/'):
-        db_path = os.path.join(current_app.root_path, db_path)
-
-    backup_path = db_path + '.bak'
-    if os.path.exists(db_path):
-        shutil.copy2(db_path, backup_path)
-
-    file.save(db_path)
-    admin_logger.info("Database restored from uploaded file")
-    flash('База данных восстановлена. Пожалуйста, перезапустите приложение для применения изменений.')
-    return redirect(url_for('admin.backups'))

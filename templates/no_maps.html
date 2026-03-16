@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="alert alert-warning" role="alert">
+    <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Нет доступных карт</h4>
+    <p>В системе пока нет ни одной карты. Обратитесь к администратору для создания карты.</p>
+    <hr>
+    <p class="mb-0">Вы можете вернуться на <a href="{{ url_for('main.dashboard') }}">главную</a> позже.</p>
+</div>
+{% endblock %}
