@@ -15,6 +15,202 @@ let pendingFit = false;
 let elementsLoaded = false;
 let backgroundLoaded = false;
 
+
+// ============================================================================
+// СТИЛИ CYTOSCAPE (вынесены в константу)
+// ============================================================================
+const CY_STYLE = [
+    {
+        selector: 'node[iconUrl][iconUrl != ""]',
+        style: {
+            'shape': 'round-rectangle',
+            'width': function(node) { return node.data('width') || 54; },
+            'height': function(node) { return node.data('height') || 54; },
+            'background-color': '#000000',
+            'background-opacity': 0,
+            'background-image': 'data(iconUrl)',
+            'background-fit': 'contain',
+            'background-clip': 'node',
+            'border-width': 3,
+            'border-color': '#28a745',
+            'border-style': 'solid',
+            'label': function(node) {
+                return node.data('name') + '\n' + (node.data('ip') || '');
+            },
+            'text-valign': 'bottom',
+            'text-margin-y': 8,
+            'font-size': '11px',
+            'font-weight': 'bold',
+            'text-wrap': 'wrap',
+            'text-max-width': '80px',
+            'color': '#000000',
+            'text-background-color': '#ffffff',
+            'text-background-opacity': 0.8,
+            'text-background-padding': '3px',
+            'text-background-shape': 'roundrectangle'
+        }
+    },
+    {
+        selector: 'node[iconUrl][iconUrl != ""][status="true"]',
+        style: {
+            'border-color': '#28a745',
+            'border-style': 'solid',
+            'border-width': 3,
+            'opacity': 1
+        }
+    },
+    {
+        selector: 'node[iconUrl][iconUrl != ""][status="false"]',
+        style: {
+            'border-color': '#dc3545',
+            'border-style': 'dashed',
+            'border-width': 3,
+            'opacity': 0.85,
+            'overlay-color': '#dc3545',
+            'overlay-opacity': 0.15,
+            'overlay-padding': '4px'
+        }
+    },
+    {
+        selector: 'node[!iconUrl][status="true"], node[iconUrl=""][status="true"]',
+        style: {
+            'shape': 'round-rectangle',
+            'width': 60,
+            'height': 60,
+            'background-color': '#d4edda',
+            'border-width': 3,
+            'border-color': '#28a745',
+            'border-style': 'solid',
+            'label': function(node) {
+                return node.data('name') + '\n' + (node.data('ip') || '');
+            },
+            'text-wrap': 'wrap',
+            'text-max-width': '70px',
+            'font-size': '10px',
+            'font-weight': 'bold',
+            'color': '#155724',
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'text-background-color': '#ffffff',
+            'text-background-opacity': 0.8,
+            'text-background-padding': '3px',
+            'text-background-shape': 'roundrectangle'
+        }
+    },
+    {
+        selector: 'node[!iconUrl][status="false"], node[iconUrl=""][status="false"]',
+        style: {
+            'shape': 'round-rectangle',
+            'width': 60,
+            'height': 60,
+            'background-color': '#f8d7da',
+            'border-width': 3,
+            'border-color': '#dc3545',
+            'border-style': 'dashed',
+            'label': function(node) {
+                return node.data('name') + '\n' + (node.data('ip') || '');
+            },
+            'text-wrap': 'wrap',
+            'text-max-width': '70px',
+            'font-size': '10px',
+            'font-weight': 'bold',
+            'color': '#721c24',
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'text-background-color': '#ffffff',
+            'text-background-opacity': 0.8,
+            'text-background-padding': '3px',
+            'text-background-shape': 'roundrectangle',
+            'opacity': 0.9,
+            'overlay-color': '#dc3545',
+            'overlay-opacity': 0.15,
+            'overlay-padding': '4px'
+        }
+    },
+    {
+        selector: 'node:selected',
+        style: {
+            'border-color': '#007bff',
+            'border-width': 5,
+            'background-color': 'rgba(0,123,255,0.1)'
+        }
+    },
+    {
+        selector: '.cy-node-highlight',
+        style: {
+            'border-color': '#007bff',
+            'border-width': 4,
+            'border-style': 'solid',
+            'overlay-color': '#007bff',
+            'overlay-opacity': 0.4,
+            'overlay-padding': '6px',
+            'z-index': 10
+        }
+    },
+    {
+        selector: 'node[isGroup]',
+        style: {
+            'shape': 'rectangle',
+            'background-color': 'data(color)',
+            'background-opacity': 0.1,
+            'border-color': 'data(color)',
+            'border-width': 1,
+            'border-opacity': 0.3,
+            'border-style': 'dashed',
+            'label': 'data(name)',
+            'font-size': '11px',
+            'font-weight': 'normal',
+            'color': '#888',
+            'text-valign': 'top',
+            'text-halign': 'center',
+            'padding': '5px',
+            'compound-sizing-wrt-labels': 'include',
+            'min-zoomed-font-size': 8,
+            'min-width': 30,
+            'min-height': 30
+        }
+    },
+    {
+        selector: 'node[isGroup]:selected',
+        style: {
+            'border-color': '#007bff',
+            'border-width': 4
+        }
+    },
+    {
+        selector: 'edge',
+        style: {
+            'width': function(edge) { return edge.data('width') || 2; },
+            'line-color': function(edge) { return edge.data('color') || '#6c757d'; },
+            'line-style': function(edge) { return edge.data('style') || 'solid'; },
+            'curve-style': 'bezier',
+            'label': 'data(label)',
+            'font-size': '8px',
+            'text-rotation': 'autorotate',
+            'text-margin-y': -8,
+            'text-background-color': '#fff',
+            'text-background-opacity': 0.8,
+            'text-background-padding': '2px'
+        }
+    },
+    {
+        selector: 'edge:selected',
+        style: {
+            'width': 4,
+            'line-color': '#007bff',
+            'text-background-color': '#e7f3ff'
+        }
+    },
+    {
+        selector: 'node[monitoring_enabled="false"]',
+        style: {
+            'border-color': '#6c757d',
+            'border-style': 'dotted',
+            'border-width': 3,
+            'opacity': 0.7
+        }
+    }
+];
 // Глобальный сокет (объявлен как window.socket)
 // window.socket = null;
 
@@ -183,14 +379,14 @@ function checkReadyAndFit() {
 
 function initMap(mapId) {
     Logger.info('🗺️ Инициализация карты:', mapId);
-    // Присоединяемся к комнате карты через глобальный сокет
-        // Проверка: если mapId не число (например, null) – создаём пустую карту (режим новой карты)
+
+    // Проверка: если mapId не число (например, null) – создаём пустую карту (режим новой карты)
     if (!mapId || isNaN(parseInt(mapId))) {
         Logger.warn('initMap: mapId невалиден, создаётся пустая карта');
         cy = cytoscape({
             container: document.getElementById('cy'),
             elements: [],
-            style: [ /* ВСТАВЬТЕ СЮДА ПОЛНЫЙ МАССИВ СТИЛЕЙ ИЗ ОСНОВНОГО КОДА */ ],
+            style: CY_STYLE,
             layout: { name: 'preset' },
             boxSelectionEnabled: false,
             autounselectify: true,
@@ -201,9 +397,10 @@ function initMap(mapId) {
         });
         backgroundLoaded = true;
         elementsLoaded = true;
-        // Не подключаемся к сокету, не загружаем элементы и фон
         return;
-        }
+    }
+
+    // Подключение к Socket.IO
     if (window.socket) {
         if (window.socket.connected) {
             window.socket.emit('join_room', `map_${mapId}`);
@@ -218,254 +415,39 @@ function initMap(mapId) {
         Logger.error('❌ Глобальный сокет не инициализирован');
     }
 
+    // Обработчик обновления статуса устройства
     window.socket.on('device_status', (data) => {
         Logger.debug('📡 [RAW] device_status получен:', data);
-
-        if (Number(data.map_id) !== Number(mapId)) {
-            Logger.debug('⏭️ Событие для другой карты, игнорируем');
-            return;
-        }
-
-        if (!cy) {
-            Logger.debug('⏭️ Cytoscape ещё не инициализирован');
-            return;
-        }
-
+        if (Number(data.map_id) !== Number(mapId)) return;
+        if (!cy) return;
         const node = cy.getElementById(String(data.id));
         if (!node.length) {
             Logger.warn(`⚠️ Узел с id ${data.id} не найден на карте`);
             return;
         }
-
         try {
             const statusValue = data.status === 'true' ? 'true' : 'false';
             const oldStatus = node.data('status');
-
-            Logger.debug(`🔄 Узел: ${node.data('name')} (id=${data.id})`);
-            Logger.debug(`   Старый статус: ${oldStatus}, новый: ${statusValue}`);
-
-            if (oldStatus === statusValue) {
-                Logger.debug('   Статус не изменился, пропускаем обновление');
-                return;
-            }
-
+            if (oldStatus === statusValue) return;
             node.data('status', statusValue);
-
             if (statusValue === 'false') {
                 addPulsingNode(node);
             } else {
                 removePulsingNode(node);
             }
-
             cy.style().update();
-
             const becameDown = (statusValue === 'false');
             updateSidebarCounter(data.map_id, becameDown);
-
-            const computedBorderColor = node.style('border-color');
-            Logger.debug(`   Применённый border-color: ${computedBorderColor}`);
-            Logger.debug('✅ Статус успешно обновлён');
         } catch (e) {
             Logger.error('❌ Ошибка в обработчике device_status:', e);
         }
     });
 
+    // Инициализация Cytoscape
     cy = cytoscape({
         container: document.getElementById('cy'),
         elements: [],
-        style: [
-            {
-                selector: 'node[iconUrl][iconUrl != ""]',
-                style: {
-                    'shape': 'round-rectangle',
-                    'width': function(node) { return node.data('width') || 54; },
-                    'height': function(node) { return node.data('height') || 54; },
-                    'background-color': '#000000',
-                    'background-opacity': 0,
-                    'background-image': 'data(iconUrl)',
-                    'background-fit': 'contain',
-                    'background-clip': 'node',
-                    'border-width': 3,
-                    'border-color': '#28a745',
-                    'border-style': 'solid',
-                    'label': function(node) {
-                        return node.data('name') + '\n' + (node.data('ip') || '');
-                    },
-                    'text-valign': 'bottom',
-                    'text-margin-y': 8,
-                    'font-size': '11px',
-                    'font-weight': 'bold',
-                    'text-wrap': 'wrap',
-                    'text-max-width': '80px',
-                    'color': '#000000',
-                    'text-background-color': '#ffffff',
-                    'text-background-opacity': 0.8,
-                    'text-background-padding': '3px',
-                    'text-background-shape': 'roundrectangle'
-                }
-            },
-            {
-                selector: 'node[iconUrl][iconUrl != ""][status="true"]',
-                style: {
-                    'border-color': '#28a745',
-                    'border-style': 'solid',
-                    'border-width': 3,
-                    'opacity': 1
-                }
-            },
-            {
-                selector: 'node[iconUrl][iconUrl != ""][status="false"]',
-                style: {
-                    'border-color': '#dc3545',
-                    'border-style': 'dashed',
-                    'border-width': 3,
-                    'opacity': 0.85,
-                    'overlay-color': '#dc3545',
-                    'overlay-opacity': 0.15,
-                    'overlay-padding': '4px'
-                }
-            },
-            {
-                selector: 'node[!iconUrl][status="true"], node[iconUrl=""][status="true"]',
-                style: {
-                    'shape': 'round-rectangle',
-                    'width': 60,
-                    'height': 60,
-                    'background-color': '#d4edda',
-                    'border-width': 3,
-                    'border-color': '#28a745',
-                    'border-style': 'solid',
-                    'label': function(node) {
-                        return node.data('name') + '\n' + (node.data('ip') || '');
-                    },
-                    'text-wrap': 'wrap',
-                    'text-max-width': '70px',
-                    'font-size': '10px',
-                    'font-weight': 'bold',
-                    'color': '#155724',
-                    'text-valign': 'center',
-                    'text-halign': 'center',
-                    'text-background-color': '#ffffff',
-                    'text-background-opacity': 0.8,
-                    'text-background-padding': '3px',
-                    'text-background-shape': 'roundrectangle'
-                }
-            },
-            {
-                selector: 'node[!iconUrl][status="false"], node[iconUrl=""][status="false"]',
-                style: {
-                    'shape': 'round-rectangle',
-                    'width': 60,
-                    'height': 60,
-                    'background-color': '#f8d7da',
-                    'border-width': 3,
-                    'border-color': '#dc3545',
-                    'border-style': 'dashed',
-                    'label': function(node) {
-                        return node.data('name') + '\n' + (node.data('ip') || '');
-                    },
-                    'text-wrap': 'wrap',
-                    'text-max-width': '70px',
-                    'font-size': '10px',
-                    'font-weight': 'bold',
-                    'color': '#721c24',
-                    'text-valign': 'center',
-                    'text-halign': 'center',
-                    'text-background-color': '#ffffff',
-                    'text-background-opacity': 0.8,
-                    'text-background-padding': '3px',
-                    'text-background-shape': 'roundrectangle',
-                    'opacity': 0.9,
-                    'overlay-color': '#dc3545',
-                    'overlay-opacity': 0.15,
-                    'overlay-padding': '4px'
-                }
-            },
-            {
-                selector: 'node:selected',
-                style: {
-                    'border-color': '#007bff',
-                    'border-width': 5,
-                    'background-color': 'rgba(0,123,255,0.1)'
-                }
-            },
-                // Новый селектор для подсветки при поиске
-            {
-                selector: '.cy-node-highlight',
-                style: {
-                    'border-color': '#007bff',
-                    'border-width': 4,
-                    'border-style': 'solid',
-                    'overlay-color': '#007bff',
-                    'overlay-opacity': 0.4,
-                    'overlay-padding': '6px',
-                    'z-index': 10
-                }
-            },
-            {
-                selector: 'node[isGroup]',
-                style: {
-                    'shape': 'rectangle',
-                    'background-color': 'data(color)',
-                    'background-opacity': 0.1,
-                    'border-color': 'data(color)',
-                    'border-width': 1,
-                    'border-opacity': 0.3,
-                    'border-style': 'dashed',
-                    'label': 'data(name)',
-                    'font-size': '11px',
-                    'font-weight': 'normal',
-                    'color': '#888',
-                    'text-valign': 'top',
-                    'text-halign': 'center',
-                    'padding': '5px',
-                    'compound-sizing-wrt-labels': 'include',
-                    'min-zoomed-font-size': 8,
-                    'min-width': 30,
-                    'min-height': 30
-                }
-            },
-            {
-                selector: 'node[isGroup]:selected',
-                style: {
-                    'border-color': '#007bff',
-                    'border-width': 4
-                }
-            },
-            {
-                selector: 'edge',
-                style: {
-                    'width': function(edge) { return edge.data('width') || 2; },
-                    'line-color': function(edge) { return edge.data('color') || '#6c757d'; },
-                    'line-style': function(edge) { return edge.data('style') || 'solid'; },
-                    'curve-style': 'bezier',
-                    'label': 'data(label)',
-                    'font-size': '8px',
-                    'text-rotation': 'autorotate',
-                    'text-margin-y': -8,
-                    'text-background-color': '#fff',
-                    'text-background-opacity': 0.8,
-                    'text-background-padding': '2px'
-                }
-            },
-            {
-                selector: 'edge:selected',
-                style: {
-                    'width': 4,
-                    'line-color': '#007bff',
-                    'text-background-color': '#e7f3ff'
-                }
-            },
-            {
-                selector: 'node[monitoring_enabled="false"]',
-                style: {
-                    'border-color': '#6c757d',
-                    'border-style': 'dotted',
-                    'border-width': 3,
-                    'opacity': 0.7
-                }
-            }
-        ],
+        style: CY_STYLE,
         layout: { name: 'preset' },
         boxSelectionEnabled: false,
         autounselectify: true,
@@ -475,17 +457,21 @@ function initMap(mapId) {
         fit: false
     });
 
+    // Обновление фона и сохранение viewport при перемещении/масштабировании
     cy.on('pan zoom', () => {
         updateBackgroundTransform();
         enforcePanBounds();
         saveViewportToServer();
     });
+
+    // Обновление кнопки массового редактирования при изменении выделения
     cy.on('select unselect', updateBulkEditButton);
+
+    // Инициализация модальных окон
     const deviceModalEl = document.getElementById('deviceModal');
     if (deviceModalEl && !deviceModal) {
         deviceModal = new bootstrap.Modal(deviceModalEl);
     }
-
     const linkModalEl = document.getElementById('linkModal');
     if (linkModalEl && !linkModal) {
         linkModal = new bootstrap.Modal(linkModalEl);
@@ -495,6 +481,15 @@ function initMap(mapId) {
         });
     }
 
+    // Обновление состояния кнопки блокировки и курсора
+    updateLockButton();
+    if (dragLocked) {
+        cy.nodes().style('cursor', 'not-allowed');
+    } else {
+        cy.nodes().style('cursor', 'move');
+    }
+
+    // Загрузка фона
     const bgEl = document.getElementById('cy-background');
     if (bgEl && bgEl.dataset.background) {
         loadBackground(bgEl.dataset.background);
@@ -503,9 +498,11 @@ function initMap(mapId) {
         checkReadyAndFit();
     }
 
+    // Загрузка элементов карты и типов устройств
     loadElements(mapId);
     loadDeviceTypes();
 
+    // Обработчик изменения размера окна
     window.addEventListener('resize', () => {
         if (cy) {
             cy.resize();
@@ -514,16 +511,28 @@ function initMap(mapId) {
         }
     });
 
+    // ==================== ОБРАБОТЧИКИ ПЕРЕТАСКИВАНИЯ ====================
+
+    // Завершение перетаскивания одиночного узла
     cy.on('dragfree', 'node', function(evt) {
-        // if (window.isOperator) return; // запрет для оператора
-        if (window.isOperator || dragLocked) return;
         const node = evt.target;
+        // Пропускаем группы (группы не должны перемещаться отдельно)
+        if (node.data('isGroup')) return;
+
+        // Запрет для оператора и при активной блокировке
+        if (window.isOperator) return;
+        if (dragLocked) return;
+
         let pos = node.position();
-        const boundedPos = boundNodePosition(pos);
-        if (boundedPos.x !== pos.x || boundedPos.y !== pos.y) {
-            node.position(boundedPos);
-            pos = boundedPos;
+        // Если фон загружен, ограничиваем позицию (чтобы не уходить за границы)
+        if (bgImageWidth && bgImageHeight) {
+            const boundedPos = boundNodePosition(pos);
+            if (boundedPos.x !== pos.x || boundedPos.y !== pos.y) {
+                node.position(boundedPos);
+                pos = boundedPos;
+            }
         }
+
         clearTimeout(dragTimeout);
         dragTimeout = setTimeout(() => {
             fetch(`/api/device/${node.id()}/position`, {
@@ -534,40 +543,68 @@ function initMap(mapId) {
         }, 500);
     });
 
+    // Начало перетаскивания (запоминаем стартовую позицию)
     cy.on('drag', 'node', function(evt) {
-        if (window.isOperator || dragLocked) {
-        evt.preventDefault();
-        return;
-    }
+        const node = evt.target;
+        // Группы не перетаскиваем отдельно (они двигаются вместе с дочерними)
+        if (node.data('isGroup')) {
+            evt.preventDefault();
+            return;
+        }
+        if (window.isOperator) {
+            evt.preventDefault();
+            return;
+        }
+        if (dragLocked) {
+            evt.preventDefault();
+            return;
+        }
         evt.target._private.scratch._dragStartPos = evt.target.position();
     });
 
+    // Завершение перетаскивания группы выбранных узлов
     cy.on('dragfree', 'node:selected', function(evt) {
-        // if (window.isOperator) return;
-        if (window.isOperator || dragLocked) return;
-        const selectedNodes = cy.nodes(':selected');
+        if (window.isOperator) return;
+        if (dragLocked) return;
+
+        const selectedNodes = cy.nodes(':selected').filter(node => !node.data('isGroup'));
         if (selectedNodes.length <= 1) return;
+
         const draggedNode = evt.target;
+        // Если перетащили группу – игнорируем (группы не участвуют в групповом выделении)
+        if (draggedNode.data('isGroup')) return;
+
         const oldPos = draggedNode._private.scratch._dragStartPos || draggedNode.position();
         const newPos = draggedNode.position();
         const deltaX = newPos.x - oldPos.x;
         const deltaY = newPos.y - oldPos.y;
+
         clearTimeout(dragTimeout);
         dragTimeout = setTimeout(() => {
             selectedNodes.forEach(node => {
                 if (node.id() !== draggedNode.id()) {
                     const nodePos = node.position();
-                    const boundedPos = boundNodePosition({ x: nodePos.x + deltaX, y: nodePos.y + deltaY });
-                    node.position(boundedPos);
+                    let newX = nodePos.x + deltaX;
+                    let newY = nodePos.y + deltaY;
+                    // Если есть фон, ограничиваем
+                    if (bgImageWidth && bgImageHeight) {
+                        const bounded = boundNodePosition({ x: newX, y: newY });
+                        newX = bounded.x;
+                        newY = bounded.y;
+                    }
+                    node.position({ x: newX, y: newY });
+                    // Сохраняем позицию
                     fetch(`/api/device/${node.id()}/position`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ x: Math.round(boundedPos.x), y: Math.round(boundedPos.y) })
+                        body: JSON.stringify({ x: Math.round(newX), y: Math.round(newY) })
                     }).catch(err => Logger.error('Ошибка при сохранении позиции:', err));
                 }
             });
         }, 500);
     });
+
+    // ==================== ОБРАБОТЧИКИ КЛИКОВ ====================
 
     cy.on('tap', 'node', function(evt) {
         const node = evt.target;
@@ -588,17 +625,25 @@ function initMap(mapId) {
         node.selected(true);
     });
 
-    cy.on('dbltap', 'node', function(evt) { openDeviceModal(evt.target); });
+    cy.on('dbltap', 'node', function(evt) {
+        openDeviceModal(evt.target);
+    });
+
     cy.on('tap', 'edge', function(evt) {
         if (currentMode !== 'select') cy.edges().selected(false);
         evt.target.selected(true);
     });
-    cy.on('dbltap', 'edge', function(evt) { openLinkModalForEdit(evt.target); });
+
+    cy.on('dbltap', 'edge', function(evt) {
+        openLinkModalForEdit(evt.target);
+    });
+
     cy.on('tap', function(event) {
         if (event.target === cy && linkMode) resetLinkMode();
         if (event.target === cy) cy.elements().deselect();
     });
 
+    // Устанавливаем начальный режим
     setMode('pan');
 }
 
@@ -675,7 +720,7 @@ function loadElements(mapId) {
     .then(data => {
         if (!cy) return;
 
-        // Обработка групп
+        // Создаём узлы групп (прямоугольники)
         const groupNodes = [];
         const groupMap = {};
         if (data.groups) {
@@ -686,22 +731,24 @@ function loadElements(mapId) {
                         id: `group_${g.id}`,
                         name: g.name,
                         color: g.color,
-                        isGroup: true
-                    }
+                        isGroup: true,
+                        group_id: g.id
+                    },
+                    // Группы могут иметь позицию – например, среднюю точку всех устройств группы
+                    // Но пока оставим без позиции – они будут отображаться, но не влиять
                 };
                 groupNodes.push(groupNode);
                 groupMap[g.id] = `group_${g.id}`;
             });
         }
 
-        // Обработка устройств
+        // Обработка устройств – parent НЕ устанавливаем
         const validNodes = data.nodes.filter(n => n.data && n.data.id);
         const deviceNodes = validNodes.map(n => {
-            // Устанавливаем parent, если устройство принадлежит группе
-            if (n.data.group_id && groupMap[n.data.group_id]) {
-                n.data.parent = groupMap[n.data.group_id];
-            }
-            // Корректировка позиции
+        if (n.data.group_id && groupMap[n.data.group_id]) {
+            n.data.parent = groupMap[n.data.group_id];
+        }
+            // Корректировка позиции (только если есть фон)
             if (bgImageWidth && bgImageHeight) {
                 if (n.data.x !== undefined && n.data.y !== undefined) {
                     const bounded = boundNodePosition({ x: n.data.x, y: n.data.y });
@@ -710,14 +757,6 @@ function loadElements(mapId) {
                 }
             }
             return n;
-        });
-
-        // Отладка
-        Logger.debug('Группы добавлены:', groupNodes.length);
-        deviceNodes.forEach(n => {
-            if (n.data.parent) {
-                Logger.debug('Устройство', n.data.id, 'принадлежит группе', n.data.parent);
-            }
         });
 
         // Обработка рёбер
@@ -731,18 +770,24 @@ function loadElements(mapId) {
         cy.add(deviceNodes);
         cy.add(validEdges);
 
-        const layout = cy.layout({ name: 'preset' });
-        layout.one('layoutstop', () => {
-            elementsLoaded = true;
-            Logger.info('✅ Элементы загружены:', deviceNodes.length, 'узлов,', validEdges.length, 'связей');
-            checkReadyAndFit();
-            cy.nodes().forEach(node => {
-                if (node.data('status') === 'false') {
-                    addPulsingNode(node);
-                }
-            });
+        // Отмечаем загрузку
+        elementsLoaded = true;
+        Logger.info('✅ Элементы загружены:', deviceNodes.length, 'узлов,', validEdges.length, 'связей');
+        checkReadyAndFit();
+
+        // Запускаем пульсацию для недоступных узлов
+        cy.nodes().forEach(node => {
+            if (node.data('status') === 'false') {
+                addPulsingNode(node);
+            }
         });
-        layout.run();
+
+        // Обновляем курсор в зависимости от блокировки
+        if (dragLocked) {
+            cy.nodes().style('cursor', 'not-allowed');
+        } else {
+            cy.nodes().style('cursor', 'move');
+        }
 
         // Предзагрузка иконок
         validNodes.forEach(n => {
@@ -757,6 +802,31 @@ function loadElements(mapId) {
         elementsLoaded = true;
         checkReadyAndFit();
     });
+}
+
+function saveDevicePosition(node) {
+    if (window.isOperator) return;
+    if (dragLocked) return;
+    if (node.data('isGroup')) return; // группы не сохраняем
+
+    let pos = node.position();
+    // Если есть фон, ограничиваем позицию
+    if (bgImageWidth && bgImageHeight) {
+        const bounded = boundNodePosition(pos);
+        if (bounded.x !== pos.x || bounded.y !== pos.y) {
+            node.position(bounded);
+            pos = bounded;
+        }
+    }
+
+    clearTimeout(dragTimeout);
+    dragTimeout = setTimeout(() => {
+        fetch(`/api/device/${node.id()}/position`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
+        }).catch(err => Logger.error('Ошибка при сохранении позиции:', err));
+    }, 500);
 }
 
 function loadDeviceTypes() {
@@ -777,10 +847,9 @@ function loadDeviceTypes() {
 }
 
 function saveViewportToServer() {
-    if (window.isOperator) {
-        // Оператор не сохраняет viewport – все изменения временные
-        return;
-    }
+    // Оператор не сохраняет viewport – все изменения временные
+    if (window.isOperator) return;
+
     if (!cy) return;
     const pan = cy.pan();
     const zoom = cy.zoom();
@@ -1664,32 +1733,47 @@ function applyBulkEdit() {
         });
 }
 // ============================================================================
-// БЛОКИРОВКА ПЕРЕТАСКИВАНИЯ
+// БЛОКИРОВКА ПЕРЕТАСКИВАНИЯ (с сохранением в localStorage)
 // ============================================================================
-let dragLocked = false;
+let dragLocked = localStorage.getItem('dragLocked') === 'true';
+
+function updateLockButton() {
+    const lockBtn = document.getElementById('lockMode');
+    if (!lockBtn) return;
+
+    if (window.isOperator) {
+        // Оператору показываем замок всегда закрытым и неактивным
+        lockBtn.disabled = true;
+        lockBtn.classList.add('active');
+        lockBtn.innerHTML = '<i class="fas fa-lock"></i>';
+        lockBtn.title = 'Оператор не может разблокировать карту';
+        return;
+    }
+
+    lockBtn.disabled = false;
+    if (dragLocked) {
+        lockBtn.classList.add('active');
+        lockBtn.innerHTML = '<i class="fas fa-lock"></i>';
+        lockBtn.title = 'Разблокировать перемещение';
+    } else {
+        lockBtn.classList.remove('active');
+        lockBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
+        lockBtn.title = 'Заблокировать перемещение';
+    }
+}
 
 function toggleLock() {
+    // Оператор не может переключать блокировку
+    if (window.isOperator) return;
+
     dragLocked = !dragLocked;
+    localStorage.setItem('dragLocked', dragLocked);
     updateLockButton();
-    // Обновляем курсор при наведении на узлы
     if (cy) {
         if (dragLocked) {
             cy.nodes().style('cursor', 'not-allowed');
         } else {
             cy.nodes().style('cursor', 'move');
-        }
-    }
-}
-
-function updateLockButton() {
-    const lockBtn = document.getElementById('lockMode');
-    if (lockBtn) {
-        if (dragLocked) {
-            lockBtn.classList.add('active');
-            lockBtn.innerHTML = '<i class="fas fa-lock"></i>';
-        } else {
-            lockBtn.classList.remove('active');
-            lockBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
         }
     }
 }

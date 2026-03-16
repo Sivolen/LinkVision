@@ -339,8 +339,8 @@ def update_position(id):
     data = request.json
     dev.pos_x = data['x']
     dev.pos_y = data['y']
-    if dev.pos_x < 0: dev.pos_x = 0
-    if dev.pos_y < 0: dev.pos_y = 0
+    # if dev.pos_x < 0: dev.pos_x = 0
+    # if dev.pos_y < 0: dev.pos_y = 0
     db.session.commit()
     api_logger.info(f"Device position updated: ID={id} -> ({dev.pos_x}, {dev.pos_y})")
     return jsonify({'status': 'ok'})
