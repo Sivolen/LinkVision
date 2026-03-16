@@ -7,8 +7,8 @@ from blueprints.auth import auth_bp
 from blueprints.admin import admin_bp
 from blueprints.main import main_bp
 from blueprints.api import api_bp
-from monitor import init_monitor, start_monitor
-from logger import app_logger
+from services.monitor import init_monitor, start_monitor
+from utils.logger import app_logger
 import os
 
 def create_app():
@@ -83,6 +83,7 @@ def create_app():
         }
 
     return app
+
 
 if __name__ == '__main__':
     os.makedirs('static/uploads/icons', exist_ok=True)
