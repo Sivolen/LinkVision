@@ -16,7 +16,7 @@ let elementsLoaded = false;
 let backgroundLoaded = false;
 
 // Глобальный сокет (объявлен как window.socket)
-window.socket = null;
+// window.socket = null;
 
 // ============================================================================
 // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ FETCH С ПОВТОРНЫМИ ПОПЫТКАМИ
@@ -183,47 +183,19 @@ function checkReadyAndFit() {
 
 function initMap(mapId) {
     console.log('🗺️ Инициализация карты:', mapId);
-    const MAX_RECONNECT_ATTEMPTS = 5;
-
-    if (!window.socket) {
-        window.socket = io({
-            reconnection: true,
-            reconnectionDelay: 5000,
-            reconnectionDelayMax: 10000,
-            reconnectionAttempts: MAX_RECONNECT_ATTEMPTS
-        });
-
-        window.socket.on('connect_error', (error) => {
-            console.error('❌ Socket connection error:', error);
-            if (typeof updateBackendStatus === 'function') updateBackendStatus(false);
-        });
-
-        window.socket.on('disconnect', (reason) => {
-            console.warn('⚠️ Socket disconnected:', reason);
-            if (typeof updateBackendStatus === 'function') updateBackendStatus(false);
-            setTimeout(() => {
-                console.log('🔄 Попытка переподключения...');
-                window.socket.connect();
-            }, 3000);
-        });
-
-        window.socket.on('reconnect', (attemptNumber) => {
-            console.log('✅ Socket reconnected after', attemptNumber, 'attempts');
+    // Присоединяемся к комнате карты через глобальный сокет
+    if (window.socket) {
+        if (window.socket.connected) {
             window.socket.emit('join_room', `map_${mapId}`);
-            if (typeof updateBackendStatus === 'function') updateBackendStatus(true);
-        });
-
-        window.socket.on('connect', () => {
-            console.log('✅ Socket connected');
-            const roomName = `map_${mapId}`;
-            console.log('🚪 Присоединяемся к комнате:', roomName);
-            window.socket.emit('join_room', roomName);
-            if (typeof updateBackendStatus === 'function') updateBackendStatus(true);
-        });
-
-        window.socket.onAny((event, ...args) => {
-            console.log(`📨 Событие сокета: ${event}`, args);
-        });
+        } else {
+            const onConnect = () => {
+                window.socket.emit('join_room', `map_${mapId}`);
+                window.socket.off('connect', onConnect);
+            };
+            window.socket.on('connect', onConnect);
+        }
+    } else {
+        console.error('❌ Глобальный сокет не инициализирован');
     }
 
     window.socket.on('device_status', (data) => {

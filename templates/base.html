@@ -429,6 +429,48 @@
         }
         // Начальное состояние – офлайн
         updateBackendStatus(false);
+        // ====================================================================
+        // Глобальная инициализация сокета (для всех страниц с сайдбаром)
+        // ====================================================================
+        {% if current_user.is_authenticated %}
+        (function initGlobalSocket() {
+            if (window.socket) return; // уже инициализирован
+
+            window.socket = io({
+                reconnection: true,
+                reconnectionDelay: 5000,
+                reconnectionDelayMax: 10000,
+                reconnectionAttempts: 5
+            });
+
+            window.socket.on('connect', () => {
+                console.log('✅ Socket connected (global)');
+                // Если мы на странице карты, присоединяемся к её комнате
+                if (window.currentMapId) {
+                    window.socket.emit('join_room', `map_${window.currentMapId}`);
+                }
+                updateBackendStatus(true);
+            });
+
+            window.socket.on('disconnect', (reason) => {
+                console.warn('⚠️ Socket disconnected (global):', reason);
+                updateBackendStatus(false);
+            });
+
+            window.socket.on('reconnect', (attemptNumber) => {
+                console.log('✅ Socket reconnected after', attemptNumber, 'attempts');
+                if (window.currentMapId) {
+                    window.socket.emit('join_room', `map_${window.currentMapId}`);
+                }
+                updateBackendStatus(true);
+            });
+
+            window.socket.on('connect_error', (error) => {
+                console.error('❌ Socket connection error:', error);
+                updateBackendStatus(false);
+            });
+        })();
+        {% endif %}
     </script>
 
     {% block scripts %}{% endblock %}
