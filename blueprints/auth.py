@@ -2,8 +2,8 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from extensions import db
 from models import User
+from logger import auth_logger
 
-# Объявляем Blueprint ПЕРЕД использованием
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -16,14 +16,17 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
             login_user(user)
+            auth_logger.info(f"User logged in: {username}")
             next_page = request.args.get('next')
             return redirect(next_page) if next_page else redirect(url_for('main.dashboard'))
+        auth_logger.warning(f"Failed login attempt for username: {username}")
         flash('Неверный логин или пароль')
     return render_template('login.html')
 
 @auth_bp.route('/logout')
 @login_required
 def logout():
+    auth_logger.info(f"User logged out: {current_user.username}")
     logout_user()
     return redirect(url_for('auth.login'))
 
@@ -35,12 +38,14 @@ def register():
         username = request.form.get('username')
         password = request.form.get('password')
         if User.query.filter_by(username=username).first():
+            auth_logger.warning(f"Registration attempt with existing username: {username}")
             flash('Пользователь уже существует')
             return redirect(url_for('auth.register'))
         user = User(username=username)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
+        auth_logger.info(f"New user registered: {username}")
         flash('Регистрация успешна. Войдите.')
         return redirect(url_for('auth.login'))
     return render_template('register.html')

@@ -29,7 +29,7 @@ async function fetchWithRetry(url, options = {}, retries = 3, delay = 500) {
         } catch (error) {
             const isLastAttempt = i === retries - 1;
             if (isLastAttempt) throw error;
-            console.warn(`⚠️ fetch failed (attempt ${i+1}/${retries}), retrying in ${delay}ms...`, error);
+            Logger.warn(`⚠️ fetch failed (attempt ${i+1}/${retries}), retrying in ${delay}ms...`, error);
             await new Promise(resolve => setTimeout(resolve, delay));
             delay *= 2;
         }
@@ -161,7 +161,7 @@ function fitImageToView() {
     cy.viewport({ pan: { x: panX, y: panY }, zoom: zoom });
     updateBackgroundTransform();
     enforcePanBounds();
-    console.log('📐 Изображение подогнано:', zoom.toFixed(2), 'pan:', panX.toFixed(0), panY.toFixed(0));
+    Logger.debug('📐 Изображение подогнано:', zoom.toFixed(2), 'pan:', panX.toFixed(0), panY.toFixed(0));
 }
 
 function checkReadyAndFit() {
@@ -172,7 +172,7 @@ function checkReadyAndFit() {
         const zoom = parseFloat(cyEl.dataset.zoom) || 1;
         if (panX !== 0 || panY !== 0 || zoom !== 1) {
             cy.viewport({ pan: { x: panX, y: panY }, zoom: zoom });
-            console.log('🖼️ Viewport восстановлен из БД');
+            Logger.debug('🖼️ Viewport восстановлен из БД');
         } else {
             fitImageToView();
         }
@@ -182,7 +182,7 @@ function checkReadyAndFit() {
 }
 
 function initMap(mapId) {
-    console.log('🗺️ Инициализация карты:', mapId);
+    Logger.info('🗺️ Инициализация карты:', mapId);
     // Присоединяемся к комнате карты через глобальный сокет
     if (window.socket) {
         if (window.socket.connected) {
@@ -195,25 +195,25 @@ function initMap(mapId) {
             window.socket.on('connect', onConnect);
         }
     } else {
-        console.error('❌ Глобальный сокет не инициализирован');
+        Logger.error('❌ Глобальный сокет не инициализирован');
     }
 
     window.socket.on('device_status', (data) => {
-        console.log('📡 [RAW] device_status получен:', data);
+        Logger.debug('📡 [RAW] device_status получен:', data);
 
         if (Number(data.map_id) !== Number(mapId)) {
-            console.log('⏭️ Событие для другой карты, игнорируем');
+            Logger.debug('⏭️ Событие для другой карты, игнорируем');
             return;
         }
 
         if (!cy) {
-            console.log('⏭️ Cytoscape ещё не инициализирован');
+            Logger.debug('⏭️ Cytoscape ещё не инициализирован');
             return;
         }
 
         const node = cy.getElementById(String(data.id));
         if (!node.length) {
-            console.log(`⚠️ Узел с id ${data.id} не найден на карте`);
+            Logger.warn(`⚠️ Узел с id ${data.id} не найден на карте`);
             return;
         }
 
@@ -221,11 +221,11 @@ function initMap(mapId) {
             const statusValue = data.status === 'true' ? 'true' : 'false';
             const oldStatus = node.data('status');
 
-            console.log(`🔄 Узел: ${node.data('name')} (id=${data.id})`);
-            console.log(`   Старый статус: ${oldStatus}, новый: ${statusValue}`);
+            Logger.debug(`🔄 Узел: ${node.data('name')} (id=${data.id})`);
+            Logger.debug(`   Старый статус: ${oldStatus}, новый: ${statusValue}`);
 
             if (oldStatus === statusValue) {
-                console.log('   Статус не изменился, пропускаем обновление');
+                Logger.debug('   Статус не изменился, пропускаем обновление');
                 return;
             }
 
@@ -243,10 +243,10 @@ function initMap(mapId) {
             updateSidebarCounter(data.map_id, becameDown);
 
             const computedBorderColor = node.style('border-color');
-            console.log(`   Применённый border-color: ${computedBorderColor}`);
-            console.log('✅ Статус успешно обновлён');
+            Logger.debug(`   Применённый border-color: ${computedBorderColor}`);
+            Logger.debug('✅ Статус успешно обновлён');
         } catch (e) {
-            console.error('❌ Ошибка в обработчике device_status:', e);
+            Logger.error('❌ Ошибка в обработчике device_status:', e);
         }
     });
 
@@ -387,15 +387,15 @@ function initMap(mapId) {
                 style: {
                     'shape': 'rectangle',
                     'background-color': 'data(color)',
-                    'background-opacity': 0.1,          // очень прозрачный фон
+                    'background-opacity': 0.1,
                     'border-color': 'data(color)',
-                    'border-width': 1,                   // тонкая граница
-                    'border-opacity': 0.3,                // граница тоже полупрозрачная
-                    'border-style': 'dashed',              // пунктирная линия для большей незаметности
+                    'border-width': 1,
+                    'border-opacity': 0.3,
+                    'border-style': 'dashed',
                     'label': 'data(name)',
-                    'font-size': '11px',                   // мелкий шрифт
+                    'font-size': '11px',
                     'font-weight': 'normal',
-                    'color': '#888',                        // серый цвет текста
+                    'color': '#888',
                     'text-valign': 'top',
                     'text-halign': 'center',
                     'padding': '5px',
@@ -508,7 +508,7 @@ function initMap(mapId) {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
-            }).catch(err => console.error('Ошибка при сохранении позиции:', err));
+            }).catch(err => Logger.error('Ошибка при сохранении позиции:', err));
         }, 500);
     });
 
@@ -535,7 +535,7 @@ function initMap(mapId) {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ x: Math.round(boundedPos.x), y: Math.round(boundedPos.y) })
-                    }).catch(err => console.error('Ошибка при сохранении позиции:', err));
+                    }).catch(err => Logger.error('Ошибка при сохранении позиции:', err));
                 }
             });
         }, 500);
@@ -611,11 +611,11 @@ function loadBackground(bgUrl) {
             bgEl.classList.add('has-image');
         }
         backgroundLoaded = true;
-        console.log('🖼️ Фон загружен:', bgImageWidth, 'x', bgImageHeight);
+        Logger.debug('🖼️ Фон загружен:', bgImageWidth, 'x', bgImageHeight);
         checkReadyAndFit();
     };
     img.onerror = () => {
-        console.error('❌ Не удалось загрузить фон');
+        Logger.error('❌ Не удалось загрузить фон');
         backgroundLoaded = true;
         checkReadyAndFit();
     };
@@ -685,10 +685,10 @@ function loadElements(mapId) {
         });
 
         // Отладка
-        console.log('Группы добавлены:', groupNodes.length);
+        Logger.debug('Группы добавлены:', groupNodes.length);
         deviceNodes.forEach(n => {
             if (n.data.parent) {
-                console.log('Устройство', n.data.id, 'принадлежит группе', n.data.parent);
+                Logger.debug('Устройство', n.data.id, 'принадлежит группе', n.data.parent);
             }
         });
 
@@ -706,7 +706,7 @@ function loadElements(mapId) {
         const layout = cy.layout({ name: 'preset' });
         layout.one('layoutstop', () => {
             elementsLoaded = true;
-            console.log('✅ Элементы загружены:', deviceNodes.length, 'узлов,', validEdges.length, 'связей');
+            Logger.info('✅ Элементы загружены:', deviceNodes.length, 'узлов,', validEdges.length, 'связей');
             checkReadyAndFit();
             cy.nodes().forEach(node => {
                 if (node.data('status') === 'false') {
@@ -725,7 +725,7 @@ function loadElements(mapId) {
         });
     })
     .catch(err => {
-        console.error('❌ Ошибка загрузки элементов:', err);
+        Logger.error('❌ Ошибка загрузки элементов:', err);
         elementsLoaded = true;
         checkReadyAndFit();
     });
@@ -745,7 +745,7 @@ function loadDeviceTypes() {
             select.appendChild(option);
         });
     })
-    .catch(err => console.error('❌ Ошибка типов:', err));
+    .catch(err => Logger.error('❌ Ошибка типов:', err));
 }
 
 function saveViewportToServer() {
@@ -758,7 +758,7 @@ function saveViewportToServer() {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pan_x: pan.x, pan_y: pan.y, zoom: zoom })
-        }).catch(err => console.error('Ошибка сохранения viewport:', err));
+        }).catch(err => Logger.error('Ошибка сохранения viewport:', err));
     }, 500);
 }
 
@@ -861,10 +861,10 @@ function openDeviceModal(node) {
                             devGroup.value = '';
                         }
                     })
-                    .catch(err => console.error('Ошибка загрузки групп:', err));
+                    .catch(err => Logger.error('Ошибка загрузки групп:', err));
             })
             .catch(err => {
-                console.error('Ошибка загрузки деталей:', err);
+                Logger.error('Ошибка загрузки деталей:', err);
                 historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Ошибка загрузки</td></tr>';
                 neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка загрузки</td></tr>';
             });
@@ -891,7 +891,7 @@ function openDeviceModal(node) {
                     devGroup.appendChild(option);
                 });
             })
-            .catch(err => console.error('Ошибка загрузки групп:', err));
+            .catch(err => Logger.error('Ошибка загрузки групп:', err));
     }
 
     // Активируем первую вкладку
@@ -927,7 +927,7 @@ function saveDevice() {
         })
         .then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'))
         .catch(err => {
-            console.error('Ошибка при сохранении устройства:', err);
+            Logger.error('Ошибка при сохранении устройства:', err);
             alert('❌ Ошибка сети при сохранении');
         });
     } else {
@@ -950,7 +950,7 @@ function saveDevice() {
         })
         .then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'))
         .catch(err => {
-            console.error('Ошибка при создании устройства:', err);
+            Logger.error('Ошибка при создании устройства:', err);
             alert('❌ Ошибка сети при создании');
         });
     }
@@ -961,7 +961,7 @@ function deleteDevice(id) {
         fetch(`/api/device/${id}`, { method: 'DELETE' })
         .then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'))
         .catch(err => {
-            console.error('Ошибка при удалении устройства:', err);
+            Logger.error('Ошибка при удалении устройства:', err);
             alert('❌ Ошибка сети при удалении');
         });
     }
@@ -1068,7 +1068,7 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
         }
     })
     .catch(err => {
-        console.error('Ошибка создания связи:', err);
+        Logger.error('Ошибка создания связи:', err);
         alert('❌ Ошибка: ' + err.message);
     });
 }
@@ -1089,7 +1089,7 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
     })
     .then(res => res.ok ? location.reload() : alert('❌ Ошибка'))
     .catch(err => {
-        console.error('Ошибка обновления связи:', err);
+        Logger.error('Ошибка обновления связи:', err);
         alert('❌ Ошибка сети при обновлении');
     });
 }
@@ -1100,7 +1100,7 @@ function deleteLink(linkId) {
     fetch(`/api/link/${numericId}`, { method: 'DELETE' })
     .then(res => res.ok ? location.reload() : alert('❌ Ошибка'))
     .catch(err => {
-        console.error('Ошибка удаления связи:', err);
+        Logger.error('Ошибка удаления связи:', err);
         alert('❌ Ошибка сети при удалении');
     });
 }
@@ -1197,7 +1197,7 @@ function openDeviceHistory(deviceId) {
             modal.show();
         })
         .catch(err => {
-            console.error('Ошибка загрузки истории:', err);
+            Logger.error('Ошибка загрузки истории:', err);
             alert('Не удалось загрузить историю');
         });
 }
@@ -1209,27 +1209,27 @@ let searchTimeout;
 
 // Фильтрация по статусу
 window.filterByStatus = function(status) {
-    console.log('Фильтр по статусу:', status);
+    Logger.debug('Фильтр по статусу:', status);
     currentFilterStatus = status;
     applyFilterAndSearch();
 };
 
 // Применить фильтр и поиск
 function applyFilterAndSearch() {
-    console.log('applyFilterAndSearch вызван');
+    Logger.debug('applyFilterAndSearch вызван');
     if (!cy) {
-        console.log('cy не инициализирован');
+        Logger.debug('cy не инициализирован');
         return;
     }
 
     const searchInput = document.getElementById('searchInput');
     if (!searchInput) {
-        console.log('searchInput не найден');
+        Logger.debug('searchInput не найден');
         return;
     }
 
     const searchTerm = searchInput.value.toLowerCase().trim();
-    console.log('Поисковый запрос:', searchTerm);
+    Logger.debug('Поисковый запрос:', searchTerm);
 
     // Сбрасываем подсветку
     cy.nodes().removeClass('cy-node-highlight');
@@ -1250,7 +1250,7 @@ function applyFilterAndSearch() {
             node.hide();
         }
     });
-    console.log(`После фильтра видимо узлов: ${visibleCount}`);
+    Logger.debug(`После фильтра видимо узлов: ${visibleCount}`);
 
     // Применяем поиск (подсвечиваем совпадения среди всех узлов, включая скрытые)
     if (searchTerm) {
@@ -1265,13 +1265,13 @@ function applyFilterAndSearch() {
                 matchCount++;
             }
         });
-        console.log(`Найдено совпадений: ${matchCount}`);
+        Logger.debug(`Найдено совпадений: ${matchCount}`);
     }
 }
 
 // Очистка поиска
 window.clearSearch = function() {
-    console.log('Очистка поиска');
+    Logger.debug('Очистка поиска');
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.value = '';
@@ -1285,7 +1285,7 @@ window.clearSearch = function() {
 
 // Инициализация после загрузки DOM
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM загружен, инициализация поиска');
+    Logger.debug('DOM загружен, инициализация поиска');
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         // Обработка ввода с задержкой (debounce)
@@ -1301,9 +1301,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 applyFilterAndSearch();
             }
         });
-        console.log('Слушатели навешены');
+        Logger.debug('Слушатели навешены');
     } else {
-        console.error('searchInput не найден при инициализации');
+        Logger.error('searchInput не найден при инициализации');
     }
 });
 function goToDevice(deviceId) {
@@ -1345,7 +1345,7 @@ function loadGroups() {
                 `;
             });
         })
-        .catch(err => console.error('Ошибка загрузки групп:', err));
+        .catch(err => Logger.error('Ошибка загрузки групп:', err));
 }
 
 document.getElementById('groupForm').addEventListener('submit', function(e) {
@@ -1371,7 +1371,7 @@ document.getElementById('groupForm').addEventListener('submit', function(e) {
         loadGroups();
         reloadMapElements(); // обновить карту (перезагрузить элементы)
     })
-    .catch(err => console.error('Ошибка сохранения группы:', err));
+    .catch(err => Logger.error('Ошибка сохранения группы:', err));
 });
 
 function editGroup(id, name, color) {
@@ -1388,7 +1388,7 @@ function deleteGroup(id) {
             loadGroups();
             reloadMapElements();
         })
-        .catch(err => console.error('Ошибка удаления группы:', err));
+        .catch(err => Logger.error('Ошибка удаления группы:', err));
 }
 
 function reloadMapElements() {
@@ -1499,7 +1499,7 @@ function loadDeviceTypesForBulk() {
                 select.appendChild(option);
             });
         })
-        .catch(err => console.error('Ошибка загрузки типов:', err));
+        .catch(err => Logger.error('Ошибка загрузки типов:', err));
 }
 
 // Загрузка групп для массового редактирования
@@ -1516,7 +1516,7 @@ function loadGroupsForBulk() {
                 select.appendChild(option);
             });
         })
-        .catch(err => console.error('Ошибка загрузки групп:', err));
+        .catch(err => Logger.error('Ошибка загрузки групп:', err));
 }
 
 // Применить массовое редактирование
@@ -1575,7 +1575,7 @@ function applyBulkEdit() {
             reloadMapElements();
         })
         .catch(err => {
-            console.error('Ошибка массового редактирования:', err);
+            Logger.error('Ошибка массового редактирования:', err);
             alert('Не удалось обновить все устройства');
         });
 }

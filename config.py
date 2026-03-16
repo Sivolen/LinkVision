@@ -15,4 +15,10 @@ class Config:
     SESSION_COOKIE_SECURE = False
     PERMANENT_SESSION_LIFETIME = timedelta(days=1)
 
-    VERSION = '1.0.7'  # Версия приложения
+    VERSION = '1.0.8'
+
+    # Логирование
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')  # INFO, WARNING, DEBUG
+    LOG_FOLDER = os.path.join(BASE_DIR, 'logs')
+    LOG_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+    LOG_BACKUP_COUNT = 5

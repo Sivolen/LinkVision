@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from extensions import db
 from models import Map, Device, DeviceType, Link, DeviceHistory, Group
+from logger import api_logger
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -25,7 +26,6 @@ def get_elements(map_id):
     nodes = []
     edges = []
 
-    # 1. Собираем узлы
     for dev in map_obj.devices:
         icon_url = None
         width = None
@@ -55,19 +55,16 @@ def get_elements(map_id):
             'position': {'x': dev.pos_x or 100, 'y': dev.pos_y or 100}
         })
 
-    # 2. Собираем рёбра С ПРОВЕРКОЙ
     for link in map_obj.links:
-        # ✅ Пропускаем связи, если нет источника или цели
         if not link.source_device_id or not link.target_device_id:
-            print(f"⚠️ Skipping broken link {link.id}: missing source/target")
+            api_logger.warning(f"Skipping broken link {link.id}: missing source/target")
             continue
 
-        # ✅ Пропускаем, если устройства удалены (защита от orphaned links)
         source_exists = any(n['data']['id'] == str(link.source_device_id) for n in nodes)
         target_exists = any(n['data']['id'] == str(link.target_device_id) for n in nodes)
 
         if not source_exists or not target_exists:
-            print(f"⚠️ Skipping link {link.id}: node not found in map")
+            api_logger.warning(f"Skipping link {link.id}: node not found in map")
             continue
 
         edges.append({
@@ -77,7 +74,6 @@ def get_elements(map_id):
                 'source': str(link.source_device_id),
                 'target': str(link.target_device_id),
                 'label': f"{link.source_interface or 'eth0'}↔{link.target_interface or 'eth0'}",
-                # Новые поля
                 'link_type': link.link_type,
                 'color': link.line_color,
                 'width': link.line_width,
@@ -88,7 +84,6 @@ def get_elements(map_id):
     return jsonify({'nodes': nodes, 'edges': edges, 'groups': groups})
 
 
-# ✅ НОВЫЙ: Получение данных одного устройства (для редактирования)
 @api_bp.route('/device/<int:id>', methods=['GET'])
 @login_required
 def get_device(id):
@@ -119,10 +114,11 @@ def create_device():
         pos_x=data.get('x', 100),
         pos_y=data.get('y', 100),
         group_id=data.get('group_id'),
-        monitoring_enabled=data.get('monitoring_enabled', True)  # по умолчанию True
+        monitoring_enabled=data.get('monitoring_enabled', True)
     )
     db.session.add(dev)
     db.session.commit()
+    api_logger.info(f"Device created: ID={dev.id}, name={dev.name}, map={dev.map_id}")
     return jsonify({'id': dev.id}), 201
 
 
@@ -136,6 +132,7 @@ def manage_device(id):
     if request.method == 'DELETE':
         db.session.delete(device)
         db.session.commit()
+        api_logger.info(f"Device deleted: ID={id}")
         return jsonify({'status': 'deleted', 'id': id})
 
     elif request.method == 'PUT':
@@ -148,6 +145,7 @@ def manage_device(id):
         if 'group_id' in data: device.group_id = data['group_id']
         if 'monitoring_enabled' in data: device.monitoring_enabled = data['monitoring_enabled']
         db.session.commit()
+        api_logger.info(f"Device updated: ID={id}")
         return jsonify({'status': 'ok', 'id': device.id})
 
 
@@ -157,23 +155,14 @@ def update_position(id):
     dev = Device.query.get_or_404(id)
     data = request.json
 
-    # Получаем размеры фона, если он есть
-    max_x = None
-    max_y = None
-    if dev.map.background_image:
-        # Здесь можно кэшировать размеры или читать из метаданных
-        # Для простоты пока пропускаем, ограничение на клиенте (JS) основное
-        pass
-
-    # Применяем координаты
     dev.pos_x = data['x']
     dev.pos_y = data['y']
 
-    # Опционально: проверка на отрицательные значения
     if dev.pos_x < 0: dev.pos_x = 0
     if dev.pos_y < 0: dev.pos_y = 0
 
     db.session.commit()
+    api_logger.info(f"Device position updated: ID={id} -> ({dev.pos_x}, {dev.pos_y})")
     return jsonify({'status': 'ok'})
 
 
@@ -182,7 +171,7 @@ def update_position(id):
 def create_link():
     try:
         data = request.get_json()
-        print(f"🔗 Creating link: {data}")
+        api_logger.info(f"Creating link: {data}")
 
         if not all(k in data for k in ['map_id', 'source_id', 'target_id']):
             return jsonify({'error': 'Missing required fields'}), 400
@@ -198,7 +187,6 @@ def create_link():
             target_device_id=data['target_id'],
             source_interface=data.get('src_iface', 'eth0'),
             target_interface=data.get('tgt_iface', 'eth0'),
-            # Новые поля
             link_type=data.get('link_type'),
             line_color=data.get('line_color', '#6c757d'),
             line_width=data.get('line_width', 2),
@@ -207,15 +195,14 @@ def create_link():
         db.session.add(link)
         db.session.commit()
 
-        print(f"✅ Link created: ID={link.id}")
+        api_logger.info(f"Link created: ID={link.id}")
         return jsonify({'id': link.id}), 201
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error creating link: {e}")
+        api_logger.error(f"Error creating link: {e}")
         return jsonify({'error': str(e)}), 500
 
 
-# === Обновление связи ===
 @api_bp.route('/link/<int:id>', methods=['PUT'])
 @login_required
 def update_link(id):
@@ -228,7 +215,6 @@ def update_link(id):
         link.source_interface = data['source_interface']
     if 'target_interface' in data:
         link.target_interface = data['target_interface']
-    # Новые поля
     if 'link_type' in data:
         link.link_type = data['link_type']
     if 'line_color' in data:
@@ -239,10 +225,10 @@ def update_link(id):
         link.line_style = data['line_style']
 
     db.session.commit()
+    api_logger.info(f"Link updated: ID={id}")
     return jsonify({'id': link.id, 'status': 'updated'})
 
 
-# === Удаление связи ===
 @api_bp.route('/link/<int:id>', methods=['DELETE'])
 @login_required
 def delete_link(id):
@@ -252,6 +238,7 @@ def delete_link(id):
 
     db.session.delete(link)
     db.session.commit()
+    api_logger.info(f"Link deleted: ID={id}")
     return jsonify({'id': id, 'status': 'deleted'})
 
 
@@ -265,6 +252,7 @@ def manage_link(id):
     if request.method == 'DELETE':
         db.session.delete(link)
         db.session.commit()
+        api_logger.info(f"Link deleted (manage): ID={id}")
         return jsonify({'status': 'deleted', 'id': id})
 
     elif request.method == 'PUT':
@@ -272,6 +260,7 @@ def manage_link(id):
         if 'source_interface' in data: link.source_interface = data['source_interface']
         if 'target_interface' in data: link.target_interface = data['target_interface']
         db.session.commit()
+        api_logger.info(f"Link updated (manage): ID={id}")
         return jsonify({'status': 'ok', 'id': link.id})
 
 
@@ -299,54 +288,50 @@ def update_map(id):
     if name:
         map_obj.name = name
 
-    # Обработка загружаемого фона
     if 'background' in request.files:
         file = request.files['background']
         if file and file.filename:
-            print(f"📎 Получен файл: {file.filename}")
+            api_logger.info(f"Received background file: {file.filename}")
             filename = secure_filename(f"map_{id}_{file.filename}")
             upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'maps')
             os.makedirs(upload_folder, exist_ok=True)
             full_path = os.path.join(upload_folder, filename)
 
-            # Проверка прав на запись
             if not os.access(upload_folder, os.W_OK):
-                print(f"❌ Нет прав на запись в {upload_folder}")
+                api_logger.error(f"No write permission to {upload_folder}")
                 return jsonify({'error': 'Нет прав на запись'}), 500
 
-            print(f"💾 Сохраняю файл фона: {full_path}")
+            api_logger.info(f"Saving background file to: {full_path}")
             try:
                 file.save(full_path)
                 if os.path.exists(full_path):
                     file_size = os.path.getsize(full_path)
-                    print(f"✅ Файл сохранён, размер: {file_size} байт")
+                    api_logger.info(f"File saved, size: {file_size} bytes")
                 else:
-                    print(f"❌ Файл не найден после сохранения!")
+                    api_logger.error("File not found after saving!")
                     return jsonify({'error': 'Ошибка сохранения файла'}), 500
             except Exception as e:
-                print(f"❌ Исключение при сохранении: {e}")
+                api_logger.error(f"Exception while saving file: {e}")
                 return jsonify({'error': str(e)}), 500
 
-            # Удаление старого фона (только если имя отличается)
             if map_obj.background_image and map_obj.background_image != filename:
                 old_path = os.path.join(upload_folder, map_obj.background_image)
                 if os.path.exists(old_path):
                     os.remove(old_path)
-                    print(f"🗑️ Удалён старый фон: {old_path}")
+                    api_logger.info(f"Removed old background: {old_path}")
 
             map_obj.background_image = filename
         else:
-            print("⚠️ Файл не содержит имени или пустой")
+            api_logger.warning("File is empty or has no name")
     else:
-        print("ℹ️ Поле 'background' отсутствует в запросе")
+        api_logger.debug("No 'background' field in request")
 
-    # Удаление фона (если отмечен чекбокс)
     if data.get('remove_background') == 'true':
         if map_obj.background_image:
             old_path = os.path.join(current_app.root_path, 'static', 'uploads', 'maps', map_obj.background_image)
             if os.path.exists(old_path):
                 os.remove(old_path)
-                print(f"🗑️ Удалён фон по запросу: {old_path}")
+                api_logger.info(f"Removed background by request: {old_path}")
             map_obj.background_image = None
 
     db.session.commit()
@@ -369,13 +354,14 @@ def update_viewport(id):
     map_obj.pan_y = data.get('pan_y', 0)
     map_obj.zoom = data.get('zoom', 1)
     db.session.commit()
+    api_logger.info(f"Viewport saved for map {id}: pan=({map_obj.pan_x},{map_obj.pan_y}), zoom={map_obj.zoom}")
     return jsonify({'status': 'ok'})
 
 
 @api_bp.route('/test_emit/<int:device_id>/<int:status>')
 def test_emit(device_id, status):
     from extensions import socketio
-    print(f"📤 Тестовая отправка device_status: id={device_id}, status={bool(status)}, map_id=1")
+    api_logger.info(f"Test emit: device={device_id}, status={bool(status)}")
     socketio.emit('device_status', {
         'id': device_id,
         'status': bool(status),
@@ -407,7 +393,6 @@ def get_device_details(id):
     if not current_user.is_admin and device.map.owner_id != current_user.id:
         return jsonify({'error': 'Доступ запрещён'}), 403
 
-    # Базовая информация
     data = {
         'id': device.id,
         'name': device.name,
@@ -423,7 +408,6 @@ def get_device_details(id):
         'monitoring_enabled': device.monitoring_enabled,
     }
 
-    # История изменений
     from models import DeviceHistory
     history = DeviceHistory.query.filter_by(device_id=id).order_by(DeviceHistory.timestamp.desc()).limit(50).all()
     data['history'] = [{
@@ -432,12 +416,10 @@ def get_device_details(id):
         'timestamp': h.timestamp.isoformat()
     } for h in history]
 
-    # Соседи (связи) с проверкой существования устройства
     neighbors = []
-    # Исходящие связи
     for link in device.source_links:
         neighbor = link.target
-        if neighbor:  # проверка на None
+        if neighbor:
             neighbors.append({
                 'device_id': neighbor.id,
                 'device_name': neighbor.name,
@@ -448,7 +430,6 @@ def get_device_details(id):
                 'width': link.line_width,
                 'style': link.line_style
             })
-    # Входящие связи
     for link in device.target_links:
         neighbor = link.source
         if neighbor:
@@ -488,7 +469,7 @@ def export_map(id):
             'icon_filename': dev.type.icon_filename if dev.type else None,
             'width': dev.type.width if dev.type else None,
             'height': dev.type.height if dev.type else None,
-            'group_id': dev.group_id  # добавляем ID группы
+            'group_id': dev.group_id
         })
 
     links = []
@@ -525,6 +506,7 @@ def export_map(id):
         'links': links,
         'groups': groups
     }
+    api_logger.info(f"Map {id} exported")
     return jsonify(data)
 
 
@@ -542,26 +524,22 @@ def import_map():
             return jsonify({'error': 'Map not found'}), 404
         if not current_user.is_admin and map_obj.owner_id != current_user.id:
             return jsonify({'error': 'Access denied'}), 403
-        # Удаляем старые устройства и связи (связи удаляются первыми)
         Link.query.filter_by(map_id=map_id).delete()
         Device.query.filter_by(map_id=map_id).delete()
-        # Удаляем старые группы
         Group.query.filter_by(map_id=map_id).delete()
         db.session.flush()
-        print(f"🗑️ Удалены все устройства, связи и группы карты {map_id}")
+        api_logger.info(f"Deleted all devices, links, groups for map {map_id}")
     else:
         map_obj = Map(name=data.get('name', 'Imported Map'), owner_id=current_user.id)
         db.session.add(map_obj)
         db.session.flush()
 
-    # Обновляем свойства карты
     map_obj.name = data.get('name', map_obj.name)
     map_obj.background_image = data.get('background_image')
     map_obj.pan_x = data.get('pan_x', 0)
     map_obj.pan_y = data.get('pan_y', 0)
     map_obj.zoom = data.get('zoom', 1)
 
-    # Маппинг старых ID групп на новые
     group_id_map = {}
     groups_created = 0
     for g_data in data.get('groups', []):
@@ -574,9 +552,8 @@ def import_map():
         db.session.flush()
         group_id_map[g_data['id']] = group.id
         groups_created += 1
-    print(f"✅ Создано групп: {groups_created}")
+    api_logger.info(f"Groups created: {groups_created}")
 
-    # Маппинг старых ID устройств на новые
     device_id_map = {}
     devices_created = 0
     for dev_data in data.get('devices', []):
@@ -592,7 +569,6 @@ def import_map():
         else:
             type_id = dev_data.get('type_id')
 
-        # Определяем новую группу для устройства, если была
         new_group_id = None
         old_group_id = dev_data.get('group_id')
         if old_group_id:
@@ -612,7 +588,7 @@ def import_map():
         db.session.flush()
         device_id_map[dev_data['id']] = dev.id
         devices_created += 1
-    print(f"✅ Создано устройств: {devices_created}")
+    api_logger.info(f"Devices created: {devices_created}")
 
     links_created = 0
     links_skipped = 0
@@ -621,7 +597,7 @@ def import_map():
         tgt_id = device_id_map.get(link_data['target_device_id'])
         if not src_id or not tgt_id:
             links_skipped += 1
-            print(f"⚠️ Пропущена связь: source {link_data['source_device_id']} -> target {link_data['target_device_id']} (нет в device_id_map)")
+            api_logger.warning(f"Skipped link: source {link_data['source_device_id']} -> target {link_data['target_device_id']} (missing in device_id_map)")
             continue
         link = Link(
             map_id=map_obj.id,
@@ -636,9 +612,10 @@ def import_map():
         )
         db.session.add(link)
         links_created += 1
-    print(f"✅ Создано связей: {links_created}, пропущено (битых): {links_skipped}")
+    api_logger.info(f"Links created: {links_created}, skipped: {links_skipped}")
 
     db.session.commit()
+    api_logger.info(f"Map import completed, new map ID: {map_obj.id}")
     return jsonify({'id': map_obj.id, 'status': 'imported'})
 
 
@@ -674,6 +651,7 @@ def create_group():
     )
     db.session.add(group)
     db.session.commit()
+    api_logger.info(f"Group created: ID={group.id}, name={group.name}, map={map_id}")
     return jsonify({'id': group.id}), 201
 
 
@@ -685,10 +663,10 @@ def manage_group(id):
     if not current_user.is_admin and map_obj.owner_id != current_user.id:
         return jsonify({'error': 'Доступ запрещён'}), 403
     if request.method == 'DELETE':
-        # Перед удалением отвязать устройства
         Device.query.filter_by(group_id=id).update({'group_id': None})
         db.session.delete(group)
         db.session.commit()
+        api_logger.info(f"Group deleted: ID={id}")
         return jsonify({'status': 'deleted'})
     elif request.method == 'PUT':
         data = request.json
@@ -697,4 +675,5 @@ def manage_group(id):
         if 'color' in data:
             group.color = data['color']
         db.session.commit()
+        api_logger.info(f"Group updated: ID={id}")
         return jsonify({'status': 'updated'})
