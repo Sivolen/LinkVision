@@ -184,6 +184,26 @@ function checkReadyAndFit() {
 function initMap(mapId) {
     Logger.info('🗺️ Инициализация карты:', mapId);
     // Присоединяемся к комнате карты через глобальный сокет
+        // Проверка: если mapId не число (например, null) – создаём пустую карту (режим новой карты)
+    if (!mapId || isNaN(parseInt(mapId))) {
+        Logger.warn('initMap: mapId невалиден, создаётся пустая карта');
+        cy = cytoscape({
+            container: document.getElementById('cy'),
+            elements: [],
+            style: [ /* ВСТАВЬТЕ СЮДА ПОЛНЫЙ МАССИВ СТИЛЕЙ ИЗ ОСНОВНОГО КОДА */ ],
+            layout: { name: 'preset' },
+            boxSelectionEnabled: false,
+            autounselectify: true,
+            minZoom: 0.1,
+            maxZoom: 5,
+            wheelSensitivity: 0.5,
+            fit: false
+        });
+        backgroundLoaded = true;
+        elementsLoaded = true;
+        // Не подключаемся к сокету, не загружаем элементы и фон
+        return;
+        }
     if (window.socket) {
         if (window.socket.connected) {
             window.socket.emit('join_room', `map_${mapId}`);
@@ -495,6 +515,7 @@ function initMap(mapId) {
     });
 
     cy.on('dragfree', 'node', function(evt) {
+        if (window.isOperator) return; // запрет для оператора
         const node = evt.target;
         let pos = node.position();
         const boundedPos = boundNodePosition(pos);
@@ -517,6 +538,7 @@ function initMap(mapId) {
     });
 
     cy.on('dragfree', 'node:selected', function(evt) {
+        if (window.isOperator) return;
         const selectedNodes = cy.nodes(':selected');
         if (selectedNodes.length <= 1) return;
         const draggedNode = evt.target;
@@ -749,6 +771,10 @@ function loadDeviceTypes() {
 }
 
 function saveViewportToServer() {
+    if (window.isOperator) {
+        // Оператор не сохраняет viewport – все изменения временные
+        return;
+    }
     if (!cy) return;
     const pan = cy.pan();
     const zoom = cy.zoom();
@@ -804,15 +830,10 @@ function openDeviceModal(node) {
         deleteBtn.style.display = 'inline-block';
         deleteBtn.onclick = () => deleteDevice(node.id());
 
-        // Загружаем детальную информацию
         fetch(`/api/device/${node.id()}/details`)
             .then(res => res.ok ? res.json() : Promise.reject('Ошибка загрузки'))
             .then(data => {
-                // Заполняем тип устройства
-                if (data.type_id && devType) {
-                    devType.value = data.type_id;
-                }
-                // Заполняем историю
+                if (data.type_id && devType) devType.value = data.type_id;
                 if (data.history && data.history.length > 0) {
                     historyBody.innerHTML = '';
                     data.history.forEach(entry => {
@@ -824,7 +845,6 @@ function openDeviceModal(node) {
                 } else {
                     historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет записей</td></tr>';
                 }
-                // Заполняем соседей
                 if (data.neighbors && data.neighbors.length > 0) {
                     neighborsBody.innerHTML = '';
                     data.neighbors.forEach(n => {
@@ -838,28 +858,21 @@ function openDeviceModal(node) {
                 } else {
                     neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет связей</td></tr>';
                 }
-                if (monitoringCheck) {
-                    monitoringCheck.checked = data.monitoring_enabled;
-                }
-                // Загружаем список групп для этой карты
+                if (monitoringCheck) monitoringCheck.checked = data.monitoring_enabled;
+
                 fetch(`/api/map/${getMapId()}/groups`)
                     .then(res => res.ok ? res.json() : [])
                     .then(groups => {
-                        // Очищаем и наполняем select
                         devGroup.innerHTML = '<option value="">-- Без группы --</option>';
                         groups.forEach(g => {
                             const option = document.createElement('option');
                             option.value = g.id;
                             option.textContent = g.name;
-                            option.style.backgroundColor = g.color; // можно добавить цвет
+                            option.style.backgroundColor = g.color;
                             devGroup.appendChild(option);
                         });
-                        // Устанавливаем сохранённую группу, если есть
-                        if (data.group_id) {
-                            devGroup.value = data.group_id;
-                        } else {
-                            devGroup.value = '';
-                        }
+                        if (data.group_id) devGroup.value = data.group_id;
+                        else devGroup.value = '';
                     })
                     .catch(err => Logger.error('Ошибка загрузки групп:', err));
             })
@@ -878,7 +891,6 @@ function openDeviceModal(node) {
         historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет данных</td></tr>';
         neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет данных</td></tr>';
 
-        // Загружаем список групп (без установки значения)
         fetch(`/api/map/${getMapId()}/groups`)
             .then(res => res.ok ? res.json() : [])
             .then(groups => {
@@ -898,8 +910,31 @@ function openDeviceModal(node) {
     const tab = new bootstrap.Tab(document.querySelector('#deviceModal .nav-link.active'));
     tab.show();
 
+    // ========== БЛОКИРОВКА ДЛЯ ОПЕРАТОРА ==========
+    if (window.isOperator) {
+        // Блокируем все поля ввода
+        devName.disabled = true;
+        devIp.disabled = true;
+        devType.disabled = true;
+        devGroup.disabled = true;
+        if (monitoringCheck) monitoringCheck.disabled = true;
+        // Скрываем кнопки "Сохранить" и "Удалить"
+        const saveBtn = document.querySelector('#deviceModal .btn-primary');
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    } else {
+        // Обычный режим – поля доступны
+        devName.disabled = false;
+        devIp.disabled = false;
+        devType.disabled = false;
+        devGroup.disabled = false;
+        if (monitoringCheck) monitoringCheck.disabled = false;
+    }
+    // =============================================
+
     deviceModal.show();
 }
+
 function saveDevice() {
     const id = document.getElementById('dev_id').value;
     const name = document.getElementById('dev_name').value;
@@ -987,6 +1022,17 @@ function openLinkModal(sourceId, targetId) {
     document.getElementById('linkModalTitle').textContent = 'Новая связь';
     document.getElementById('linkDeleteBtn').style.display = 'none';
     updateLinkPreview();
+
+    // ========== БЛОКИРОВКА ДЛЯ ОПЕРАТОРА ==========
+    if (window.isOperator) {
+        document.querySelectorAll('#linkModal input, #linkModal select').forEach(el => el.disabled = true);
+        const saveBtn = document.querySelector('#linkModal .btn-primary');
+        const deleteBtn = document.querySelector('#linkModal .btn-danger');
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+    // =============================================
+
     if (linkModal) linkModal.show();
 }
 
@@ -1006,6 +1052,17 @@ function openLinkModalForEdit(edge) {
     document.getElementById('linkDeleteBtn').style.display = 'inline-block';
     document.getElementById('linkDeleteBtn').onclick = () => deleteLink(data.id);
     updateLinkPreview();
+
+    // ========== БЛОКИРОВКА ДЛЯ ОПЕРАТОРА ==========
+    if (window.isOperator) {
+        document.querySelectorAll('#linkModal input, #linkModal select').forEach(el => el.disabled = true);
+        const saveBtn = document.querySelector('#linkModal .btn-primary');
+        const deleteBtn = document.querySelector('#linkModal .btn-danger');
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+    // =============================================
+
     if (linkModal) linkModal.show();
 }
 
@@ -1115,6 +1172,13 @@ function resetLinkMode() {
 }
 
 function startLinkMode() {
+    // ========== ПРОВЕРКА ДЛЯ ОПЕРАТОРА ==========
+    if (window.isOperator) {
+        alert('Оператор не может создавать связи');
+        return;
+    }
+    // =============================================
+
     if (!cy) { alert('⚠️ Карта не загружена'); return; }
     resetLinkMode();
     linkMode = true;
@@ -1321,6 +1385,13 @@ function goToDevice(deviceId) {
 // УПРАВЛЕНИЕ ГРУППАМИ
 // ============================================================================
 function openGroupManager() {
+    // ========== ПРОВЕРКА ДЛЯ ОПЕРАТОРА ==========
+    if (window.isOperator) {
+        alert('Оператор не может управлять группами');
+        return;
+    }
+    // =============================================
+
     loadGroups();
     const modal = new bootstrap.Modal(document.getElementById('groupModal'));
     modal.show();
@@ -1472,6 +1543,13 @@ function updateBulkEditButton() {
 
 // Открыть модальное окно массового редактирования
 function openBulkEditModal() {
+    // ========== ПРОВЕРКА ДЛЯ ОПЕРАТОРА ==========
+    if (window.isOperator) {
+        alert('Оператор не может редактировать устройства');
+        return;
+    }
+    // =============================================
+
     const selected = cy.nodes(':selected').filter(node => !node.data('isGroup'));
     if (selected.length === 0) {
         alert('Нет выбранных устройств');

@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% set is_operator = is_operator|default(false) %}
+<script>
+    window.isOperator = {{ 'true' if is_operator else 'false' }};
+</script>
+
 <div class="toolbar">
+    {% if not is_operator %}
     <div class="toolbar-group">
         <button class="toolbar-btn" onclick="openDeviceModal()">
             <i class="fas fa-plus"></i> Устройство
@@ -10,6 +16,7 @@
             <i class="fas fa-link"></i> Связь
         </button>
     </div>
+    {% endif %}
 
     <div class="toolbar-group">
         <button class="toolbar-btn" id="panMode" onclick="setMode('pan')" title="Перемещение карты">
@@ -19,11 +26,15 @@
             <i class="fas fa-object-group"></i> Выделение
         </button>
     </div>
+
+    {% if not is_operator %}
     <div class="toolbar-group" id="bulkEditGroup" style="display:none;">
         <button class="toolbar-btn" onclick="openBulkEditModal()">
             <i class="fas fa-edit"></i> Редактировать выбранные
         </button>
     </div>
+    {% endif %}
+
     <div class="toolbar-group">
         <button class="toolbar-btn" onclick="zoomIn()">
             <i class="fas fa-search-plus"></i>
@@ -35,6 +46,8 @@
             <i class="fas fa-compress-arrows-alt"></i>
         </button>
     </div>
+
+    {% if not is_operator %}
     <div class="toolbar-group">
         <button class="toolbar-btn" onclick="openGroupManager()">
             <i class="fas fa-layer-group"></i> Группы
@@ -54,6 +67,8 @@
             </ul>
         </div>
     </div>
+    {% endif %}
+
     <div class="search-filter-bar toolbar-group">
         <div class="input-group">
             <span class="input-group-text bg-secondary text-white"><i class="fas fa-search"></i></span>
@@ -74,6 +89,7 @@
 <!--        </button>-->
 <!--    </div>-->
 </div>
+
 <div class="map-container">
     <div id="cy-background" class="cy-background"
          data-background="{{ map.background_image or '' }}"></div>
@@ -82,6 +98,7 @@
          data-pan-y="{{ map.pan_y or 0 }}"
          data-zoom="{{ map.zoom or 1 }}"></div>
 </div>
+
 <!-- Модальное окно устройства -->
 <div class="modal fade" id="deviceModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -166,15 +183,18 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                {% if not is_operator %}
                 <button type="button" class="btn btn-primary" onclick="saveDevice()">Сохранить</button>
                 <button type="button" class="btn btn-danger" id="deleteDeviceBtn" style="display:none;" onclick="deleteDevice()">Удалить</button>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+
 <!-- Модальное окно связи -->
 <div class="modal fade" id="linkModal" tabindex="-1">
-    <div class="modal-dialog modal-md"> <!-- изменено с modal-sm на modal-md -->
+    <div class="modal-dialog modal-md">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="linkModalTitle">Настройка связи</h5>
@@ -238,12 +258,15 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+                {% if not is_operator %}
                 <button type="button" class="btn btn-danger btn-sm" id="linkDeleteBtn" style="display:none;" onclick="deleteLink()">Удалить</button>
                 <button type="button" class="btn btn-primary btn-sm" onclick="confirmCreateLink()">Сохранить</button>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+
 <!-- Модальное окно истории устройства -->
 <div class="modal fade" id="deviceHistoryModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -272,6 +295,7 @@
         </div>
     </div>
 </div>
+
 <!-- Модальное окно управления группами -->
 <div class="modal fade" id="groupModal" tabindex="-1">
     <div class="modal-dialog">
@@ -289,19 +313,19 @@
                         <button type="submit" class="btn btn-success">Сохранить</button>
                     </div>
                 </form>
-                    <table class="modern-table">
-                        <thead>
-                            <tr>
-                                <th>Название</th>
-                                <th>Цвет</th>
-                                <th>Устройств</th>
-                                <th>Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody id="group-list-body">
-                            <!-- Загружается через JS -->
-                        </tbody>
-                    </table>
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Цвет</th>
+                            <th>Устройств</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="group-list-body">
+                        <!-- Загружается через JS -->
+                    </tbody>
+                </table>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
@@ -309,6 +333,7 @@
         </div>
     </div>
 </div>
+
 <!-- Модальное окно массового редактирования -->
 <div class="modal fade" id="bulkEditModal" tabindex="-1">
     <div class="modal-dialog">
@@ -345,7 +370,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                {% if not is_operator %}
                 <button type="button" class="btn btn-primary" onclick="applyBulkEdit()">Применить</button>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -355,7 +382,7 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script>
-    window.currentMapId = {{ map.id }};
+    window.currentMapId = {% if map %}{{ map.id }}{% else %}null{% endif %};
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof initMap === 'function') {
             initMap(window.currentMapId);

@@ -34,6 +34,9 @@
             {% if current_user.is_admin %}
             <span class="badge bg-warning text-dark ms-2">Admin</span>
             {% endif %}
+            {% if current_user.is_operator %}
+            <span class="badge bg-info text-dark ms-2">Operator</span>
+            {% endif %}
         </div>
 
         <div class="sidebar-maps">
@@ -41,12 +44,14 @@
             <ul class="map-list" id="sidebarMapList">
                 <!-- Загружается через JS -->
             </ul>
+            {% if not current_user.is_operator %}
             <button class="btn btn-sm btn-outline-light w-100 mt-2" data-bs-toggle="modal" data-bs-target="#createMapModal">
                 <i class="fas fa-plus"></i> <span>Новая карта</span>
             </button>
             <button class="btn btn-sm btn-outline-light w-100 mt-2" onclick="importMapNew()">
                 <i class="fas fa-file-import"></i> <span>Импорт карты</span>
             </button>
+            {% endif %}
         </div>
 
         <div class="sidebar-footer">
@@ -70,8 +75,8 @@
                 <a href="{{ url_for('admin.settings') }}" class="admin-menu-item">
                     <i class="fas fa-cog"></i> <span>Настройки</span>
                 </a>
-                <a href="{{ url_for('admin.backups') }}" class="admin-menu-item">
-                    <i class="fas fa-hdd"></i> <span>Бэкапы</span>
+                <a href="{{ url_for('admin.maps_list') }}" class="admin-menu-item">
+                    <i class="fas fa-map"></i> <span>Карты</span>
                 </a>
             </div>
             {% endif %}
@@ -230,32 +235,43 @@
         document.addEventListener('DOMContentLoaded', function() {
             const savedSidebar = localStorage.getItem('sidebarCollapsed');
             if (savedSidebar === 'true') {
-                document.getElementById('sidebar').classList.add('collapsed');
-                const icon = document.querySelector('#sidebarToggle i');
-                icon.classList.remove('fa-bars');
-                icon.classList.add('fa-chevron-right');
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) {
+                    sidebar.classList.add('collapsed');
+                    const icon = document.querySelector('#sidebarToggle i');
+                    if (icon) {
+                        icon.classList.remove('fa-bars');
+                        icon.classList.add('fa-chevron-right');
+                    }
+                }
             }
             const savedTheme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', savedTheme);
             if (savedTheme === 'dark') {
                 const icon = document.querySelector('.theme-toggle i');
-                icon.classList.remove('fa-moon');
-                icon.classList.add('fa-sun');
+                if (icon) {
+                    icon.classList.remove('fa-moon');
+                    icon.classList.add('fa-sun');
+                }
             }
-            if (typeof loadSidebarMaps === 'function') {
+
+            // Загружаем карты в сайдбар только если сайдбар существует
+            if (document.getElementById('sidebar') && typeof loadSidebarMaps === 'function') {
                 loadSidebarMaps();
             }
+
             const sidebar = document.getElementById('sidebar');
             const toggleIcon = document.querySelector('.sidebar-toggle i');
-            if (sidebar && sidebar.classList.contains('collapsed')) {
-                toggleIcon.classList.remove('fa-bars');
-                toggleIcon.classList.add('fa-chevron-right');
-            } else if (sidebar) {
-                toggleIcon.classList.remove('fa-chevron-right');
-                toggleIcon.classList.add('fa-bars');
+            if (sidebar && toggleIcon) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleIcon.classList.remove('fa-bars');
+                    toggleIcon.classList.add('fa-chevron-right');
+                } else {
+                    toggleIcon.classList.remove('fa-chevron-right');
+                    toggleIcon.classList.add('fa-bars');
+                }
             }
         });
-
         // ====================================================================
         // ЗАГРУЗКА КАРТ В САЙДБАР
         // ====================================================================
@@ -473,7 +489,7 @@
             });
 
             window.socket.on('disconnect', (reason) => {
-                Logger.warn('Socket disconnected (global):', reason);
+                Logger.debug('Socket disconnected (global):', reason);
                 updateBackendStatus(false);
             });
 
@@ -486,7 +502,7 @@
             });
 
             window.socket.on('connect_error', (error) => {
-                Logger.error('Socket connection error:', error);
+                Logger.warn('Socket connection error:', error);
                 updateBackendStatus(false);
             });
         })();

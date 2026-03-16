@@ -9,23 +9,20 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, index=True)
     password_hash = db.Column(db.String(128))
     is_admin = db.Column(db.Boolean, default=False)
+    is_operator = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    maps = db.relationship('Map', backref='owner', lazy='dynamic')
+    last_map_id = db.Column(db.Integer, db.ForeignKey('map.id'), nullable=True)
+
+    # Явно указываем foreign_keys для связи maps
+    maps = db.relationship('Map', backref='owner', lazy='dynamic',
+                           foreign_keys='Map.owner_id')
+    last_map = db.relationship('Map', foreign_keys=[last_map_id])
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
-
-class Map(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(128))
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    devices = db.relationship('Device', backref='map', cascade="all, delete-orphan", lazy='dynamic')
-    links = db.relationship('Link', backref='map', cascade="all, delete-orphan", lazy='dynamic')
 
 
 class DeviceType(db.Model):
