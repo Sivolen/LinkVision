@@ -15,7 +15,7 @@ class Config:
     SESSION_COOKIE_SECURE = False
     PERMANENT_SESSION_LIFETIME = timedelta(days=1)
 
-    VERSION = '1.0.8'
+    VERSION = '1.1.1'
 
     # Логирование
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')  # INFO, WARNING, DEBUG

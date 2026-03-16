@@ -1003,3 +1003,7 @@ body {
 .search-filter-bar {
     max-width: 500px;
 }
+/* Выделение букв L и V в логотипе */
+.logo-text .logo-letter {
+    color: var(--accent-color); /* используем акцентный синий из переменной */
+}
