@@ -515,7 +515,8 @@ function initMap(mapId) {
     });
 
     cy.on('dragfree', 'node', function(evt) {
-        if (window.isOperator) return; // запрет для оператора
+        // if (window.isOperator) return; // запрет для оператора
+        if (window.isOperator || dragLocked) return;
         const node = evt.target;
         let pos = node.position();
         const boundedPos = boundNodePosition(pos);
@@ -534,11 +535,16 @@ function initMap(mapId) {
     });
 
     cy.on('drag', 'node', function(evt) {
+        if (window.isOperator || dragLocked) {
+        evt.preventDefault();
+        return;
+    }
         evt.target._private.scratch._dragStartPos = evt.target.position();
     });
 
     cy.on('dragfree', 'node:selected', function(evt) {
-        if (window.isOperator) return;
+        // if (window.isOperator) return;
+        if (window.isOperator || dragLocked) return;
         const selectedNodes = cy.nodes(':selected');
         if (selectedNodes.length <= 1) return;
         const draggedNode = evt.target;
@@ -1656,4 +1662,34 @@ function applyBulkEdit() {
             Logger.error('Ошибка массового редактирования:', err);
             alert('Не удалось обновить все устройства');
         });
+}
+// ============================================================================
+// БЛОКИРОВКА ПЕРЕТАСКИВАНИЯ
+// ============================================================================
+let dragLocked = false;
+
+function toggleLock() {
+    dragLocked = !dragLocked;
+    updateLockButton();
+    // Обновляем курсор при наведении на узлы
+    if (cy) {
+        if (dragLocked) {
+            cy.nodes().style('cursor', 'not-allowed');
+        } else {
+            cy.nodes().style('cursor', 'move');
+        }
+    }
+}
+
+function updateLockButton() {
+    const lockBtn = document.getElementById('lockMode');
+    if (lockBtn) {
+        if (dragLocked) {
+            lockBtn.classList.add('active');
+            lockBtn.innerHTML = '<i class="fas fa-lock"></i>';
+        } else {
+            lockBtn.classList.remove('active');
+            lockBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
+        }
+    }
 }
