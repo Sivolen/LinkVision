@@ -1012,3 +1012,12 @@ body {
 body, .sidebar, .modal-content, .toolbar-group, .btn, .form-control {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
+/* Увеличиваем длительность анимации появления/исчезновения алертов */
+.alert.fade {
+    transition: opacity 0.5s ease-in-out;
+}
+
+/* Для плавного появления можно добавить начальное состояние */
+.alert:not(.show) {
+    opacity: 0;
+}

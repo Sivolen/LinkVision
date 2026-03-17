@@ -722,7 +722,7 @@ function loadElements(mapId) {
     .then(data => {
         if (!cy) return;
 
-        // Создаём узлы групп (прямоугольники)
+        // Группы
         const groupNodes = [];
         const groupMap = {};
         if (data.groups) {
@@ -735,22 +735,23 @@ function loadElements(mapId) {
                         color: g.color,
                         isGroup: true,
                         group_id: g.id
-                    },
-                    // Группы могут иметь позицию – например, среднюю точку всех устройств группы
-                    // Но пока оставим без позиции – они будут отображаться, но не влиять
+                    }
                 };
                 groupNodes.push(groupNode);
                 groupMap[g.id] = `group_${g.id}`;
             });
         }
 
-        // Обработка устройств – parent НЕ устанавливаем
+        // Узлы устройств — работаем с исходными объектами, только приводим id к строке
         const validNodes = data.nodes.filter(n => n.data && n.data.id);
-        const deviceNodes = validNodes.map(n => {
-        if (n.data.group_id && groupMap[n.data.group_id]) {
-            n.data.parent = groupMap[n.data.group_id];
-        }
-            // Корректировка позиции (только если есть фон)
+        validNodes.forEach(n => {
+            n.data.id = String(n.data.id);                 // обязательно строка
+            if (n.data.group_id && groupMap[n.data.group_id]) {
+                n.data.parent = groupMap[n.data.group_id];
+            } else {
+                delete n.data.parent;                        // удалить parent, если группы нет
+            }
+            // Корректировка позиции (если есть фон)
             if (bgImageWidth && bgImageHeight) {
                 if (n.data.x !== undefined && n.data.y !== undefined) {
                     const bounded = boundNodePosition({ x: n.data.x, y: n.data.y });
@@ -758,26 +759,31 @@ function loadElements(mapId) {
                     n.data.y = bounded.y;
                 }
             }
-            return n;
         });
 
-        // Обработка рёбер
+        // Рёбра — приводим source/target к строке и добавляем префикс к ID
         const validEdges = data.edges.filter(e =>
             e.data && e.data.source && e.data.target &&
             e.data.source !== 'None' && e.data.target !== 'None'
         );
+        validEdges.forEach(e => {
+            e.data.source = String(e.data.source);
+            e.data.target = String(e.data.target);
+            if (e.data.id) {
+                e.data.id = `link_${String(e.data.id)}`;   // ← добавляем префикс
+            }
+        });
 
-        // Добавляем всё в cy
+        // Добавляем в граф
         cy.add(groupNodes);
-        cy.add(deviceNodes);
+        cy.add(validNodes);      // теперь это массив исходных объектов с изменёнными data
         cy.add(validEdges);
 
-        // Отмечаем загрузку
         elementsLoaded = true;
-        Logger.info('✅ Элементы загружены:', deviceNodes.length, 'узлов,', validEdges.length, 'связей');
+        Logger.info('✅ Элементы загружены:', validNodes.length, 'узлов,', validEdges.length, 'связей');
         checkReadyAndFit();
 
-        // Запускаем пульсацию для недоступных узлов
+        // Пульсация для недоступных узлов
         cy.nodes().forEach(node => {
             if (node.data('status') === 'false') {
                 addPulsingNode(node);
@@ -789,6 +795,13 @@ function loadElements(mapId) {
             if (n.data.iconUrl && n.data.iconUrl !== '') {
                 const img = new Image();
                 img.src = n.data.iconUrl;
+            }
+        });
+
+        // Отладка
+        validEdges.forEach(e => {
+            if (!cy.getElementById(e.data.source).length || !cy.getElementById(e.data.target).length) {
+                console.warn('⚠️ Ребро', e.data.id, 'ссылается на отсутствующий узел!', e.data.source, '→', e.data.target);
             }
         });
     })
@@ -1160,6 +1173,7 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
     const sourceId = typeof src === 'number' ? src : parseInt(src);
     const targetId = typeof tgt === 'number' ? tgt : parseInt(tgt);
     if (isNaN(sourceId) || isNaN(targetId)) { alert('⚠️ Ошибка: неверные ID'); return; }
+
     fetch('/api/link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1182,8 +1196,8 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
                 group: 'edges',
                 data: {
                     id: `link_${data.id}`,
-                    source: String(sourceId),
-                    target: String(targetId),
+                    source: String(sourceId),      // обязательно строка!
+                    target: String(targetId),      // обязательно строка!
                     label: `${srcIface}↔${tgtIface}`,
                     link_type: linkType,
                     color: lineColor,
