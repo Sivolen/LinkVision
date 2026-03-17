@@ -1,3 +1,5 @@
+import atexit
+
 from flask import Flask, request
 from flask_socketio import join_room
 from config import Config
@@ -7,7 +9,7 @@ from blueprints.auth import auth_bp
 from blueprints.admin import admin_bp
 from blueprints.main import main_bp
 from blueprints.api import api_bp
-from services.monitor import init_monitor, start_monitor
+from services.monitor import init_monitor, start_monitor, stop_monitor
 from utils.logger import app_logger
 import os
 
@@ -61,6 +63,7 @@ def create_app():
         app_logger.info(f"❌ Клиент отключился: {request.sid}")
 
     start_monitor()
+    atexit.register(stop_monitor)
 
     @app.route('/static/uploads/maps/<path:filename>')
     def serve_map_background(filename):

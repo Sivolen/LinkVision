@@ -487,6 +487,7 @@ body {
     overflow: hidden;
     border-radius: 12px;
     box-shadow: var(--card-shadow);
+    animation: fadeInUp 0.5s ease-out;
 }
 .cy-background {
     position: absolute;
@@ -1006,4 +1007,8 @@ body {
 /* Выделение букв L и V в логотипе */
 .logo-text .logo-letter {
     color: var(--accent-color); /* используем акцентный синий из переменной */
+}
+
+body, .sidebar, .modal-content, .toolbar-group, .btn, .form-control {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
