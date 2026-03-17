@@ -1,8 +1,6 @@
-import os
 from flask import Blueprint, render_template, redirect, url_for, request, jsonify, current_app, flash, abort
 from flask_login import login_required, current_user
 from extensions import db
-from models import Map, Device
 from services import map_service
 from utils.logger import main_logger
 

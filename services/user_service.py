@@ -1,17 +1,21 @@
 from models import User, db
 from utils.logger import admin_logger, auth_logger
 
+
 def get_user_by_id(user_id):
     """Получить пользователя по ID или None."""
     return User.query.get(user_id)
+
 
 def get_user_by_username(username):
     """Получить пользователя по имени."""
     return User.query.filter_by(username=username).first()
 
+
 def get_all_users():
     """Получить всех пользователей."""
     return User.query.all()
+
 
 def create_user(username, password, role):
     """
@@ -27,6 +31,7 @@ def create_user(username, password, role):
     admin_logger.info(f"User created: {username}, role={role}")
     return user
 
+
 def update_user(user_id, username=None, password=None, role=None):
     """Обновить данные пользователя."""
     user = User.query.get_or_404(user_id)
@@ -41,6 +46,7 @@ def update_user(user_id, username=None, password=None, role=None):
     admin_logger.info(f"User updated: ID={user_id}, role={role}")
     return user
 
+
 def delete_user(user_id):
     """Удалить пользователя."""
     user = User.query.get_or_404(user_id)
@@ -48,6 +54,7 @@ def delete_user(user_id):
     db.session.commit()
     admin_logger.info(f"User deleted: ID={user_id}")
     return user_id
+
 
 def authenticate_user(username, password):
     """Проверить логин и пароль, вернуть пользователя или None."""

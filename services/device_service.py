@@ -21,25 +21,10 @@ def get_device_history(device_id, limit=50):
 
 
 def get_device_details(device_id):
-    """Получить расширенную информацию об устройстве (включая соседей)."""
     device = Device.query.get_or_404(device_id)
-    data = {
-        'id': device.id,
-        'name': device.name,
-        'ip_address': device.ip_address,
-        'type_id': device.type_id,
-        'type_name': device.type.name if device.type else None,
-        'pos_x': device.pos_x,
-        'pos_y': device.pos_y,
-        'status': device.status,
-        'last_check': device.last_check.isoformat() if device.last_check else None,
-        'map_id': device.map_id,
-        'group_id': device.group_id,
-        'monitoring_enabled': device.monitoring_enabled,
-    }
-    data['history'] = get_device_history(device_id)
-
+    history = get_device_history(device_id)
     neighbors = []
+
     for link in device.source_links:
         neighbor = link.target
         if neighbor:
@@ -53,6 +38,7 @@ def get_device_details(device_id):
                 'width': link.line_width,
                 'style': link.line_style
             })
+
     for link in device.target_links:
         neighbor = link.source
         if neighbor:
@@ -66,8 +52,23 @@ def get_device_details(device_id):
                 'width': link.line_width,
                 'style': link.line_style
             })
-    data['neighbors'] = neighbors
-    return data
+
+    return {
+        'id': device.id,
+        'name': device.name,
+        'ip_address': device.ip_address,
+        'type_id': device.type_id,
+        'type_name': device.type.name if device.type else None,
+        'pos_x': device.pos_x,
+        'pos_y': device.pos_y,
+        'status': device.status,
+        'last_check': device.last_check.isoformat() if device.last_check else None,
+        'map_id': device.map_id,
+        'group_id': device.group_id,
+        'monitoring_enabled': device.monitoring_enabled,
+        'history': history,
+        'neighbors': neighbors,
+    }
 
 
 def create_device(map_id, type_id, name, ip_address=None, x=100, y=100, group_id=None, monitoring_enabled=True):

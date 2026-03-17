@@ -1,7 +1,7 @@
 import os
 
 from cachetools import TTLCache
-from flask import url_for, current_app
+from flask import url_for
 from models import Map, Group, Link, Device, DeviceType, User, UserMapSettings, db
 from utils.logger import api_logger, main_logger
 
@@ -162,7 +162,6 @@ def get_map_elements(map_id):
 
 def get_map_groups(map_id):
     """Получить список групп карты."""
-    map_obj = Map.query.get_or_404(map_id)
     groups = Group.query.filter_by(map_id=map_id).all()
     return [{
         'id': g.id,
@@ -353,7 +352,6 @@ def import_map(data, current_user):
 
     device_id_map = {}
     for dev_data in data.get('devices', []):
-        type_id = None
         type_name = dev_data.get('type_name')
         if type_name:
             dtype = DeviceType.query.filter_by(name=type_name).first()

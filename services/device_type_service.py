@@ -4,13 +4,16 @@ from werkzeug.utils import secure_filename
 from models import DeviceType, db
 from utils.logger import admin_logger
 
+
 def get_all_device_types():
     """Получить все типы устройств."""
     return DeviceType.query.all()
 
+
 def get_device_type_by_id(type_id):
     """Получить тип устройства по ID."""
     return DeviceType.query.get(type_id)
+
 
 def create_device_type(name, width=None, height=None, icon_file=None):
     """Создать новый тип устройства с иконкой (опционально)."""
@@ -29,6 +32,7 @@ def create_device_type(name, width=None, height=None, icon_file=None):
     db.session.commit()
     admin_logger.info(f"Device type created: {name}")
     return dtype
+
 
 def update_device_type(type_id, name=None, width=None, height=None, icon_file=None):
     """Обновить тип устройства."""
@@ -51,6 +55,7 @@ def update_device_type(type_id, name=None, width=None, height=None, icon_file=No
     db.session.commit()
     admin_logger.info(f"Device type updated: ID={type_id}")
     return dtype
+
 
 def delete_device_type(type_id):
     """Удалить тип устройства и его иконку."""

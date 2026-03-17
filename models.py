@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
@@ -10,7 +10,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     is_admin = db.Column(db.Boolean, default=False)
     is_operator = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     last_map_id = db.Column(db.Integer, db.ForeignKey('map.id'), nullable=True)
 
     # Явно указываем foreign_keys для связи maps
@@ -43,13 +43,12 @@ class Device(db.Model):
     pos_x = db.Column(db.Float, default=0)
     pos_y = db.Column(db.Float, default=0)
     status = db.Column(db.Boolean, default=True)
-    last_check = db.Column(db.DateTime, default=datetime.utcnow)
+    last_check = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)
     monitoring_enabled = db.Column(db.Boolean, default=True)
 
     source_links = db.relationship('Link', foreign_keys='Link.source_device_id', backref='source', lazy='dynamic', cascade='all, delete-orphan')
     target_links = db.relationship('Link', foreign_keys='Link.target_device_id', backref='target', lazy='dynamic', cascade='all, delete-orphan')
-
 
 
 class Link(db.Model):
@@ -76,7 +75,7 @@ class Map(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     background_image = db.Column(db.String(256), nullable=True)  # новое поле
     devices = db.relationship('Device', backref='map', cascade="all, delete-orphan", lazy='dynamic')
     links = db.relationship('Link', backref='map', cascade="all, delete-orphan", lazy='dynamic')
@@ -90,7 +89,7 @@ class DeviceHistory(db.Model):
     device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
     old_status = db.Column(db.Boolean)
     new_status = db.Column(db.Boolean)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     device = db.relationship('Device', backref='history')
 
