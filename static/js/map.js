@@ -361,11 +361,13 @@ function fitImageToView() {
 }
 
 function checkReadyAndFit() {
+    //console.log('checkReadyAndFit called', {backgroundLoaded, elementsLoaded, pendingFit});
     if (backgroundLoaded && elementsLoaded && !pendingFit) {
         const cyEl = document.getElementById('cy');
         const panX = parseFloat(cyEl.dataset.panX) || 0;
         const panY = parseFloat(cyEl.dataset.panY) || 0;
         const zoom = parseFloat(cyEl.dataset.zoom) || 1;
+        //console.log('data attributes:', {panX, panY, zoom});
         if (panX !== 0 || panY !== 0 || zoom !== 1) {
             cy.viewport({ pan: { x: panX, y: panY }, zoom: zoom });
             Logger.debug('🖼️ Viewport восстановлен из БД');
@@ -836,7 +838,7 @@ function loadDeviceTypes() {
 
 function saveViewportToServer() {
     // Оператор не сохраняет viewport – все изменения временные
-    if (window.isOperator) return;
+    // if (window.isOperator) return;
 
     if (!cy) return;
     const pan = cy.pan();

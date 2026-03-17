@@ -1,4 +1,4 @@
-from models import Device, DeviceHistory, db
+from models import Device, DeviceHistory, db, DeviceType
 from utils.logger import api_logger
 
 
@@ -116,3 +116,8 @@ def update_device_position(device_id, x, y):
     db.session.commit()
     api_logger.info(f"Device position updated: ID={device_id} -> ({x}, {y})")
     return device
+
+
+def get_all_device_types():
+    """Вернуть список всех типов устройств."""
+    return DeviceType.query.all()
