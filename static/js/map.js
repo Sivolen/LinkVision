@@ -132,7 +132,9 @@ const CY_STYLE = [
         style: {
             'border-color': '#007bff',
             'border-width': 5,
-            'background-color': 'rgba(0,123,255,0.1)'
+            'background-color': 'rgba(0,123,255,0.1)',
+            'transition-property': 'border-width, background-color',
+            'transition-duration': '0.2s'
         }
     },
     {
