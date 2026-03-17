@@ -18,11 +18,14 @@ app_instance = None
 last_emit_time = {}
 _monitor_started = False
 _lock = threading.Lock()
+_executor = None
 
 
 def init_monitor(app):
-    global app_instance
+    global app_instance, _executor
     app_instance = app
+    # Увеличим количество workers для масштабирования
+    _executor = concurrent.futures.ThreadPoolExecutor(max_workers=100)
 
 
 def ping_host(ip, count=1):
@@ -67,15 +70,19 @@ def monitor_loop():
         monitor_logger.debug("Monitor started")
 
     while True:
+        start_time = time.time()
         try:
             with app_instance.app_context():
-                devices = Device.query.all()
+                devices = Device.query.filter_by(monitoring_enabled=True).all()
                 if not devices:
                     time.sleep(5)
                     continue
 
                 ping_count = get_setting('ping_count', 4)
-                max_workers = min(50, len(devices))
+                # Рекомендуется уменьшить до 2 для больших сетей
+                if ping_count > 2:
+                    ping_count = 2
+                    monitor_logger.debug(f"Reducing ping count to 2 for performance")
 
                 results = []
 
@@ -85,21 +92,21 @@ def monitor_loop():
                         return dev, is_up
                     return dev, None
 
-                with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    future_to_dev = {executor.submit(check_device, dev): dev for dev in devices}
-                    for future in concurrent.futures.as_completed(future_to_dev):
-                        try:
-                            dev, is_up = future.result()
-                            if is_up is not None:
-                                results.append((dev, is_up))
-                        except Exception as e:
-                            monitor_logger.error(f"Error checking device {future_to_dev[future].id}: {e}")
+                future_to_dev = {_executor.submit(check_device, dev): dev for dev in devices}
+                for future in concurrent.futures.as_completed(future_to_dev):
+                    try:
+                        dev, is_up = future.result()
+                        if is_up is not None:
+                            results.append((dev, is_up))
+                    except Exception as e:
+                        monitor_logger.error(f"Error checking device {future_to_dev[future].id}: {e}")
+
+                # Группируем изменения для массового коммита
+                changes = []
+                history_entries = []
+                current_time = time.time()
 
                 for device, is_up in results:
-                    if not device.monitoring_enabled:
-                        continue
-                    import time as time_module
-                    current_time = time_module.time()
                     with _lock:
                         last_time = last_emit_time.get(device.id, 0)
                         if current_time - last_time < 0.5:
@@ -117,25 +124,33 @@ def monitor_loop():
                                 old_status=old_status,
                                 new_status=is_up
                             )
-                            db.session.add(history_entry)
-                            db.session.commit()
+                            history_entries.append(history_entry)
+                            changes.append((device, is_up, room_name, status_str, current_time))
 
-                            socketio.emit('device_status', {
-                                'id': device.id,
-                                'status': status_str,
-                                'map_id': device.map_id
-                            }, room=room_name)
+                if history_entries:
+                    db.session.add_all(history_entries)
+                    db.session.commit()  # Один коммит на все изменения
 
-                            monitor_logger.info(
-                                f"[{'UP' if is_up else 'DOWN'}] Sent: id={device.id}, status={status_str}, room={room_name}"
-                            )
-                            last_emit_time[device.id] = current_time
+                for device, is_up, room_name, status_str, ts in changes:
+                    socketio.emit('device_status', {
+                        'id': device.id,
+                        'status': status_str,
+                        'map_id': device.map_id
+                    }, room=room_name)
+                    monitor_logger.info(
+                        f"[{'UP' if is_up else 'DOWN'}] Sent: id={device.id}, status={status_str}, room={room_name}"
+                    )
+                    last_emit_time[device.id] = ts
 
         except Exception as e:
             monitor_logger.error(f"Monitor error: {e}")
 
+        elapsed = time.time() - start_time
         interval = get_setting('ping_interval', 10)
-        time.sleep(interval)
+        # Уберём предупреждение или сделаем его менее частым
+        if elapsed > interval * 0.8:
+            monitor_logger.warning(f"Monitor cycle took {elapsed:.2f}s (interval {interval}s)")
+        time.sleep(max(0, interval - elapsed))
 
 
 def start_monitor():

@@ -623,7 +623,10 @@ function initMap(mapId) {
     });
 
     cy.on('dbltap', 'node', function(evt) {
-        openDeviceModal(evt.target);
+        const node = evt.target;
+        // Если это группа – игнорируем двойной клик
+        if (node.data('isGroup')) return;
+        openDeviceModal(node);
     });
 
     cy.on('tap', 'edge', function(evt) {
