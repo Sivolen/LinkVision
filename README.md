@@ -135,33 +135,62 @@ sudo systemctl status linkvision.service
 
 #### Структура проекта
     linkvision/
-    ├── app.py                 # точка входа, конфигурация приложения
-    ├── config.py              # настройки (секретный ключ, БД, загрузки, версия)
-    ├── extensions.py          # инициализация Flask-SQLAlchemy, LoginManager, SocketIO
-    ├── models.py              # модели базы данных (User, Map, Device, Link и др.)
-    ├── monitor.py             # фоновый процесс мониторинга устройств
-    ├── requirements.txt       # зависимости проекта
-    ├── blueprints/            # модули (разделы приложения)
-    │   ├── auth.py            # аутентификация (вход, регистрация, выход)
-    │   ├── admin.py           # администрирование (пользователи, типы, настройки)
-    │   ├── main.py            # основные страницы (карты, дашборд)
-    │   └── api.py             # REST API для работы с элементами карты
-    ├── static/                # статические файлы
-    │   ├── css/               # стили (bootstrap, font-awesome, style.css)
-    │   ├── js/                # скрипты (map.js, socket.io, cytoscape)
-    │   ├── images/            # логотипы, фавиконки
-    │   └── uploads/           # загружаемые иконки и фоны карт
-    ├── templates/             # HTML-шаблоны
-    │   ├── base.html          # общий каркас с сайдбаром
-    │   ├── login.html         # страница входа
-    │   ├── register.html      # страница регистрации
-    │   ├── map_view.html      # страница карты
-    │   └── admin/             # шаблоны админ-панели
+    ├── app.py                      # точка входа, создание приложения Flask
+    ├── config.py                   # настройки (секретный ключ, БД, загрузки, версия)
+    ├── extensions.py               # инициализация Flask-SQLAlchemy, LoginManager, SocketIO, Migrate
+    ├── models.py                   # модели базы данных (User, Map, Device, Link, Group, Settings, UserMapSettings и др.)
+    ├── requirements.txt            # зависимости проекта
+    ├── README.md                   # документация
+    ├── blueprints/                 # модули (разделы приложения)
+    │   ├── auth.py                 # аутентификация (вход, регистрация, выход)
+    │   ├── admin.py                # администрирование (пользователи, типы, настройки, карты)
+    │   ├── main.py                 # основные страницы (дашборд, карта, создание карты)
+    │   └── api.py                  # REST API для работы с элементами карты
+    ├── services/                   # бизнес-логика, вынесенная из эндпоинтов
+    │   ├── __init__.py
+    │   ├── user_service.py         # операции с пользователями
+    │   ├── device_service.py       # операции с устройствами
+    │   ├── map_service.py          # операции с картами, группами, связями
+    │   ├── device_type_service.py  # операции с типами устройств
+    │   ├── settings_service.py     # операции с настройками
+    │   └── monitor.py              # фоновый процесс мониторинга устройств (синхронный)
+    ├── utils/                      # вспомогательные модули
+    │   ├── __init__.py
+    │   └── logger.py               # настройка логирования
+    ├── static/                      # статические файлы
+    │   ├── css/                     # стили
+    │   │   ├── bootstrap.min.css
+    │   │   ├── all.min.css (FontAwesome)
+    │   │   └── style.css            # кастомные стили
+    │   ├── js/                      # скрипты
+    │   │   ├── bootstrap.bundle.min.js
+    │   │   ├── socket.io.js
+    │   │   ├── cytoscape.min.js
+    │   │   └── map.js               # основной скрипт карты
+    │   ├── images/                   # логотипы, фавиконки
+    │   └── uploads/                  # загружаемые файлы
+    │       ├── icons/                # иконки типов устройств
+    │       └── maps/                 # фоновые изображения карт
+    ├── templates/                    # HTML-шаблоны
+    │   ├── base.html                 # общий каркас с сайдбаром
+    │   ├── login.html                # страница входа
+    │   ├── register.html             # страница регистрации
+    │   ├── dashboard.html            # дашборд (список карт пользователя)
+    │   ├── map_view.html             # страница карты
+    │   ├── no_maps.html              # сообщение об отсутствии карт для оператора
+    │   └── admin/                     # шаблоны админ-панели
     │       ├── users.html
     │       ├── types.html
     │       ├── maps.html
-    │       └── settings.html
-    └── README.md              # этот файл
+    │       ├── settings.html
+    │       └── backups.html          # резервное копирование (если отдельно)
+    └── logs/                          # папка для логов (создаётся автоматически)
+        ├── app.log
+        ├── auth.log
+        ├── admin.log
+        ├── api.log
+        ├── main.log
+        └── monitor.log
 ### Обновление проекта при работе через systemd
 ```
 # 1. Остановите сервис
