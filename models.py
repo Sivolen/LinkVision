@@ -102,3 +102,16 @@ class Group(db.Model):
     map_id = db.Column(db.Integer, db.ForeignKey('map.id'))
     map = db.relationship('Map', backref='groups')
     devices = db.relationship('Device', backref='group', lazy='dynamic')
+
+
+class UserMapSettings(db.Model):
+    """Настройки просмотра карты для конкретного пользователя."""
+    __tablename__ = 'user_map_settings'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    map_id = db.Column(db.Integer, db.ForeignKey('map.id'), primary_key=True)
+    pan_x = db.Column(db.Float, default=0)
+    pan_y = db.Column(db.Float, default=0)
+    zoom = db.Column(db.Float, default=1)
+
+    user = db.relationship('User', backref='map_settings')
+    map = db.relationship('Map', backref='user_settings')

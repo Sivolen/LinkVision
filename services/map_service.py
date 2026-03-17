@@ -1,11 +1,88 @@
-from models import Map, Group, Link, Device, DeviceType, db
+import os
+from flask import url_for, current_app
+from models import Map, Group, Link, Device, DeviceType, User, UserMapSettings, db
 from utils.logger import api_logger
-from flask import url_for
 
 
 def get_map_by_id(map_id):
     """Получить карту по ID или вернуть None."""
     return Map.query.get(map_id)
+
+
+def get_available_maps(user):
+    """Вернуть список карт, доступных пользователю."""
+    if user.is_admin or user.is_operator:
+        return Map.query.all()
+    return Map.query.filter_by(owner_id=user.id).all()
+
+
+def get_sidebar_maps_data(user):
+    """Вернуть данные для сайдбара: id, name, owner_id, down_count."""
+    maps = get_available_maps(user)
+    result = []
+    for m in maps:
+        down_count = Device.query.filter_by(map_id=m.id, status=False).count()
+        result.append({
+            'id': m.id,
+            'name': m.name,
+            'owner_id': m.owner_id,
+            'down_count': down_count
+        })
+    return result
+
+
+def create_new_map(name, owner_id):
+    """Создать новую карту."""
+    new_map = Map(name=name, owner_id=owner_id)
+    db.session.add(new_map)
+    db.session.commit()
+    return new_map
+
+
+def delete_map_and_cleanup(map_id, app):
+    """Удалить карту, связанные файлы и обновить last_map_id пользователей."""
+    map_obj = Map.query.get_or_404(map_id)
+
+    # Сброс last_map_id у пользователей
+    User.query.filter_by(last_map_id=map_id).update({'last_map_id': None})
+
+    # Удаление фонового изображения
+    if map_obj.background_image:
+        bg_path = os.path.join(app.config['UPLOAD_FOLDER'], 'maps', map_obj.background_image)
+        if os.path.exists(bg_path):
+            os.remove(bg_path)
+
+    # Удаление настроек пользователей для этой карты
+    UserMapSettings.query.filter_by(map_id=map_id).delete()
+
+    db.session.delete(map_obj)
+    db.session.commit()
+    return map_id
+
+
+def get_user_settings(user_id, map_id):
+    """Получить настройки пользователя для карты, при необходимости создать."""
+    settings = UserMapSettings.query.filter_by(user_id=user_id, map_id=map_id).first()
+    if not settings:
+        settings = UserMapSettings(user_id=user_id, map_id=map_id, pan_x=0, pan_y=0, zoom=1)
+        db.session.add(settings)
+        db.session.commit()
+    return settings
+
+
+def update_user_viewport(user_id, map_id, pan_x, pan_y, zoom):
+    try:
+        settings = get_user_settings(user_id, map_id)
+        settings.pan_x = pan_x
+        settings.pan_y = pan_y
+        settings.zoom = zoom
+        db.session.commit()
+        api_logger.info(f"Viewport UPDATED: user={user_id}, map={map_id}, pan=({pan_x}, {pan_y}), zoom={zoom}")
+        return settings
+    except Exception as e:
+        db.session.rollback()
+        api_logger.error(f"Viewport UPDATE ERROR: {e}")
+        raise
 
 
 def get_map_elements(map_id):
@@ -146,17 +223,6 @@ def update_map_details(map_id, name=None, background_filename=None, remove_backg
     return map_obj
 
 
-def update_viewport(map_id, pan_x, pan_y, zoom):
-    """Обновить положение камеры карты."""
-    map_obj = Map.query.get_or_404(map_id)
-    map_obj.pan_x = pan_x
-    map_obj.pan_y = pan_y
-    map_obj.zoom = zoom
-    db.session.commit()
-    api_logger.info(f"Viewport saved for map {map_id}")
-    return map_obj
-
-
 def create_link(map_id, source_id, target_id, src_iface='eth0', tgt_iface='eth0',
                 link_type=None, line_color='#6c757d', line_width=2, line_style='solid'):
     """Создать связь между устройствами."""
@@ -226,6 +292,16 @@ def delete_group(group_id):
     db.session.commit()
     api_logger.info(f"Group deleted: ID={group_id}")
     return group_id
+
+
+def get_link_by_id(link_id):
+    """Получить связь по ID или вернуть None."""
+    return Link.query.get(link_id)
+
+
+def get_group_by_id(group_id):
+    """Получить группу по ID или вернуть None."""
+    return Group.query.get(group_id)
 
 
 def import_map(data, current_user):

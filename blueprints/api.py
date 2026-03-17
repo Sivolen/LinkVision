@@ -3,7 +3,6 @@ from flask import Blueprint, request, jsonify, url_for, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from extensions import db
-from models import Map, DeviceType
 from services import device_service, map_service
 from utils.logger import api_logger
 from functools import wraps
@@ -27,10 +26,7 @@ def operator_forbidden(f):
 @api_bp.route('/maps')
 @login_required
 def get_maps():
-    if current_user.is_admin or current_user.is_operator:
-        maps = Map.query.all()
-    else:
-        maps = Map.query.filter_by(owner_id=current_user.id).all()
+    maps = map_service.get_all_maps_for_user(current_user)
     return jsonify([{'id': m.id, 'name': m.name} for m in maps])
 
 
@@ -117,7 +113,7 @@ def get_groups(map_id):
 @api_bp.route('/types')
 @login_required
 def get_types():
-    types = DeviceType.query.all()
+    types = device_service.get_all_device_types()
     return jsonify([{
         'id': t.id,
         'name': t.name,
@@ -233,7 +229,6 @@ def create_link():
     if not all(k in data for k in ['map_id', 'source_id', 'target_id']):
         return jsonify({'error': 'Missing required fields'}), 400
 
-    # Проверка существования устройств
     source = device_service.get_device_by_id(data['source_id'])
     target = device_service.get_device_by_id(data['target_id'])
     if not source or not target:
@@ -261,7 +256,7 @@ def create_link():
 @login_required
 @operator_forbidden
 def update_link(id):
-    link = Link.query.get(id)  # можно было бы через map_service.get_link_by_id, но пока оставим
+    link = map_service.get_link_by_id(id)
     if not link:
         return jsonify({'error': 'Link not found'}), 404
     if not (current_user.is_admin or link.map.owner_id == current_user.id):
@@ -280,7 +275,7 @@ def update_link(id):
 @login_required
 @operator_forbidden
 def delete_link(id):
-    link = Link.query.get(id)
+    link = map_service.get_link_by_id(id)
     if not link:
         return jsonify({'error': 'Link not found'}), 404
     if not (current_user.is_admin or link.map.owner_id == current_user.id):
@@ -337,17 +332,22 @@ def update_map(id):
 
 @api_bp.route('/map/<int:id>/viewport', methods=['PUT'])
 @login_required
-@operator_forbidden
 def update_viewport(id):
     map_obj = map_service.get_map_by_id(id)
     if not map_obj:
         return jsonify({'error': 'Map not found'}), 404
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
+    if not (current_user.is_admin or map_obj.owner_id == current_user.id or current_user.is_operator):
         return jsonify({'error': 'Доступ запрещён'}), 403
 
     data = request.json
+    pan_x = data.get('pan_x', 0)
+    pan_y = data.get('pan_y', 0)
+    zoom = data.get('zoom', 1)
+
+    api_logger.info(f"Received viewport update: user={current_user.id}, map={id}, pan=({pan_x}, {pan_y}), zoom={zoom}")
+
     try:
-        map_service.update_viewport(id, data.get('pan_x', 0), data.get('pan_y', 0), data.get('zoom', 1))
+        map_service.update_user_viewport(current_user.id, id, pan_x, pan_y, zoom)
         return jsonify({'status': 'ok'})
     except Exception as e:
         api_logger.error(f"Error updating viewport: {e}")
@@ -398,7 +398,7 @@ def create_group():
 @login_required
 @operator_forbidden
 def update_group(id):
-    group = Group.query.get(id)
+    group = map_service.get_group_by_id(id)
     if not group:
         return jsonify({'error': 'Group not found'}), 404
     map_obj = group.map
@@ -418,7 +418,7 @@ def update_group(id):
 @login_required
 @operator_forbidden
 def delete_group(id):
-    group = Group.query.get(id)
+    group = map_service.get_group_by_id(id)
     if not group:
         return jsonify({'error': 'Group not found'}), 404
     map_obj = group.map
