@@ -4,7 +4,7 @@ from flask import Flask, request
 from flask_socketio import join_room
 from config import Config
 from extensions import db, login_manager, socketio, init_extensions
-from models import User, Map, DeviceType, Settings, Device
+from models import User, DeviceType, Settings
 from blueprints.auth import auth_bp
 from blueprints.admin import admin_bp
 from blueprints.main import main_bp
@@ -12,6 +12,7 @@ from blueprints.api import api_bp
 from services.monitor import init_monitor, start_monitor, stop_monitor
 from utils.logger import app_logger
 import os
+
 
 def create_app():
     app = Flask(__name__)
@@ -32,7 +33,9 @@ def create_app():
         db.create_all()
 
         if not User.query.filter_by(username='admin').first():
-            admin = User(username='admin', is_admin=True)
+            admin = User()
+            admin.username = 'admin'
+            admin.is_admin = True
             admin.set_password('admin')
             db.session.add(admin)
 
@@ -56,11 +59,11 @@ def create_app():
 
     @socketio.on('connect')
     def handle_connect():
-        app_logger.info(f"✅ Клиент подключился: {request.sid}")
+        app_logger.info(f"✅ Клиент подключился: {request.sid}")  # type: ignore
 
     @socketio.on('disconnect')
     def handle_disconnect():
-        app_logger.info(f"❌ Клиент отключился: {request.sid}")
+        app_logger.info(f"❌ Клиент отключился: {request.sid}")  # type: ignore
 
     start_monitor()
     atexit.register(stop_monitor)
@@ -90,5 +93,5 @@ def create_app():
 
 if __name__ == '__main__':
     os.makedirs('static/uploads/icons', exist_ok=True)
-    app = create_app()
-    socketio.run(app, debug=True, use_reloader=False, port=5000, host="0.0.0.0", allow_unsafe_werkzeug=True)
+    application = create_app()
+    socketio.run(application, debug=True, use_reloader=False, port=5000, host="0.0.0.0", allow_unsafe_werkzeug=True)

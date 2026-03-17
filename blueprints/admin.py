@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort, send_file
 from flask_login import login_required, current_user
 from extensions import db
-from models import Map, DeviceType, Settings
+from models import Map
 from services import user_service, device_type_service, settings_service
 from utils.logger import admin_logger
 
@@ -16,6 +16,7 @@ def check_admin():
     if not current_user.is_authenticated or not current_user.is_admin:
         flash('Доступ запрещен. Требуются права администратора.')
         return redirect(url_for('main.dashboard'))
+    return None  # явное возвращение None для продолжения запроса
 
 
 # ============================================================================

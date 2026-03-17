@@ -1,8 +1,7 @@
 import os
-from flask import Blueprint, request, jsonify, url_for, current_app
+from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from extensions import db
 from services import device_service, map_service
 from utils.logger import api_logger
 from functools import wraps
@@ -26,7 +25,7 @@ def operator_forbidden(f):
 @api_bp.route('/maps')
 @login_required
 def get_maps():
-    maps = map_service.get_all_maps_for_user(current_user)
+    maps = map_service.get_available_maps(current_user)
     return jsonify([{'id': m.id, 'name': m.name} for m in maps])
 
 
