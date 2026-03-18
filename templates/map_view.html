@@ -280,7 +280,7 @@
         </div>
     </div>
 </div>
-<!-- Модальное окно управления группами -->
+<!-- Модальное окно управления группами (новая версия) -->
 <div class="modal fade" id="groupModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -289,14 +289,31 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="groupForm" class="mb-3">
+                <form id="groupForm" class="group-form">
                     <input type="hidden" id="group_id">
-                    <div class="input-group">
-                        <input type="text" id="group_name" class="form-control" placeholder="Название группы" required>
-                        <input type="color" id="group_color" class="form-control form-control-color" value="#3498db">
-                        <button type="submit" class="btn btn-success">Сохранить</button>
+
+                    <div class="group-field">
+                        <label for="group_name" class="form-label">Название группы</label>
+                        <input type="text" id="group_name" class="form-control" placeholder="Например: Серверная" required>
+                    </div>
+
+                    <div class="group-field">
+                        <label class="form-label">Цвет группы</label>
+                        <div class="color-selector">
+                            <button type="button" id="group_color_btn" class="btn btn-outline-primary color-button">
+                                <span class="color-preview" id="color_preview" style="background-color: #3498db;"></span>
+                                <span id="color_value">#3498db</span>
+                                <i class="fas fa-chevron-down ms-1"></i>
+                            </button>
+                            <input type="color" id="group_color_input" value="#3498db" style="display: none;">
+                        </div>
+                    </div>
+
+                    <div class="group-action">
+                        <button type="submit" class="btn btn-primary" id="groupSubmitBtn">Добавить группу</button>
                     </div>
                 </form>
+
                 <table class="modern-table">
                     <thead>
                         <tr>
@@ -317,7 +334,6 @@
         </div>
     </div>
 </div>
-
 <!-- Модальное окно массового редактирования -->
 <div class="modal fade" id="bulkEditModal" tabindex="-1">
     <div class="modal-dialog">

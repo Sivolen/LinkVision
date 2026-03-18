@@ -486,26 +486,107 @@ if (groupForm) {
         });
     }
 });
-// ==================== Группы ====================
-let groupModal = null;          // экземпляр модального окна групп
-let currentGroupId = null;      // для редактирования группы
+// ==================== Группы (новая версия) ====================
+// ==================== Группы (чистая версия) ====================
+let groupModal = null;
+let currentGroupId = null;
 
-/**
- * Открыть модальное окно управления группами
- */
+// Инициализация после загрузки DOM
+document.addEventListener('DOMContentLoaded', function() {
+    initColorPicker();
+    const groupForm = document.getElementById('groupForm');
+    if (groupForm) {
+        // Удаляем все предыдущие обработчики, чтобы не было дублей
+        groupForm.replaceWith(groupForm.cloneNode(true));
+        const newGroupForm = document.getElementById('groupForm');
+        newGroupForm.addEventListener('submit', handleGroupSubmit);
+    }
+});
+
+// Обработчик отправки формы
+function handleGroupSubmit(e) {
+    e.preventDefault();
+
+    const idInput = document.getElementById('group_id');
+    const nameInput = document.getElementById('group_name');
+    const colorInput = document.getElementById('group_color_input');
+
+    // Проверка на случай, если элементы не найдены
+    if (!idInput || !nameInput || !colorInput) {
+        console.error('Ошибка: не найдены поля формы', { idInput, nameInput, colorInput });
+        alert('Техническая ошибка: перезагрузите страницу');
+        return;
+    }
+
+    const id = idInput.value;
+    const name = nameInput.value.trim();
+    const color = colorInput.value;
+
+    if (!name) {
+        alert('Введите название группы');
+        return;
+    }
+
+    const url = id ? `/api/group/${id}` : '/api/group';
+    const method = id ? 'PUT' : 'POST';
+    const body = id ? { name, color } : { map_id: window.currentMapId, name, color };
+
+    fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Ошибка сохранения');
+        return res.json();
+    })
+    .then(() => {
+        resetGroupForm();
+        loadGroupsList();
+        if (typeof reloadMapElements === 'function') reloadMapElements();
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Ошибка при сохранении группы');
+    });
+}
+
+// Открыть модальное окно групп
 window.openGroupManager = function() {
+    if (window.isOperator) {
+        alert('Оператор не может управлять группами');
+        return;
+    }
     if (!groupModal) {
         const el = document.getElementById('groupModal');
         if (el) groupModal = new bootstrap.Modal(el);
         else return;
     }
-    loadGroupsList(); // загружаем список групп
+    resetGroupForm();
+    loadGroupsList();
     groupModal.show();
 };
 
-/**
- * Загрузить список групп для текущей карты
- */
+// Сброс формы в режим добавления
+function resetGroupForm() {
+    const idInput = document.getElementById('group_id');
+    const nameInput = document.getElementById('group_name');
+    const colorInput = document.getElementById('group_color_input');
+    const colorPreview = document.getElementById('color_preview');
+    const colorValue = document.getElementById('color_value');
+    const submitBtn = document.getElementById('groupSubmitBtn');
+
+    if (idInput) idInput.value = '';
+    if (nameInput) nameInput.value = '';
+    const defaultColor = '#3498db';
+    if (colorInput) colorInput.value = defaultColor;
+    if (colorPreview) colorPreview.style.backgroundColor = defaultColor;
+    if (colorValue) colorValue.textContent = defaultColor;
+    if (submitBtn) submitBtn.textContent = 'Добавить группу';
+    currentGroupId = null;
+}
+
+// Загрузка списка групп
 function loadGroupsList() {
     const tbody = document.getElementById('group-list-body');
     if (!tbody) return;
@@ -521,15 +602,17 @@ function loadGroupsList() {
                 const row = tbody.insertRow();
                 row.innerHTML = `
                     <td>${group.name}</td>
-                    <td><span style="display:inline-block; width:20px; height:20px; background:${group.color}; border-radius:4px;"></span></td>
+                    <td><span class="color-preview" style="background-color: ${group.color};"></span></td>
                     <td>${group.device_count || 0}</td>
                     <td>
-                        <button class="btn-action" onclick="editGroup(${group.id}, '${group.name}', '${group.color}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-action" onclick="deleteGroup(${group.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="table-actions">
+                            <button class="btn-action" onclick="editGroup(${group.id}, '${group.name}', '${group.color}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action" onclick="deleteGroup(${group.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 `;
             });
@@ -540,28 +623,58 @@ function loadGroupsList() {
         });
 }
 
-/**
- * Редактирование группы (заполнение формы)
- */
+// Редактирование группы
 window.editGroup = function(id, name, color) {
     currentGroupId = id;
-    document.getElementById('group_id').value = id;
-    document.getElementById('group_name').value = name;
-    document.getElementById('group_color').value = color;
+    const idInput = document.getElementById('group_id');
+    const nameInput = document.getElementById('group_name');
+    const colorInput = document.getElementById('group_color_input');
+    const colorPreview = document.getElementById('color_preview');
+    const colorValue = document.getElementById('color_value');
+    const submitBtn = document.getElementById('groupSubmitBtn');
+
+    if (idInput) idInput.value = id;
+    if (nameInput) nameInput.value = name;
+    if (colorInput) colorInput.value = color;
+    if (colorPreview) colorPreview.style.backgroundColor = color;
+    if (colorValue) colorValue.textContent = color;
+    if (submitBtn) submitBtn.textContent = 'Сохранить изменения';
 };
 
-/**
- * Удаление группы
- */
+// Удаление группы
 window.deleteGroup = function(id) {
     if (!confirm('Удалить группу? Устройства группы останутся без группы.')) return;
     fetch(`/api/group/${id}`, { method: 'DELETE' })
         .then(res => {
             if (!res.ok) throw new Error('Ошибка удаления');
-            loadGroupsList(); // обновляем список после удаления
+            loadGroupsList();
+            if (currentGroupId === id) resetGroupForm();
         })
         .catch(err => {
             console.error(err);
             alert('Ошибка при удалении группы');
         });
 };
+
+// Инициализация кастомного выбора цвета
+function initColorPicker() {
+    const colorBtn = document.getElementById('group_color_btn');
+    const colorInput = document.getElementById('group_color_input');
+    const colorPreview = document.getElementById('color_preview');
+    const colorValue = document.getElementById('color_value');
+
+    if (!colorBtn || !colorInput) {
+        console.warn('Элементы color picker не найдены');
+        return;
+    }
+
+    colorBtn.addEventListener('click', () => {
+        colorInput.click();
+    });
+
+    colorInput.addEventListener('input', (e) => {
+        const newColor = e.target.value;
+        if (colorPreview) colorPreview.style.backgroundColor = newColor;
+        if (colorValue) colorValue.textContent = newColor;
+    });
+}
