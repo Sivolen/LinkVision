@@ -2,7 +2,7 @@
 // LinkVision - Карта сети (ФИНАЛЬНАЯ ВЕРСИЯ С ИСПРАВЛЕНИЯМИ)
 // ============================================================================
 let cy = null;
-let deviceModal = null;
+//let deviceModal = null;
 let linkModal = null;
 let linkMode = false;
 let sourceNode = null;
@@ -651,14 +651,14 @@ function initMap(mapId) {
 
 function applyLinkTypePreset(type) {
     const presets = {
-        '100m':  { color: '#FFA500', width: 2, style: 'solid' },
-        '1G':    { color: '#00FF00', width: 3, style: 'solid' },
-        '10G':   { color: '#0000FF', width: 4, style: 'solid' },
-        '25G':   { color: '#FF00FF', width: 5, style: 'solid' },
-        '100G':  { color: '#800080', width: 6, style: 'solid' },
-        '400G':  { color: '#800080', width: 8, style: 'solid' },
-        'vlan':  { color: '#A9A9A9', width: 2, style: 'dashed' },
-        'radio': { color: '#00FFFF', width: 2, style: 'dotted' }
+        '100m':  { color: '#d1d5db', width: 2, style: 'solid' },   // очень светлый серый
+        '1G':    { color: '#3b82f6', width: 3, style: 'solid' },   // синий
+        '10G':   { color: '#2563eb', width: 4, style: 'solid' },   // тёмно-синий
+        '25G':   { color: '#4f46e5', width: 5, style: 'solid' },   // индиго
+        '100G':  { color: '#6b7280', width: 6, style: 'solid' },   // серый (бывший 100m)
+        '400G':  { color: '#8b5cf6', width: 8, style: 'solid' },   // мягкий фиолетовый
+        'vlan':  { color: '#94a3b8', width: 2, style: 'dashed' },  // серо-голубой пунктир
+        'radio': { color: '#84cc16', width: 2, style: 'dotted' }   // оливково-зелёный (можно заменить)
     };
     if (type && presets[type]) {
         document.getElementById('link_line_color').value = presets[type].color;
@@ -837,22 +837,7 @@ function saveDevicePosition(node) {
     }, 500);
 }
 
-function loadDeviceTypes() {
-    fetchWithRetry('/api/types')
-    .then(res => res.ok ? res.json() : Promise.reject())
-    .then(types => {
-        const select = document.getElementById('dev_type');
-        if (!select) return;
-        select.innerHTML = '-- Выберите тип --';
-        types.forEach(t => {
-            const option = document.createElement('option');
-            option.value = t.id;
-            option.text = t.name;
-            select.appendChild(option);
-        });
-    })
-    .catch(err => Logger.error('❌ Ошибка типов:', err));
-}
+
 
 function saveViewportToServer() {
     // Оператор не сохраняет viewport – все изменения временные
@@ -885,195 +870,6 @@ function updateMapBackground(background) {
         bgEl.style.transform = 'none';
         backgroundLoaded = true;
         checkReadyAndFit();
-    }
-}
-
-function openDeviceModal(node) {
-    if (!deviceModal) {
-        const el = document.getElementById('deviceModal');
-        if (el) deviceModal = new bootstrap.Modal(el);
-        else return;
-    }
-    const modal = document.getElementById('deviceModal');
-    const devId = document.getElementById('dev_id');
-    const devName = document.getElementById('dev_name');
-    const devIp = document.getElementById('dev_ip');
-    const devType = document.getElementById('dev_type');
-    const deleteBtn = document.getElementById('deleteDeviceBtn');
-    const neighborsBody = document.getElementById('device-neighbors-body');
-    const devGroup = document.getElementById('dev_group');
-    const monitoringCheck = document.getElementById('dev_monitoring');
-
-    // Сбрасываем таблицу истории (она будет загружаться через вкладку)
-    const historyBody = document.getElementById('device-history-body');
-    if (historyBody) {
-        historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Переключитесь на вкладку "История"</td></tr>';
-    }
-    // Скрываем пагинацию до загрузки истории
-    const paginationDiv = document.getElementById('history-pagination');
-    if (paginationDiv) paginationDiv.style.display = 'none';
-
-    if (node) {
-        // Режим редактирования
-        devId.value = node.id();
-        devName.value = node.data('name') || '';
-        devIp.value = node.data('ip') || '';
-        deleteBtn.style.display = 'inline-block';
-        deleteBtn.onclick = () => deleteDevice(node.id());
-
-        fetch(`/api/device/${node.id()}/details`)
-            .then(res => res.ok ? res.json() : Promise.reject('Ошибка загрузки'))
-            .then(data => {
-                if (data.type_id && devType) devType.value = data.type_id;
-                if (data.neighbors && data.neighbors.length > 0) {
-                    neighborsBody.innerHTML = '';
-                    data.neighbors.forEach(n => {
-                        const row = neighborsBody.insertRow();
-                        row.insertCell().innerHTML = `<a href="#" onclick="goToDevice(${n.device_id})">${n.device_name}</a>`;
-                        row.insertCell().textContent = n.interface;
-                        row.insertCell().textContent = '↔';
-                        row.insertCell().textContent = n.neighbor_interface;
-                        row.insertCell().textContent = n.link_type || '—';
-                    });
-                } else {
-                    neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет связей</td></tr>';
-                }
-                if (monitoringCheck) monitoringCheck.checked = data.monitoring_enabled;
-
-                fetch(`/api/map/${getMapId()}/groups`)
-                    .then(res => res.ok ? res.json() : [])
-                    .then(groups => {
-                        devGroup.innerHTML = '<option value="">-- Без группы --</option>';
-                        groups.forEach(g => {
-                            const option = document.createElement('option');
-                            option.value = g.id;
-                            option.textContent = g.name;
-                            option.style.backgroundColor = g.color;
-                            devGroup.appendChild(option);
-                        });
-                        if (data.group_id) devGroup.value = data.group_id;
-                        else devGroup.value = '';
-                    })
-                    .catch(err => Logger.error('Ошибка загрузки групп:', err));
-            })
-            .catch(err => {
-                Logger.error('Ошибка загрузки деталей:', err);
-                neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка загрузки</td></tr>';
-            });
-    } else {
-        // Режим создания
-        devId.value = '';
-        devName.value = '';
-        devIp.value = '';
-        if (devType) devType.value = '';
-        deleteBtn.style.display = 'none';
-        neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет данных</td></tr>';
-
-        fetch(`/api/map/${getMapId()}/groups`)
-            .then(res => res.ok ? res.json() : [])
-            .then(groups => {
-                devGroup.innerHTML = '<option value="">-- Без группы --</option>';
-                groups.forEach(g => {
-                    const option = document.createElement('option');
-                    option.value = g.id;
-                    option.textContent = g.name;
-                    option.style.backgroundColor = g.color;
-                    devGroup.appendChild(option);
-                });
-            })
-            .catch(err => Logger.error('Ошибка загрузки групп:', err));
-    }
-
-    // Активируем первую вкладку
-    const tab = new bootstrap.Tab(document.querySelector('#deviceModal .nav-link.active'));
-    tab.show();
-
-    // ========== БЛОКИРОВКА ДЛЯ ОПЕРАТОРА ==========
-    if (window.isOperator) {
-        devName.disabled = true;
-        devIp.disabled = true;
-        devType.disabled = true;
-        devGroup.disabled = true;
-        if (monitoringCheck) monitoringCheck.disabled = true;
-        const saveBtn = document.querySelector('#deviceModal .btn-primary');
-        if (saveBtn) saveBtn.style.display = 'none';
-        if (deleteBtn) deleteBtn.style.display = 'none';
-    } else {
-        devName.disabled = false;
-        devIp.disabled = false;
-        devType.disabled = false;
-        devGroup.disabled = false;
-        if (monitoringCheck) monitoringCheck.disabled = false;
-    }
-    // =============================================
-
-    deviceModal.show();
-}
-
-function saveDevice() {
-    const id = document.getElementById('dev_id').value;
-    const name = document.getElementById('dev_name').value;
-    const ip = document.getElementById('dev_ip').value;
-    const type_id = document.getElementById('dev_type').value;
-    const group_id = document.getElementById('dev_group').value;
-    const monitoring = document.getElementById('dev_monitoring')?.checked;
-
-    if (!name) { alert('⚠️ Введите имя'); return; }
-    if (!type_id) { alert('⚠️ Выберите тип'); return; }
-
-    const body = {
-        name,
-        ip_address: ip,
-        type_id: parseInt(type_id),
-        group_id: group_id ? parseInt(group_id) : null,
-        monitoring_enabled: monitoring
-    };
-
-    if (id) {
-        fetch(`/api/device/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        })
-        .then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'))
-        .catch(err => {
-            Logger.error('Ошибка при сохранении устройства:', err);
-            alert('❌ Ошибка сети при сохранении');
-        });
-    } else {
-        body.map_id = getMapId();
-        if (cy) {
-            const center = {
-                x: (-cy.pan().x + cy.width() / 2 / cy.zoom()),
-                y: (-cy.pan().y + cy.height() / 2 / cy.zoom())
-            };
-            const bounded = boundNodePosition(center);
-            body.x = Math.round(bounded.x);
-            body.y = Math.round(bounded.y);
-        } else {
-            body.x = 100; body.y = 100;
-        }
-        fetch('/api/device', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        })
-        .then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'))
-        .catch(err => {
-            Logger.error('Ошибка при создании устройства:', err);
-            alert('❌ Ошибка сети при создании');
-        });
-    }
-}
-
-function deleteDevice(id) {
-    if (confirm('⚠️ Удалить?')) {
-        fetch(`/api/device/${id}`, { method: 'DELETE' })
-        .then(res => res.ok ? (deviceModal?.hide(), location.reload()) : alert('❌ Ошибка'))
-        .catch(err => {
-            Logger.error('Ошибка при удалении устройства:', err);
-            alert('❌ Ошибка сети при удалении');
-        });
     }
 }
 
@@ -1471,28 +1267,6 @@ function openGroupManager() {
     loadGroups();
     const modal = new bootstrap.Modal(document.getElementById('groupModal'));
     modal.show();
-}
-
-function loadGroups() {
-    fetch(`/api/map/${getMapId()}/groups`)
-        .then(res => res.ok ? res.json() : [])
-        .then(groups => {
-            const tbody = document.getElementById('group-list-body');
-            tbody.innerHTML = '';
-            groups.forEach(g => {
-                const row = tbody.insertRow();
-                row.insertCell().textContent = g.name;
-                row.insertCell().innerHTML = `<span style="display:inline-block; width:20px; height:20px; background:${g.color}; border-radius:4px;"></span> ${g.color}`;
-                // Количество устройств в группе (можно получить отдельно или добавить в ответ API)
-                row.insertCell().textContent = g.device_count || 0;
-                const actions = row.insertCell();
-                actions.innerHTML = `
-                    <button class="btn btn-sm btn-outline-primary" onclick="editGroup(${g.id}, '${g.name}', '${g.color}')">✏️</button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup(${g.id})">🗑️</button>
-                `;
-            });
-        })
-        .catch(err => Logger.error('Ошибка загрузки групп:', err));
 }
 
 document.getElementById('groupForm').addEventListener('submit', function(e) {

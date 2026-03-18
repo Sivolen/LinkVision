@@ -20,12 +20,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Пароль</label>
-                        <div class="password-field">
+                        <div class="password-field-wrapper">
                             <input type="password" name="password" id="register_password" class="form-control" placeholder="Введите пароль" required>
                             <i class="fas fa-eye toggle-password" onclick="togglePassword('register_password')"></i>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-success w-100">
+                    <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-user-plus me-2"></i> Зарегистрироваться
                     </button>
                 </form>
@@ -40,7 +40,8 @@
 <script>
 function togglePassword(fieldId) {
     const field = document.getElementById(fieldId);
-    const icon = field.nextElementSibling;
+    const wrapper = field.closest('.password-field-wrapper');
+    const icon = wrapper.querySelector('.toggle-password');
     if (field.type === "password") {
         field.type = "text";
         icon.classList.remove('fa-eye');
