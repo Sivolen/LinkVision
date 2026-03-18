@@ -52,7 +52,11 @@ window.openDeviceModal = function(node) {
         fetch(`/api/device/${node.id()}/details`)
             .then(res => res.ok ? res.json() : Promise.reject('Ошибка'))
             .then(data => {
-                if (data.type_id && devType) devType.value = data.type_id;
+                // Загружаем типы и после загрузки устанавливаем значение
+                loadDeviceTypes(devType, () => {
+                    if (data.type_id) devType.value = data.type_id;
+                });
+                if (data.ip_address) devIp.value = data.ip_address;
                 if (data.neighbors && data.neighbors.length > 0) {
                     neighborsBody.innerHTML = '';
                     data.neighbors.forEach(n => {
@@ -85,9 +89,8 @@ window.openDeviceModal = function(node) {
 
         if (historyTabItem) historyTabItem.style.display = 'none';
         if (neighborsTabItem) neighborsTabItem.style.display = 'none';
+        loadDeviceTypes(devType); // просто загружаем список
     }
-
-    loadDeviceTypes(devType);
 
     if (infoTabLink) {
         const infoTab = new bootstrap.Tab(infoTabLink);
@@ -134,15 +137,38 @@ window.saveDevice = function() {
 
     const data = {
         name: name,
-        ip: ip || null,
+        ip_address: ip || null,
         type_id: parseInt(typeId),
         group_id: groupId ? parseInt(groupId) : null,
         monitoring_enabled: monitoring
     };
 
+    if (!devId) {
+        // Режим создания
+        if (!window.currentMapId) {
+            showToast('Ошибка', 'Не удалось определить текущую карту', 'error');
+            return;
+        }
+        data.map_id = window.currentMapId;
+
+        // Координаты центра
+        if (cy) {
+            const container = document.getElementById('cy');
+            const pan = cy.pan();
+            const zoom = cy.zoom();
+            data.x = Math.round((-pan.x + container.clientWidth / 2) / zoom);
+            data.y = Math.round((-pan.y + container.clientHeight / 2) / zoom);
+        } else {
+            data.x = 100;
+            data.y = 100;
+        }
+    } else {
+        // Режим редактирования – id уже есть
+        data.id = parseInt(devId);
+    }
+
     const url = devId ? `/api/device/${devId}` : '/api/device';
     const method = devId ? 'PUT' : 'POST';
-    if (devId) data.id = parseInt(devId);
 
     fetch(url, {
         method: method,
@@ -153,10 +179,42 @@ window.saveDevice = function() {
         if (!res.ok) throw new Error('Ошибка сохранения');
         return res.json();
     })
-    .then(device => {
-        if (typeof window.updateDevice === 'function') window.updateDevice(device);
+    .then(result => {
+        if (!devId) {
+            // Создание нового устройства
+            // result должен содержать id (и возможно другие поля)
+            const newDevice = {
+                id: result.id,
+                name: data.name,
+                ip: data.ip_address,
+                type_id: data.type_id,
+                group_id: data.group_id,
+                monitoring_enabled: data.monitoring_enabled,
+                x: data.x,
+                y: data.y,
+                status: 'true' // начальный статус (можно получить из сервера, если есть)
+            };
+            if (typeof window.addDeviceToGraph === 'function') {
+                window.addDeviceToGraph(newDevice);
+            }
+            showToast('Успешно', 'Устройство создано', 'success');
+        } else {
+            // Обновление существующего устройства
+            if (typeof window.updateDevice === 'function') {
+                window.updateDevice({
+                    id: devId,
+                    name: data.name,
+                    ip: data.ip_address,
+                    type_id: data.type_id,
+                    group_id: data.group_id,
+                    monitoring_enabled: data.monitoring_enabled
+                });
+            }
+            // Добавлено: перезагружаем карту для обновления группы
+            if (typeof reloadMapElements === 'function') reloadMapElements();
+            showToast('Успешно', 'Устройство обновлено', 'success');
+        }
         deviceModal.hide();
-        showToast('Успешно', devId ? 'Устройство обновлено' : 'Устройство создано', 'success');
     })
     .catch(err => {
         Logger.error('Ошибка сохранения устройства:', err);
@@ -166,10 +224,24 @@ window.saveDevice = function() {
 
 window.deleteDevice = function(deviceId) {
     if (!confirm('Удалить устройство?')) return;
+
     fetch(`/api/device/${deviceId}`, { method: 'DELETE' })
     .then(res => {
+        if (res.status === 404) {
+            // Устройство уже не существует на сервере – убираем с карты и информируем
+            if (typeof window.removeDeviceFromGraph === 'function') {
+                window.removeDeviceFromGraph(deviceId);
+            }
+            deviceModal.hide();
+            showToast('Информация', 'Устройство уже было удалено', 'info');
+            return;
+        }
         if (!res.ok) throw new Error('Ошибка удаления');
-        if (typeof window.removeDeviceFromGraph === 'function') window.removeDeviceFromGraph(deviceId);
+
+        // Успешное удаление
+        if (typeof window.removeDeviceFromGraph === 'function') {
+            window.removeDeviceFromGraph(deviceId);
+        }
         deviceModal.hide();
         showToast('Успешно', 'Устройство удалено', 'success');
     })
@@ -179,7 +251,7 @@ window.deleteDevice = function(deviceId) {
     });
 };
 
-function loadDeviceTypes(selectEl) {
+function loadDeviceTypes(selectEl, callback) {
     if (!selectEl) return;
     fetch('/api/types')
     .then(res => res.ok ? res.json() : [])
@@ -191,8 +263,12 @@ function loadDeviceTypes(selectEl) {
             option.textContent = t.name;
             selectEl.appendChild(option);
         });
+        if (callback) callback();
     })
-    .catch(err => Logger.error('Ошибка загрузки типов:', err));
+    .catch(err => {
+        Logger.error('Ошибка загрузки типов:', err);
+        if (callback) callback(); // чтобы не сломать цепочку
+    });
 }
 
 function loadGroups(selectEl, selectedGroupId) {
@@ -677,6 +753,9 @@ function showToast(title, message, type = 'success') {
     if (type === 'error') {
         if (icon) icon.className = 'fas fa-exclamation-circle text-danger me-2';
         if (header) header.style.borderLeft = '4px solid #ef4444';
+    } else if (type === 'info') {
+        if (icon) icon.className = 'fas fa-info-circle text-info me-2';
+        if (header) header.style.borderLeft = '4px solid #3b82f6';
     } else {
         if (icon) icon.className = 'fas fa-check-circle text-success me-2';
         if (header) header.style.borderLeft = '4px solid #22c55e';

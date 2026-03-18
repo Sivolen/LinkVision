@@ -1016,7 +1016,24 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
             line_style: lineStyle
         })
     })
-    .then(res => res.ok ? location.reload() : alert('❌ Ошибка'))
+    .then(res => {
+        if (!res.ok) throw new Error('Ошибка обновления');
+        // Обновляем данные ребра в графе
+        const edge = cy.getElementById(linkId);
+        if (edge.length) {
+            edge.data({
+                label: `${srcIface}↔${tgtIface}`,
+                link_type: linkType,
+                color: lineColor,
+                width: lineWidth,
+                style: lineStyle
+            });
+            cy.style().update(); // переприменяем стили
+        }
+        if (typeof window.showToast === 'function') {
+            window.showToast('Успешно', 'Связь обновлена', 'success');
+        }
+    })
     .catch(err => {
         Logger.error('Ошибка обновления связи:', err);
         alert('❌ Ошибка сети при обновлении');
@@ -1027,7 +1044,13 @@ function deleteLink(linkId) {
     if (!confirm('⚠️ Удалить эту связь?')) return;
     const numericId = String(linkId).replace('link_', '');
     fetch(`/api/link/${numericId}`, { method: 'DELETE' })
-    .then(res => res.ok ? location.reload() : alert('❌ Ошибка'))
+    .then(res => {
+        if (!res.ok) throw new Error('Ошибка удаления');
+        // Удаляем ребро из графа
+        removeLinkFromGraph(linkId);
+        // Закрываем модальное окно
+        if (linkModal) linkModal.hide();
+    })
     .catch(err => {
         Logger.error('Ошибка удаления связи:', err);
         alert('❌ Ошибка сети при удалении');
@@ -1479,4 +1502,92 @@ function toggleLock() {
     dragLocked = !dragLocked;
     localStorage.setItem('dragLocked', dragLocked);
     updateLockButton();
+}
+
+// ============================================================================
+// ДОБАВЛЕНИЕ НОВОГО УСТРОЙСТВА НА КАРТУ
+// ============================================================================
+window.addDeviceToGraph = function(device) {
+    if (!cy) return;
+    if (cy.getElementById(String(device.id)).length > 0) return;
+
+    const groupParent = device.group_id ? `group_${device.group_id}` : undefined;
+
+    cy.add({
+        group: 'nodes',
+        data: {
+            id: String(device.id),
+            name: device.name,
+            ip: device.ip,
+            type_id: device.type_id,
+            group_id: device.group_id,
+            parent: groupParent,
+            monitoring_enabled: device.monitoring_enabled,
+            status: device.status || 'true'
+        },
+        position: {
+            x: device.x || 100,
+            y: device.y || 100
+        }
+    });
+
+    cy.style().update();
+    Logger.info('✅ Новое устройство добавлено на карту:', device.name);
+};
+
+window.removeDeviceFromGraph = function(deviceId) {
+    if (!cy) return;
+    const node = cy.getElementById(String(deviceId));
+    if (node.length) {
+        cy.remove(node);
+        Logger.info('✅ Устройство удалено с карты:', deviceId);
+    }
+};
+
+window.updateDevice = function(device) {
+    if (!cy) return;
+    const node = cy.getElementById(String(device.id));
+    if (node.length) {
+        // Обновляем основные данные
+        node.data({
+            name: device.name,
+            ip: device.ip_address || device.ip,
+            type_id: device.type_id,
+            group_id: device.group_id,
+            monitoring_enabled: device.monitoring_enabled
+        });
+        // Обновляем принадлежность к группе (parent)
+        const groupParent = device.group_id ? `group_${device.group_id}` : undefined;
+        node.data('parent', groupParent);
+        // Принудительно обновляем стили
+        cy.style().update();
+        Logger.info('✅ Устройство обновлено на карте:', device.name);
+    }
+};
+// ============================================================================
+// ПЕРЕЗАГРУЗКА ЭЛЕМЕНТОВ КАРТЫ (после изменений)
+// ============================================================================
+window.reloadMapElements = function() {
+    if (!cy) return;
+    const mapId = getMapId();
+    if (!mapId) return;
+    Logger.info('🔄 Перезагрузка элементов карты...');
+    // Удаляем все существующие элементы (узлы и рёбра)
+    cy.elements().remove();
+    // Загружаем элементы заново
+    loadElements(mapId);
+};
+// ============================================================================
+// УДАЛЕНИЕ СВЯЗИ С КАРТЫ
+// ============================================================================
+function removeLinkFromGraph(linkId) {
+    if (!cy) return;
+    const edge = cy.getElementById(String(linkId));
+    if (edge.length) {
+        cy.remove(edge);
+        Logger.info('✅ Связь удалена с карты:', linkId);
+        if (typeof window.showToast === 'function') {
+            window.showToast('Успешно', 'Связь удалена', 'success');
+        }
+    }
 }
