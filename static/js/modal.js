@@ -397,7 +397,9 @@ function getStatusBadgeClass(status) {
 
 // ==================== Инициализация ====================
 document.addEventListener('DOMContentLoaded', function() {
-    // Обработчик переключения на вкладку истории
+
+console.log('modal.js loaded');
+    // ========== Обработчик переключения на вкладку истории ==========
     const historyTab = document.querySelector('a[href="#device-history"]');
     if (historyTab) {
         historyTab.addEventListener('shown.bs.tab', function() {
@@ -406,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Обработчики кнопок пагинации (без onclick в HTML)
+    // ========== Обработчики кнопок пагинации (без onclick в HTML) ==========
     const prevBtn = document.getElementById('history-prev');
     const nextBtn = document.getElementById('history-next');
     if (prevBtn) {
@@ -421,4 +423,145 @@ document.addEventListener('DOMContentLoaded', function() {
             loadHistoryPage(currentHistoryPage + 1);
         });
     }
+
+// Обработчик формы группы (с защитой от дублирования и блокировкой кнопки)
+const groupForm = document.getElementById('groupForm');
+if (groupForm) {
+    // Удаляем предыдущий обработчик, если он был (по имени функции)
+    groupForm.removeEventListener('submit', window._groupSubmitHandler);
+
+    // Определяем функцию обработчика
+    window._groupSubmitHandler = function(e) {
+        e.preventDefault();
+        const submitBtn = groupForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true; // блокируем кнопку
+
+        const id = document.getElementById('group_id').value;
+        const name = document.getElementById('group_name').value.trim();
+        const color = document.getElementById('group_color').value;
+
+        if (!name) {
+            alert('Введите название группы');
+            if (submitBtn) submitBtn.disabled = false;
+            return;
+        }
+
+        const url = id ? `/api/group/${id}` : '/api/group';
+        const method = id ? 'PUT' : 'POST';
+        const body = id ? { name, color } : { map_id: window.currentMapId, name, color };
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Ошибка сохранения');
+            return res.json();
+        })
+        .then(() => {
+            document.getElementById('group_id').value = '';
+            document.getElementById('group_name').value = '';
+            document.getElementById('group_color').value = '#3498db';
+            loadGroupsList(); // обновляем список
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Ошибка при сохранении группы');
+        })
+        .finally(() => {
+            if (submitBtn) submitBtn.disabled = false; // разблокируем
+        });
+    };
+
+    // Навешиваем обработчик
+    groupForm.addEventListener('submit', window._groupSubmitHandler);
+}
+
+    // ========== При открытии модального окна групп обновляем список ==========
+    const groupModalEl = document.getElementById('groupModal');
+    if (groupModalEl) {
+        groupModalEl.addEventListener('shown.bs.modal', function () {
+            loadGroupsList();
+        });
+    }
 });
+// ==================== Группы ====================
+let groupModal = null;          // экземпляр модального окна групп
+let currentGroupId = null;      // для редактирования группы
+
+/**
+ * Открыть модальное окно управления группами
+ */
+window.openGroupManager = function() {
+    if (!groupModal) {
+        const el = document.getElementById('groupModal');
+        if (el) groupModal = new bootstrap.Modal(el);
+        else return;
+    }
+    loadGroupsList(); // загружаем список групп
+    groupModal.show();
+};
+
+/**
+ * Загрузить список групп для текущей карты
+ */
+function loadGroupsList() {
+    const tbody = document.getElementById('group-list-body');
+    if (!tbody) return;
+
+    fetch(`/api/map/${window.currentMapId}/groups`)
+        .then(res => {
+            if (!res.ok) throw new Error('Ошибка загрузки групп');
+            return res.json();
+        })
+        .then(groups => {
+            tbody.innerHTML = '';
+            groups.forEach(group => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${group.name}</td>
+                    <td><span style="display:inline-block; width:20px; height:20px; background:${group.color}; border-radius:4px;"></span></td>
+                    <td>${group.device_count || 0}</td>
+                    <td>
+                        <button class="btn-action" onclick="editGroup(${group.id}, '${group.name}', '${group.color}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-action" onclick="deleteGroup(${group.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+            });
+        })
+        .catch(err => {
+            console.error('Ошибка загрузки групп:', err);
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Ошибка загрузки</td></tr>';
+        });
+}
+
+/**
+ * Редактирование группы (заполнение формы)
+ */
+window.editGroup = function(id, name, color) {
+    currentGroupId = id;
+    document.getElementById('group_id').value = id;
+    document.getElementById('group_name').value = name;
+    document.getElementById('group_color').value = color;
+};
+
+/**
+ * Удаление группы
+ */
+window.deleteGroup = function(id) {
+    if (!confirm('Удалить группу? Устройства группы останутся без группы.')) return;
+    fetch(`/api/group/${id}`, { method: 'DELETE' })
+        .then(res => {
+            if (!res.ok) throw new Error('Ошибка удаления');
+            loadGroupsList(); // обновляем список после удаления
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Ошибка при удалении группы');
+        });
+};
