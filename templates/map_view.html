@@ -168,6 +168,13 @@
                                 <tr><td colspan="3" class="text-center text-muted">Загрузка...</td></tr>
                             </tbody>
                         </table>
+
+                    <!-- Пагинация -->
+                    <div class="pagination-container" id="history-pagination" style="display: none;">
+                        <button class="pagination-btn" id="history-prev" disabled>‹ Предыдущая</button>
+                        <span class="pagination-info" id="history-page-info">Страница 1 из 1</span>
+                        <button class="pagination-btn" id="history-next" disabled>Следующая ›</button>
+                    </div>
                     </div>
                     <!-- Вкладка "Соседи" -->
                     <div class="tab-pane" id="device-neighbors">
@@ -273,36 +280,6 @@
         </div>
     </div>
 </div>
-
-<!-- Модальное окно истории устройства -->
-<div class="modal fade" id="deviceHistoryModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">История изменений статуса</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <table class="table table-sm table-striped">
-                    <thead>
-                        <tr>
-                            <th>Время</th>
-                            <th>Старый статус</th>
-                            <th>Новый статус</th>
-                        </tr>
-                    </thead>
-                    <tbody id="device-history-body">
-                        <!-- Данные будут загружаться через JS -->
-                    </tbody>
-                </table>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Модальное окно управления группами -->
 <div class="modal fade" id="groupModal" tabindex="-1">
     <div class="modal-dialog">
@@ -388,6 +365,7 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modal.js') }}"></script>
 <script>
     window.currentMapId = {% if map %}{{ map.id }}{% else %}null{% endif %};
     document.addEventListener('DOMContentLoaded', function() {

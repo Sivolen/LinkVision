@@ -7,17 +7,30 @@ def get_device_by_id(device_id):
     return Device.query.get(device_id)
 
 
-def get_device_history(device_id, limit=50):
-    """Получить историю изменений статуса устройства."""
-    history = DeviceHistory.query.filter_by(device_id=device_id)\
-        .order_by(DeviceHistory.timestamp.desc())\
-        .limit(limit).all()
-    return [{
+def get_device_history(device_id, page=1, per_page=10):
+    """Получить историю изменений статуса устройства с пагинацией."""
+    query = DeviceHistory.query.filter_by(device_id=device_id).order_by(DeviceHistory.timestamp.desc())
+
+    # Общее количество записей
+    total = query.count()
+
+    # Пагинация
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    items = [{
         'id': h.id,
         'old_status': 'true' if h.old_status else 'false',
         'new_status': 'true' if h.new_status else 'false',
         'timestamp': h.timestamp.isoformat()
-    } for h in history]
+    } for h in paginated.items]
+
+    return {
+        'items': items,
+        'page': page,
+        'pages': paginated.pages,
+        'total': total,
+        'per_page': per_page
+    }
 
 
 def get_device_details(device_id):
