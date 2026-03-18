@@ -835,17 +835,17 @@ body {
    ============================================================================ */
 .modal-content {
     background: var(--bg-secondary);
-    color: var(--text-primary);
     border: 1px solid var(--border-color);
     border-radius: 28px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     overflow: hidden;
 }
 
-.modal-header {
-    border-bottom: 1px solid var(--border-color);
+modal-header,
+.modal-footer {
+    background: transparent; /* убираем отдельный фон */
+    border-color: var(--border-color);
     padding: 1.2rem 1.8rem;
-    background: var(--bg-primary);
 }
 
 .modal-title {
@@ -857,11 +857,12 @@ body {
     padding: 1.8rem;
 }
 
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
 .modal-footer {
     border-top: 1px solid var(--border-color);
-    padding: 1.2rem 1.8rem;
-    background: var(--bg-primary);
-    gap: 8px;
 }
 
 .modal-footer .btn {
@@ -1287,4 +1288,52 @@ body {
 .pagination-info {
     font-size: 0.9rem;
     color: var(--text-secondary);
+}
+
+/* ============================================================================
+   Унификация таблиц в модальных окнах (как на страницах админки)
+   ============================================================================ */
+.modal .modern-table {
+    border-collapse: separate !important;
+    border-spacing: 0 8px !important;
+}
+
+.modal .modern-table tbody tr {
+    background: var(--bg-secondary);
+    border-radius: 16px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.modal .modern-table td:first-child {
+    border-radius: 16px 0 0 16px !important;
+    padding-left: 1.5rem !important;
+}
+
+.modal .modern-table td:last-child {
+    border-radius: 0 16px 16px 0 !important;
+    padding-right: 1.5rem !important;
+}
+
+/* ============================================================================
+   Приглушённые цвета для статусов UP/DOWN
+   ============================================================================ */
+.badge.bg-success {
+    background-color: #d1fae5 !important; /* мягкий мятный */
+    color: #065f46 !important;            /* тёмно-зелёный текст */
+}
+
+.badge.bg-danger {
+    background-color: #fee2e2 !important; /* мягкий розовый */
+    color: #991b1b !important;            /* тёмно-красный текст */
+}
+
+/* Тёмная тема */
+[data-theme="dark"] .badge.bg-success {
+    background-color: #064e3b !important; /* тёмно-зелёный */
+    color: #d1fae5 !important;            /* светлый мятный текст */
+}
+
+[data-theme="dark"] .badge.bg-danger {
+    background-color: #7f1d1d !important; /* тёмно-красный */
+    color: #fee2e2 !important;            /* светлый розовый текст */
 }
