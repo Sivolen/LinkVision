@@ -70,7 +70,7 @@ window.openDeviceModal = function(node) {
                 loadGroups(devGroup, data.group_id);
             })
             .catch(err => {
-                console.error('Ошибка загрузки деталей:', err);
+                Logger.error('Ошибка загрузки деталей:', err);
                 neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка загрузки</td></tr>';
                 showToast('Ошибка', 'Не удалось загрузить данные устройства', 'error');
             });
@@ -159,7 +159,7 @@ window.saveDevice = function() {
         showToast('Успешно', devId ? 'Устройство обновлено' : 'Устройство создано', 'success');
     })
     .catch(err => {
-        console.error(err);
+        Logger.error('Ошибка сохранения устройства:', err);
         showToast('Ошибка', 'Не удалось сохранить устройство', 'error');
     });
 };
@@ -174,7 +174,7 @@ window.deleteDevice = function(deviceId) {
         showToast('Успешно', 'Устройство удалено', 'success');
     })
     .catch(err => {
-        console.error(err);
+        Logger.error('Ошибка удаления устройства:', err);
         showToast('Ошибка', 'Не удалось удалить устройство', 'error');
     });
 };
@@ -192,7 +192,7 @@ function loadDeviceTypes(selectEl) {
             selectEl.appendChild(option);
         });
     })
-    .catch(err => console.error('Ошибка загрузки типов:', err));
+    .catch(err => Logger.error('Ошибка загрузки типов:', err));
 }
 
 function loadGroups(selectEl, selectedGroupId) {
@@ -212,7 +212,7 @@ function loadGroups(selectEl, selectedGroupId) {
         });
         if (selectedGroupId) selectEl.value = selectedGroupId;
     })
-    .catch(err => console.error('Ошибка загрузки групп:', err));
+    .catch(err => Logger.error('Ошибка загрузки групп:', err));
 }
 
 // ==================== История ====================
@@ -271,7 +271,7 @@ function loadHistory(deviceId, page = 1) {
         totalHistoryPages = totalPages;
     })
     .catch(error => {
-        console.error('Ошибка загрузки истории:', error);
+        Logger.error('Ошибка загрузки истории:', error);
         tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Ошибка загрузки</td></tr>';
         if (paginationDiv) paginationDiv.style.display = 'none';
         showToast('Ошибка', 'Не удалось загрузить историю', 'error');
@@ -333,7 +333,7 @@ function initColorPicker() {
     const code = document.getElementById('colorCode');
 
     if (!btn || !panel || !input || !preview || !code) {
-        console.error('❌ Color picker: элементы не найдены');
+        Logger.error('❌ Color picker: элементы не найдены');
         return;
     }
 
@@ -457,7 +457,7 @@ function initFormHandler() {
             if (typeof reloadMapElements === 'function') reloadMapElements();
 
         } catch (err) {
-            console.error('Submit error:', err);
+            Logger.error('Submit error:', err);
             showToast('Ошибка', err.message || 'Не удалось сохранить', 'error');
         } finally {
             if (btnText) btnText.classList.remove('d-none');
@@ -539,7 +539,7 @@ async function loadGroupsList() {
         `).join('');
 
     } catch (err) {
-        console.error('Load groups error:', err);
+        Logger.error('Load groups error:', err);
         tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">Ошибка загрузки</td></tr>`;
         showToast('Ошибка', 'Не удалось загрузить группы', 'error');
     } finally {
@@ -610,7 +610,7 @@ window.deleteGroup = async function(id, name) {
         if (typeof reloadMapElements === 'function') reloadMapElements();
 
     } catch (err) {
-        console.error('Delete error:', err);
+        Logger.error('Delete error:', err);
         showToast('Ошибка', 'Не удалось удалить группу', 'error');
     }
 };
@@ -627,7 +627,7 @@ window.openGroupManager = function() {
         if (el) {
             groupModal = new bootstrap.Modal(el);
         } else {
-            console.error('Modal #groupModal not found');
+            Logger.error('Modal #groupModal not found');
             return;
         }
     }
@@ -662,7 +662,7 @@ function showToast(title, message, type = 'success') {
     const instance = toast?.toast;
 
     if (!instance) {
-        console.log(`[${type}] ${title}: ${message}`);
+        Logger.info(`[${type}] ${title}: ${message}`);
         if (type === 'error') alert(title + ': ' + message);
         return;
     }
@@ -695,7 +695,7 @@ function escapeHtml(str) {
 
 // ==================== Инициализация (ОДИН раз!) ====================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📄 modal.js loaded');
+    Logger.info('📄 modal.js loaded');
 
     // Обработчик переключения на вкладку истории
     const historyTab = document.querySelector('a[href="#device-history"]');
@@ -728,5 +728,5 @@ document.addEventListener('DOMContentLoaded', function() {
     initToast();
     initModalEvents();
 
-    console.log('✅ modal.js инициализирован');
+    Logger.info('✅ modal.js инициализирован');
 });
