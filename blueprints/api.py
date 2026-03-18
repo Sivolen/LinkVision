@@ -73,7 +73,12 @@ def get_device_history(id):
         return jsonify({'error': 'Device not found'}), 404
     if not (current_user.is_admin or device.map.owner_id == current_user.id or current_user.is_operator):
         return jsonify({'error': 'Доступ запрещён'}), 403
-    history = device_service.get_device_history(id)
+
+    # Получаем параметры пагинации из запроса
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
+    history = device_service.get_device_history(id, page=page, per_page=per_page)
     return jsonify(history)
 
 

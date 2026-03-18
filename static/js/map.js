@@ -614,7 +614,7 @@ function initMap(mapId) {
                 sourceNode.style('border-color', '#007bff');
                 sourceNode.style('border-width', 5);
                 const linkInfo = document.getElementById('linkInfo');
-                if (linkInfo) linkInfo.textContent = `✅ Источник: ${node.data('name')}\n👆 Выберите второе устройство`;
+                if (linkInfo) linkInfo.textContent = `✅ Источник: ${node.data('name')}\n Выберите второе устройство`;
             } else if (sourceNode.id() !== node.id()) {
                 openLinkModal(sourceNode.id(), node.id());
             }
@@ -900,10 +900,18 @@ function openDeviceModal(node) {
     const devIp = document.getElementById('dev_ip');
     const devType = document.getElementById('dev_type');
     const deleteBtn = document.getElementById('deleteDeviceBtn');
-    const historyBody = document.getElementById('device-history-body');
     const neighborsBody = document.getElementById('device-neighbors-body');
     const devGroup = document.getElementById('dev_group');
     const monitoringCheck = document.getElementById('dev_monitoring');
+
+    // Сбрасываем таблицу истории (она будет загружаться через вкладку)
+    const historyBody = document.getElementById('device-history-body');
+    if (historyBody) {
+        historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Переключитесь на вкладку "История"</td></tr>';
+    }
+    // Скрываем пагинацию до загрузки истории
+    const paginationDiv = document.getElementById('history-pagination');
+    if (paginationDiv) paginationDiv.style.display = 'none';
 
     if (node) {
         // Режим редактирования
@@ -917,17 +925,6 @@ function openDeviceModal(node) {
             .then(res => res.ok ? res.json() : Promise.reject('Ошибка загрузки'))
             .then(data => {
                 if (data.type_id && devType) devType.value = data.type_id;
-                if (data.history && data.history.length > 0) {
-                    historyBody.innerHTML = '';
-                    data.history.forEach(entry => {
-                        const row = historyBody.insertRow();
-                        row.insertCell().textContent = new Date(entry.timestamp).toLocaleString();
-                        row.insertCell().innerHTML = entry.old_status === 'true' ? '<span class="badge bg-success">UP</span>' : '<span class="badge bg-danger">DOWN</span>';
-                        row.insertCell().innerHTML = entry.new_status === 'true' ? '<span class="badge bg-success">UP</span>' : '<span class="badge bg-danger">DOWN</span>';
-                    });
-                } else {
-                    historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет записей</td></tr>';
-                }
                 if (data.neighbors && data.neighbors.length > 0) {
                     neighborsBody.innerHTML = '';
                     data.neighbors.forEach(n => {
@@ -961,7 +958,6 @@ function openDeviceModal(node) {
             })
             .catch(err => {
                 Logger.error('Ошибка загрузки деталей:', err);
-                historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Ошибка загрузки</td></tr>';
                 neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка загрузки</td></tr>';
             });
     } else {
@@ -971,7 +967,6 @@ function openDeviceModal(node) {
         devIp.value = '';
         if (devType) devType.value = '';
         deleteBtn.style.display = 'none';
-        historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет данных</td></tr>';
         neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет данных</td></tr>';
 
         fetch(`/api/map/${getMapId()}/groups`)
@@ -995,18 +990,15 @@ function openDeviceModal(node) {
 
     // ========== БЛОКИРОВКА ДЛЯ ОПЕРАТОРА ==========
     if (window.isOperator) {
-        // Блокируем все поля ввода
         devName.disabled = true;
         devIp.disabled = true;
         devType.disabled = true;
         devGroup.disabled = true;
         if (monitoringCheck) monitoringCheck.disabled = true;
-        // Скрываем кнопки "Сохранить" и "Удалить"
         const saveBtn = document.querySelector('#deviceModal .btn-primary');
         if (saveBtn) saveBtn.style.display = 'none';
         if (deleteBtn) deleteBtn.style.display = 'none';
     } else {
-        // Обычный режим – поля доступны
         devName.disabled = false;
         devIp.disabled = false;
         devType.disabled = false;
@@ -1274,7 +1266,7 @@ function startLinkMode() {
     info.id = 'linkInfo';
     info.className = 'alert alert-info position-fixed';
     info.style.cssText = 'top:80px;left:50%;transform:translateX(-50%);z-index:1000;';
-    info.textContent = '👆 Выберите ПЕРВОЕ устройство';
+    info.textContent = 'Выберите ПЕРВОЕ устройство';
     document.body.appendChild(info);
 }
 
