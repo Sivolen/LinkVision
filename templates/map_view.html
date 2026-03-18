@@ -280,56 +280,145 @@
         </div>
     </div>
 </div>
-<!-- Модальное окно управления группами (новая версия) -->
-<div class="modal fade" id="groupModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Группы устройств</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Модальное окно управления группами -->
+<div class="modal fade" id="groupModal" tabindex="-1" aria-labelledby="groupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modern-modal">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h5 class="modal-title fw-bold" id="groupModalLabel">Группы устройств</h5>
+                    <small class="text-muted">Организуйте устройства по категориям</small>
+                </div>
+                <button type="button" class="btn-close btn-close-gray" data-bs-dismiss="modal" aria-label="Закрыть"></button>
             </div>
-            <div class="modal-body">
-                <form id="groupForm" class="group-form">
+
+            <!-- Body -->
+            <div class="modal-body pt-4">
+
+                <!-- Форма -->
+                <form id="groupForm" class="group-form needs-validation" novalidate>
                     <input type="hidden" id="group_id">
 
-                    <div class="group-field">
-                        <label for="group_name" class="form-label">Название группы</label>
-                        <input type="text" id="group_name" class="form-control" placeholder="Например: Серверная" required>
-                    </div>
+                    <div class="form-stack">
+                        <!-- Название -->
+                        <div class="form-group">
+                            <label for="group_name" class="form-label">
+                                Название группы <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-tag input-icon"></i>
+                                <input type="text"
+                                       id="group_name"
+                                       class="form-control modern-input"
+                                       placeholder="Например: Серверная"
+                                       pattern="^.{2,50}$"
+                                       title="От 2 до 50 символов"
+                                       required>
+                            </div>
+                            <div class="invalid-feedback">Введите название от 2 до 50 символов</div>
+                        </div>
 
-                    <div class="group-field">
-                        <label class="form-label">Цвет группы</label>
-                        <div class="color-selector">
-                            <button type="button" id="group_color_btn" class="btn btn-outline-primary color-button">
-                                <span class="color-preview" id="color_preview" style="background-color: #3498db;"></span>
-                                <span id="color_value">#3498db</span>
-                                <i class="fas fa-chevron-down ms-1"></i>
-                            </button>
-                            <input type="color" id="group_color_input" value="#3498db" style="display: none;">
+                        <!-- Цвет -->
+                         <div class="form-group">
+                            <label class="form-label">Цвет метки</label>
+
+                            <div class="color-picker-simple">
+                                <!-- Кнопка выбора -->
+                                <button type="button" id="colorPickerBtn" class="color-btn">
+                                    <span class="color-box" id="colorPreview"></span>
+                                    <span id="colorCode">#3498db</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+
+                                <!-- Панель с цветами -->
+                                <div id="colorPanel" class="color-panel" style="display:none;">
+                                    <div class="color-grid">
+                                        <button type="button" class="color-swatch" data-color="#3498db" style="background:#3498db"></button>
+                                        <button type="button" class="color-swatch" data-color="#2ecc71" style="background:#2ecc71"></button>
+                                        <button type="button" class="color-swatch" data-color="#e74c3c" style="background:#e74c3c"></button>
+                                        <button type="button" class="color-swatch" data-color="#f39c12" style="background:#f39c12"></button>
+                                        <button type="button" class="color-swatch" data-color="#9b59b6" style="background:#9b59b6"></button>
+                                        <button type="button" class="color-swatch" data-color="#1abc9c" style="background:#1abc9c"></button>
+                                        <button type="button" class="color-swatch" data-color="#34495e" style="background:#34495e"></button>
+                                        <button type="button" class="color-swatch" data-color="#e67e22" style="background:#e67e22"></button>
+                                    </div>
+                                    <div class="color-custom">
+                                        <input type="color" id="group_color" value="#3498db">
+                                        <label for="group_color">Свой цвет</label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="group-action">
-                        <button type="submit" class="btn btn-primary" id="groupSubmitBtn">Добавить группу</button>
+                    <!-- Кнопки формы -->
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost" id="resetFormBtn">Сбросить</button>
+                        <button type="submit" class="btn btn-primary modern-btn" id="submitBtn">
+                            <span class="btn-text">Добавить группу</span>
+                            <span class="btn-loader d-none">
+                                <span class="spinner"></span> Сохранение...
+                            </span>
+                        </button>
                     </div>
                 </form>
 
-                <table class="modern-table">
-                    <thead>
-                        <tr>
-                            <th>Название</th>
-                            <th>Цвет</th>
-                            <th>Устройств</th>
-                            <th>Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody id="group-list-body">
-                        <!-- Загружается через JS -->
-                    </tbody>
-                </table>
+                <!-- Разделитель -->
+                <hr class="my-4 text-muted opacity-25">
+
+                <!-- Список групп -->
+                <div class="groups-section">
+                    <div class="section-header">
+                        <h6 class="mb-0 fw-semibold">Существующие группы</h6>
+                        <span class="badge bg-light text-dark" id="groupsCount">0</span>
+                    </div>
+
+                    <!-- Поиск -->
+                    <div class="search-wrapper mb-3">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text"
+                               id="groupsSearch"
+                               class="form-control modern-input search-input"
+                               placeholder="Поиск по названию...">
+                    </div>
+
+                    <!-- Таблица -->
+                    <div class="table-responsive">
+                        <table class="table modern-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width:40%">Название</th>
+                                    <th style="width:20%">Цвет</th>
+                                    <th style="width:20%" class="text-center">Устройств</th>
+                                    <th style="width:20%" class="text-end">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="groupListBody">
+                                <!-- Загружается через JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Пустое состояние -->
+                    <div class="empty-state d-none" id="emptyState">
+                        <i class="fas fa-folder-open empty-icon"></i>
+                        <p class="mb-0 text-muted">Нет созданных групп</p>
+                        <small class="text-muted opacity-75">Создайте первую группу выше</small>
+                    </div>
+
+                    <!-- Skeleton загрузка -->
+                    <div class="skeleton-loader d-none" id="skeletonLoader">
+                        <div class="skeleton-row"></div>
+                        <div class="skeleton-row"></div>
+                        <div class="skeleton-row"></div>
+                    </div>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Закрыть</button>
             </div>
         </div>
     </div>
