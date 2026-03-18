@@ -471,11 +471,11 @@ function initMap(mapId) {
     // Обновление кнопки массового редактирования при изменении выделения
     cy.on('select unselect', updateBulkEditButton);
 
-    // Инициализация модальных окон
-    const deviceModalEl = document.getElementById('deviceModal');
-    if (deviceModalEl && !deviceModal) {
-        deviceModal = new bootstrap.Modal(deviceModalEl);
-    }
+    // Инициализация модальных окон Need remove
+    // const deviceModalEl = document.getElementById('deviceModal');
+    // if (deviceModalEl && !deviceModal) {
+    //    deviceModal = new bootstrap.Modal(deviceModalEl);
+    // }
     const linkModalEl = document.getElementById('linkModal');
     if (linkModalEl && !linkModal) {
         linkModal = new bootstrap.Modal(linkModalEl);
@@ -499,7 +499,7 @@ function initMap(mapId) {
 
     // Загрузка элементов карты и типов устройств
     loadElements(mapId);
-    loadDeviceTypes();
+    // loadDeviceTypes(); need remove
 
     // Обработчик изменения размера окна
     window.addEventListener('resize', () => {
@@ -1272,7 +1272,8 @@ function goToDevice(deviceId) {
         cy.zoom(1.0);
         cy.center(node);
         node.select();
-        bootstrap.Modal.getInstance(document.getElementById('deviceModal')).hide();
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deviceModal'));
+        if (modal) modal.hide();
     }
 }
 

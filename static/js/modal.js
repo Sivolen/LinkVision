@@ -152,7 +152,7 @@ window.saveDevice = function() {
         data.map_id = window.currentMapId;
 
         // Координаты центра
-        if (cy) {
+        if (cy && typeof cy.pan === 'function') {
             const container = document.getElementById('cy');
             const pan = cy.pan();
             const zoom = cy.zoom();
@@ -162,9 +162,6 @@ window.saveDevice = function() {
             data.x = 100;
             data.y = 100;
         }
-    } else {
-        // Режим редактирования – id уже есть
-        data.id = parseInt(devId);
     }
 
     const url = devId ? `/api/device/${devId}` : '/api/device';
