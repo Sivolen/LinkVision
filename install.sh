@@ -37,9 +37,9 @@ if ! command -v python3 &> /dev/null; then
     apt update && apt install -y python3 python3-pip python3-venv
 fi
 
-PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-if (( $(echo "$PY_VERSION < 3.8" | bc -l) )); then
-    echo -e "${RED}Error: Python 3.8+ required, found $PY_VERSION${NC}"
+PY_MINOR=$(python3 -c 'import sys; print(sys.version_info.minor)')
+if [ "$PY_MAJOR" -lt 3 ] || { [ "$PY_MAJOR" -eq 3 ] && [ "$PY_MINOR" -lt 8 ]; }; then
+    echo -e "${RED}Error: Python 3.8+ required, found ${PY_MAJOR}.${PY_MINOR}${NC}"
     exit 1
 fi
 echo -e "${GREEN}Python $PY_VERSION found.${NC}"

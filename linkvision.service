@@ -8,20 +8,20 @@ User=root
 Group=root
 
 # Рабочая директория проекта
-WorkingDirectory=/opt/linkvision
+WorkingDirectory=/opt/LinkVision
 
 # Команда запуска через Gunicorn
 # -w 4 : количество воркеров (процессов)
 # -b 0.0.0.0:5000 : адрес и порт прослушивания
 # app:app : файл app.py и объект приложения app внутри него
-ExecStart=/opt/linkvision/venv/bin/gunicorn -w 4 -b 0.0.0.0:5000 app:app
+ExecStart=/opt/LinkVision/venv/bin/gunicorn -w 4 -b 0.0.0.0:5000 app:app
 
 # Переменные окружения
-Environment="PATH=/opt/linkvision/venv/bin"
+Environment="PATH=/opt/LinkVision/venv/bin"
 Environment="FLASK_ENV=production"
 Environment="FLASK_APP=app.py"
 # Если используете .env-файл:
-# EnvironmentFile=/opt/linkvision/.env
+# EnvironmentFile=/opt/LinkVision/.env
 
 # Автоматический перезапуск при падении
 Restart=always
@@ -30,7 +30,7 @@ RestartSec=10
 # Логирование в systemd journal
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=linkvision
+SyslogIdentifier=LinkVision
 
 # Опционально: базовые ограничения безопасности
 PrivateTmp=true
