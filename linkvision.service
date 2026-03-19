@@ -12,9 +12,10 @@ Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
 # PYTHONPATH для корректного импорта модулей проекта
 Environment="PYTHONPATH=/opt/LinkVision"
 Environment="FLASK_ENV=production"
-Environment="FLASK_APP=app.py"
+Environment="FLASK_APP=app.py"          # может не понадобиться, но оставим
 
-ExecStart=/opt/LinkVision/venv/bin/gunicorn -w 4 -b 0.0.0.0:8005 app:app
+# Запуск через Gunicorn, указываем wsgi:app
+ExecStart=/opt/LinkVision/venv/bin/gunicorn -w 4 -b 0.0.0.0:8005 wsgi:app
 
 Restart=always
 RestartSec=10
