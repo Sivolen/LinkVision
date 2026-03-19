@@ -3,36 +3,26 @@ Description=LinkVision - Network Infrastructure Visualization
 After=network.target
 
 [Service]
-# Запуск от root (требуется для raw ICMP и сетевых операций)
 User=root
 Group=root
-
-# Рабочая директория проекта
 WorkingDirectory=/opt/LinkVision
 
-# Команда запуска через Gunicorn
-# -w 4 : количество воркеров (процессов)
-# -b 0.0.0.0:5000 : адрес и порт прослушивания
-# app:app : файл app.py и объект приложения app внутри него
-ExecStart=/opt/LinkVision/venv/bin/gunicorn -w 4 -b 0.0.0.0:5000 app:app
-
-# Переменные окружения
-Environment="PATH=/opt/LinkVision/venv/bin"
+# Полный PATH (включая системные каталоги и venv)
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/LinkVision/venv/bin"
+# PYTHONPATH для корректного импорта модулей проекта
+Environment="PYTHONPATH=/opt/LinkVision"
 Environment="FLASK_ENV=production"
 Environment="FLASK_APP=app.py"
-# Если используете .env-файл:
-# EnvironmentFile=/opt/LinkVision/.env
 
-# Автоматический перезапуск при падении
+ExecStart=/opt/LinkVision/venv/bin/gunicorn -w 4 -b 0.0.0.0:8005 app:app
+
 Restart=always
 RestartSec=10
 
-# Логирование в systemd journal
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=LinkVision
 
-# Опционально: базовые ограничения безопасности
 PrivateTmp=true
 
 [Install]
