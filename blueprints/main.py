@@ -32,6 +32,8 @@ def dashboard():
 @main_bp.route('/map/create-page')
 @login_required
 def create_map_page():
+    if current_user.is_operator:
+        return redirect(url_for('main.dashboard'))
     return render_template('map_view.html', map=None)
 
 

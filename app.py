@@ -1,4 +1,6 @@
 import atexit
+import secrets
+from pathlib import Path
 
 from flask import Flask, request
 from flask_socketio import join_room
@@ -11,7 +13,23 @@ from blueprints.main import main_bp
 from blueprints.api import api_bp
 from services.monitor import init_monitor, start_monitor, stop_monitor
 from utils.logger import app_logger
+from dotenv import load_dotenv
 import os
+
+
+def ensure_env_file():
+    """Создаёт .env с SECRET_KEY, если файл не существует."""
+    env_path = Path('.env')
+    if not env_path.exists():
+        secret = secrets.token_hex(32)
+        with open(env_path, 'w') as f:
+            f.write(f'SECRET_KEY={secret}\n')
+        print(f"✅ Файл .env создан, SECRET_KEY сгенерирован.")
+    # В любом случае загружаем переменные из файла
+    load_dotenv(env_path)
+
+
+ensure_env_file()
 
 
 def create_app():
@@ -32,23 +50,31 @@ def create_app():
     with app.app_context():
         db.create_all()
 
-        if not User.query.filter_by(username='admin').first():
-            admin = User()
-            admin.username = 'admin'
-            admin.is_admin = True
-            admin.set_password('admin')
+        # --- Создание администратора, если ни одного нет ---
+        if not User.query.filter_by(is_admin=True).first():
+            import secrets
+            admin = User(username='admin', is_admin=True)
+            # default_password = secrets.token_urlsafe(8)  # случайный пароль
+            default_password = "Admin"
+            admin.set_password(default_password)
             db.session.add(admin)
+            db.session.commit()
+            app_logger.info(f"✅ Создан администратор: admin / {default_password}")
 
+        # --- Настройки мониторинга, если ещё не заданы ---
+        if not Settings.query.get('ping_count'):
             db.session.add(Settings(key='ping_count', value='4'))
+        if not Settings.query.get('ping_interval'):
             db.session.add(Settings(key='ping_interval', value='10'))
 
-            db.session.add(DeviceType(name='Router', icon_filename=''))
-            db.session.add(DeviceType(name='Switch', icon_filename=''))
-            db.session.add(DeviceType(name='Server', icon_filename=''))
-            db.session.add(DeviceType(name='PC', icon_filename=''))
+        # --- Дефолтные типы устройств, если таблица пуста ---
+        if not DeviceType.query.first():
+            default_types = ['Router', 'Switch', 'Server', 'PC']
+            for name in default_types:
+                db.session.add(DeviceType(name=name, icon_filename=''))
+            app_logger.info("✅ Добавлены стандартные типы устройств")
 
-            db.session.commit()
-            app_logger.info("✅ Admin created: admin / admin")
+        db.session.commit()
 
         init_monitor(app)
 
