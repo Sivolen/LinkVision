@@ -162,7 +162,7 @@ const CY_STYLE = [
             'label': 'data(name)',
             'font-size': '11px',
             'font-weight': 'bold',
-            'color': '#000000',
+            // 'color': '#000000',
             'text-valign': 'top',
             'text-halign': 'center',
             'padding': '5px',
@@ -213,6 +213,17 @@ const CY_STYLE = [
         }
     }
 ];
+
+function updateGroupLabelColor() {
+    if (!cy) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#ffffff' : '#000000';
+    cy.style()
+        .selector('node[isGroup]')
+        .style('color', textColor)
+        .update();
+}
+
 // Глобальный сокет (объявлен как window.socket)
 // window.socket = null;
 
@@ -487,6 +498,8 @@ function initMap(mapId) {
 
     // Обновление состояния кнопки блокировки
     updateLockButton();
+
+    updateGroupLabelColor();
 
     // Загрузка фона
     const bgEl = document.getElementById('cy-background');
