@@ -18,15 +18,36 @@ import os
 
 
 def ensure_env_file():
-    """Создаёт .env с SECRET_KEY, если файл не существует."""
+    """Создаёт или дополняет .env необходимыми переменными (продакшен-конфигурация)."""
     env_path = Path('.env')
+    required_vars = {
+        'SECRET_KEY': secrets.token_hex(32),
+        'SESSION_COOKIE_SECURE': 'True',      # Безопасность: только HTTPS
+        'BEHIND_PROXY': 'True',               # Приложение работает за прокси (nginx)
+        'LOG_LEVEL': 'INFO',
+    }
+
     if not env_path.exists():
-        secret = secrets.token_hex(32)
         with open(env_path, 'w') as f:
-            f.write(f'SECRET_KEY={secret}\n')
-        print(f"✅ Файл .env создан, SECRET_KEY сгенерирован.")
-    # В любом случае загружаем переменные из файла
+            for key, value in required_vars.items():
+                f.write(f"{key}={value}\n")
+        app_logger.info(f"Файл .env создан с переменными для продакшена: {', '.join(required_vars.keys())}")
+        load_dotenv(env_path)
+        return
+
     load_dotenv(env_path)
+
+    missing = []
+    for key, default in required_vars.items():
+        if os.environ.get(key) is None:
+            missing.append((key, default))
+
+    if missing:
+        with open(env_path, 'a') as f:
+            for key, default in missing:
+                f.write(f"{key}={default}\n")
+        load_dotenv(env_path, override=True)
+        app_logger.info(f"В .env добавлены переменные: {', '.join(k for k, _ in missing)}")
 
 
 ensure_env_file()
