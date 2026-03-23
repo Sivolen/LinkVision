@@ -15,6 +15,7 @@ let pendingFit = false;
 let elementsLoaded = false;
 let backgroundLoaded = false;
 let groupDragTimeout = null;
+let copyTimer = null;
 
 // ============================================================================
 // СТИЛИ CYTOSCAPE (вынесены в константу)
@@ -662,13 +663,33 @@ cy.on('dragfree', 'node[isGroup]', function(evt) {
             }
             return;
         }
+
+        // Копирование IP при одиночном клике (с задержкой)
+        if (copyTimer) clearTimeout(copyTimer);
+        copyTimer = setTimeout(() => {
+            const ip = node.data('ip');
+            if (ip && ip.trim()) {
+                navigator.clipboard.writeText(ip).then(() => {
+                    showToast('Скопировано', `IP ${ip} скопирован в буфер обмена`, 'info');
+                }).catch(err => {
+                    Logger.error('Ошибка копирования:', err);
+                });
+            }
+            copyTimer = null;
+        }, 200);
+
+        // Выделение узла (если не в режиме выделения, снимаем выделение с других)
         if (currentMode !== 'select') cy.nodes().selected(false);
         node.selected(true);
     });
 
     cy.on('dbltap', 'node', function(evt) {
+        // Отменяем копирование при двойном клике
+        if (copyTimer) {
+            clearTimeout(copyTimer);
+            copyTimer = null;
+        }
         const node = evt.target;
-        // Если это группа – игнорируем двойной клик
         if (node.data('isGroup')) return;
         openDeviceModal(node);
     });
