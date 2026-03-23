@@ -13,7 +13,8 @@
     </div>
     <div class="card-body">
         <form action="{{ url_for('admin.edit_type', id=edit_type.id) if edit_type else url_for('admin.create_type') }}"
-              method="POST" enctype="multipart/form-data" class="row g-2">
+              method="POST" enctype="multipart/form-data" class="row g-2" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
             <div class="col-md-4">
                 <input type="text" name="name" class="form-control"
                        placeholder="Название типа" value="{{ edit_type.name if edit_type else '' }}" required>
@@ -80,14 +81,17 @@
                 {% endif %}
             </td>
             <td><span class="badge bg-info">{{ type.devices.count() }}</span></td>
-            <td>
+            <td class="text-end">
                 <div class="table-actions">
                     <a href="{{ url_for('admin.edit_type', id=type.id) }}" class="btn-action" title="Редактировать">
                         <i class="fas fa-edit"></i>
                     </a>
-                    <a href="{{ url_for('admin.delete_type', id=type.id) }}" class="btn-action" onclick="return confirm('Удалить тип?')" title="Удалить">
-                        <i class="fas fa-trash"></i>
-                    </a>
+                    <form method="POST" action="{{ url_for('admin.delete_type', id=type.id) }}" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-action" onclick="return confirm('Удалить тип?')" title="Удалить">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
                 </div>
             </td>
         </tr>

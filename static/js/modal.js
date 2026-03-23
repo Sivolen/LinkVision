@@ -144,14 +144,11 @@ window.saveDevice = function() {
     };
 
     if (!devId) {
-        // Режим создания
         if (!window.currentMapId) {
             showToast('Ошибка', 'Не удалось определить текущую карту', 'error');
             return;
         }
         data.map_id = window.currentMapId;
-
-        // Координаты центра
         if (cy && typeof cy.pan === 'function') {
             const container = document.getElementById('cy');
             const pan = cy.pan();
@@ -169,7 +166,10 @@ window.saveDevice = function() {
 
     fetch(url, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
         body: JSON.stringify(data)
     })
     .then(res => {
@@ -178,8 +178,6 @@ window.saveDevice = function() {
     })
     .then(result => {
         if (!devId) {
-            // Создание нового устройства
-            // result должен содержать id (и возможно другие поля)
             const newDevice = {
                 id: result.id,
                 name: data.name,
@@ -189,14 +187,13 @@ window.saveDevice = function() {
                 monitoring_enabled: data.monitoring_enabled,
                 x: data.x,
                 y: data.y,
-                status: 'true' // начальный статус (можно получить из сервера, если есть)
+                status: 'true'
             };
             if (typeof window.addDeviceToGraph === 'function') {
                 window.addDeviceToGraph(newDevice);
             }
             showToast('Успешно', 'Устройство создано', 'success');
         } else {
-            // Обновление существующего устройства
             if (typeof window.updateDevice === 'function') {
                 window.updateDevice({
                     id: devId,
@@ -207,7 +204,6 @@ window.saveDevice = function() {
                     monitoring_enabled: data.monitoring_enabled
                 });
             }
-            // Добавлено: перезагружаем карту для обновления группы
             if (typeof reloadMapElements === 'function') reloadMapElements();
             showToast('Успешно', 'Устройство обновлено', 'success');
         }
@@ -222,10 +218,14 @@ window.saveDevice = function() {
 window.deleteDevice = function(deviceId) {
     if (!confirm('Удалить устройство?')) return;
 
-    fetch(`/api/device/${deviceId}`, { method: 'DELETE' })
+    fetch(`/api/device/${deviceId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
     .then(res => {
         if (res.status === 404) {
-            // Устройство уже не существует на сервере – убираем с карты и информируем
             if (typeof window.removeDeviceFromGraph === 'function') {
                 window.removeDeviceFromGraph(deviceId);
             }
@@ -235,7 +235,6 @@ window.deleteDevice = function(deviceId) {
         }
         if (!res.ok) throw new Error('Ошибка удаления');
 
-        // Успешное удаление
         if (typeof window.removeDeviceFromGraph === 'function') {
             window.removeDeviceFromGraph(deviceId);
         }
@@ -515,7 +514,10 @@ function initFormHandler() {
 
             const res = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
                 body: JSON.stringify(body)
             });
 
@@ -673,7 +675,12 @@ window.deleteGroup = async function(id, name) {
     if (!confirm(`Удалить группу "${name}"?\nУстройства останутся без привязки.`)) return;
 
     try {
-        const res = await fetch(`/api/group/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/group/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
         if (!res.ok) throw new Error('Ошибка: ' + res.status);
 
         showToast('Группа удалена', `Группа "${name}" удалена`, 'success');
@@ -690,6 +697,10 @@ window.deleteGroup = async function(id, name) {
 
 // ===== Открытие модалки =====
 window.openGroupManager = function() {
+    if (!window.currentUserIsAdmin) {  // нужно передать флаг из шаблона
+        showToast('Доступ запрещён', 'Только администратор может управлять группами', 'error');
+        return;
+    }
     if (window.isOperator) {
         showToast('Доступ запрещён', 'Оператор не может управлять группами', 'error');
         return;

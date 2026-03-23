@@ -4,6 +4,7 @@ from pathlib import Path
 
 from flask import Flask, request
 from flask_socketio import join_room
+from flask_wtf.csrf import CSRFProtect
 from config import Config
 from extensions import db, login_manager, socketio, init_extensions
 from models import User, DeviceType, Settings
@@ -56,6 +57,7 @@ ensure_env_file()
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    csrf = CSRFProtect(app)
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     init_extensions(app)
 

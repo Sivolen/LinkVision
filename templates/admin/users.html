@@ -8,13 +8,14 @@
         <i class="fas fa-plus"></i> Добавить нового пользователя
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('admin.create_user') }}" class="row g-2">
+        <form method="POST" action="{{ url_for('admin.create_user') }}" class="row g-2" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
             <div class="col-md-4">
                 <input type="text" name="username" class="form-control" placeholder="Имя пользователя" required>
             </div>
             <div class="col-md-4">
                 <div class="password-field-wrapper">
-                    <input type="password" name="password" id="create_password" class="form-control" placeholder="Пароль" required>
+                    <input type="password" name="password" id="create_password" class="form-control" placeholder="Пароль" required autocomplete="new-password">
                     <i class="fas fa-eye toggle-password" onclick="togglePassword('create_password')"></i>
                 </div>
             </div>
@@ -33,7 +34,6 @@
         </form>
     </div>
 </div>
-
 <!-- Карточка со списком пользователей -->
 <table class="modern-table">
     <thead>
@@ -66,23 +66,17 @@
                 {% endif %}
             </td>
             <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
-            <td>
+            <td class="text-end">
                 <div class="table-actions">
-                    <button class="btn-action"
-                            onclick="openEditUserModal(
-                                {{ user.id }},
-                                '{{ user.username }}',
-                                '{% if user.is_admin %}admin{% elif user.is_operator %}operator{% else %}user{% endif %}'
-                            )"
-                            title="Редактировать">
+                    <button class="btn-action" onclick="openEditUserModal({{ user.id }}, '{{ user.username }}', '{% if user.is_admin %}admin{% elif user.is_operator %}operator{% else %}user{% endif %}')" title="Редактировать">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <a href="{{ url_for('admin.delete_user', id=user.id) }}"
-                       class="btn-action"
-                       onclick="return confirm('Удалить пользователя?')"
-                       title="Удалить">
-                        <i class="fas fa-trash"></i>
-                    </a>
+                    <form method="POST" action="{{ url_for('admin.delete_user', id=user.id) }}" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-action" onclick="return confirm('Удалить пользователя?')" title="Удалить">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
                 </div>
             </td>
         </tr>
@@ -94,11 +88,9 @@
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" id="editUserForm">
-                <div class="modal-header">
-                    <h5 class="modal-title">Редактировать пользователя</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+            <form method="POST" id="editUserForm" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
+                <div class="modal-header">...</div>
                 <div class="modal-body">
                     <input type="hidden" name="user_id" id="edit_user_id">
                     <div class="mb-3">
@@ -108,7 +100,7 @@
                     <div class="mb-3">
                         <label class="form-label">Новый пароль (оставьте пустым, чтобы не менять)</label>
                         <div class="password-field-wrapper">
-                            <input type="password" name="password" id="edit_password" class="form-control">
+                            <input type="password" name="password" id="edit_password" class="form-control" autocomplete="off">
                             <i class="fas fa-eye toggle-password" onclick="togglePassword('edit_password')"></i>
                         </div>
                     </div>
@@ -136,7 +128,6 @@
         </div>
     </div>
 </div>
-
 <script>
 function togglePassword(fieldId) {
     const field = document.getElementById(fieldId);
