@@ -45,7 +45,7 @@ const CY_STYLE = [
             'text-max-width': '80px',
             'color': '#000000',
             'text-background-color': '#ffffff',
-            'text-background-opacity': 0.8,
+            'text-background-opacity': 1,
             'text-background-padding': '3px',
             'text-background-shape': 'roundrectangle'
         }
@@ -92,7 +92,7 @@ const CY_STYLE = [
             'text-valign': 'center',
             'text-halign': 'center',
             'text-background-color': '#ffffff',
-            'text-background-opacity': 0.8,
+            'text-background-opacity': 1,
             'text-background-padding': '3px',
             'text-background-shape': 'roundrectangle'
         }
@@ -118,7 +118,7 @@ const CY_STYLE = [
             'text-valign': 'center',
             'text-halign': 'center',
             'text-background-color': '#ffffff',
-            'text-background-opacity': 0.8,
+            'text-background-opacity': 1,
             'text-background-padding': '3px',
             'text-background-shape': 'roundrectangle',
             'opacity': 0.9,
