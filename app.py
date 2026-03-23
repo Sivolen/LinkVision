@@ -62,9 +62,9 @@ def create_app():
             app_logger.info(f"✅ Создан администратор: admin / {default_password}")
 
         # --- Настройки мониторинга, если ещё не заданы ---
-        if not Settings.query.get('ping_count'):
+        if not db.session.get(Settings, 'ping_count'):
             db.session.add(Settings(key='ping_count', value='4'))
-        if not Settings.query.get('ping_interval'):
+        if not db.session.get(Settings, 'ping_interval'):
             db.session.add(Settings(key='ping_interval', value='10'))
 
         # --- Дефолтные типы устройств, если таблица пуста ---
