@@ -15,7 +15,7 @@ Environment="FLASK_ENV=production"
 Environment="FLASK_APP=app.py"          # может не понадобиться, но оставим
 
 # Запуск через Gunicorn, указываем wsgi:app
-ExecStart=/opt/LinkVision/venv/bin/gunicorn -k eventlet -w 1 -b 0.0.0.0:8005 wsgi:app
+ExecStart=/opt/LinkVision/venv/bin/gunicorn -k gevent -w 1 -b 0.0.0.0:8005 wsgi:app
 
 Restart=always
 RestartSec=10
