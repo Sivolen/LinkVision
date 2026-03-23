@@ -11,6 +11,7 @@ class Config:
 
     # Безопасность сессий: только HTTPS, если переменная True
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
+    DEBUG = os.environ.get('FLASK_DEBUG', 'False') == 'True'
 
     # Если приложение за прокси (nginx), доверяем заголовки
     if os.environ.get('BEHIND_PROXY') == 'True':
@@ -22,7 +23,7 @@ class Config:
 
     PERMANENT_SESSION_LIFETIME = timedelta(days=1)
 
-    VERSION = '1.3.7'
+    VERSION = '1.4.0'
 
     # Логирование
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')

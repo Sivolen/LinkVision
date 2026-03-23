@@ -18,9 +18,18 @@ def operator_forbidden(f):
     return decorated_function
 
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            return jsonify({'error': 'Требуются права администратора'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
 # ============================================================================
 # GET-запросы (доступны оператору)
 # ============================================================================
+
 
 @api_bp.route('/maps')
 @login_required
@@ -148,7 +157,7 @@ def export_map(id):
 
 @api_bp.route('/device', methods=['POST'])
 @login_required
-@operator_forbidden
+@admin_required
 def create_device():
     data = request.json
     try:
@@ -170,7 +179,7 @@ def create_device():
 
 @api_bp.route('/device/<int:id>', methods=['PUT'])
 @login_required
-@operator_forbidden
+@admin_required
 def update_device(id):
     device = device_service.get_device_by_id(id)
     if not device:
@@ -191,7 +200,7 @@ def update_device(id):
 
 @api_bp.route('/device/<int:id>', methods=['DELETE'])
 @login_required
-@operator_forbidden
+@admin_required
 def delete_device(id):
     device = device_service.get_device_by_id(id)
     if not device:
@@ -208,7 +217,7 @@ def delete_device(id):
 
 @api_bp.route('/device/<int:id>/position', methods=['PUT'])
 @login_required
-@operator_forbidden
+@admin_required
 def update_position(id):
     device = device_service.get_device_by_id(id)
     if not device:
@@ -227,7 +236,7 @@ def update_position(id):
 
 @api_bp.route('/link', methods=['POST'])
 @login_required
-@operator_forbidden
+@admin_required
 def create_link():
     data = request.get_json()
     if not all(k in data for k in ['map_id', 'source_id', 'target_id']):
@@ -258,7 +267,7 @@ def create_link():
 
 @api_bp.route('/link/<int:id>', methods=['PUT'])
 @login_required
-@operator_forbidden
+@admin_required
 def update_link(id):
     link = map_service.get_link_by_id(id)
     if not link:
@@ -277,7 +286,7 @@ def update_link(id):
 
 @api_bp.route('/link/<int:id>', methods=['DELETE'])
 @login_required
-@operator_forbidden
+@admin_required
 def delete_link(id):
     link = map_service.get_link_by_id(id)
     if not link:
@@ -294,7 +303,7 @@ def delete_link(id):
 
 @api_bp.route('/map/<int:id>', methods=['PUT'])
 @login_required
-@operator_forbidden
+@admin_required
 def update_map(id):
     map_obj = map_service.get_map_by_id(id)
     if not map_obj:
@@ -364,7 +373,7 @@ def update_viewport(id):
 
 @api_bp.route('/map/import', methods=['POST'])
 @login_required
-@operator_forbidden
+@admin_required
 def import_map():
     data = request.get_json()
     if not data:
@@ -381,7 +390,7 @@ def import_map():
 
 @api_bp.route('/group', methods=['POST'])
 @login_required
-@operator_forbidden
+@admin_required
 def create_group():
     data = request.json
     map_id = data.get('map_id')
@@ -404,7 +413,7 @@ def create_group():
 
 @api_bp.route('/group/<int:id>', methods=['PUT'])
 @login_required
-@operator_forbidden
+@admin_required
 def update_group(id):
     group = map_service.get_group_by_id(id)
     if not group:
@@ -424,7 +433,7 @@ def update_group(id):
 
 @api_bp.route('/group/<int:id>', methods=['DELETE'])
 @login_required
-@operator_forbidden
+@admin_required
 def delete_group(id):
     group = map_service.get_group_by_id(id)
     if not group:

@@ -52,7 +52,7 @@ def create_user():
     return redirect(url_for('admin.users'))
 
 
-@admin_bp.route('/users/delete/<int:id>')
+@admin_bp.route('/users/delete/<int:id>', methods=['POST'])
 def delete_user(id):
     user = user_service.get_user_by_id(id)
     if not user:
@@ -159,7 +159,7 @@ def edit_type(id):
     return render_template('admin/types.html', types=all_types, edit_type=dtype)
 
 
-@admin_bp.route('/types/<int:id>/delete')
+@admin_bp.route('/types/<int:id>/delete', methods=['POST'])
 def delete_type(id):
     try:
         device_type_service.delete_device_type(id)
@@ -220,11 +220,10 @@ def maps_list():
     return render_template('admin/maps.html', maps=all_maps)
 
 
-@admin_bp.route('/maps/delete/<int:id>')
+@admin_bp.route('/maps/delete/<int:id>', methods=['POST'])
 def delete_map(id):
     map_obj = Map.query.get_or_404(id)
     try:
-        # Здесь можно использовать map_service.delete_map, но пока оставим как есть
         db.session.delete(map_obj)
         db.session.commit()
         admin_logger.info(f"Map deleted: ID={id}")

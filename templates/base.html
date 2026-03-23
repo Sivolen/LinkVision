@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Link Vision</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
@@ -46,7 +47,7 @@
             <ul class="map-list" id="sidebarMapList">
                 <!-- Загружается через JS -->
             </ul>
-            {% if not current_user.is_operator %}
+            {% if current_user.is_admin %}
             <button class="btn btn-sm btn-outline-light w-100 mt-2" data-bs-toggle="modal" data-bs-target="#createMapModal">
                 <i class="fas fa-plus"></i> <span>Новая карта</span>
             </button>
@@ -122,7 +123,8 @@
     <div class="modal fade" id="createMapModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="{{ url_for('main.create_map') }}" method="POST">
+                <form action="{{ url_for('main.create_map') }}" method="POST" autocomplete="off">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="modal-header">
                         <h5 class="modal-title">Новая карта</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -144,7 +146,8 @@
     <div class="modal fade" id="editMapModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form id="editMapForm" enctype="multipart/form-data">
+                <form id="editMapForm" enctype="multipart/form-data" autocomplete="off">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="modal-header">
                         <h5 class="modal-title">Редактировать карту</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -213,6 +216,11 @@
                 }
             }
         };
+
+        function getCsrfToken() {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.getAttribute('content') : '';
+        }
 
         // ====================================================================
         // ПЕРЕКЛЮЧЕНИЕ САЙДБАРА (сворачивание/разворачивание)
@@ -312,7 +320,9 @@
         // ЗАГРУЗКА КАРТ В САЙДБАР
         // ====================================================================
         function loadSidebarMaps() {
-            fetch('/api/sidebar-maps')
+            fetch('/api/sidebar-maps', {
+                cache: 'no-store'   // запрещаем кэширование
+            })
                 .then(res => res.ok ? res.json() : [])
                 .then(maps => {
                     const list = document.getElementById('sidebarMapList');
@@ -350,7 +360,6 @@
                 })
                 .catch(err => Logger.error('Error loading maps:', err));
         }
-
         // ====================================================================
         // УДАЛЕНИЕ И РЕДАКТИРОВАНИЕ КАРТЫ
         // ====================================================================
@@ -358,18 +367,32 @@
             event.preventDefault();
             event.stopPropagation();
             if (confirm('Удалить эту карту?')) {
-                fetch(`/api/map/${mapId}`, { method: 'DELETE' })
+                fetch(`/api/map/${mapId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                })
                     .then(res => {
                         if (res.ok) {
-                            loadSidebarMaps();
+                            console.log('Map deleted:', mapId);
                             if (window.currentMapId == mapId) {
+                                // Удаляем текущую карту – редирект на главную
                                 window.location.href = '/';
+                            } else {
+                                // Удалена не текущая карта – обновляем сайдбар
+                                console.log('Refreshing sidebar maps');
+                                // Небольшая задержка, чтобы сервер успел завершить операцию
+                                setTimeout(() => loadSidebarMaps(), 100);
                             }
                         } else {
                             alert('Ошибка удаления');
                         }
                     })
-                    .catch(err => Logger.error('Error deleting map:', err));
+                    .catch(err => {
+                        Logger.error('Error deleting map:', err);
+                        alert('Не удалось удалить карту');
+                    });
             }
         }
         function editMap(event, mapId, mapName) {
@@ -398,6 +421,9 @@
             }
             fetch(`/api/map/${mapId}`, {
                 method: 'PUT',
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                },
                 body: formData
             })
             .then(res => {
@@ -458,7 +484,10 @@
                         data.id = null;
                         fetch('/api/map/import', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCsrfToken()
+                            },
                             body: JSON.stringify(data)
                         })
                         .then(res => {

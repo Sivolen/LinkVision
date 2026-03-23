@@ -8,7 +8,8 @@
         <i class="fas fa-sliders-h"></i> Параметры опроса устройств
     </div>
     <div class="card-body">
-        <form method="POST">
+        <form method="POST" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
             <div class="mb-3">
                 <label class="form-label">Количество пакетов (ping count)</label>
                 <input type="number" name="ping_count" class="form-control" value="{{ count }}" min="1" max="10">
@@ -43,7 +44,8 @@
         </div>
 
         <p class="text-danger">Внимание! Восстановление заменит текущую базу данных. Все текущие данные будут потеряны. Рекомендуется предварительно сделать резервную копию.</p>
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
             <input type="hidden" name="restore_backup" value="1">
             <div class="mb-3">
                 <label class="form-label">Выберите файл базы данных (.db)</label>

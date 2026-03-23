@@ -32,18 +32,16 @@ def dashboard():
 @main_bp.route('/map/create-page')
 @login_required
 def create_map_page():
-    if current_user.is_operator:
-        return redirect(url_for('main.dashboard'))
+    if not current_user.is_admin:
+        abort(403)
     return render_template('map_view.html', map=None)
 
 
 @main_bp.route('/map/create', methods=['POST'])
 @login_required
 def create_map():
-    if current_user.is_operator:
-        flash('Оператор не может создавать карты')
-        return redirect(url_for('main.dashboard'))
-
+    if not current_user.is_admin:
+        abort(403)
     name = request.form.get('name')
     if name:
         new_map = map_service.create_new_map(name, current_user.id)
@@ -89,8 +87,8 @@ def get_sidebar_maps():
 @main_bp.route('/api/map/<int:map_id>', methods=['DELETE'])
 @login_required
 def delete_map(map_id):
-    if current_user.is_operator:
-        return jsonify({'error': 'Оператор не может удалять карты'}), 403
+    if not current_user.is_admin:
+        return jsonify({'error': 'Только администратор может удалять карты'}), 403
 
     map_obj = map_service.get_map_by_id(map_id)
     if not map_obj:

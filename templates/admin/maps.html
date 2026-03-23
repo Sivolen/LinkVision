@@ -19,14 +19,17 @@
             <td>{{ map.name }}</td>
             <td>{{ map.owner.username }}</td>
             <td>{{ map.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td>
+            <td class="text-end">
                 <div class="table-actions">
                     <a href="{{ url_for('main.map_view', map_id=map.id) }}" class="btn-action" title="Открыть">
                         <i class="fas fa-external-link-alt"></i>
                     </a>
-                    <a href="{{ url_for('admin.delete_map', id=map.id) }}" class="btn-action" onclick="return confirm('Удалить карту и все устройства?')" title="Удалить">
-                        <i class="fas fa-trash"></i>
-                    </a>
+                    <form method="POST" action="{{ url_for('admin.delete_map', id=map.id) }}" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-action" onclick="return confirm('Удалить карту и все устройства?')" title="Удалить">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
                 </div>
             </td>
         </tr>

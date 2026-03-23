@@ -7,7 +7,7 @@
 </script>
 
 <div class="toolbar">
-    {% if not is_operator %}
+    {% if current_user.is_admin %}
     <div class="toolbar-group">
         <button class="toolbar-btn" onclick="openDeviceModal()">
             <i class="fas fa-plus"></i> Устройство
@@ -27,7 +27,7 @@
         </button>
     </div>
 
-    {% if not is_operator %}
+    {% if current_user.is_admin %}
     <div class="toolbar-group" id="bulkEditGroup" style="display:none;">
         <button class="toolbar-btn" onclick="openBulkEditModal()">
             <i class="fas fa-edit"></i> Редактировать выбранные
@@ -47,7 +47,7 @@
         </button>
     </div>
 
-    {% if not is_operator %}
+    {% if current_user.is_admin %}
     <div class="toolbar-group">
         <button class="toolbar-btn" onclick="openGroupManager()">
             <i class="fas fa-layer-group"></i> Группы
@@ -197,7 +197,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                {% if not is_operator %}
+                {% if current_user.is_admin %}
                 <button type="button" class="btn btn-primary" onclick="saveDevice()">Сохранить</button>
                 <button type="button" class="btn btn-danger" id="deleteDeviceBtn" style="display:none;" onclick="deleteDevice()">Удалить</button>
                 {% endif %}
@@ -272,7 +272,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
-                {% if not is_operator %}
+                {% if current_user.is_admin %}
                 <button type="button" class="btn btn-danger btn-sm" id="linkDeleteBtn" style="display:none;" onclick="deleteLink()">Удалить</button>
                 <button type="button" class="btn btn-primary btn-sm" onclick="confirmCreateLink()">Сохранить</button>
                 {% endif %}
@@ -459,7 +459,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                {% if not is_operator %}
+                {% if current_user.is_admin %}
                 <button type="button" class="btn btn-primary" onclick="applyBulkEdit()">Применить</button>
                 {% endif %}
             </div>
@@ -478,5 +478,6 @@
             initMap(window.currentMapId);
         }
     });
+    window.isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
 </script>
 {% endblock %}

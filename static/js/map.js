@@ -232,6 +232,11 @@ function updateGroupLabelColor() {
 // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ FETCH С ПОВТОРНЫМИ ПОПЫТКАМИ
 // ============================================================================
 async function fetchWithRetry(url, options = {}, retries = 3, delay = 500) {
+    // Добавляем CSRF-токен для изменяющих методов
+    if (options.method && ['POST', 'PUT', 'DELETE'].includes(options.method.toUpperCase())) {
+        options.headers = options.headers || {};
+        options.headers['X-CSRFToken'] = getCsrfToken();
+    }
     for (let i = 0; i < retries; i++) {
         try {
             const response = await fetch(url, options);
@@ -529,15 +534,11 @@ function initMap(mapId) {
     // Завершение перетаскивания одиночного узла
     cy.on('dragfree', 'node', function(evt) {
         const node = evt.target;
-        // Пропускаем группы (группы не должны перемещаться отдельно)
         if (node.data('isGroup')) return;
-
-        // Запрет для оператора и при активной блокировке
         if (window.isOperator) return;
         if (dragLocked) return;
 
         let pos = node.position();
-        // Если фон загружен, ограничиваем позицию (чтобы не уходить за границы)
         if (bgImageWidth && bgImageHeight) {
             const boundedPos = boundNodePosition(pos);
             if (boundedPos.x !== pos.x || boundedPos.y !== pos.y) {
@@ -550,7 +551,10 @@ function initMap(mapId) {
         dragTimeout = setTimeout(() => {
             fetch(`/api/device/${node.id()}/position`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
                 body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
             }).catch(err => Logger.error('Ошибка при сохранении позиции:', err));
         }, 500);
@@ -584,7 +588,6 @@ function initMap(mapId) {
         if (selectedNodes.length <= 1) return;
 
         const draggedNode = evt.target;
-        // Если перетащили группу – игнорируем (группы не участвуют в групповом выделении)
         if (draggedNode.data('isGroup')) return;
 
         const oldPos = draggedNode._private.scratch._dragStartPos || draggedNode.position();
@@ -599,17 +602,18 @@ function initMap(mapId) {
                     const nodePos = node.position();
                     let newX = nodePos.x + deltaX;
                     let newY = nodePos.y + deltaY;
-                    // Если есть фон, ограничиваем
                     if (bgImageWidth && bgImageHeight) {
                         const bounded = boundNodePosition({ x: newX, y: newY });
                         newX = bounded.x;
                         newY = bounded.y;
                     }
                     node.position({ x: newX, y: newY });
-                    // Сохраняем позицию
                     fetch(`/api/device/${node.id()}/position`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
                         body: JSON.stringify({ x: Math.round(newX), y: Math.round(newY) })
                     }).catch(err => Logger.error('Ошибка при сохранении позиции:', err));
                 }
@@ -618,34 +622,36 @@ function initMap(mapId) {
     });
 
     // Обработчик перетаскивания группы
-// Обработчик перетаскивания группы
-cy.on('dragfree', 'node[isGroup]', function(evt) {
-    const groupNode = evt.target;
-    if (window.isOperator) return;
-    if (dragLocked) return;
+    cy.on('dragfree', 'node[isGroup]', function(evt) {
+        const groupNode = evt.target;
+        if (window.isOperator) return;
+        if (dragLocked) return;
 
-    const children = groupNode.children().filter(child => !child.data('isGroup'));
-    if (children.length === 0) return;
+        const children = groupNode.children().filter(child => !child.data('isGroup'));
+        if (children.length === 0) return;
 
-    clearTimeout(groupDragTimeout);
-    groupDragTimeout = setTimeout(() => {
-        children.forEach(child => {
-            let pos = child.position();
-            if (bgImageWidth && bgImageHeight) {
-                const bounded = boundNodePosition(pos);
-                if (bounded.x !== pos.x || bounded.y !== pos.y) {
-                    child.position(bounded);
-                    pos = bounded;
+        clearTimeout(groupDragTimeout);
+        groupDragTimeout = setTimeout(() => {
+            children.forEach(child => {
+                let pos = child.position();
+                if (bgImageWidth && bgImageHeight) {
+                    const bounded = boundNodePosition(pos);
+                    if (bounded.x !== pos.x || bounded.y !== pos.y) {
+                        child.position(bounded);
+                        pos = bounded;
+                    }
                 }
-            }
-            fetch(`/api/device/${child.id()}/position`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
-            }).catch(err => Logger.error('Ошибка сохранения позиции устройства:', err));
-        });
-    }, 500);
-});
+                fetch(`/api/device/${child.id()}/position`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
+                }).catch(err => Logger.error('Ошибка сохранения позиции устройства:', err));
+            });
+        }, 500);
+    });
     // ==================== ОБРАБОТЧИКИ КЛИКОВ ====================
 
     cy.on('tap', 'node', function(evt) {
@@ -903,9 +909,6 @@ function saveDevicePosition(node) {
 
 
 function saveViewportToServer() {
-    // Оператор не сохраняет viewport – все изменения временные
-    // if (window.isOperator) return;
-
     if (!cy) return;
     const pan = cy.pan();
     const zoom = cy.zoom();
@@ -913,7 +916,10 @@ function saveViewportToServer() {
     viewportTimeout = setTimeout(() => {
         fetch(`/api/map/${getMapId()}/viewport`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
             body: JSON.stringify({ pan_x: pan.x, pan_y: pan.y, zoom: zoom })
         }).catch(err => Logger.error('Ошибка сохранения viewport:', err));
     }, 500);
@@ -1027,7 +1033,10 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
 
     fetch('/api/link', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
         body: JSON.stringify({
             map_id: getMapId(),
             source_id: sourceId,
@@ -1047,8 +1056,8 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
                 group: 'edges',
                 data: {
                     id: `link_${data.id}`,
-                    source: String(sourceId),      // обязательно строка!
-                    target: String(targetId),      // обязательно строка!
+                    source: String(sourceId),
+                    target: String(targetId),
                     label: `${srcIface}↔${tgtIface}`,
                     link_type: linkType,
                     color: lineColor,
@@ -1069,7 +1078,10 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
     const numericId = linkId.replace('link_', '');
     fetch(`/api/link/${numericId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
         body: JSON.stringify({
             source_interface: srcIface,
             target_interface: tgtIface,
@@ -1081,7 +1093,6 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
     })
     .then(res => {
         if (!res.ok) throw new Error('Ошибка обновления');
-        // Обновляем данные ребра в графе
         const edge = cy.getElementById(linkId);
         if (edge.length) {
             edge.data({
@@ -1091,7 +1102,7 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
                 width: lineWidth,
                 style: lineStyle
             });
-            cy.style().update(); // переприменяем стили
+            cy.style().update();
         }
         if (typeof window.showToast === 'function') {
             window.showToast('Успешно', 'Связь обновлена', 'success');
@@ -1106,12 +1117,15 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
 function deleteLink(linkId) {
     if (!confirm('⚠️ Удалить эту связь?')) return;
     const numericId = String(linkId).replace('link_', '');
-    fetch(`/api/link/${numericId}`, { method: 'DELETE' })
+    fetch(`/api/link/${numericId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
     .then(res => {
         if (!res.ok) throw new Error('Ошибка удаления');
-        // Удаляем ребро из графа
         removeLinkFromGraph(linkId);
-        // Закрываем модальное окно
         if (linkModal) linkModal.hide();
     })
     .catch(err => {
@@ -1506,7 +1520,10 @@ function applyBulkEdit() {
         promises.push(
             fetch(`/api/device/${node.id()}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
                 body: JSON.stringify(update)
             }).then(res => {
                 if (!res.ok) throw new Error(`Ошибка обновления устройства ${node.id()}`);

@@ -1,6 +1,7 @@
 import os
 import uuid
 from werkzeug.utils import secure_filename
+from PIL import Image
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
 MAX_FILE_SIZE = 16 * 1024 * 1024  # 16 MB
@@ -12,7 +13,7 @@ def allowed_file(filename):
 
 
 def validate_image(file):
-    """Проверяет, является ли файл изображением (по сигнатуре)."""
+    """Проверяет, является ли файл изображением (по сигнатуре и через Pillow)."""
     if not file:
         return False
 
@@ -23,38 +24,25 @@ def validate_image(file):
     if size > MAX_FILE_SIZE:
         return False
 
-    # Читаем начало файла
+    # Проверка через Pillow (безопасное открытие)
+    try:
+        img = Image.open(file)
+        img.verify()  # Проверка на корректность изображения
+        file.seek(0)  # Возвращаем указатель в начало
+    except Exception:
+        return False
+
+    # Дополнительная проверка сигнатур для SVG (Pillow не поддерживает SVG)
     head = file.read(1024)
     file.seek(0)
-
-    # Проверка сигнатур основных форматов
-    # PNG
-    if head.startswith(b'\x89PNG\r\n\x1a\n'):
-        return 'png' in ALLOWED_EXTENSIONS
-    # JPEG
-    if head.startswith(b'\xff\xd8\xff'):
-        return 'jpg' in ALLOWED_EXTENSIONS or 'jpeg' in ALLOWED_EXTENSIONS
-    # GIF
-    if head.startswith(b'GIF87a') or head.startswith(b'GIF89a'):
-        return 'gif' in ALLOWED_EXTENSIONS
-    # BMP
-    if head.startswith(b'BM'):
-        return 'bmp' in ALLOWED_EXTENSIONS
-    # WEBP
-    if head.startswith(b'RIFF') and head[8:12] == b'WEBP':
-        return 'webp' in ALLOWED_EXTENSIONS
-    # SVG (текстовый XML или SVG)
     if head.startswith(b'<?xml') or head.startswith(b'<svg'):
         return 'svg' in ALLOWED_EXTENSIONS
 
-    return False
+    # Для остальных форматов достаточно проверки Pillow
+    return True
 
 
 def safe_save_upload(file, folder, prefix=''):
-    """
-    Безопасно сохраняет загруженный файл.
-    Возвращает имя сохранённого файла или None.
-    """
     if not file or not allowed_file(file.filename):
         return None
     if not validate_image(file):
