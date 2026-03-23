@@ -14,7 +14,7 @@ let viewportTimeout = null;
 let pendingFit = false;
 let elementsLoaded = false;
 let backgroundLoaded = false;
-
+let groupDragTimeout = null;
 
 // ============================================================================
 // СТИЛИ CYTOSCAPE (вынесены в константу)
@@ -545,9 +545,9 @@ function initMap(mapId) {
     // Начало перетаскивания (запоминаем стартовую позицию)
     cy.on('drag', 'node', function(evt) {
         const node = evt.target;
-        // Группы не перетаскиваем отдельно (они двигаются вместе с дочерними)
+        // Группы можно перетаскивать, но не запоминаем для них стартовую позицию (она не используется)
         if (node.data('isGroup')) {
-            evt.preventDefault();
+            // Разрешаем перетаскивание, выходим без запоминания
             return;
         }
         if (window.isOperator) {
@@ -603,6 +603,35 @@ function initMap(mapId) {
         }, 500);
     });
 
+    // Обработчик перетаскивания группы
+// Обработчик перетаскивания группы
+cy.on('dragfree', 'node[isGroup]', function(evt) {
+    const groupNode = evt.target;
+    if (window.isOperator) return;
+    if (dragLocked) return;
+
+    const children = groupNode.children().filter(child => !child.data('isGroup'));
+    if (children.length === 0) return;
+
+    clearTimeout(groupDragTimeout);
+    groupDragTimeout = setTimeout(() => {
+        children.forEach(child => {
+            let pos = child.position();
+            if (bgImageWidth && bgImageHeight) {
+                const bounded = boundNodePosition(pos);
+                if (bounded.x !== pos.x || bounded.y !== pos.y) {
+                    child.position(bounded);
+                    pos = bounded;
+                }
+            }
+            fetch(`/api/device/${child.id()}/position`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
+            }).catch(err => Logger.error('Ошибка сохранения позиции устройства:', err));
+        });
+    }, 500);
+});
     // ==================== ОБРАБОТЧИКИ КЛИКОВ ====================
 
     cy.on('tap', 'node', function(evt) {
