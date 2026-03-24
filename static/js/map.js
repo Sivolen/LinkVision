@@ -4,7 +4,9 @@ let cy = null;
 let linkModal = null;
 let linkMode = false;
 let sourceNode = null;
-let dragTimeout = null;
+//let dragTimeout = null;
+let dragTimeouts = {};            // для одиночных узлов
+let groupBatchTimeout = null;     // для группового сохранения
 let currentMode = 'pan';
 let bgImageWidth = null;
 let bgImageHeight = null;
@@ -507,8 +509,7 @@ function initMap(mapId) {
     cy.on('dragfree', 'node', function(evt) {
         const node = evt.target;
         if (node.data('isGroup')) return;
-        if (window.isOperator) return;
-        if (dragLocked) return;
+        if (window.isOperator || dragLocked) return;
 
         let pos = node.position();
         if (bgImageWidth && bgImageHeight) {
@@ -519,8 +520,8 @@ function initMap(mapId) {
             }
         }
 
-        clearTimeout(dragTimeout);
-        dragTimeout = setTimeout(() => {
+        if (dragTimeouts[node.id()]) clearTimeout(dragTimeouts[node.id()]);
+        dragTimeouts[node.id()] = setTimeout(() => {
             fetch(`/api/device/${node.id()}/position`, {
                 method: 'PUT',
                 headers: {
@@ -529,68 +530,76 @@ function initMap(mapId) {
                 },
                 body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
             }).catch(err => Logger.error('Ошибка при сохранении позиции:', err));
+            delete dragTimeouts[node.id()];
         }, 500);
     });
 
     // Начало перетаскивания (запоминаем стартовую позицию)
     cy.on('drag', 'node', function(evt) {
         const node = evt.target;
-        // Группы можно перетаскивать, но не запоминаем для них стартовую позицию (она не используется)
-        if (node.data('isGroup')) {
-            // Разрешаем перетаскивание, выходим без запоминания
-            return;
-        }
-        if (window.isOperator) {
+        if (node.data('isGroup')) return;
+        if (window.isOperator || dragLocked) {
             evt.preventDefault();
             return;
         }
-        if (dragLocked) {
-            evt.preventDefault();
-            return;
+        // Сохраняем начальные позиции для всех выбранных узлов
+        if (!node._private.scratch._dragStartPos) {
+            const selectedNodes = cy.nodes(':selected').filter(n => !n.data('isGroup'));
+            selectedNodes.forEach(selNode => {
+                selNode._private.scratch._dragStartPos = selNode.position();
+            });
+            node._private.scratch._dragStartPos = node.position();
         }
-        evt.target._private.scratch._dragStartPos = evt.target.position();
     });
 
     // Завершение перетаскивания группы выбранных узлов
     cy.on('dragfree', 'node:selected', function(evt) {
-        if (window.isOperator) return;
-        if (dragLocked) return;
-
-        const selectedNodes = cy.nodes(':selected').filter(node => !node.data('isGroup'));
-        if (selectedNodes.length <= 1) return;
+        if (window.isOperator || dragLocked) return;
 
         const draggedNode = evt.target;
         if (draggedNode.data('isGroup')) return;
 
-        const oldPos = draggedNode._private.scratch._dragStartPos || draggedNode.position();
+        const selectedNodes = cy.nodes(':selected').filter(n => !n.data('isGroup'));
+        if (selectedNodes.length <= 1) return;
+
+        const oldPos = draggedNode._private.scratch._dragStartPos;
+        if (!oldPos) return;
+
         const newPos = draggedNode.position();
         const deltaX = newPos.x - oldPos.x;
         const deltaY = newPos.y - oldPos.y;
 
-        clearTimeout(dragTimeout);
-        dragTimeout = setTimeout(() => {
-            selectedNodes.forEach(node => {
-                if (node.id() !== draggedNode.id()) {
-                    const nodePos = node.position();
-                    let newX = nodePos.x + deltaX;
-                    let newY = nodePos.y + deltaY;
-                    if (bgImageWidth && bgImageHeight) {
-                        const bounded = boundNodePosition({ x: newX, y: newY });
-                        newX = bounded.x;
-                        newY = bounded.y;
-                    }
-                    node.position({ x: newX, y: newY });
-                    fetch(`/api/device/${node.id()}/position`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCsrfToken()
-                        },
-                        body: JSON.stringify({ x: Math.round(newX), y: Math.round(newY) })
-                    }).catch(err => Logger.error('Ошибка при сохранении позиции:', err));
-                }
-            });
+        const updates = [];
+        selectedNodes.forEach(node => {
+            let x = node.position().x + deltaX;
+            let y = node.position().y + deltaY;
+            if (bgImageWidth && bgImageHeight) {
+                const bounded = boundNodePosition({ x, y });
+                x = bounded.x;
+                y = bounded.y;
+            }
+            node.position({ x, y });
+            updates.push({ id: node.id(), x: Math.round(x), y: Math.round(y) });
+        });
+
+        // batch-сохранение после debounce
+        if (groupBatchTimeout) clearTimeout(groupBatchTimeout);
+        groupBatchTimeout = setTimeout(() => {
+            const promises = updates.map(update =>
+                fetch(`/api/device/${update.id}/position`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ x: update.x, y: update.y })
+                }).catch(err => Logger.error('Ошибка при сохранении позиции:', err))
+            );
+            Promise.all(promises).catch(err => Logger.error('Групповое сохранение:', err));
         }, 500);
+
+        // очистка scratch
+        selectedNodes.forEach(node => delete node._private.scratch._dragStartPos);
     });
 
     // Обработчик перетаскивания группы
