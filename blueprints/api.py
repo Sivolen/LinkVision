@@ -83,7 +83,6 @@ def get_device_history(id):
     if not (current_user.is_admin or device.map.owner_id == current_user.id or current_user.is_operator):
         return jsonify({'error': 'Доступ запрещён'}), 403
 
-    # Получаем параметры пагинации из запроса
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
 
@@ -160,7 +159,23 @@ def export_map(id):
 @admin_required
 def create_device():
     data = request.json
+    # Проверяем обязательные поля
+    if not data.get('map_id'):
+        return jsonify({'error': 'map_id is required'}), 400
+    if not data.get('type_id'):
+        return jsonify({'error': 'type_id is required'}), 400
+    if not data.get('name'):
+        return jsonify({'error': 'name is required'}), 400
+
     try:
+        # Валидация карты
+        map_service.validate_map(data['map_id'])
+        # Валидация типа устройства
+        device_service.validate_device_type(data['type_id'])
+        # Валидация группы (если указана)
+        if data.get('group_id'):
+            device_service.validate_group_for_map(data['group_id'], data['map_id'])
+
         dev = device_service.create_device(
             map_id=data['map_id'],
             type_id=data['type_id'],
@@ -172,9 +187,12 @@ def create_device():
             monitoring_enabled=data.get('monitoring_enabled', True)
         )
         return jsonify({'id': dev.id}), 201
+    except ValueError as e:
+        api_logger.warning(f"Validation error creating device: {e}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         api_logger.error(f"Error creating device: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @api_bp.route('/device/<int:id>', methods=['PUT'])
@@ -190,9 +208,20 @@ def update_device(id):
     data = request.json
     allowed_fields = ['name', 'ip_address', 'type_id', 'pos_x', 'pos_y', 'group_id', 'monitoring_enabled']
     update_data = {k: v for k, v in data.items() if k in allowed_fields}
+
     try:
+        # Если меняется тип устройства, проверяем существование
+        if 'type_id' in update_data:
+            device_service.validate_device_type(update_data['type_id'])
+        # Если меняется группа, проверяем принадлежность к карте
+        if 'group_id' in update_data:
+            device_service.validate_group_for_map(update_data['group_id'], device.map_id)
+
         device_service.update_device(id, **update_data)
         return jsonify({'status': 'ok', 'id': id})
+    except ValueError as e:
+        api_logger.warning(f"Validation error updating device {id}: {e}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         api_logger.error(f"Error updating device: {e}")
         return jsonify({'error': str(e)}), 500
@@ -226,6 +255,8 @@ def update_position(id):
         return jsonify({'error': 'Доступ запрещён'}), 403
 
     data = request.json
+    if 'x' not in data or 'y' not in data:
+        return jsonify({'error': 'x and y are required'}), 400
     try:
         device_service.update_device_position(id, data['x'], data['y'])
         return jsonify({'status': 'ok'})
@@ -239,15 +270,22 @@ def update_position(id):
 @admin_required
 def create_link():
     data = request.get_json()
-    if not all(k in data for k in ['map_id', 'source_id', 'target_id']):
-        return jsonify({'error': 'Missing required fields'}), 400
-
-    source = device_service.get_device_by_id(data['source_id'])
-    target = device_service.get_device_by_id(data['target_id'])
-    if not source or not target:
-        return jsonify({'error': 'Source or target device not found'}), 404
+    required = ['map_id', 'source_id', 'target_id']
+    if not all(k in data for k in required):
+        return jsonify({'error': 'Missing required fields: map_id, source_id, target_id'}), 400
 
     try:
+        # Валидация карты
+        map_service.validate_map(data['map_id'])
+        # Валидация устройств
+        source = device_service.get_device_by_id(data['source_id'])
+        target = device_service.get_device_by_id(data['target_id'])
+        if not source or not target:
+            return jsonify({'error': 'Source or target device not found'}), 404
+        # Проверяем, что оба устройства принадлежат указанной карте
+        if source.map_id != data['map_id'] or target.map_id != data['map_id']:
+            return jsonify({'error': 'Both devices must belong to the same map'}), 400
+
         link = map_service.create_link(
             map_id=data['map_id'],
             source_id=data['source_id'],
@@ -260,6 +298,9 @@ def create_link():
             line_style=data.get('line_style', 'solid')
         )
         return jsonify({'id': link.id}), 201
+    except ValueError as e:
+        api_logger.warning(f"Validation error creating link: {e}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         api_logger.error(f"Error creating link: {e}")
         return jsonify({'error': str(e)}), 500
@@ -397,16 +438,22 @@ def create_group():
     map_id = data.get('map_id')
     if not map_id:
         return jsonify({'error': 'map_id required'}), 400
-
-    map_obj = map_service.get_map_by_id(map_id)
-    if not map_obj:
-        return jsonify({'error': 'Map not found'}), 404
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
-        return jsonify({'error': 'Доступ запрещён'}), 403
+    if not data.get('name'):
+        return jsonify({'error': 'name required'}), 400
 
     try:
+        # Валидация карты
+        map_service.validate_map(map_id)
+        # Валидация прав (уже сделано через admin_required и проверку доступа)
+        map_obj = map_service.get_map_by_id(map_id)
+        if not (current_user.is_admin or map_obj.owner_id == current_user.id):
+            return jsonify({'error': 'Доступ запрещён'}), 403
+
         group = map_service.create_group(map_id, data['name'], data.get('color', '#3498db'))
         return jsonify({'id': group.id}), 201
+    except ValueError as e:
+        api_logger.warning(f"Validation error creating group: {e}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         api_logger.error(f"Error creating group: {e}")
         return jsonify({'error': str(e)}), 500
@@ -425,8 +472,15 @@ def update_group(id):
 
     data = request.json
     try:
+        # Валидация (можно проверить, что название не пустое)
+        name = data.get('name')
+        if name is not None and (not name or len(name) < 2):
+            return jsonify({'error': 'Group name must be at least 2 characters'}), 400
         map_service.update_group(id, name=data.get('name'), color=data.get('color'))
         return jsonify({'status': 'updated'})
+    except ValueError as e:
+        api_logger.warning(f"Validation error updating group {id}: {e}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         api_logger.error(f"Error updating group: {e}")
         return jsonify({'error': str(e)}), 500
