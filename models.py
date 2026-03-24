@@ -79,9 +79,9 @@ class Map(db.Model):
     background_image = db.Column(db.String(256), nullable=True)  # новое поле
     devices = db.relationship('Device', backref='map', cascade="all, delete-orphan", lazy='dynamic')
     links = db.relationship('Link', backref='map', cascade="all, delete-orphan", lazy='dynamic')
-    pan_x = db.Column(db.Float, default=0)
-    pan_y = db.Column(db.Float, default=0)
-    zoom = db.Column(db.Float, default=1)
+    # pan_x = db.Column(db.Float, default=0)
+    # pan_y = db.Column(db.Float, default=0)
+    # zoom = db.Column(db.Float, default=1)
 
 
 class DeviceHistory(db.Model):

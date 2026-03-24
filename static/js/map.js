@@ -1,8 +1,6 @@
-// ============================================================================
-// LinkVision - Карта сети (ФИНАЛЬНАЯ ВЕРСИЯ С ИСПРАВЛЕНИЯМИ)
-// ============================================================================
+// map.js - функции карты
+// ==================== Глобальные переменные ====================
 let cy = null;
-//let deviceModal = null;
 let linkModal = null;
 let linkMode = false;
 let sourceNode = null;
@@ -223,32 +221,6 @@ function updateGroupLabelColor() {
         .selector('node[isGroup]')
         .style('color', textColor)
         .update();
-}
-
-// Глобальный сокет (объявлен как window.socket)
-// window.socket = null;
-
-// ============================================================================
-// УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ FETCH С ПОВТОРНЫМИ ПОПЫТКАМИ
-// ============================================================================
-async function fetchWithRetry(url, options = {}, retries = 3, delay = 500) {
-    // Добавляем CSRF-токен для изменяющих методов
-    if (options.method && ['POST', 'PUT', 'DELETE'].includes(options.method.toUpperCase())) {
-        options.headers = options.headers || {};
-        options.headers['X-CSRFToken'] = getCsrfToken();
-    }
-    for (let i = 0; i < retries; i++) {
-        try {
-            const response = await fetch(url, options);
-            return response;
-        } catch (error) {
-            const isLastAttempt = i === retries - 1;
-            if (isLastAttempt) throw error;
-            Logger.warn(`⚠️ fetch failed (attempt ${i+1}/${retries}), retrying in ${delay}ms...`, error);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            delay *= 2;
-        }
-    }
 }
 
 // ============================================================================
@@ -1386,50 +1358,6 @@ function confirmLayout(layoutName) {
     }
 }
 
-function applyLayout(layoutName) {
-    if (!cy) return;
-
-    // Параметры для разных лэйаутов
-    const layoutOptions = {
-        name: layoutName,
-        animate: true,
-        animationDuration: 500,
-        fit: true,
-        padding: 30
-    };
-
-    // Дополнительные настройки для конкретных лэйаутов
-    if (layoutName === 'grid') {
-        layoutOptions.rows = undefined; // авто
-    } else if (layoutName === 'circle') {
-        // стандартные настройки
-    } else if (layoutName === 'concentric') {
-        layoutOptions.minNodeSpacing = 50;
-    } else if (layoutName === 'breadthfirst') {
-        layoutOptions.directed = true;
-        layoutOptions.circle = false;
-        layoutOptions.spacingFactor = 1.5;
-    } else if (layoutName === 'cose') {
-        layoutOptions.idealEdgeLength = 100;
-        layoutOptions.nodeOverlap = 20;
-        layoutOptions.refresh = 20;
-        layoutOptions.fit = true;
-        layoutOptions.padding = 30;
-        layoutOptions.randomize = false;
-        layoutOptions.componentSpacing = 100;
-        layoutOptions.nodeRepulsion = 400000;
-        layoutOptions.edgeElasticity = 100;
-        layoutOptions.nestingFactor = 5;
-        layoutOptions.gravity = 80;
-        layoutOptions.numIter = 1000;
-        layoutOptions.initialTemp = 200;
-        layoutOptions.coolingFactor = 0.95;
-        layoutOptions.minTemp = 1.0;
-    }
-
-    const layout = cy.layout(layoutOptions);
-    layout.run();
-}
 // ============================================================================
 // МАССОВОЕ РЕДАКТИРОВАНИЕ
 // ============================================================================
@@ -1704,4 +1632,115 @@ function setLinkSaving(isSaving) {
         if (btnLoader) btnLoader.classList.add('d-none');
         saveBtn.disabled = false;
     }
+}
+
+function saveAllPositions() {
+    const devices = cy.nodes().filter(node => !node.data('isGroup'));
+    if (devices.length === 0) return;
+
+    const updates = [];
+    devices.forEach(device => {
+        let pos = device.position();
+        if (bgImageWidth && bgImageHeight) {
+            const bounded = boundNodePosition(pos);
+            if (bounded.x !== pos.x || bounded.y !== pos.y) {
+                device.position(bounded);
+                pos = bounded;
+            }
+        }
+        updates.push({
+            id: device.id(),
+            x: Math.round(pos.x),
+            y: Math.round(pos.y)
+        });
+    });
+
+    const savingToast = showToast('Сохранение', 'Сохранение позиций устройств...', 'info', { autoHide: false });
+    fetch('/api/devices/positions', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(updates)
+    })
+    .then(async res => {
+        if (!res.ok) {
+            const errorMsg = await getErrorMessage(res);
+            throw new Error(errorMsg);
+        }
+        return res.json();
+    })
+    .then(data => {
+        Logger.info(`Saved ${data.updated} device positions after layout`);
+        showToast('Успешно', `Сохранены позиции ${data.updated} устройств`, 'success');
+    })
+    .catch(err => {
+        Logger.error('Error saving positions after layout:', err);
+        showToast('Ошибка', err.message || 'Не удалось сохранить позиции устройств', 'error');
+    })
+    .finally(() => {
+        if (savingToast && typeof savingToast.hide === 'function') savingToast.hide();
+    });
+}
+
+function applyLayout(layoutName) {
+    if (!cy) return;
+
+    // Параметры для разных лэйаутов
+    const layoutOptions = {
+        name: layoutName,
+        animate: true,
+        animationDuration: 500,
+        fit: true,
+        padding: 30
+    };
+
+    // Дополнительные настройки для конкретных лэйаутов
+    if (layoutName === 'grid') {
+        layoutOptions.rows = undefined; // авто
+    } else if (layoutName === 'circle') {
+        // стандартные настройки
+    } else if (layoutName === 'concentric') {
+        layoutOptions.minNodeSpacing = 50;
+    } else if (layoutName === 'breadthfirst') {
+        layoutOptions.directed = true;
+        layoutOptions.circle = false;
+        layoutOptions.spacingFactor = 1.5;
+    } else if (layoutName === 'cose') {
+        layoutOptions.idealEdgeLength = 100;
+        layoutOptions.nodeOverlap = 20;
+        layoutOptions.refresh = 20;
+        layoutOptions.fit = true;
+        layoutOptions.padding = 30;
+        layoutOptions.randomize = false;
+        layoutOptions.componentSpacing = 100;
+        layoutOptions.nodeRepulsion = 400000;
+        layoutOptions.edgeElasticity = 100;
+        layoutOptions.nestingFactor = 5;
+        layoutOptions.gravity = 80;
+        layoutOptions.numIter = 1000;
+        layoutOptions.initialTemp = 200;
+        layoutOptions.coolingFactor = 0.95;
+        layoutOptions.minTemp = 1.0;
+    }
+
+    const layout = cy.layout(layoutOptions);
+
+    // Сохраняем позиции после завершения раскладки
+    layout.on('layoutstop', function() {
+        cy.nodes().forEach(node => {
+            if (node.data('isGroup')) return;
+            let pos = node.position();
+            if (bgImageWidth && bgImageHeight) {
+                const bounded = boundNodePosition(pos);
+                if (bounded.x !== pos.x || bounded.y !== pos.y) {
+                    node.position(bounded);
+                }
+            }
+        });
+        saveAllPositions(); // вызовем функцию сохранения
+    });
+
+    layout.run();
 }

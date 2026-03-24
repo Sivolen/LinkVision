@@ -448,3 +448,37 @@ def delete_group(id):
     except Exception as e:
         api_logger.error(f"Error deleting group: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/devices/positions', methods=['PUT'])
+@login_required
+@admin_required
+def update_devices_positions():
+    """Массовое обновление позиций устройств."""
+    data = request.json
+    if not data or not isinstance(data, list):
+        return jsonify({'error': 'Invalid request, expected list of {id, x, y}'}), 400
+
+    valid_updates = []
+    for item in data:
+        device_id = item.get('id')
+        x = item.get('x')
+        y = item.get('y')
+        if device_id is None or x is None or y is None:
+            continue
+        device = device_service.get_device_by_id(device_id)
+        if not device:
+            continue
+        if not (current_user.is_admin or device.map.owner_id == current_user.id):
+            continue
+        valid_updates.append({'id': device_id, 'x': x, 'y': y})
+
+    if not valid_updates:
+        return jsonify({'error': 'No valid updates'}), 400
+
+    try:
+        updated = device_service.update_devices_positions(valid_updates)
+        return jsonify({'status': 'ok', 'updated': updated})
+    except Exception as e:
+        api_logger.error(f"Error updating multiple positions: {e}")
+        return jsonify({'error': str(e)}), 500

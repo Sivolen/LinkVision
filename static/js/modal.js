@@ -390,24 +390,6 @@ function loadHistoryPage(newPage) {
     loadHistory(currentDeviceId, newPage);
 }
 
-function formatDateTime(timestamp) {
-    if (!timestamp) return '—';
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return timestamp;
-    return date.toLocaleString('ru-RU', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', second: '2-digit'
-    });
-}
-
-function getStatusBadgeClass(status) {
-    const s = String(status).toLowerCase();
-    if (s === 'up' || s === 'true' || s === 'online') return 'bg-success';
-    if (s === 'down' || s === 'false' || s === 'offline') return 'bg-danger';
-    if (s === 'warning') return 'bg-warning';
-    return 'bg-secondary';
-}
-
 // ==================== ГРУППЫ — ИСПРАВЛЕННАЯ ВЕРСИЯ ====================
 
 // ===== Цветовой пикер =====
@@ -754,37 +736,6 @@ function initToast() {
     if (toastEl && !toastEl.toast) {
         toastEl.toast = new bootstrap.Toast(toastEl, { delay: 3500 });
     }
-}
-
-function showToast(title, message, type = 'success') {
-    const toast = document.getElementById('liveToast');
-    const instance = toast?.toast;
-
-    if (!instance) {
-        Logger.info(`[${type}] ${title}: ${message}`);
-        if (type === 'error') alert(title + ': ' + message);
-        return;
-    }
-
-    document.getElementById('toastTitle').textContent = title;
-    document.getElementById('toastMessage').textContent = message;
-    document.getElementById('toastTime').textContent = 'только что';
-
-    const icon = document.getElementById('toastIcon');
-    const header = toast.querySelector('.toast-header');
-
-    if (type === 'error') {
-        if (icon) icon.className = 'fas fa-exclamation-circle text-danger me-2';
-        if (header) header.style.borderLeft = '4px solid #ef4444';
-    } else if (type === 'info') {
-        if (icon) icon.className = 'fas fa-info-circle text-info me-2';
-        if (header) header.style.borderLeft = '4px solid #3b82f6';
-    } else {
-        if (icon) icon.className = 'fas fa-check-circle text-success me-2';
-        if (header) header.style.borderLeft = '4px solid #22c55e';
-    }
-
-    instance.show();
 }
 
 // ===== Утилиты =====
