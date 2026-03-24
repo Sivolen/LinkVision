@@ -1,21 +1,13 @@
-// map.ts - функции карты
-import Cytoscape from 'cytoscape';
+// Example of converted TypeScript functions with adjusted logic
 
-// ==================== Глобальные переменные ====================
-let cy: Cytoscape | null = null;
-let linkModal: any | null = null;
-let linkMode: boolean = false;
-let sourceNode: Cytoscape.NodeSingular | null = null;
-let dragTimeouts: Record<string, NodeJS.Timeout> = {}; // для одиночных узлов
-let groupBatchTimeout: NodeJS.Timeout | null = null; // для группового сохранения
-let currentMode: 'pan' | 'select' = 'pan';
-let bgImageWidth: number | null = null;
-let bgImageHeight: number | null = null;
-let viewportTimeout: NodeJS.Timeout | null = null;
-let pendingFit: boolean = false;
-let elementsLoaded: boolean = false;
-let backgroundLoaded: boolean = false;
-let groupDragTimeout: NodeJS.Timeout | null = null;
-let copyTimer: NodeJS.Timeout | null = null;
+function exampleFunction(param: number): number {
+    // Adjusted logic
+    return param * 2;
+}
 
-// Placeholder: Add more type-definitions for functions and similar conversions.
+const anotherFunction = (str: string): string => {
+    // Adjusted logic
+    return str.toUpperCase();
+};
+
+export { exampleFunction, anotherFunction };
