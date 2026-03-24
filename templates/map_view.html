@@ -479,7 +479,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/confirm.js') }}"></script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modal.js') }}"></script>
 <script>
@@ -489,7 +489,5 @@
             initMap(window.currentMapId);
         }
     });
-    window.isOperator = {{ 'true' if is_operator else 'false' }};
-    window.isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
 </script>
 {% endblock %}

@@ -135,3 +135,29 @@ def update_device_position(device_id, x, y):
 def get_all_device_types():
     """Вернуть список всех типов устройств."""
     return DeviceType.query.all()
+
+
+def update_devices_positions(updates):
+    """
+    Обновляет позиции нескольких устройств.
+    updates: список словарей {'id': device_id, 'x': x, 'y': y}
+    Возвращает количество обновлённых устройств.
+    """
+    if not updates:
+        return 0
+
+    updated = 0
+    for item in updates:
+        device_id = item.get('id')
+        x = item.get('x')
+        y = item.get('y')
+        if device_id is None or x is None or y is None:
+            continue
+        device = Device.query.get(device_id)
+        if not device:
+            continue
+        device.pos_x = x
+        device.pos_y = y
+        updated += 1
+    db.session.commit()
+    return updated
