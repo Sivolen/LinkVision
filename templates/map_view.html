@@ -198,7 +198,12 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                 {% if current_user.is_admin %}
-                <button type="button" class="btn btn-primary" onclick="saveDevice()">Сохранить</button>
+                <button type="button" class="btn btn-primary" onclick="saveDevice()" id="saveDeviceBtn">
+                    <span class="btn-text">Сохранить</span>
+                    <span class="btn-loader d-none">
+                        <span class="spinner"></span> Сохранение...
+                    </span>
+                </button>
                 <button type="button" class="btn btn-danger" id="deleteDeviceBtn" style="display:none;" onclick="deleteDevice()">Удалить</button>
                 {% endif %}
             </div>
@@ -274,7 +279,12 @@
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
                 {% if current_user.is_admin %}
                 <button type="button" class="btn btn-danger btn-sm" id="linkDeleteBtn" style="display:none;" onclick="deleteLink()">Удалить</button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="confirmCreateLink()">Сохранить</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="confirmCreateLink()" id="saveLinkBtn">
+                    <span class="btn-text">Сохранить</span>
+                    <span class="btn-loader d-none">
+                        <span class="spinner"></span> Сохранение...
+                    </span>
+                </button>
                 {% endif %}
             </div>
         </div>
@@ -469,6 +479,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/confirm.js') }}"></script>
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modal.js') }}"></script>
 <script>

@@ -177,6 +177,24 @@
             </div>
         </div>
     </div>
+    <!-- Модальное окно подтверждения -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmModalTitle">Подтверждение</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="confirmModalMessage">
+                    Вы уверены?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger" id="confirmModalConfirmBtn">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
 <!-- Toast контейнер для уведомлений -->
 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100">
     <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
@@ -366,12 +384,10 @@
         function deleteMap(event, mapId) {
             event.preventDefault();
             event.stopPropagation();
-            if (confirm('Удалить эту карту?')) {
+            confirmAction('Удаление карты', 'Удалить эту карту?', () => {
                 fetch(`/api/map/${mapId}`, {
                     method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken()
-                    }
+                    headers: { 'X-CSRFToken': getCsrfToken() }
                 })
                 .then(async res => {
                     if (res.ok) {
@@ -379,7 +395,6 @@
                             window.location.href = '/';
                             return;
                         }
-                        // Удаляем элемент карты из DOM
                         const mapItemElement = document.querySelector(`.map-item[href="/map/${mapId}"]`);
                         if (mapItemElement) {
                             const li = mapItemElement.closest('li');
@@ -395,7 +410,7 @@
                     Logger.error('Error deleting map:', err);
                     showToast('Ошибка', 'Не удалось удалить карту', 'error');
                 });
-            }
+            });
         }
         function editMap(event, mapId, mapName) {
             event.preventDefault();
@@ -605,7 +620,6 @@
         instance.show();
     }
     </script>
-
     {% block scripts %}{% endblock %}
 </body>
 </html>
