@@ -9,6 +9,14 @@ from utils.logger import api_logger, main_logger
 sidebar_cache = TTLCache(maxsize=100, ttl=5)
 
 
+def invalidate_sidebar_cache(user_id):
+    """Удаляет кэшированные данные сайдбара для пользователя."""
+    cache_key = f"sidebar_{user_id}"
+    if cache_key in sidebar_cache:
+        del sidebar_cache[cache_key]
+        main_logger.debug(f"Sidebar cache invalidated for user {user_id}")
+
+
 def get_map_by_id(map_id):
     """Получить карту по ID или вернуть None."""
     return Map.query.get(map_id)

@@ -40,11 +40,14 @@ def create_map_page():
 @main_bp.route('/map/create', methods=['POST'])
 @login_required
 def create_map():
-    if not current_user.is_admin:
-        abort(403)
+    if current_user.is_operator:
+        flash('Оператор не может создавать карты')
+        return redirect(url_for('main.dashboard'))
+
     name = request.form.get('name')
     if name:
         new_map = map_service.create_new_map(name, current_user.id)
+        map_service.invalidate_sidebar_cache(current_user.id)   # <-- добавлено
         main_logger.info(f"Map created: {name}, ID={new_map.id}, owner={current_user.username}")
         return redirect(url_for('main.map_view', map_id=new_map.id))
     return redirect(url_for('main.dashboard'))
@@ -98,7 +101,9 @@ def delete_map(map_id):
         return jsonify({'error': 'Доступ запрещён'}), 403
 
     try:
+        owner_id = map_obj.owner_id
         map_service.delete_map_and_cleanup(map_id, current_app)
+        map_service.invalidate_sidebar_cache(owner_id)
         return jsonify({'status': 'deleted'})
     except Exception as e:
         main_logger.error(f"Error deleting map {map_id}: {e}")

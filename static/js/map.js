@@ -1049,7 +1049,13 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
             line_style: lineStyle
         })
     })
-    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(async res => {
+        if (!res.ok) {
+            const errorMsg = await getErrorMessage(res);
+            throw new Error(errorMsg);
+        }
+        return res.json();
+    })
     .then(data => {
         if (data.id && cy) {
             cy.add({
@@ -1070,7 +1076,7 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
     })
     .catch(err => {
         Logger.error('Ошибка создания связи:', err);
-        alert('❌ Ошибка: ' + err.message);
+        showToast('Ошибка', err.message || 'Не удалось создать связь', 'error');
     });
 }
 
@@ -1091,8 +1097,11 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
             line_style: lineStyle
         })
     })
-    .then(res => {
-        if (!res.ok) throw new Error('Ошибка обновления');
+    .then(async res => {
+        if (!res.ok) {
+            const errorMsg = await getErrorMessage(res);
+            throw new Error(errorMsg);
+        }
         const edge = cy.getElementById(linkId);
         if (edge.length) {
             edge.data({
@@ -1110,7 +1119,7 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
     })
     .catch(err => {
         Logger.error('Ошибка обновления связи:', err);
-        alert('❌ Ошибка сети при обновлении');
+        showToast('Ошибка', err.message || 'Не удалось обновить связь', 'error');
     });
 }
 
@@ -1123,14 +1132,17 @@ function deleteLink(linkId) {
             'X-CSRFToken': getCsrfToken()
         }
     })
-    .then(res => {
-        if (!res.ok) throw new Error('Ошибка удаления');
+    .then(async res => {
+        if (!res.ok) {
+            const errorMsg = await getErrorMessage(res);
+            throw new Error(errorMsg);
+        }
         removeLinkFromGraph(linkId);
         if (linkModal) linkModal.hide();
     })
     .catch(err => {
         Logger.error('Ошибка удаления связи:', err);
-        alert('❌ Ошибка сети при удалении');
+        showToast('Ошибка', err.message || 'Не удалось удалить связь', 'error');
     });
 }
 
@@ -1518,17 +1530,20 @@ function applyBulkEdit() {
         if (Object.keys(update).length === 0) return;
 
         promises.push(
-            fetch(`/api/device/${node.id()}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
-                },
-                body: JSON.stringify(update)
-            }).then(res => {
-                if (!res.ok) throw new Error(`Ошибка обновления устройства ${node.id()}`);
-                return res.json();
-            })
+        fetch(`/api/device/${node.id()}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(update)
+        }).then(async res => {
+            if (!res.ok) {
+                const errorMsg = await getErrorMessage(res);
+                throw new Error(errorMsg);
+            }
+            return res.json();
+        })
         );
     });
 

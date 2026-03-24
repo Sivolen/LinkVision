@@ -373,26 +373,28 @@
                         'X-CSRFToken': getCsrfToken()
                     }
                 })
-                    .then(res => {
-                        if (res.ok) {
-                            console.log('Map deleted:', mapId);
-                            if (window.currentMapId == mapId) {
-                                // Удаляем текущую карту – редирект на главную
-                                window.location.href = '/';
-                            } else {
-                                // Удалена не текущая карта – обновляем сайдбар
-                                console.log('Refreshing sidebar maps');
-                                // Небольшая задержка, чтобы сервер успел завершить операцию
-                                setTimeout(() => loadSidebarMaps(), 100);
-                            }
-                        } else {
-                            alert('Ошибка удаления');
+                .then(async res => {
+                    if (res.ok) {
+                        if (window.currentMapId == mapId) {
+                            window.location.href = '/';
+                            return;
                         }
-                    })
-                    .catch(err => {
-                        Logger.error('Error deleting map:', err);
-                        alert('Не удалось удалить карту');
-                    });
+                        // Удаляем элемент карты из DOM
+                        const mapItemElement = document.querySelector(`.map-item[href="/map/${mapId}"]`);
+                        if (mapItemElement) {
+                            const li = mapItemElement.closest('li');
+                            if (li) li.remove();
+                        }
+                        showToast('Успешно', 'Карта удалена', 'success');
+                    } else {
+                        const errorMsg = await getErrorMessage(res);
+                        showToast('Ошибка', errorMsg, 'error');
+                    }
+                })
+                .catch(err => {
+                    Logger.error('Error deleting map:', err);
+                    showToast('Ошибка', 'Не удалось удалить карту', 'error');
+                });
             }
         }
         function editMap(event, mapId, mapName) {
@@ -426,8 +428,11 @@
                 },
                 body: formData
             })
-            .then(res => {
-                if (!res.ok) throw new Error('Ошибка сохранения');
+            .then(async res => {
+                if (!res.ok) {
+                    const errorMsg = await getErrorMessage(res);
+                    throw new Error(errorMsg);
+                }
                 return res.json();
             })
             .then(data => {
@@ -437,38 +442,13 @@
                     if (typeof updateMapBackground === 'function') updateMapBackground(data.background);
                 }
                 bootstrap.Modal.getInstance(document.getElementById('editMapModal')).hide();
+                showToast('Успешно', 'Карта обновлена', 'success');
             })
             .catch(err => {
                 Logger.error(err);
-                alert('Ошибка при сохранении');
+                showToast('Ошибка', err.message || 'Ошибка при сохранении', 'error');
             });
         });
-        // Экспорт карты
-        function exportMap() {
-            const mapId = document.getElementById('edit_map_id').value;
-            if (!mapId) {
-                alert('Сначала выберите карту');
-                return;
-            }
-            fetch(`/api/map/${mapId}/export`)
-                .then(res => {
-                    if (!res.ok) throw new Error('Ошибка экспорта');
-                    return res.json();
-                })
-                .then(data => {
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `map_${mapId}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                })
-                .catch(err => {
-                    Logger.error(err);
-                    alert('Не удалось экспортировать карту');
-                });
-        }
         // Импорт карты (всегда создаёт новую)
         function importMapNew() {
             const input = document.createElement('input');
@@ -490,8 +470,11 @@
                             },
                             body: JSON.stringify(data)
                         })
-                        .then(res => {
-                            if (!res.ok) throw new Error('Ошибка импорта');
+                        .then(async res => {
+                            if (!res.ok) {
+                                const errorMsg = await getErrorMessage(res);
+                                throw new Error(errorMsg);
+                            }
                             return res.json();
                         })
                         .then(result => {
@@ -504,7 +487,7 @@
                         })
                         .catch(err => {
                             Logger.error(err);
-                            alert('Ошибка при импорте');
+                            alert(err.message || 'Ошибка при импорте');
                         });
                     } catch (ex) {
                         alert('Некорректный JSON-файл');
@@ -579,6 +562,48 @@
                 bsAlert.close();
             });
         }, 5000);
+        async function getErrorMessage(response) {
+            try {
+                const data = await response.clone().json();
+                return data.error || `Ошибка ${response.status}: ${response.statusText}`;
+            } catch (e) {
+                try {
+                    const text = await response.clone().text();
+                    if (text) return text;
+                } catch (e2) {}
+                return `Ошибка ${response.status}: ${response.statusText}`;
+            }
+        }
+            function showToast(title, message, type = 'success') {
+        const toast = document.getElementById('liveToast');
+        const instance = toast?.toast;
+
+        if (!instance) {
+            console.log(`[${type}] ${title}: ${message}`);
+            if (type === 'error') alert(title + ': ' + message);
+            return;
+        }
+
+        document.getElementById('toastTitle').textContent = title;
+        document.getElementById('toastMessage').textContent = message;
+        document.getElementById('toastTime').textContent = 'только что';
+
+        const icon = document.getElementById('toastIcon');
+        const header = toast.querySelector('.toast-header');
+
+        if (type === 'error') {
+            if (icon) icon.className = 'fas fa-exclamation-circle text-danger me-2';
+            if (header) header.style.borderLeft = '4px solid #ef4444';
+        } else if (type === 'info') {
+            if (icon) icon.className = 'fas fa-info-circle text-info me-2';
+            if (header) header.style.borderLeft = '4px solid #3b82f6';
+        } else {
+            if (icon) icon.className = 'fas fa-check-circle text-success me-2';
+            if (header) header.style.borderLeft = '4px solid #22c55e';
+        }
+
+        instance.show();
+    }
     </script>
 
     {% block scripts %}{% endblock %}
