@@ -36,7 +36,7 @@ class DeviceType(db.Model):
 
 class Device(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    map_id = db.Column(db.Integer, db.ForeignKey('map.id'))
+    map_id = db.Column(db.Integer, db.ForeignKey('map.id'), index=True)
     type_id = db.Column(db.Integer, db.ForeignKey('device_type.id'))
     name = db.Column(db.String(64))
     ip_address = db.Column(db.String(45))
@@ -44,7 +44,7 @@ class Device(db.Model):
     pos_y = db.Column(db.Float, default=0)
     status = db.Column(db.Boolean, default=True)
     last_check = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), index=True)
     monitoring_enabled = db.Column(db.Boolean, default=True)
 
     source_links = db.relationship('Link', foreign_keys='Link.source_device_id', backref='source', lazy='dynamic', cascade='all, delete-orphan')
@@ -53,9 +53,9 @@ class Device(db.Model):
 
 class Link(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    map_id = db.Column(db.Integer, db.ForeignKey('map.id'))
-    source_device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
-    target_device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
+    map_id = db.Column(db.Integer, db.ForeignKey('map.id'), index=True)
+    source_device_id = db.Column(db.Integer, db.ForeignKey('device.id'), index=True)
+    target_device_id = db.Column(db.Integer, db.ForeignKey('device.id'), index=True)
     source_interface = db.Column(db.String(32), default="eth0")
     target_interface = db.Column(db.String(32), default="eth0")
     # Новые поля для кастомизации линии
@@ -86,10 +86,10 @@ class Map(db.Model):
 
 class DeviceHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.Integer, db.ForeignKey('device.id'))
+    device_id = db.Column(db.Integer, db.ForeignKey('device.id'), index=True)
     old_status = db.Column(db.Boolean)
     new_status = db.Column(db.Boolean)
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
     device = db.relationship('Device', backref='history')
 
@@ -106,8 +106,8 @@ class Group(db.Model):
 class UserMapSettings(db.Model):
     """Настройки просмотра карты для конкретного пользователя."""
     __tablename__ = 'user_map_settings'
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    map_id = db.Column(db.Integer, db.ForeignKey('map.id'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True, index=True)
+    map_id = db.Column(db.Integer, db.ForeignKey('map.id'), primary_key=True, index=True)
     pan_x = db.Column(db.Float, default=0)
     pan_y = db.Column(db.Float, default=0)
     zoom = db.Column(db.Float, default=1)
