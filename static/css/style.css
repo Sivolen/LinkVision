@@ -2052,3 +2052,44 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+/* Тёмная тема: гарантия читаемости текста в модалках и формах */
+[data-theme="dark"] .modal-title,
+[data-theme="dark"] .modal-body,
+[data-theme="dark"] .modal-footer,
+[data-theme="dark"] .form-label,
+[data-theme="dark"] .form-check-label,
+[data-theme="dark"] .form-text {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-header .btn-close {
+    filter: invert(1);
+}
+/* Тёмная тема: исправление цвета вкладок (nav-tabs) */
+[data-theme="dark"] .nav-tabs .nav-link {
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+    background-color: transparent;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link:hover {
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link.active {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    border-bottom-color: var(--bg-secondary);
+}
+
+/* Для вкладок внутри карточек (card-header-tabs) */
+[data-theme="dark"] .card-header-tabs .nav-link {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .card-header-tabs .nav-link.active {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    border-bottom-color: var(--bg-secondary);
+}
