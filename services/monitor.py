@@ -29,6 +29,12 @@ settings_cache = TTLCache(maxsize=10, ttl=2)
 def init_monitor(app):
     global app_instance, _executor
     app_instance = app
+
+    # Закрываем старый executor, если он существует
+    if _executor is not None:
+        _executor.shutdown(wait=False)
+        _executor = None
+
     _executor = concurrent.futures.ThreadPoolExecutor(max_workers=50)
 
 
@@ -161,7 +167,12 @@ def start_monitor():
 
 
 def stop_monitor():
-    global _monitor_stop_flag, _monitor_started
+    global _monitor_stop_flag, _monitor_started, _executor
     _monitor_stop_flag = True
     _monitor_started = False
+
+    if _executor is not None:
+        _executor.shutdown(wait=False)   # не блокируем, пусть завершится в фоне
+        _executor = None
+
     monitor_logger.info("Monitor stopped")

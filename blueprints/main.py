@@ -29,12 +29,12 @@ def dashboard():
         return redirect(url_for('main.create_map_page'))
 
 
-@main_bp.route('/map/create-page')
-@login_required
-def create_map_page():
-    if not current_user.is_admin:
-        abort(403)
-    return render_template('map_view.html', map=None)
+# @main_bp.route('/map/create-page')
+# @login_required
+# def create_map_page():
+#     if not current_user.is_admin:
+#         abort(403)
+#     return render_template('map_view.html', map=None)
 
 
 @main_bp.route('/map/create', methods=['POST'])
