@@ -337,6 +337,7 @@ def update_map(id):
     try:
         map_service.update_map_details(id, name=name, background_filename=background_filename,
                                        remove_background=remove_background)
+        map_service.invalidate_sidebar_cache(map_obj.owner_id)
         return jsonify({
             'id': map_obj.id,
             'name': map_obj.name,

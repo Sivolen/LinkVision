@@ -172,8 +172,11 @@ window.saveDevice = function() {
         },
         body: JSON.stringify(data)
     })
-    .then(res => {
-        if (!res.ok) throw new Error('Ошибка сохранения');
+    .then(async res => {
+        if (!res.ok) {
+            const errorMsg = await getErrorMessage(res);
+            throw new Error(errorMsg);
+        }
         return res.json();
     })
     .then(result => {
@@ -211,7 +214,7 @@ window.saveDevice = function() {
     })
     .catch(err => {
         Logger.error('Ошибка сохранения устройства:', err);
-        showToast('Ошибка', 'Не удалось сохранить устройство', 'error');
+        showToast('Ошибка', err.message || 'Не удалось сохранить устройство', 'error');
     });
 };
 
@@ -224,7 +227,7 @@ window.deleteDevice = function(deviceId) {
             'X-CSRFToken': getCsrfToken()
         }
     })
-    .then(res => {
+    .then(async res => {
         if (res.status === 404) {
             if (typeof window.removeDeviceFromGraph === 'function') {
                 window.removeDeviceFromGraph(deviceId);
@@ -233,8 +236,10 @@ window.deleteDevice = function(deviceId) {
             showToast('Информация', 'Устройство уже было удалено', 'info');
             return;
         }
-        if (!res.ok) throw new Error('Ошибка удаления');
-
+        if (!res.ok) {
+            const errorMsg = await getErrorMessage(res);
+            throw new Error(errorMsg);
+        }
         if (typeof window.removeDeviceFromGraph === 'function') {
             window.removeDeviceFromGraph(deviceId);
         }
@@ -243,7 +248,7 @@ window.deleteDevice = function(deviceId) {
     })
     .catch(err => {
         Logger.error('Ошибка удаления устройства:', err);
-        showToast('Ошибка', 'Не удалось удалить устройство', 'error');
+        showToast('Ошибка', err.message || 'Не удалось удалить устройство', 'error');
     });
 };
 
@@ -522,8 +527,8 @@ function initFormHandler() {
             });
 
             if (!res.ok) {
-                const errText = await res.text().catch(() => '');
-                throw new Error('Ошибка: ' + res.status);
+                const errorMsg = await getErrorMessage(res);
+                throw new Error(errorMsg);
             }
 
             showToast(isEdit ? 'Группа обновлена' : 'Группа создана', `Группа "${name}"`, 'success');
@@ -681,9 +686,12 @@ window.deleteGroup = async function(id, name) {
                 'X-CSRFToken': getCsrfToken()
             }
         });
-        if (!res.ok) throw new Error('Ошибка: ' + res.status);
+        if (!res.ok) {
+            const errorMsg = await getErrorMessage(res);
+            throw new Error(errorMsg);
+        }
 
-        showToast('Группа удалена', `Группа "${name}" удалена`, 'success');
+        showToast('Группа удалена', `Группа "${name}" удалена`, 'success');   // <-- добавить
         loadGroupsList();
 
         if (currentGroupId === id) resetGroupForm();
@@ -691,13 +699,13 @@ window.deleteGroup = async function(id, name) {
 
     } catch (err) {
         Logger.error('Delete error:', err);
-        showToast('Ошибка', 'Не удалось удалить группу', 'error');
+        showToast('Ошибка', err.message || 'Не удалось удалить группу', 'error');
     }
 };
 
 // ===== Открытие модалки =====
 window.openGroupManager = function() {
-    if (!window.currentUserIsAdmin) {  // нужно передать флаг из шаблона
+    if (!window.isAdmin) {
         showToast('Доступ запрещён', 'Только администратор может управлять группами', 'error');
         return;
     }
