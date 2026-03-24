@@ -1018,6 +1018,8 @@ function confirmCreateLink() {
     const lineStyle = document.getElementById('link_line_style')?.value;
 
     if (!src || !tgt) { alert('⚠️ Ошибка: не выбраны устройства'); return; }
+
+    setLinkSaving(true);
     if (linkModal) linkModal.hide();
     if (linkId) {
         updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle);
@@ -1077,7 +1079,8 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
     .catch(err => {
         Logger.error('Ошибка создания связи:', err);
         showToast('Ошибка', err.message || 'Не удалось создать связь', 'error');
-    });
+    })
+    .finally(() => setLinkSaving(false));
 }
 
 function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle) {
@@ -1120,29 +1123,29 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
     .catch(err => {
         Logger.error('Ошибка обновления связи:', err);
         showToast('Ошибка', err.message || 'Не удалось обновить связь', 'error');
-    });
+    })
+    .finally(() => setLinkSaving(false));
 }
 
 function deleteLink(linkId) {
-    if (!confirm('⚠️ Удалить эту связь?')) return;
-    const numericId = String(linkId).replace('link_', '');
-    fetch(`/api/link/${numericId}`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRFToken': getCsrfToken()
-        }
-    })
-    .then(async res => {
-        if (!res.ok) {
-            const errorMsg = await getErrorMessage(res);
-            throw new Error(errorMsg);
-        }
-        removeLinkFromGraph(linkId);
-        if (linkModal) linkModal.hide();
-    })
-    .catch(err => {
-        Logger.error('Ошибка удаления связи:', err);
-        showToast('Ошибка', err.message || 'Не удалось удалить связь', 'error');
+    confirmAction('Удаление связи', '⚠️ Удалить эту связь?', () => {
+        const numericId = String(linkId).replace('link_', '');
+        fetch(`/api/link/${numericId}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        })
+        .then(async res => {
+            if (!res.ok) {
+                const errorMsg = await getErrorMessage(res);
+                throw new Error(errorMsg);
+            }
+            removeLinkFromGraph(linkId);
+            if (linkModal) linkModal.hide();
+        })
+        .catch(err => {
+            Logger.error('Ошибка удаления связи:', err);
+            showToast('Ошибка', err.message || 'Не удалось удалить связь', 'error');
+        });
     });
 }
 
@@ -1685,5 +1688,20 @@ function removeLinkFromGraph(linkId) {
         if (typeof window.showToast === 'function') {
             window.showToast('Успешно', 'Связь удалена', 'success');
         }
+    }
+}
+function setLinkSaving(isSaving) {
+    const saveBtn = document.getElementById('saveLinkBtn');
+    const btnText = saveBtn?.querySelector('.btn-text');
+    const btnLoader = saveBtn?.querySelector('.btn-loader');
+    if (!saveBtn) return;
+    if (isSaving) {
+        if (btnText) btnText.classList.add('d-none');
+        if (btnLoader) btnLoader.classList.remove('d-none');
+        saveBtn.disabled = true;
+    } else {
+        if (btnText) btnText.classList.remove('d-none');
+        if (btnLoader) btnLoader.classList.add('d-none');
+        saveBtn.disabled = false;
     }
 }
