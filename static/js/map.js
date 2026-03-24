@@ -1263,11 +1263,7 @@ function applyFilterAndSearch() {
     const searchTerm = searchInput.value.toLowerCase().trim();
     Logger.debug('Поисковый запрос:', searchTerm);
 
-    // Сбрасываем подсветку
-    cy.nodes().removeClass('cy-node-highlight');
-
     // Применяем фильтр по статусу
-    let visibleCount = 0;
     cy.nodes().forEach(node => {
         if (node.data('isGroup')) {
             node.show(); // группы всегда видимы
@@ -1277,18 +1273,23 @@ function applyFilterAndSearch() {
         const shouldShow = (currentFilterStatus === 'all' || nodeStatus === currentFilterStatus);
         if (shouldShow) {
             node.show();
-            visibleCount++;
         } else {
             node.hide();
         }
     });
-    Logger.debug(`После фильтра видимо узлов: ${visibleCount}`);
 
-    // Применяем поиск (подсвечиваем совпадения среди всех узлов, включая скрытые)
+    // Сбрасываем подсветку
+    cy.nodes().removeClass('cy-node-highlight');
+
+    // Если есть поисковый запрос, подсвечиваем только видимые узлы
     if (searchTerm) {
+        const visibleNodes = cy.nodes().filter(node => {
+            if (node.data('isGroup')) return false;
+            return node.visible(); // проверяем, виден ли узел после фильтрации
+        });
+
         let matchCount = 0;
-        cy.nodes().forEach(node => {
-            if (node.data('isGroup')) return; // группы не участвуют в поиске
+        visibleNodes.forEach(node => {
             const name = (node.data('name') || '').toLowerCase();
             const ip = (node.data('ip') || '').toLowerCase();
             const type = (node.data('type') || '').toLowerCase();
@@ -1297,7 +1298,10 @@ function applyFilterAndSearch() {
                 matchCount++;
             }
         });
-        Logger.debug(`Найдено совпадений: ${matchCount}`);
+        Logger.debug(`Найдено совпадений среди видимых: ${matchCount}`);
+        // При желании можно добавить отображение количества в интерфейс
+        // const resultCountSpan = document.getElementById('searchResultCount');
+        // if (resultCountSpan) resultCountSpan.textContent = matchCount;
     }
 }
 
