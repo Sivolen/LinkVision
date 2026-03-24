@@ -2009,3 +2009,33 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
+/* Стилизация кнопки выбора файла для тёмной темы */
+[data-theme="dark"] input[type="file"] {
+    background-color: #2c2c2c;
+    color: #e0e0e0;
+    border: 1px solid #444;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+}
+
+[data-theme="dark"] input[type="file"]::file-selector-button {
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    margin-right: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+[data-theme="dark"] input[type="file"]::file-selector-button:hover {
+    background-color: #4a4a4a;
+}
+
+[data-theme="dark"] input[type="file"]:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
