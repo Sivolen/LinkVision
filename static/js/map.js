@@ -851,7 +851,7 @@ function loadElements(mapId) {
         // Отладка
         validEdges.forEach(e => {
             if (!cy.getElementById(e.data.source).length || !cy.getElementById(e.data.target).length) {
-                console.warn('⚠️ Ребро', e.data.id, 'ссылается на отсутствующий узел!', e.data.source, '→', e.data.target);
+                Logger.warn('⚠️ Ребро', e.data.id, 'ссылается на отсутствующий узел!', e.data.source, '→', e.data.target);
             }
         });
     })
