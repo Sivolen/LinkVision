@@ -9,6 +9,22 @@ from utils.logger import api_logger, main_logger
 sidebar_cache = TTLCache(maxsize=100, ttl=5)
 
 
+def validate_map(map_id):
+    """Проверяет существование карты. Возвращает карту или выбрасывает ValueError."""
+    map_obj = Map.query.get(map_id)
+    if not map_obj:
+        raise ValueError(f"Map with id {map_id} not found")
+    return map_obj
+
+
+def validate_link(link_id):
+    """Проверяет существование связи. Возвращает связь или выбрасывает ValueError."""
+    link = Link.query.get(link_id)
+    if not link:
+        raise ValueError(f"Link with id {link_id} not found")
+    return link
+
+
 def invalidate_sidebar_cache(user_id):
     """Удаляет кэшированные данные сайдбара для пользователя."""
     cache_key = f"sidebar_{user_id}"

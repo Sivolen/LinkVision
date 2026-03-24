@@ -6,7 +6,13 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-me'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or f'sqlite:///{os.path.join(BASE_DIR, "webnetmap.db")}'
+
+    # Поддержка PostgreSQL через DATABASE_URL
+    if os.environ.get('DATABASE_URL'):
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    else:
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DIR, "webnetmap.db")}'
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Безопасность сессий: только HTTPS, если переменная True

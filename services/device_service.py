@@ -1,5 +1,25 @@
-from models import Device, DeviceHistory, db, DeviceType
+from models import Device, DeviceHistory, db, DeviceType, Group
 from utils.logger import api_logger
+
+
+def validate_device_type(type_id):
+    """Проверяет существование типа устройства."""
+    dtype = DeviceType.query.get(type_id)
+    if not dtype:
+        raise ValueError(f"Device type with id {type_id} not found")
+    return dtype
+
+
+def validate_group_for_map(group_id, map_id):
+    """Проверяет, что группа принадлежит указанной карте."""
+    if group_id is None:
+        return None
+    group = Group.query.get(group_id)
+    if not group:
+        raise ValueError(f"Group with id {group_id} not found")
+    if group.map_id != map_id:
+        raise ValueError(f"Group {group_id} does not belong to map {map_id}")
+    return group
 
 
 def get_device_by_id(device_id):
