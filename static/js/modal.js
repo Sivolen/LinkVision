@@ -10,7 +10,6 @@ let historyPerPage = 10;
 let groupModal = null;
 let currentGroupId = null;
 let _formHandlerAttached = false;
-let _colorPickerInitialized = false;
 
 // ==================== Устройство ====================
 window.openDeviceModal = function(node) {
@@ -394,9 +393,6 @@ function loadHistoryPage(newPage) {
 
 // ===== Цветовой пикер =====
 function initColorPicker() {
-    if (_colorPickerInitialized) return;
-    _colorPickerInitialized = true;
-
     const btn = document.getElementById('colorPickerBtn');
     const panel = document.getElementById('colorPanel');
     const input = document.getElementById('group_color');
@@ -408,25 +404,35 @@ function initColorPicker() {
         return;
     }
 
-    function setColor(color) {
-        preview.style.backgroundColor = color;
-        code.textContent = color.toUpperCase();
-        input.value = color;
+    // Заменяем кнопку, чтобы удалить старые обработчики
+    const newBtn = btn.cloneNode(true);
+    if (btn.parentNode) {
+        btn.parentNode.replaceChild(newBtn, btn);
+    }
 
+    // Обновляем ссылки на элементы после замены
+    const newPanel = document.getElementById('colorPanel');
+    const newInput = document.getElementById('group_color');
+    const newPreview = document.getElementById('colorPreview');
+    const newCode = document.getElementById('colorCode');
+
+    function setColor(color) {
+        newPreview.style.backgroundColor = color;
+        newCode.textContent = color.toUpperCase();
+        newInput.value = color;
         document.querySelectorAll('.color-swatch').forEach(sw => {
             sw.classList.toggle('active', sw.dataset.color?.toLowerCase() === color.toLowerCase());
         });
     }
 
-    btn.addEventListener('click', function(e) {
+    newBtn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-
-        const isVisible = panel.style.display !== 'none';
-        panel.style.display = isVisible ? 'none' : 'block';
-        btn.classList.toggle('active', !isVisible);
-        panel.style.zIndex = '99999';
-        panel.style.position = 'absolute';
+        const isVisible = newPanel.style.display !== 'none';
+        newPanel.style.display = isVisible ? 'none' : 'block';
+        newBtn.classList.toggle('active', !isVisible);
+        newPanel.style.zIndex = '99999';
+        newPanel.style.position = 'absolute';
     });
 
     document.querySelectorAll('.color-swatch').forEach(swatch => {
@@ -435,31 +441,29 @@ function initColorPicker() {
             const color = swatch.dataset.color;
             if (color) {
                 setColor(color);
-                panel.style.display = 'none';
-                btn.classList.remove('active');
+                newPanel.style.display = 'none';
+                newBtn.classList.remove('active');
             }
         });
     });
 
-    input.addEventListener('input', function(e) {
+    newInput.addEventListener('input', function(e) {
         setColor(e.target.value);
     });
 
     document.addEventListener('click', function(e) {
         if (!e.target.closest('#colorPickerBtn') && !e.target.closest('#colorPanel')) {
-            panel.style.display = 'none';
-            btn.classList.remove('active');
+            newPanel.style.display = 'none';
+            newBtn.classList.remove('active');
         }
     });
 
-    panel.addEventListener('click', function(e) {
+    newPanel.addEventListener('click', function(e) {
         e.stopPropagation();
     });
 
-    const defaultColor = '#3498db';
-    preview.style.backgroundColor = defaultColor;
-    code.textContent = defaultColor.toUpperCase();
-    input.value = defaultColor;
+    const defaultColor = newInput.value || '#3498db';
+    setColor(defaultColor);
 
     window.setColor = setColor;
 }

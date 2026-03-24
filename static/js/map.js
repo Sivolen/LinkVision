@@ -1538,7 +1538,13 @@ window.addDeviceToGraph = function(device) {
     if (!cy) return;
     if (cy.getElementById(String(device.id)).length > 0) return;
 
-    const groupParent = device.group_id ? `group_${device.group_id}` : undefined;
+    let groupParent = undefined;
+    if (device.group_id) {
+        const groupNode = cy.getElementById(`group_${device.group_id}`);
+        if (groupNode.length) {
+            groupParent = `group_${device.group_id}`;
+        }
+    }
 
     cy.add({
         group: 'nodes',
@@ -1552,10 +1558,7 @@ window.addDeviceToGraph = function(device) {
             monitoring_enabled: device.monitoring_enabled,
             status: device.status || 'true'
         },
-        position: {
-            x: device.x || 100,
-            y: device.y || 100
-        }
+        position: { x: device.x || 100, y: device.y || 100 }
     });
 
     cy.style().update();
@@ -1575,7 +1578,6 @@ window.updateDevice = function(device) {
     if (!cy) return;
     const node = cy.getElementById(String(device.id));
     if (node.length) {
-        // Обновляем основные данные
         node.data({
             name: device.name,
             ip: device.ip_address || device.ip,
@@ -1583,10 +1585,16 @@ window.updateDevice = function(device) {
             group_id: device.group_id,
             monitoring_enabled: device.monitoring_enabled
         });
-        // Обновляем принадлежность к группе (parent)
-        const groupParent = device.group_id ? `group_${device.group_id}` : undefined;
+
+        let groupParent = undefined;
+        if (device.group_id) {
+            const groupNode = cy.getElementById(`group_${device.group_id}`);
+            if (groupNode.length) {
+                groupParent = `group_${device.group_id}`;
+            }
+        }
         node.data('parent', groupParent);
-        // Принудительно обновляем стили
+
         cy.style().update();
         Logger.info('✅ Устройство обновлено на карте:', device.name);
     }
