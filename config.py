@@ -9,6 +9,8 @@ class Config:
     SESSION_REFRESH_EACH_REQUEST = True  # обновлять сессию при каждом запросе
     SESSION_COOKIE_SAMESITE = 'Lax'  # защита от CSRF
     SESSION_COOKIE_HTTPONLY = True  # доступ к cookie только через HTTP
+    WTF_CSRF_TIME_LIMIT = None
+
     # Поддержка PostgreSQL через DATABASE_URL
     if os.environ.get('DATABASE_URL'):
         SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')

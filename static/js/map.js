@@ -1871,20 +1871,17 @@ function enterFullscreen() {
 }
 
 function exitFullscreen() {
-    if (document.exitFullscreen) {
+    if (document.fullscreenElement) {
         document.exitFullscreen().catch(err => Logger.error(`Exit fullscreen error: ${err.message}`));
     }
-    // Возвращаем панели
+    // Возвращаем панели (это нужно делать всегда, даже если вызов exitFullscreen не сработал)
     document.getElementById('sidebar')?.classList.remove('fullscreen-hidden');
     document.querySelector('.toolbar')?.classList.remove('fullscreen-hidden');
     document.querySelector('.mobile-menu-toggle')?.classList.remove('fullscreen-hidden');
-    // Скрываем кнопку выхода
     const exitBtn = document.getElementById('exitFullscreenBtn');
     if (exitBtn) exitBtn.style.display = 'none';
-    // Возвращаем иконку
     const fullBtn = document.getElementById('fullscreenBtn');
     if (fullBtn) fullBtn.innerHTML = '<i class="fas fa-expand"></i>';
-    // Убираем класс карты
     document.querySelector('.map-container')?.classList.remove('fullscreen-map');
 }
 
