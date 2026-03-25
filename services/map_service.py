@@ -2,11 +2,15 @@ import os
 
 from cachetools import TTLCache
 from flask import url_for
-from models import Map, Group, Link, Device, DeviceType, User, UserMapSettings, db
+from models import Map, Group, Link, Device, DeviceType, User, UserMapSettings, db, MapShape
 from utils.logger import api_logger, main_logger
 
 # Кэш для сайдбара: ключ = user_id, значение = результат, TTL 5 секунд
 sidebar_cache = TTLCache(maxsize=100, ttl=5)
+
+
+def get_shape_by_id(shape_id):
+    return MapShape.query.get(shape_id)
 
 
 def validate_map(map_id):
@@ -179,9 +183,22 @@ def get_map_elements(map_id):
                 'style': link.line_style
             }
         })
+    shapes = []
+    for sh in map_obj.shapes:
+        shapes.append({
+            'id': sh.id,
+            'shape_type': sh.shape_type,
+            'x': sh.x,
+            'y': sh.y,
+            'width': sh.width,
+            'height': sh.height,
+            'color': sh.color,
+            'opacity': sh.opacity,
+            'description': sh.description
+        })
 
     groups = [{'id': g.id, 'name': g.name, 'color': g.color} for g in map_obj.groups if g.devices.count() > 0]
-    return {'nodes': nodes, 'edges': edges, 'groups': groups}
+    return {'nodes': nodes, 'edges': edges, 'groups': groups, 'shapes': shapes}
 
 
 def get_map_groups(map_id):
@@ -427,3 +444,39 @@ def import_map(data, current_user):
 
     db.session.commit()
     return map_obj
+
+
+def get_map_shapes(map_id):
+    return MapShape.query.filter_by(map_id=map_id).all()
+
+
+def create_shape(map_id, shape_type, x, y, width, height, color, opacity, description=None):
+    shape = MapShape(
+        map_id=map_id,
+        shape_type=shape_type,
+        x=x,
+        y=y,
+        width=width,
+        height=height,
+        color=color,
+        opacity=opacity,
+        description=description
+    )
+    db.session.add(shape)
+    db.session.commit()
+    return shape
+
+
+def update_shape(shape_id, **kwargs):
+    shape = MapShape.query.get_or_404(shape_id)
+    for key, value in kwargs.items():
+        if hasattr(shape, key) and value is not None:
+            setattr(shape, key, value)
+    db.session.commit()
+    return shape
+
+
+def delete_shape(shape_id):
+    shape = MapShape.query.get_or_404(shape_id)
+    db.session.delete(shape)
+    db.session.commit()

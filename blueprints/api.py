@@ -536,3 +536,71 @@ def update_devices_positions():
     except Exception as e:
         api_logger.error(f"Error updating multiple positions: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/shape', methods=['POST'])
+@login_required
+@admin_required
+def create_shape():
+    data = request.json
+    map_id = data.get('map_id')
+    if not map_id:
+        return jsonify({'error': 'map_id required'}), 400
+    map_obj = map_service.get_map_by_id(map_id)
+    if not map_obj:
+        return jsonify({'error': 'Map not found'}), 404
+    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
+        return jsonify({'error': 'Доступ запрещён'}), 403
+
+    try:
+        shape = map_service.create_shape(
+            map_id=map_id,
+            shape_type=data['shape_type'],
+            x=data['x'],
+            y=data['y'],
+            width=data['width'],
+            height=data['height'],
+            color=data.get('color', '#3498db'),
+            opacity=data.get('opacity', 1.0),
+            description=data.get('description')
+        )
+        return jsonify({'id': shape.id}), 201
+    except Exception as e:
+        api_logger.error(f"Error creating shape: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/shape/<int:id>', methods=['PUT'])
+@login_required
+@admin_required
+def update_shape(id):
+    shape = map_service.get_shape_by_id(id)
+    if not shape:
+        return jsonify({'error': 'Shape not found'}), 404
+    if not (current_user.is_admin or shape.map.owner_id == current_user.id):
+        return jsonify({'error': 'Доступ запрещён'}), 403
+
+    data = request.json
+    try:
+        map_service.update_shape(id, **data)
+        return jsonify({'id': id, 'status': 'updated'})
+    except Exception as e:
+        api_logger.error(f"Error updating shape: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/shape/<int:id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_shape(id):
+    shape = map_service.get_shape_by_id(id)
+    if not shape:
+        return jsonify({'error': 'Shape not found'}), 404
+    if not (current_user.is_admin or shape.map.owner_id == current_user.id):
+        return jsonify({'error': 'Доступ запрещён'}), 403
+    try:
+        map_service.delete_shape(id)
+        return jsonify({'id': id, 'status': 'deleted'})
+    except Exception as e:
+        api_logger.error(f"Error deleting shape: {e}")
+        return jsonify({'error': str(e)}), 500

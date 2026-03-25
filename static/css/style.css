@@ -2128,3 +2128,9 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
     z-index: 9999 !important;
     border-radius: 0 !important;
 }
+.color-btn i {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-size: 12px;
+    transition: transform 0.2s;
+}
