@@ -1210,11 +1210,32 @@ function deleteLink(linkId) {
 
 function resetLinkMode() {
     linkMode = false;
-    if (sourceNode && cy) sourceNode.style({});
+    if (sourceNode && cy) {
+        // Сбрасываем явно border-стили
+        sourceNode.style('border-color', null);
+        sourceNode.style('border-width', null);
+        sourceNode.style({});
+        sourceNode.selected(false);
+        sourceNode.removeClass('cy-node-highlight');
+        sourceNode.emit('style');
+    }
     sourceNode = null;
     document.body.style.cursor = 'default';
     const inf = document.getElementById('linkInfo');
     if (inf) inf.remove();
+
+    if (cy) {
+        cy.elements().deselect();
+        cy.nodes().selected(false);
+        cy.edges().selected(false);
+        // Сброс возможных inline-стилей на всех узлах
+        cy.nodes().forEach(node => {
+            node.style('border-color', null);
+            node.style('border-width', null);
+            node.style({});
+        });
+        cy.style().update();
+    }
 }
 
 function startLinkMode() {
