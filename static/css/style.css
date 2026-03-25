@@ -2093,3 +2093,38 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
     background-color: var(--bg-secondary);
     border-bottom-color: var(--bg-secondary);
 }
+.fullscreen-hidden {
+    display: none !important;
+}
+
+.exit-fullscreen-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: background 0.2s;
+    align-items: center;
+    gap: 8px;
+}
+.exit-fullscreen-btn:hover {
+    background: rgba(0,0,0,0.9);
+}
+.fullscreen-map {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 9999 !important;
+    border-radius: 0 !important;
+}

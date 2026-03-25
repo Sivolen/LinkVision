@@ -88,6 +88,11 @@ def monitor_loop():
     while not _monitor_stop_flag:
         start_time = time.time()
         try:
+            if app_instance is None or _executor is None:
+                monitor_logger.error("Monitor not properly initialized")
+                time.sleep(5)
+                continue
+
             with app_instance.app_context():
                 devices = Device.query.filter_by(monitoring_enabled=True).all()
                 if not devices:
@@ -112,38 +117,43 @@ def monitor_loop():
                     except Exception as e:
                         monitor_logger.error(f"Error checking device {future_to_dev[future].id}: {e}")
 
-                for device, is_up in results:
+                devices_to_update = []
+                history_entries = []
+
+                for device, device_is_up in results:
                     current_time = time.time()
                     with _lock:
                         last_time = last_emit_time.get(device.id, 0)
                         if current_time - last_time < 0.5:
                             continue
-                        if device.status != is_up:
-                            room_name = f'map_{device.map_id}'
-                            status_str = 'true' if is_up else 'false'
-
+                        if device.status != device_is_up:
+                            devices_to_update.append((device, device_is_up))
                             old_status = device.status
-                            device.status = is_up
-                            device.last_check = db.func.now()
-
-                            history_entry = DeviceHistory(
+                            history_entries.append(DeviceHistory(
                                 device_id=device.id,
                                 old_status=old_status,
-                                new_status=is_up
-                            )
-                            db.session.add(history_entry)
-                            db.session.commit()
-
-                            socketio.emit('device_status', {
-                                'id': device.id,
-                                'status': status_str,
-                                'map_id': device.map_id
-                            }, room=room_name)
-
-                            monitor_logger.info(
-                                f"[{'UP' if is_up else 'DOWN'}] Sent: id={device.id}, status={status_str}, room={room_name}"
-                            )
+                                new_status=device_is_up
+                            ))
                             last_emit_time[device.id] = current_time
+
+                if devices_to_update:
+                    for device, device_is_up in devices_to_update:
+                        device.status = device_is_up
+                        device.last_check = db.func.now()
+                    db.session.add_all(history_entries)
+                    db.session.commit()
+
+                    for device, device_is_up in devices_to_update:
+                        room_name = f'map_{device.map_id}'
+                        status_str = 'true' if device_is_up else 'false'
+                        socketio.emit('device_status', {
+                            'id': device.id,
+                            'status': status_str,
+                            'map_id': device.map_id
+                        }, room=room_name)
+                        monitor_logger.info(
+                            f"[{'UP' if device_is_up else 'DOWN'}] Sent: id={device.id}, status={status_str}, room={room_name}"
+                        )
 
         except Exception as e:
             monitor_logger.error(f"Monitor error: {e}")

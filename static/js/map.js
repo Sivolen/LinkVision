@@ -1765,3 +1765,61 @@ function applyLayout(layoutName) {
 
     layout.run();
 }
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        enterFullscreen();
+    } else {
+        exitFullscreen();
+    }
+}
+
+function enterFullscreen() {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => Logger.error(`Fullscreen error: ${err.message}`));
+    }
+    // Скрываем панели
+    document.getElementById('sidebar')?.classList.add('fullscreen-hidden');
+    document.querySelector('.toolbar')?.classList.add('fullscreen-hidden');
+    document.querySelector('.mobile-menu-toggle')?.classList.add('fullscreen-hidden');
+    // Показываем кнопку выхода
+    const exitBtn = document.getElementById('exitFullscreenBtn');
+    if (exitBtn) exitBtn.style.display = 'flex';
+    // Меняем иконку основной кнопки (на случай, если её видно – нет)
+    const fullBtn = document.getElementById('fullscreenBtn');
+    if (fullBtn) fullBtn.innerHTML = '<i class="fas fa-compress"></i>';
+    // Растягиваем карту на весь экран
+    document.querySelector('.map-container')?.classList.add('fullscreen-map');
+}
+
+function exitFullscreen() {
+    if (document.exitFullscreen) {
+        document.exitFullscreen().catch(err => Logger.error(`Exit fullscreen error: ${err.message}`));
+    }
+    // Возвращаем панели
+    document.getElementById('sidebar')?.classList.remove('fullscreen-hidden');
+    document.querySelector('.toolbar')?.classList.remove('fullscreen-hidden');
+    document.querySelector('.mobile-menu-toggle')?.classList.remove('fullscreen-hidden');
+    // Скрываем кнопку выхода
+    const exitBtn = document.getElementById('exitFullscreenBtn');
+    if (exitBtn) exitBtn.style.display = 'none';
+    // Возвращаем иконку
+    const fullBtn = document.getElementById('fullscreenBtn');
+    if (fullBtn) fullBtn.innerHTML = '<i class="fas fa-expand"></i>';
+    // Убираем класс карты
+    document.querySelector('.map-container')?.classList.remove('fullscreen-map');
+}
+
+// Обработчик ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.fullscreenElement) {
+        exitFullscreen();
+    }
+});
+
+// Слушаем изменения fullscreen (на случай выхода через системные средства)
+document.addEventListener('fullscreenchange', function() {
+    if (!document.fullscreenElement) {
+        exitFullscreen();
+    }
+});
