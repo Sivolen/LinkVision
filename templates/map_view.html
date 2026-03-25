@@ -88,6 +88,11 @@
         <i class="fas fa-lock-open"></i>
     </button>
     </div>
+    <div class="toolbar-group">
+        <button class="toolbar-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="Полноэкранный режим">
+            <i class="fas fa-expand"></i>
+        </button>
+    </div>
 <!--    <div class="toolbar-group">-->
 <!--        <button class="toolbar-btn" onclick="saveLayout()">-->
 <!--            <i class="fas fa-save"></i> Сохранить-->
@@ -105,7 +110,9 @@
 
     </div>
 </div>
-
+<button id="exitFullscreenBtn" class="exit-fullscreen-btn" style="display: none;" onclick="exitFullscreen()" title="Выйти из полноэкранного режима">
+    <i class="fas fa-times"></i> Выйти
+</button>
 <!-- Модальное окно устройства -->
 <div class="modal fade" id="deviceModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
