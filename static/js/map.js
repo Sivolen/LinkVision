@@ -4,7 +4,6 @@ let cy = null;
 let linkModal = null;
 let linkMode = false;
 let sourceNode = null;
-//let dragTimeout = null;
 let dragTimeouts = {};            // для одиночных узлов
 let groupBatchTimeout = null;     // для группового сохранения
 let currentMode = 'pan';
@@ -211,6 +210,33 @@ const CY_STYLE = [
             'border-style': 'dotted',
             'border-width': 3,
             'opacity': 0.7
+        }
+    },
+    {
+        selector: 'node[isShape]',
+        style: {
+            'shape': function(node) {
+                        const shapeType = node.data('shape_type');
+                        // Для обратной совместимости, если вдруг в БД остался 'circle'
+                        return shapeType === 'circle' ? 'ellipse' : shapeType;
+                    },
+            'width': 'data(width)',
+            'height': 'data(height)',
+            'background-color': 'data(color)',
+            'background-opacity': 'data(opacity)',
+            'border-width': 2,
+            'border-color': '#333',
+            'border-opacity': 0.5,
+            'label': 'data(description)',
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'font-size': '12px',
+            'color': '#000',
+            'text-background-color': '#fff',
+            'text-background-opacity': 0.7,
+            'text-background-padding': '4px',
+            'text-background-shape': 'roundrectangle',
+            'z-index': 5
         }
     }
 ];
@@ -509,6 +535,7 @@ function initMap(mapId) {
     cy.on('dragfree', 'node', function(evt) {
         const node = evt.target;
         if (node.data('isGroup')) return;
+        if (node.data('isShape')) return;
         if (window.isOperator || dragLocked) return;
 
         let pos = node.position();
@@ -633,6 +660,28 @@ function initMap(mapId) {
             });
         }, 500);
     });
+    cy.on('dragfree', 'node[isShape]', function(evt) {
+        if (window.isOperator || dragLocked) return;
+        const node = evt.target;
+        let pos = node.position();
+        if (bgImageWidth && bgImageHeight) {
+            const bounded = boundNodePosition(pos);
+            if (bounded.x !== pos.x || bounded.y !== pos.y) {
+                node.position(bounded);
+                pos = bounded;
+            }
+        }
+        const shapeId = node.id().replace('shape_', '');
+        clearTimeout(dragTimeouts[shapeId]);
+        dragTimeouts[shapeId] = setTimeout(() => {
+            fetch(`/api/shape/${shapeId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ x: pos.x, y: pos.y })
+            }).catch(err => Logger.error('Error saving shape position:', err));
+            delete dragTimeouts[shapeId];
+        }, 500);
+    });
     // ==================== ОБРАБОТЧИКИ КЛИКОВ ====================
 
     cy.on('tap', 'node', function(evt) {
@@ -650,7 +699,12 @@ function initMap(mapId) {
             }
             return;
         }
-
+        // Фигуры: только выделение, без копирования IP
+        if (node.data('isShape')) {
+            if (currentMode !== 'select') cy.nodes().selected(false);
+            node.selected(true);
+            return;
+        }
         // Копирование IP при одиночном клике (с задержкой)
         if (copyTimer) clearTimeout(copyTimer);
         copyTimer = setTimeout(() => {
@@ -678,6 +732,10 @@ function initMap(mapId) {
         }
         const node = evt.target;
         if (node.data('isGroup')) return;
+        if (node.data('isShape')) {
+            openShapeModal(node);
+            return;
+        }
         openDeviceModal(node);
     });
 
@@ -792,6 +850,24 @@ function loadElements(mapId) {
             });
         }
 
+        if (data.shapes && data.shapes.length) {
+            const shapeNodes = data.shapes.map(shape => ({
+                group: 'nodes',
+                data: {
+                    id: `shape_${shape.id}`,
+                    isShape: true,
+                    shape_type: shape.shape_type,
+                    width: shape.width,
+                    height: shape.height,
+                    color: shape.color,
+                    opacity: shape.opacity,
+                    description: shape.description,
+                    label: shape.description || ''
+                },
+                position: { x: shape.x, y: shape.y }
+            }));
+            cy.add(shapeNodes);
+        }
         // Узлы устройств — работаем с исходными объектами, только приводим id к строке
         const validNodes = data.nodes.filter(n => n.data && n.data.id);
         validNodes.forEach(n => {

@@ -114,3 +114,19 @@ class UserMapSettings(db.Model):
 
     user = db.relationship('User', backref='map_settings')
     map = db.relationship('Map', backref='user_settings')
+
+
+class MapShape(db.Model):
+    __tablename__ = 'map_shape'
+    id = db.Column(db.Integer, primary_key=True)
+    map_id = db.Column(db.Integer, db.ForeignKey('map.id'), nullable=False, index=True)
+    shape_type = db.Column(db.String(20), nullable=False)  # square, rectangle, triangle, circle, diamond
+    x = db.Column(db.Float, nullable=False)
+    y = db.Column(db.Float, nullable=False)
+    width = db.Column(db.Float, nullable=False)
+    height = db.Column(db.Float, nullable=False)
+    color = db.Column(db.String(7), nullable=False, default='#3498db')
+    opacity = db.Column(db.Float, nullable=False, default=1.0)
+    description = db.Column(db.String(255), nullable=True)
+
+    map = db.relationship('Map', backref='shapes')

@@ -10,6 +10,9 @@ let historyPerPage = 10;
 let groupModal = null;
 let currentGroupId = null;
 let _formHandlerAttached = false;
+// Фигуры
+let shapeModal = null;
+let currentShapeId = null;
 
 // ==================== Устройство ====================
 window.openDeviceModal = function(node) {
@@ -787,3 +790,224 @@ document.addEventListener('DOMContentLoaded', function() {
 
     Logger.info('✅ modal.js инициализирован');
 });
+
+window.openShapeModal = function(shapeNode = null) {
+    if (!shapeModal) {
+        const el = document.getElementById('shapeModal');
+        if (el) shapeModal = new bootstrap.Modal(el);
+        else return;
+    }
+
+    const idField = document.getElementById('shape_id');
+    const typeSelect = document.getElementById('shape_type');
+    const widthInput = document.getElementById('shape_width');
+    const heightInput = document.getElementById('shape_height');
+    const colorInput = document.getElementById('shape_color');
+    const opacityInput = document.getElementById('shape_opacity');
+    const descriptionInput = document.getElementById('shape_description');
+    const deleteBtn = document.getElementById('deleteShapeBtn');
+
+    if (shapeNode) {
+        // Редактирование
+        currentShapeId = shapeNode.id().replace('shape_', '');
+        typeSelect.value = shapeNode.data('shape_type');
+        widthInput.value = shapeNode.data('width');
+        heightInput.value = shapeNode.data('height');
+        colorInput.value = shapeNode.data('color');
+        opacityInput.value = shapeNode.data('opacity');
+        descriptionInput.value = shapeNode.data('description') || '';
+        deleteBtn.style.display = 'inline-block';
+        deleteBtn.onclick = () => deleteShape(currentShapeId);
+    } else {
+        // Создание новой фигуры
+        currentShapeId = null;
+        typeSelect.value = 'square';
+        widthInput.value = 80;
+        heightInput.value = 80;
+        colorInput.value = '#3498db';
+        opacityInput.value = 1;
+        descriptionInput.value = '';
+        deleteBtn.style.display = 'none';
+    }
+    document.getElementById('opacity_value').textContent = opacityInput.value;
+
+    // Инициализация цветового пикера (заменяет кнопку и вешает обработчики)
+    initShapeColorPicker();
+
+    // Устанавливаем цвет в пикер, если редактируем
+    if (shapeNode) {
+        const color = shapeNode.data('color');
+        if (window.setShapeColor) {
+            window.setShapeColor(color);
+        }
+    }
+
+    shapeModal.show();
+};
+
+window.saveShape = function() {
+    const id = currentShapeId;
+    const shapeType = document.getElementById('shape_type').value;
+    const width = parseFloat(document.getElementById('shape_width').value);
+    const height = parseFloat(document.getElementById('shape_height').value);
+    const color = document.getElementById('shape_color').value;
+    const opacity = parseFloat(document.getElementById('shape_opacity').value);
+    const description = document.getElementById('shape_description').value;
+
+    // Определяем позицию: если создаём новую, ставим в центр видимой области
+    let x, y;
+    if (!id) {
+        if (cy) {
+            const container = document.getElementById('cy');
+            const pan = cy.pan();
+            const zoom = cy.zoom();
+            x = (-pan.x + container.clientWidth / 2) / zoom;
+            y = (-pan.y + container.clientHeight / 2) / zoom;
+        } else {
+            x = 100; y = 100;
+        }
+    } else {
+        // При редактировании позицию не меняем, она будет обновлена только при перемещении
+        const node = cy.getElementById(`shape_${id}`);
+        if (node.length) {
+            x = node.position().x;
+            y = node.position().y;
+        } else {
+            x = 100; y = 100;
+        }
+    }
+
+    const data = {
+        map_id: window.currentMapId,
+        shape_type: shapeType,
+        x: x,
+        y: y,
+        width: width,
+        height: height,
+        color: color,
+        opacity: opacity,
+        description: description
+    };
+
+    const url = id ? `/api/shape/${id}` : '/api/shape';
+    const method = id ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(async res => {
+        if (!res.ok) throw new Error(await getErrorMessage(res));
+        return res.json();
+    })
+    .then(() => {
+        reloadMapElements();
+        shapeModal.hide();
+        showToast('Успешно', id ? 'Фигура обновлена' : 'Фигура создана', 'success');
+    })
+    .catch(err => {
+        Logger.error('Error saving shape:', err);
+        showToast('Ошибка', err.message, 'error');
+    });
+};
+
+window.deleteShape = function(id) {
+    confirmAction('Удаление фигуры', 'Удалить эту фигуру?', () => {
+        fetch(`/api/shape/${id}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        })
+        .then(async res => {
+            if (!res.ok) throw new Error(await getErrorMessage(res));
+            reloadMapElements();
+            shapeModal.hide();
+            showToast('Успешно', 'Фигура удалена', 'success');
+        })
+        .catch(err => {
+            Logger.error('Error deleting shape:', err);
+            showToast('Ошибка', err.message, 'error');
+        });
+    });
+};
+
+function initShapeColorPicker() {
+    const btn = document.getElementById('shapeColorPickerBtn');
+    const panel = document.getElementById('shapeColorPanel');
+    const input = document.getElementById('shape_color');
+    const preview = document.getElementById('shapeColorPreview');
+    const code = document.getElementById('shapeColorCode');
+
+    if (!btn || !panel || !input || !preview || !code) {
+        Logger.error('❌ Shape color picker: элементы не найдены');
+        return;
+    }
+
+    // Заменяем кнопку, чтобы удалить старые обработчики
+    const newBtn = btn.cloneNode(true);
+    if (btn.parentNode) {
+        btn.parentNode.replaceChild(newBtn, btn);
+    }
+
+    // Обновляем ссылки на элементы после замены
+    const newPanel = document.getElementById('shapeColorPanel');
+    const newInput = document.getElementById('shape_color');
+    const newPreview = document.getElementById('shapeColorPreview');
+    const newCode = document.getElementById('shapeColorCode');
+
+    function setColor(color) {
+        newPreview.style.backgroundColor = color;
+        newCode.textContent = color.toUpperCase();
+        newInput.value = color;
+        document.querySelectorAll('.color-swatch').forEach(sw => {
+            sw.classList.toggle('active', sw.dataset.color?.toLowerCase() === color.toLowerCase());
+        });
+    }
+
+    newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const isVisible = newPanel.style.display !== 'none';
+        newPanel.style.display = isVisible ? 'none' : 'block';
+        newBtn.classList.toggle('active', !isVisible);
+        newPanel.style.zIndex = '99999';
+        newPanel.style.position = 'absolute';
+    });
+
+    document.querySelectorAll('.color-swatch').forEach(swatch => {
+        swatch.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const color = swatch.dataset.color;
+            if (color) {
+                setColor(color);
+                newPanel.style.display = 'none';
+                newBtn.classList.remove('active');
+            }
+        });
+    });
+
+    newInput.addEventListener('input', function(e) {
+        setColor(e.target.value);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#shapeColorPickerBtn') && !e.target.closest('#shapeColorPanel')) {
+            newPanel.style.display = 'none';
+            newBtn.classList.remove('active');
+        }
+    });
+
+    newPanel.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
+    // Устанавливаем начальный цвет из поля ввода
+    const defaultColor = newInput.value || '#3498db';
+    setColor(defaultColor);
+
+    // Экспортируем функцию для внешнего использования
+    window.setShapeColor = setColor;
+}
