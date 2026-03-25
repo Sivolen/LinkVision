@@ -6,7 +6,9 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-me'
-
+    SESSION_REFRESH_EACH_REQUEST = True  # обновлять сессию при каждом запросе
+    SESSION_COOKIE_SAMESITE = 'Lax'  # защита от CSRF
+    SESSION_COOKIE_HTTPONLY = True  # доступ к cookie только через HTTP
     # Поддержка PostgreSQL через DATABASE_URL
     if os.environ.get('DATABASE_URL'):
         SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')

@@ -963,8 +963,6 @@ function saveDevicePosition(node) {
     }, 500);
 }
 
-
-
 function saveViewportToServer() {
     if (!cy) return;
     const pan = cy.pan();
@@ -978,7 +976,11 @@ function saveViewportToServer() {
                 'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({ pan_x: pan.x, pan_y: pan.y, zoom: zoom })
-        }).catch(err => Logger.error('Ошибка сохранения viewport:', err));
+        })
+        .catch(err => {
+            // Не показываем ошибку, просто логируем
+            Logger.debug('Viewport save failed (session expired?):', err.message);
+        });
     }, 500);
 }
 
