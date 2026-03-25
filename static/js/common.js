@@ -36,6 +36,14 @@ async function fetchWithRetry(url, options = {}, retries = 3, delay = 500) {
     for (let i = 0; i < retries; i++) {
         try {
             const response = await fetch(url, options);
+            if (response.status === 400 || response.status === 401) {
+                // Если это не запрос heartbeat (/api/maps) и не viewport, перенаправляем
+                if (!url.includes('/api/maps') && !url.includes('/viewport')) {
+                    window.location.href = '/auth/login';
+                }
+                // В противном случае просто пробрасываем ошибку
+                throw new Error(`Session expired: ${response.status}`);
+            }
             return response;
         } catch (error) {
             const isLastAttempt = i === retries - 1;

@@ -326,6 +326,12 @@
                 toggleIcon.classList.add('fa-bars');
             }
         }
+        setInterval(() => {
+        fetch('/api/maps', {
+                method: 'GET',
+                headers: { 'X-CSRFToken': getCsrfToken() }
+            }).catch(() => {});
+        }, 5 * 60 * 1000);
     });
 
     // Инициализация сокета (только для авторизованных)
