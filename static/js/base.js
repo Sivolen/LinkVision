@@ -1,4 +1,7 @@
 // base.js - глобальные функции для всех страниц
+let connectionToast = null;
+let wasDisconnected = false;
+
 (function() {
     // Глобальные переменные (устанавливаются из шаблона)
     window.Logger = {
@@ -345,22 +348,36 @@
                 reconnectionAttempts: 5
             });
             window.socket.on('connect', () => {
-                Logger.info('Socket connected (global)');
+                if (window.debugMode) Logger.info('Socket connected (global)');
                 if (window.currentMapId) {
                     window.socket.emit('join_room', `map_${window.currentMapId}`);
                 }
                 updateBackendStatus(true);
+                if (wasDisconnected) {
+                    if (connectionToast) connectionToast.hide();
+                    connectionToast = showToast('Связь восстановлена', 'Соединение с сервером восстановлено', 'success', { autoHide: 3000 });
+                    wasDisconnected = false;
+                }
             });
             window.socket.on('disconnect', (reason) => {
                 Logger.debug('Socket disconnected (global):', reason);
                 updateBackendStatus(false);
+                if (!connectionToast) {
+                    connectionToast = showToast('Потеря связи', 'Соединение с сервером потеряно, попытка восстановления...', 'error', { autoHide: false });
+                    wasDisconnected = true;
+                }
             });
             window.socket.on('reconnect', (attemptNumber) => {
-                Logger.info('Socket reconnected after', attemptNumber, 'attempts');
+                if (window.debugMode) Logger.info('Socket reconnected after', attemptNumber, 'attempts');
                 if (window.currentMapId) {
                     window.socket.emit('join_room', `map_${window.currentMapId}`);
                 }
                 updateBackendStatus(true);
+                if (wasDisconnected) {
+                    if (connectionToast) connectionToast.hide();
+                    connectionToast = showToast('Связь восстановлена', 'Соединение с сервером восстановлено', 'success', { autoHide: 3000 });
+                    wasDisconnected = false;
+                }
             });
             window.socket.on('connect_error', (error) => {
                 Logger.warn('Socket connection error:', error);
