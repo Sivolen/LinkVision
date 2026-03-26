@@ -1,6 +1,6 @@
 import os
 import ipaddress
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, url_for
 from flask_login import login_required, current_user
 from services import device_service, map_service
 from utils.logger import api_logger
@@ -195,7 +195,21 @@ def create_device():
             group_id=data.get('group_id'),
             monitoring_enabled=data.get('monitoring_enabled', True)
         )
-        return jsonify({'id': dev.id}), 201
+        dtype = dev.type
+        icon_url = None
+        width = None
+        height = None
+        if dtype and dtype.icon_filename:
+            # Формируем URL с кэш-параметром
+            icon_url = url_for('static', filename=f'uploads/icons/{dtype.icon_filename}') + f'?v={dtype.id}'
+            width = dtype.width
+            height = dtype.height
+        return jsonify({
+            'id': dev.id,
+            'iconUrl': icon_url,
+            'width': width,
+            'height': height
+        }), 201
     except ValueError as e:
         api_logger.warning(f"Validation error creating device: {e}")
         return jsonify({'error': str(e)}), 400
