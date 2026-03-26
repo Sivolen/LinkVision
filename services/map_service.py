@@ -196,7 +196,7 @@ def get_map_elements(map_id):
         'font_size': sh.font_size  # добавлено
     } for sh in map_obj.shapes]
 
-    groups = [{'id': g.id, 'name': g.name, 'color': g.color} for g in map_obj.groups if g.devices.count() > 0]
+    groups = [{'id': g.id, 'name': g.name, 'color': g.color, 'font_size': g.font_size} for g in map_obj.groups if g.devices.count() > 0]
     return {'nodes': nodes, 'edges': edges, 'groups': groups, 'shapes': shapes}
 
 
@@ -207,6 +207,7 @@ def get_map_groups(map_id):
         'id': g.id,
         'name': g.name,
         'color': g.color,
+        'font_size': g.font_size,
         'device_count': g.devices.count()
     } for g in groups]
 
@@ -313,22 +314,24 @@ def delete_link(link_id):
     return link_id
 
 
-def create_group(map_id, name, color='#3498db'):
+def create_group(map_id, name, color='#3498db', font_size=11):
     """Создать группу."""
-    group = Group(name=name, color=color, map_id=map_id)
+    group = Group(name=name, color=color, map_id=map_id, font_size=font_size)
     db.session.add(group)
     db.session.commit()
     api_logger.info(f"Group created: ID={group.id}, name={group.name}, map={map_id}")
     return group
 
 
-def update_group(group_id, name=None, color=None):
+def update_group(group_id, name=None, color=None, font_size=None):
     """Обновить группу."""
     group = Group.query.get_or_404(group_id)
     if name is not None:
         group.name = name
     if color is not None:
         group.color = color
+    if font_size is not None:
+        group.font_size = font_size
     db.session.commit()
     api_logger.info(f"Group updated: ID={group_id}")
     return group

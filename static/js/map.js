@@ -160,7 +160,7 @@ const CY_STYLE = [
             'border-opacity': 0.3,
             'border-style': 'dashed',
             'label': 'data(name)',
-            'font-size': '11px',
+            'font-size': function(node) { return node.data('fontSize') + 'px'; },
             'font-weight': 'bold',
             // 'color': '#000000',
             'text-valign': 'top',
@@ -844,7 +844,8 @@ function loadElements(mapId) {
                         name: g.name,
                         color: g.color,
                         isGroup: true,
-                        group_id: g.id
+                        group_id: g.id,
+                        fontSize: g.font_size || 11
                     }
                 };
                 groupNodes.push(groupNode);

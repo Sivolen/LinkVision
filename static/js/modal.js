@@ -496,6 +496,7 @@ function initFormHandler() {
         const id = document.getElementById('group_id')?.value;
         const name = document.getElementById('group_name')?.value.trim();
         const color = document.getElementById('group_color')?.value;
+        const fontSize = parseInt(document.getElementById('group_font_size').value, 10) || 11;
 
         if (!name) {
             showToast('Ошибка', 'Введите название группы', 'error');
@@ -515,8 +516,8 @@ function initFormHandler() {
             const url = isEdit ? `/api/group/${id}` : '/api/group';
             const method = isEdit ? 'PUT' : 'POST';
             const body = isEdit
-                ? { name, color }
-                : { map_id: window.currentMapId, name, color };
+                ? { name, color, font_size: fontSize }
+                : { map_id: window.currentMapId, name, color, font_size: fontSize };
 
             const res = await fetch(url, {
                 method,
@@ -565,6 +566,9 @@ function resetGroupForm() {
         window.setColor(defaultColor);
     }
 
+    const fontSizeInput = document.getElementById('group_font_size');
+    if (fontSizeInput) fontSizeInput.value = 11;
+
     const btnText = document.querySelector('#submitBtn .btn-text');
     if (btnText) btnText.textContent = 'Добавить группу';
 
@@ -601,23 +605,23 @@ async function loadGroupsList() {
             return;
         }
 
-        tbody.innerHTML = groups.map((group, idx) => `
-            <tr style="animation: rowFadeIn 0.25s ease ${idx * 50}ms forwards; opacity: 0">
-                <td><span class="fw-medium">${escapeHtml(group.name)}</span></td>
-                <td><span class="color-preview" style="background:${group.color}" title="${group.color}"></span></td>
-                <td class="text-center"><span class="badge bg-light text-dark">${group.device_count || 0}</span></td>
-                <td class="text-end">
-                    <div class="table-actions">
-                        <button type="button" class="btn-action" data-action="edit" data-id="${group.id}" data-name="${escapeHtml(group.name)}" data-color="${group.color}">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                        <button type="button" class="btn-action btn-danger" data-action="delete" data-id="${group.id}" data-name="${escapeHtml(group.name)}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+    tbody.innerHTML = groups.map((group, idx) => `
+        <tr style="animation: rowFadeIn 0.25s ease ${idx * 50}ms forwards; opacity: 0">
+            <td><span class="fw-medium">${escapeHtml(group.name)}</span></td>
+            <td><span class="color-preview" style="background:${group.color}" title="${group.color}"></span></td>
+            <td class="text-center"><span class="badge bg-light text-dark">${group.device_count || 0}</span></td>
+            <td class="text-end">
+                <div class="table-actions">
+                    <button type="button" class="btn-action" data-action="edit" data-id="${group.id}" data-name="${escapeHtml(group.name)}" data-color="${group.color}" data-fontsize="${group.font_size || 11}">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button type="button" class="btn-action btn-danger" data-action="delete" data-id="${group.id}" data-name="${escapeHtml(group.name)}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
 
     } catch (err) {
         Logger.error('Load groups error:', err);
@@ -642,7 +646,10 @@ function initTableActions() {
         const id = parseInt(btn.dataset.id, 10);
 
         if (action === 'edit') {
-            editGroup(id, btn.dataset.name, btn.dataset.color);
+            const name = btn.dataset.name;
+            const color = btn.dataset.color;
+            const fontSize = btn.dataset.fontsize || 11;
+            editGroup(id, name, color, fontSize);
         } else if (action === 'delete') {
             deleteGroup(id, btn.dataset.name);
         }
@@ -657,12 +664,12 @@ function initTableActions() {
         });
     });
 }
-
 // ===== Редактирование =====
-window.editGroup = function(id, name, color) {
+window.editGroup = function(id, name, color, fontSize) {
     currentGroupId = id;
     const idField = document.getElementById('group_id');
     const nameField = document.getElementById('group_name');
+    const fontSizeInput = document.getElementById('group_font_size');
 
     if (idField) idField.value = id;
     if (nameField) {
@@ -671,6 +678,8 @@ window.editGroup = function(id, name, color) {
         nameField.select();
     }
     if (window.setColor) window.setColor(color);
+    if (fontSizeInput) fontSizeInput.value = fontSize || 11;
+
 
     const btnText = document.querySelector('#submitBtn .btn-text');
     if (btnText) btnText.textContent = 'Сохранить';
@@ -721,6 +730,8 @@ window.openGroupManager = function() {
     }
 
     resetGroupForm();
+    const fontSizeInput = document.getElementById('group_font_size');
+    if (fontSizeInput) fontSizeInput.value = 11;
     groupModal.show();
 };
 
