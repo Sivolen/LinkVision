@@ -142,7 +142,16 @@ window.saveDevice = function() {
         showToast('Ошибка', 'Имя и тип устройства обязательны', 'error');
         return;
     }
-
+    // Валидация IP-адреса (если указан)
+    if (ip && ip.trim()) {
+        // Упрощённая проверка IPv4 и IPv6
+        const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^(([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4})?::([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}$/;
+        if (!ipv4Regex.test(ip.trim()) && !ipv6Regex.test(ip.trim())) {
+            showToast('Ошибка', 'Неверный формат IP-адреса', 'error');
+            return;
+        }
+    }
     const data = {
         name: name,
         ip_address: ip || null,

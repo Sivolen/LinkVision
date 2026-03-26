@@ -1,7 +1,7 @@
 import os
+import ipaddress
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
 from services import device_service, map_service
 from utils.logger import api_logger
 from functools import wraps
@@ -167,6 +167,13 @@ def create_device():
         return jsonify({'error': 'type_id is required'}), 400
     if not data.get('name'):
         return jsonify({'error': 'name is required'}), 400
+    # Валидация IP-адреса, если он указан
+    ip = data.get('ip_address')
+    if ip and ip.strip():
+        try:
+            ipaddress.ip_address(ip.strip())
+        except ValueError:
+            return jsonify({'error': 'Неверный формат IP-адреса'}), 400
 
     try:
         # Валидация карты
@@ -210,7 +217,12 @@ def update_device(id):
     data = request.json
     allowed_fields = ['name', 'ip_address', 'type_id', 'pos_x', 'pos_y', 'group_id', 'monitoring_enabled']
     update_data = {k: v for k, v in data.items() if k in allowed_fields}
-
+    ip = data.get('ip_address')
+    if ip is not None and ip.strip():
+        try:
+            ipaddress.ip_address(ip.strip())
+        except ValueError:
+            return jsonify({'error': 'Неверный формат IP-адреса'}), 400
     try:
         # Если меняется тип устройства, проверяем существование
         if 'type_id' in update_data:
