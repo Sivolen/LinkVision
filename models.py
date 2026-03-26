@@ -98,6 +98,7 @@ class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
     color = db.Column(db.String(7), default="#3498db")  # hex-код цвета
+    font_size = db.Column(db.Integer, default=11)
     map_id = db.Column(db.Integer, db.ForeignKey('map.id'))
     map = db.relationship('Map', backref='groups')
     devices = db.relationship('Device', backref='group', lazy='dynamic')

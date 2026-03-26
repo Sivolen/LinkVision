@@ -448,8 +448,8 @@ def create_group():
         map_obj = map_service.get_map_by_id(map_id)
         if not (current_user.is_admin or map_obj.owner_id == current_user.id):
             return jsonify({'error': 'Доступ запрещён'}), 403
-
-        group = map_service.create_group(map_id, data['name'], data.get('color', '#3498db'))
+        font_size = data.get('font_size', 11)
+        group = map_service.create_group(map_id, data['name'], data.get('color', '#3498db'), font_size)
         return jsonify({'id': group.id}), 201
     except ValueError as e:
         api_logger.warning(f"Validation error creating group: {e}")
@@ -476,7 +476,7 @@ def update_group(id):
         name = data.get('name')
         if name is not None and (not name or len(name) < 2):
             return jsonify({'error': 'Group name must be at least 2 characters'}), 400
-        map_service.update_group(id, name=data.get('name'), color=data.get('color'))
+        map_service.update_group(id, name=data.get('name'), color=data.get('color'), font_size=data.get('font_size'))
         return jsonify({'status': 'updated'})
     except ValueError as e:
         api_logger.warning(f"Validation error updating group {id}: {e}")
