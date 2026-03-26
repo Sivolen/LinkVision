@@ -253,9 +253,6 @@ def export_map_data(map_id):
         'id': map_obj.id,
         'name': map_obj.name,
         'background_image': map_obj.background_image,
-        'pan_x': map_obj.pan_x,
-        'pan_y': map_obj.pan_y,
-        'zoom': map_obj.zoom,
         'owner_id': map_obj.owner_id,
         'devices': devices,
         'links': links,
@@ -375,9 +372,6 @@ def import_map(data, current_user):
 
     map_obj.name = data.get('name', map_obj.name)
     map_obj.background_image = data.get('background_image')
-    map_obj.pan_x = data.get('pan_x', 0)
-    map_obj.pan_y = data.get('pan_y', 0)
-    map_obj.zoom = data.get('zoom', 1)
 
     group_id_map = {}
     for g_data in data.get('groups', []):
