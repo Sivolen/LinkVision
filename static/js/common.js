@@ -54,3 +54,30 @@ async function fetchWithRetry(url, options = {}, retries = 3, delay = 500) {
         }
     }
 }
+function wrapText(text, maxChars = 25) {
+    if (!text) return '';
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+
+    for (let word of words) {
+        // Если слово само по себе длиннее maxChars, разбиваем его на части
+        while (word.length > maxChars) {
+            if (currentLine) {
+                lines.push(currentLine);
+                currentLine = '';
+            }
+            lines.push(word.slice(0, maxChars));
+            word = word.slice(maxChars);
+        }
+        // Теперь word гарантированно короче maxChars
+        if (currentLine.length + word.length + 1 <= maxChars) {
+            currentLine = currentLine ? currentLine + ' ' + word : word;
+        } else {
+            if (currentLine) lines.push(currentLine);
+            currentLine = word;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines.join('\n');
+}
