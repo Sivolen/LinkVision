@@ -503,13 +503,13 @@
                 <input type="hidden" id="shape_id">
                 <div class="mb-3">
                     <label class="form-label">Тип фигуры</label>
-                <select id="shape_type" class="form-select">
-                    <option value="square">Квадрат</option>
-                    <option value="rectangle">Прямоугольник</option>
-                    <option value="triangle">Треугольник</option>
-                    <option value="diamond">Ромб</option>
-                    <option value="ellipse">Круг</option>
-                </select>
+                    <select id="shape_type" class="form-select">
+                        <option value="square">Квадрат</option>
+                        <option value="rectangle">Прямоугольник</option>
+                        <option value="triangle">Треугольник</option>
+                        <option value="diamond">Ромб</option>
+                        <option value="ellipse">Круг</option>
+                    </select>
                 </div>
                 <div class="row g-2">
                     <div class="col-md-6">
@@ -522,7 +522,7 @@
                     </div>
                 </div>
                 <div class="row g-2 mt-2">
-                    <div class="form-group">
+                    <div class="col-md-6">
                         <label class="form-label">Цвет</label>
                         <div class="color-picker-simple">
                             <button type="button" id="shapeColorPickerBtn" class="color-btn">
@@ -551,10 +551,14 @@
                     <div class="col-md-6">
                         <label class="form-label">Прозрачность</label>
                         <input type="range" id="shape_opacity" class="form-range" min="0" max="1" step="0.05" value="1">
-                        <span id="opacity_value" class="small text-muted">1.0</span>
+                        <span id="opacity_value" class="small text-muted">100%</span>
                     </div>
                 </div>
                 <div class="mb-3 mt-2">
+                    <label class="form-label">Размер шрифта (px)</label>
+                    <input type="number" id="shape_font_size" class="form-control" value="12" min="8" max="48" step="1">
+                </div>
+                <div class="mb-3">
                     <label class="form-label">Описание (отображается по центру)</label>
                     <input type="text" id="shape_description" class="form-control" placeholder="Текст">
                 </div>

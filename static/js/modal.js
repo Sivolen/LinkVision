@@ -834,6 +834,12 @@ window.openShapeModal = function(shapeNode = null) {
         const percent = Math.round(opacityInput.value * 100);
         opacitySpan.textContent = `${percent}%`;
     }
+    const fontSizeInput = document.getElementById('shape_font_size');
+    if (shapeNode) {
+        fontSizeInput.value = shapeNode.data('fontSize') || 12;
+    } else {
+        fontSizeInput.value = 12;
+    }
 
     // Инициализация цветового пикера (заменяет кнопку и вешает обработчики)
     initShapeColorPicker();
@@ -855,6 +861,7 @@ window.saveShape = function() {
     const shapeType = document.getElementById('shape_type').value;
     const width = parseFloat(document.getElementById('shape_width').value);
     const height = parseFloat(document.getElementById('shape_height').value);
+    const fontSize = parseInt(document.getElementById('shape_font_size').value, 10) || 12;
     const color = document.getElementById('shape_color').value;
     const opacity = parseFloat(document.getElementById('shape_opacity').value);
     const description = document.getElementById('shape_description').value;
@@ -891,7 +898,8 @@ window.saveShape = function() {
         height: height,
         color: color,
         opacity: opacity,
-        description: description
+        description: description,
+        font_size: fontSize
     };
 
     const url = id ? `/api/shape/${id}` : '/api/shape';
