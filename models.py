@@ -40,6 +40,7 @@ class Device(db.Model):
     type_id = db.Column(db.Integer, db.ForeignKey('device_type.id'))
     name = db.Column(db.String(64))
     ip_address = db.Column(db.String(45))
+    font_size = db.Column(db.Integer, nullable=True)
     pos_x = db.Column(db.Float, default=0)
     pos_y = db.Column(db.Float, default=0)
     status = db.Column(db.Boolean, default=True)

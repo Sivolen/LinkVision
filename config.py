@@ -33,7 +33,7 @@ class Config:
 
     PERMANENT_SESSION_LIFETIME = timedelta(days=1)
 
-    VERSION = '1.5.0'
+    VERSION = '1.5.5'
 
     # Логирование
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')

@@ -182,6 +182,7 @@ def create_device():
             type_id=data['type_id'],
             name=data['name'],
             ip_address=data.get('ip_address'),
+            font_size=data.get('font_size'),
             x=data.get('x', 100),
             y=data.get('y', 100),
             group_id=data.get('group_id'),
@@ -217,6 +218,8 @@ def update_device(id):
         # Если меняется группа, проверяем принадлежность к карте
         if 'group_id' in update_data:
             device_service.validate_group_for_map(update_data['group_id'], device.map_id)
+        if 'font_size' in data:
+            update_data['font_size'] = data['font_size']
 
         device_service.update_device(id, **update_data)
         return jsonify({'status': 'ok', 'id': id})

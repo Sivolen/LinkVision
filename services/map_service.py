@@ -153,6 +153,7 @@ def get_map_elements(map_id):
                 'iconUrl': icon_url or '',
                 'name': dev.name,
                 'ip': dev.ip_address,
+                'fontSize': dev.font_size,
                 'type': dev.type.name if dev.type else 'Unknown',
                 'width': width,
                 'height': height,
