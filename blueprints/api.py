@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 from services import device_service, map_service
 from utils.logger import api_logger
 from functools import wraps
+from utils.file_validation import safe_save_upload
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -361,7 +362,6 @@ def update_map(id):
     if 'background' in request.files:
         file = request.files['background']
         if file and file.filename:
-            from utils.file_validation import safe_save_upload
             upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'maps')
             os.makedirs(upload_folder, exist_ok=True)
             saved_name = safe_save_upload(file, upload_folder, prefix=f"map_{id}_")
