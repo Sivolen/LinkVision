@@ -187,7 +187,11 @@ const CY_STYLE = [
             'line-style': function(edge) { return edge.data('style') || 'solid'; },
             'curve-style': 'bezier',
             'label': 'data(label)',
-            'font-size': '8px',
+            'font-size': function(edge) {
+                let size = edge.data('font_size');
+                if (size === undefined || size === null) size = 8;
+                return size + 'px';
+            },
             'text-rotation': 'autorotate',
             'text-margin-y': -8,
             'text-background-color': '#fff',
@@ -907,6 +911,9 @@ if (data.shapes && data.shapes.length) {
             if (e.data.id) {
                 e.data.id = `link_${String(e.data.id)}`;   // ← добавляем префикс
             }
+            if (e.data.font_size === undefined || e.data.font_size === null) {
+                e.data.font_size = 8;
+                }
         });
 
         // Добавляем в граф
@@ -1029,6 +1036,7 @@ function openLinkModal(sourceId, targetId) {
     document.getElementById('link_line_style').value = 'solid';
     document.getElementById('linkModalTitle').textContent = 'Новая связь';
     document.getElementById('linkDeleteBtn').style.display = 'none';
+    document.getElementById('link_font_size').value = 8;
     updateLinkPreview();
 
     // ========== БЛОКИРОВКА ДЛЯ ОПЕРАТОРА ==========
@@ -1059,6 +1067,7 @@ function openLinkModalForEdit(edge) {
     document.getElementById('linkModalTitle').textContent = 'Редактировать связь';
     document.getElementById('linkDeleteBtn').style.display = 'inline-block';
     document.getElementById('linkDeleteBtn').onclick = () => deleteLink(data.id);
+    document.getElementById('link_font_size').value = data.font_size || 8;
     updateLinkPreview();
 
     // ========== БЛОКИРОВКА ДЛЯ ОПЕРАТОРА ==========
@@ -1084,19 +1093,20 @@ function confirmCreateLink() {
     const lineColor = document.getElementById('link_line_color')?.value;
     const lineWidth = parseInt(document.getElementById('link_line_width')?.value) || 2;
     const lineStyle = document.getElementById('link_line_style')?.value;
+    const fontSize = parseInt(document.getElementById('link_font_size').value, 10) || 8;
 
     if (!src || !tgt) { alert('⚠️ Ошибка: не выбраны устройства'); return; }
 
     setLinkSaving(true);
     if (linkModal) linkModal.hide();
     if (linkId) {
-        updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle);
+        updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize);
     } else {
-        createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle);
+        createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize);
     }
 }
 
-function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle) {
+function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
     const sourceId = typeof src === 'number' ? src : parseInt(src);
     const targetId = typeof tgt === 'number' ? tgt : parseInt(tgt);
     if (isNaN(sourceId) || isNaN(targetId)) { alert('⚠️ Ошибка: неверные ID'); return; }
@@ -1116,7 +1126,8 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
             link_type: linkType || null,
             line_color: lineColor,
             line_width: lineWidth,
-            line_style: lineStyle
+            line_style: lineStyle,
+            font_size: fontSize
         })
     })
     .then(async res => {
@@ -1138,7 +1149,8 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
                     link_type: linkType,
                     color: lineColor,
                     width: lineWidth,
-                    style: lineStyle
+                    style: lineStyle,
+                    font_size: fontSize
                 }
             });
             resetLinkMode();
@@ -1151,7 +1163,7 @@ function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineCo
     .finally(() => setLinkSaving(false));
 }
 
-function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle) {
+function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
     const numericId = linkId.replace('link_', '');
     fetch(`/api/link/${numericId}`, {
         method: 'PUT',
@@ -1165,7 +1177,8 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
             link_type: linkType || null,
             line_color: lineColor,
             line_width: lineWidth,
-            line_style: lineStyle
+            line_style: lineStyle,
+            font_size: fontSize
         })
     })
     .then(async res => {
@@ -1180,7 +1193,8 @@ function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, 
                 link_type: linkType,
                 color: lineColor,
                 width: lineWidth,
-                style: lineStyle
+                style: lineStyle,
+                font_size: fontSize
             });
             cy.style().update();
         }

@@ -296,7 +296,8 @@ def create_link():
             link_type=data.get('link_type'),
             line_color=data.get('line_color', '#6c757d'),
             line_width=data.get('line_width', 2),
-            line_style=data.get('line_style', 'solid')
+            line_style=data.get('line_style', 'solid'),
+            font_size=data.get('font_size', 8)
         )
         return jsonify({'id': link.id}), 201
     except ValueError as e:

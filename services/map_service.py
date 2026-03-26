@@ -180,7 +180,8 @@ def get_map_elements(map_id):
                 'link_type': link.link_type,
                 'color': link.line_color,
                 'width': link.line_width,
-                'style': link.line_style
+                'style': link.line_style,
+                'font_size': link.font_size
             }
         })
     shapes = [{
@@ -275,7 +276,7 @@ def update_map_details(map_id, name=None, background_filename=None, remove_backg
 
 
 def create_link(map_id, source_id, target_id, src_iface='eth0', tgt_iface='eth0',
-                link_type=None, line_color='#6c757d', line_width=2, line_style='solid'):
+                link_type=None, line_color='#6c757d', line_width=2, line_style='solid', font_size=8):
     """Создать связь между устройствами."""
     link = Link(
         map_id=map_id,
@@ -286,7 +287,8 @@ def create_link(map_id, source_id, target_id, src_iface='eth0', tgt_iface='eth0'
         link_type=link_type,
         line_color=line_color,
         line_width=line_width,
-        line_style=line_style
+        line_style=line_style,
+        font_size=font_size
     )
     db.session.add(link)
     db.session.commit()
@@ -297,6 +299,8 @@ def create_link(map_id, source_id, target_id, src_iface='eth0', tgt_iface='eth0'
 def update_link(link_id, **kwargs):
     """Обновить поля связи."""
     link = Link.query.get_or_404(link_id)
+    if 'font_size' in kwargs:
+        link.font_size = kwargs['font_size']
     for field in ['source_interface', 'target_interface', 'link_type', 'line_color', 'line_width', 'line_style']:
         if field in kwargs:
             setattr(link, field, kwargs[field])
