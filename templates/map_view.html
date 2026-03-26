@@ -150,7 +150,10 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">IP адрес</label>
-                            <input type="text" id="dev_ip" class="form-control" placeholder="8.8.8.8">
+                            <input type="text" id="dev_ip" class="form-control" placeholder="8.8.8.8"
+                                   pattern="^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$"
+                                   title="Введите корректный IPv4-адрес (например, 192.168.1.1)">
+                            <small class="text-muted">Поддерживаются IPv4 и IPv6</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Тип устройства *</label>
