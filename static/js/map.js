@@ -39,7 +39,7 @@ const CY_STYLE = [
             },
             'text-valign': 'bottom',
             'text-margin-y': 8,
-            'font-size': '11px',
+            'font-size': function(node) { return (node.data('fontSize') || 11) + 'px'; },
             'font-weight': 'bold',
             'text-wrap': 'wrap',
             'text-max-width': '80px',
@@ -86,7 +86,7 @@ const CY_STYLE = [
             },
             'text-wrap': 'wrap',
             'text-max-width': '70px',
-            'font-size': '10px',
+           'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
             'font-weight': 'bold',
             'color': '#155724',
             'text-valign': 'center',
@@ -112,7 +112,7 @@ const CY_STYLE = [
             },
             'text-wrap': 'wrap',
             'text-max-width': '70px',
-            'font-size': '10px',
+            'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
             'font-weight': 'bold',
             'color': '#721c24',
             'text-valign': 'center',
@@ -897,6 +897,9 @@ if (data.shapes && data.shapes.length) {
                     n.data.x = bounded.x;
                     n.data.y = bounded.y;
                 }
+            }
+            if (n.data.fontSize === undefined) {
+                n.data.fontSize = null; // или не добавлять, потом будет дефолт в стиле
             }
         });
 

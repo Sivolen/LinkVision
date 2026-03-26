@@ -104,13 +104,14 @@ def get_device_details(device_id):
     }
 
 
-def create_device(map_id, type_id, name, ip_address=None, x=100, y=100, group_id=None, monitoring_enabled=True):
+def create_device(map_id, type_id, name, ip_address=None, x=100, y=100, group_id=None, monitoring_enabled=True, font_size=None):
     """Создать новое устройство."""
     device = Device(
         map_id=map_id,
         type_id=type_id,
         name=name,
         ip_address=ip_address,
+        font_size=font_size,
         pos_x=x,
         pos_y=y,
         group_id=group_id,
@@ -125,7 +126,7 @@ def create_device(map_id, type_id, name, ip_address=None, x=100, y=100, group_id
 def update_device(device_id, **kwargs):
     """Обновить поля устройства (name, ip_address, type_id, pos_x, pos_y, group_id, monitoring_enabled)."""
     device = Device.query.get_or_404(device_id)
-    allowed_fields = ['name', 'ip_address', 'type_id', 'pos_x', 'pos_y', 'group_id', 'monitoring_enabled']
+    allowed_fields = ['name', 'ip_address', 'type_id', 'pos_x', 'pos_y', 'group_id', 'monitoring_enabled', 'font_size']
     for key, value in kwargs.items():
         if key in allowed_fields:
             setattr(device, key, value)

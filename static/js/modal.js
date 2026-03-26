@@ -36,6 +36,9 @@ window.openDeviceModal = function(node) {
     const infoTabLink = document.querySelector('a[href="#device-info"]');
 
     const historyBody = document.getElementById('device-history-body');
+
+    const fontSizeInput = document.getElementById('dev_font_size');
+
     if (historyBody) historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Переключитесь на вкладку "История"</td></tr>';
 
     const paginationDiv = document.getElementById('history-pagination');
@@ -73,6 +76,7 @@ window.openDeviceModal = function(node) {
                     neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет связей</td></tr>';
                 }
                 if (monitoringCheck) monitoringCheck.checked = data.monitoring_enabled;
+                fontSizeInput.value = node.data('fontSize') || '';
                 loadGroups(devGroup, data.group_id);
             })
             .catch(err => {
@@ -84,6 +88,7 @@ window.openDeviceModal = function(node) {
         devId.value = '';
         devName.value = '';
         devIp.value = '';
+        fontSizeInput.value = '';
         if (devType) devType.value = '';
         deleteBtn.style.display = 'none';
         neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет данных</td></tr>';
@@ -131,6 +136,7 @@ window.saveDevice = function() {
     const typeId = document.getElementById('dev_type').value;
     const groupId = document.getElementById('dev_group').value;
     const monitoring = document.getElementById('dev_monitoring').checked;
+    const fontSize = document.getElementById('dev_font_size').value;
 
     if (!name || !typeId) {
         showToast('Ошибка', 'Имя и тип устройства обязательны', 'error');
@@ -144,7 +150,11 @@ window.saveDevice = function() {
         group_id: groupId ? parseInt(groupId) : null,
         monitoring_enabled: monitoring
     };
-
+    if (fontSize !== '') {
+        data.font_size = parseInt(fontSize, 10);
+    } else {
+        data.font_size = null;   // сброс к значению по умолчанию
+    }
     if (!devId) {
         if (!window.currentMapId) {
             showToast('Ошибка', 'Не удалось определить текущую карту', 'error');

@@ -158,11 +158,18 @@
                                 <option value="">-- Выберите тип --</option>
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Группа</label>
-                            <select id="dev_group" class="form-select">
-                                <option value="">-- Без группы --</option>
-                            </select>
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Группа</label>
+                                <select id="dev_group" class="form-select">
+                                    <option value="">-- Без группы --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Размер шрифта (px)</label>
+                                <input type="number" id="dev_font_size" class="form-control" value="11" min="8" max="48" step="1">
+                                <small class="text-muted">Оставьте пустым для стандартного</small>
+                            </div>
                         </div>
                         <div class="form-check mb-3">
                             <input type="checkbox" class="form-check-input" id="dev_monitoring">
@@ -240,13 +247,15 @@
                 <input type="hidden" id="link_target">
 
                 <!-- Интерфейсы -->
-                <div class="mb-3">
-                    <label class="form-label small">Интерфейс источника</label>
-                    <input type="text" id="link_src_iface" class="form-control form-control-sm" placeholder="eth0">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small">Интерфейс назначения</label>
-                    <input type="text" id="link_tgt_iface" class="form-control form-control-sm" placeholder="eth0">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small">Интерфейс источника</label>
+                        <input type="text" id="link_src_iface" class="form-control form-control-sm" placeholder="eth0">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Интерфейс назначения</label>
+                        <input type="text" id="link_tgt_iface" class="form-control form-control-sm" placeholder="eth0">
+                    </div>
                 </div>
 
                 <!-- Предпросмотр связи -->
@@ -271,7 +280,7 @@
                 </div>
 
                 <!-- Тонкая настройка линии -->
-                <div class="row g-2">
+                <div class="row g-2 mb-3">
                     <div class="col-md-4">
                         <label class="form-label small">Цвет линии</label>
                         <input type="color" id="link_line_color" class="form-control form-control-sm" value="#6c757d">
@@ -288,11 +297,14 @@
                             <option value="dotted">Точечная</option>
                         </select>
                     </div>
-                    <div class="row g-2 mt-2">
-                        <div class="col-md-6">
-                            <label class="form-label small">Размер шрифта (px)</label>
-                            <input type="number" id="link_font_size" class="form-control form-control-sm" min="6" max="20" value="8">
-                        </div>
+                </div>
+
+                <!-- Размер шрифта подписи -->
+                <div class="row g-2">
+                    <div class="col-md-12">
+                        <label class="form-label small">Размер шрифта подписи (px)</label>
+                        <input type="number" id="link_font_size" class="form-control form-control-sm" min="6" max="20" value="8">
+                        <small class="text-muted">Оставьте пустым для использования стандартного размера (8px)</small>
                     </div>
                 </div>
             </div>
