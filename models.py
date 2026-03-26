@@ -125,6 +125,7 @@ class MapShape(db.Model):
     y = db.Column(db.Float, nullable=False)
     width = db.Column(db.Float, nullable=False)
     height = db.Column(db.Float, nullable=False)
+    font_size = db.Column(db.Integer, default=12)
     color = db.Column(db.String(7), nullable=False, default='#3498db')
     opacity = db.Column(db.Float, nullable=False, default=1.0)
     description = db.Column(db.String(255), nullable=True)

@@ -228,14 +228,16 @@ const CY_STYLE = [
             'border-color': '#333',
             'border-opacity': 0.5,
             'label': 'data(description)',
+            'text-wrap': 'wrap',
+            'text-max-width': '90%',
             'text-valign': 'center',
             'text-halign': 'center',
-            'font-size': '12px',
+            'font-size': function(node) { return node.data('fontSize') + 'px'; },
             'color': '#000',
-            'text-background-color': '#fff',
-            'text-background-opacity': 0.7,
-            'text-background-padding': '4px',
-            'text-background-shape': 'roundrectangle',
+            //'text-background-opacity': 0,
+            //'text-background-color': '#fff',
+            //'text-background-padding': '4px',
+            //'text-background-shape': 'roundrectangle',
             'z-index': 5
         }
     }
@@ -862,7 +864,8 @@ function loadElements(mapId) {
                     color: shape.color,
                     opacity: shape.opacity,
                     description: shape.description,
-                    label: shape.description || ''
+                    label: shape.description || '',
+                    fontSize: shape.font_size || 12
                 },
                 position: { x: shape.x, y: shape.y }
             }));

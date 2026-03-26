@@ -183,19 +183,18 @@ def get_map_elements(map_id):
                 'style': link.line_style
             }
         })
-    shapes = []
-    for sh in map_obj.shapes:
-        shapes.append({
-            'id': sh.id,
-            'shape_type': sh.shape_type,
-            'x': sh.x,
-            'y': sh.y,
-            'width': sh.width,
-            'height': sh.height,
-            'color': sh.color,
-            'opacity': sh.opacity,
-            'description': sh.description
-        })
+    shapes = [{
+        'id': sh.id,
+        'shape_type': sh.shape_type,
+        'x': sh.x,
+        'y': sh.y,
+        'width': sh.width,
+        'height': sh.height,
+        'color': sh.color,
+        'opacity': sh.opacity,
+        'description': sh.description,
+        'font_size': sh.font_size  # добавлено
+    } for sh in map_obj.shapes]
 
     groups = [{'id': g.id, 'name': g.name, 'color': g.color} for g in map_obj.groups if g.devices.count() > 0]
     return {'nodes': nodes, 'edges': edges, 'groups': groups, 'shapes': shapes}
@@ -450,7 +449,7 @@ def get_map_shapes(map_id):
     return MapShape.query.filter_by(map_id=map_id).all()
 
 
-def create_shape(map_id, shape_type, x, y, width, height, color, opacity, description=None):
+def create_shape(map_id, shape_type, x, y, width, height, color, opacity, description=None, font_size=12):
     shape = MapShape(
         map_id=map_id,
         shape_type=shape_type,
@@ -458,6 +457,7 @@ def create_shape(map_id, shape_type, x, y, width, height, color, opacity, descri
         y=y,
         width=width,
         height=height,
+        font_size=font_size,
         color=color,
         opacity=opacity,
         description=description
@@ -469,6 +469,8 @@ def create_shape(map_id, shape_type, x, y, width, height, color, opacity, descri
 
 def update_shape(shape_id, **kwargs):
     shape = MapShape.query.get_or_404(shape_id)
+    if 'font_size' in kwargs:
+        shape.font_size = kwargs['font_size']
     for key, value in kwargs.items():
         if hasattr(shape, key) and value is not None:
             setattr(shape, key, value)

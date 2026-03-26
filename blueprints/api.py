@@ -551,7 +551,7 @@ def create_shape():
         return jsonify({'error': 'Map not found'}), 404
     if not (current_user.is_admin or map_obj.owner_id == current_user.id):
         return jsonify({'error': 'Доступ запрещён'}), 403
-
+    font_size = data.get('font_size', 12)
     try:
         shape = map_service.create_shape(
             map_id=map_id,
@@ -560,6 +560,7 @@ def create_shape():
             y=data['y'],
             width=data['width'],
             height=data['height'],
+            font_size=font_size,
             color=data.get('color', '#3498db'),
             opacity=data.get('opacity', 1.0),
             description=data.get('description')
