@@ -1684,7 +1684,22 @@ window.addDeviceToGraph = function(device) {
         }
     }
 
-    cy.add({
+    // Используем переданные значения, если есть
+    let iconUrl = device.iconUrl || '';
+    let width = device.width || null;
+    let height = device.height || null;
+
+    // Если не переданы, пытаемся получить из глобального списка (для старых вызовов)
+    if (!iconUrl && device.type_id && window.deviceTypes) {
+        const type = window.deviceTypes.find(t => t.id === device.type_id);
+        if (type && type.icon_filename) {
+            iconUrl = `/static/uploads/icons/${type.icon_filename}?v=${type.id}`;
+            width = type.width;
+            height = type.height;
+        }
+    }
+
+    const newNode = cy.add({
         group: 'nodes',
         data: {
             id: String(device.id),
@@ -1694,13 +1709,21 @@ window.addDeviceToGraph = function(device) {
             group_id: device.group_id,
             parent: groupParent,
             monitoring_enabled: device.monitoring_enabled,
-            status: device.status || 'true'
+            status: device.status || 'true',
+            iconUrl: iconUrl,
+            width: width,
+            height: height,
+            fontSize: device.font_size || null
         },
         position: { x: device.x || 100, y: device.y || 100 }
     });
 
+    if (newNode && newNode.length) {
+        newNode.emit('style');
+    }
     cy.style().update();
-    Logger.info('✅ Новое устройство добавлено на карту:', device.name);
+
+    Logger.info('✅ Новое устройство добавлено на карту:', device.name, 'iconUrl:', iconUrl);
 };
 
 window.removeDeviceFromGraph = function(deviceId) {

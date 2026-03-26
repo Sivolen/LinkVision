@@ -219,7 +219,10 @@ window.saveDevice = function() {
                 monitoring_enabled: data.monitoring_enabled,
                 x: data.x,
                 y: data.y,
-                status: 'true'
+                status: 'true',
+                iconUrl: result.iconUrl,
+                width: result.width,
+                height: result.height
             };
             if (typeof window.addDeviceToGraph === 'function') {
                 window.addDeviceToGraph(newDevice);
@@ -285,11 +288,23 @@ window.deleteDevice = function(deviceId) {
     });
 };
 
+// Предварительная загрузка типов устройств
+function preloadDeviceTypes() {
+    fetch('/api/types')
+        .then(res => res.ok ? res.json() : [])
+        .then(types => {
+            window.deviceTypes = types;
+        })
+        .catch(err => Logger.error('Ошибка предзагрузки типов:', err));
+}
+
+// Обновлённая loadDeviceTypes (сохраняет в глобальную переменную)
 function loadDeviceTypes(selectEl, callback) {
     if (!selectEl) return;
     fetch('/api/types')
     .then(res => res.ok ? res.json() : [])
     .then(types => {
+        window.deviceTypes = types; // сохраняем глобально
         selectEl.innerHTML = '<option value="">-- Выберите тип --</option>';
         types.forEach(t => {
             const option = document.createElement('option');
@@ -301,7 +316,7 @@ function loadDeviceTypes(selectEl, callback) {
     })
     .catch(err => {
         Logger.error('Ошибка загрузки типов:', err);
-        if (callback) callback(); // чтобы не сломать цепочку
+        if (callback) callback();
     });
 }
 
@@ -817,6 +832,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initTableActions();
     initToast();
     initModalEvents();
+    preloadDeviceTypes();
 
     Logger.info('✅ modal.js инициализирован');
 });
