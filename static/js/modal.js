@@ -829,10 +829,15 @@ window.openShapeModal = function(shapeNode = null) {
         descriptionInput.value = '';
         deleteBtn.style.display = 'none';
     }
-    document.getElementById('opacity_value').textContent = opacityInput.value;
+    const opacitySpan = document.getElementById('opacity_value');
+    if (opacitySpan) {
+        const percent = Math.round(opacityInput.value * 100);
+        opacitySpan.textContent = `${percent}%`;
+    }
 
     // Инициализация цветового пикера (заменяет кнопку и вешает обработчики)
     initShapeColorPicker();
+    initShapeModalEvents();
 
     // Устанавливаем цвет в пикер, если редактируем
     if (shapeNode) {
@@ -1010,4 +1015,17 @@ function initShapeColorPicker() {
 
     // Экспортируем функцию для внешнего использования
     window.setShapeColor = setColor;
+}
+function initShapeModalEvents() {
+    const opacitySlider = document.getElementById('shape_opacity');
+    const opacitySpan = document.getElementById('opacity_value');
+    if (opacitySlider && opacitySpan) {
+        opacitySlider.addEventListener('input', function() {
+            const percent = Math.round(this.value * 100);
+            opacitySpan.textContent = `${percent}%`;
+        });
+        // Установить начальное значение
+        const initialPercent = Math.round(opacitySlider.value * 100);
+        opacitySpan.textContent = `${initialPercent}%`;
+    }
 }
