@@ -212,35 +212,35 @@ const CY_STYLE = [
             'opacity': 0.7
         }
     },
-    {
-        selector: 'node[isShape]',
-        style: {
-            'shape': function(node) {
-                        const shapeType = node.data('shape_type');
-                        // Для обратной совместимости, если вдруг в БД остался 'circle'
-                        return shapeType === 'circle' ? 'ellipse' : shapeType;
-                    },
-            'width': 'data(width)',
-            'height': 'data(height)',
-            'background-color': 'data(color)',
-            'background-opacity': 'data(opacity)',
-            'border-width': 2,
-            'border-color': '#333',
-            'border-opacity': 0.5,
-            'label': 'data(description)',
-            'text-wrap': 'wrap',
-            'text-max-width': '90%',
-            'text-valign': 'center',
-            'text-halign': 'center',
-            'font-size': function(node) { return node.data('fontSize') + 'px'; },
-            'color': '#000',
-            //'text-background-opacity': 0,
-            //'text-background-color': '#fff',
-            //'text-background-padding': '4px',
-            //'text-background-shape': 'roundrectangle',
-            'z-index': 5
-        }
+{
+    selector: 'node[isShape]',
+    style: {
+        'shape': function(node) {
+            const shapeType = node.data('shape_type');
+            return shapeType === 'circle' ? 'ellipse' : shapeType;
+        },
+        'width': 'data(width)',
+        'height': 'data(height)',
+        'background-color': 'data(color)',
+        'background-opacity': 'data(opacity)',
+        'border-width': 2,
+        'border-color': '#333',
+        'border-opacity': 0.5,
+        'label': 'data(label)',          // ← исправлено
+        'text-wrap': 'wrap',
+        'text-max-width': function(node) {
+            let w = node.data('width');
+            if (typeof w === 'string') w = parseFloat(w);
+            if (isNaN(w)) w = 100;
+            return (w - 10) + 'px';
+        },
+        'text-valign': 'center',
+        'text-halign': 'center',
+        'font-size': function(node) { return node.data('fontSize') + 'px'; },
+        'color': '#000',
+        'z-index': 5
     }
+}
 ];
 
 function updateGroupLabelColor() {
@@ -852,25 +852,30 @@ function loadElements(mapId) {
             });
         }
 
-        if (data.shapes && data.shapes.length) {
-            const shapeNodes = data.shapes.map(shape => ({
-                group: 'nodes',
-                data: {
-                    id: `shape_${shape.id}`,
-                    isShape: true,
-                    shape_type: shape.shape_type,
-                    width: shape.width,
-                    height: shape.height,
-                    color: shape.color,
-                    opacity: shape.opacity,
-                    description: shape.description,
-                    label: shape.description || '',
-                    fontSize: shape.font_size || 12
-                },
-                position: { x: shape.x, y: shape.y }
-            }));
-            cy.add(shapeNodes);
-        }
+if (data.shapes && data.shapes.length) {
+    const shapeNodes = data.shapes.map(shape => {
+        const fontSize = shape.font_size || 12;
+        const maxWidth = shape.width - 10; // отступы от краёв
+        const wrappedDescription = wrapText(shape.description || '', 30);
+        return {
+            group: 'nodes',
+            data: {
+                id: `shape_${shape.id}`,
+                isShape: true,
+                shape_type: shape.shape_type,
+                width: shape.width,
+                height: shape.height,
+                color: shape.color,
+                opacity: shape.opacity,
+                description: shape.description,
+                label: wrappedDescription,
+                fontSize: fontSize
+            },
+            position: { x: shape.x, y: shape.y }
+        };
+    });
+    cy.add(shapeNodes);
+}
         // Узлы устройств — работаем с исходными объектами, только приводим id к строке
         const validNodes = data.nodes.filter(n => n.data && n.data.id);
         validNodes.forEach(n => {
@@ -1922,3 +1927,30 @@ document.addEventListener('fullscreenchange', function() {
         exitFullscreen();
     }
 });
+function wrapText(text, maxChars = 25) {
+    if (!text) return '';
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+
+    for (let word of words) {
+        // Если слово само по себе длиннее maxChars, разбиваем его на части
+        while (word.length > maxChars) {
+            if (currentLine) {
+                lines.push(currentLine);
+                currentLine = '';
+            }
+            lines.push(word.slice(0, maxChars));
+            word = word.slice(maxChars);
+        }
+        // Теперь word гарантированно короче maxChars
+        if (currentLine.length + word.length + 1 <= maxChars) {
+            currentLine = currentLine ? currentLine + ' ' + word : word;
+        } else {
+            if (currentLine) lines.push(currentLine);
+            currentLine = word;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines.join('\n');
+}
