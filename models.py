@@ -63,6 +63,7 @@ class Link(db.Model):
     line_color = db.Column(db.String(7), default="#6c757d")  # hex-код цвета
     line_width = db.Column(db.Integer, default=2)            # толщина линии в пикселях
     line_style = db.Column(db.String(10), default="solid")   # solid, dashed, dotted
+    font_size = db.Column(db.Integer, default=8)
 
 
 class Settings(db.Model):
