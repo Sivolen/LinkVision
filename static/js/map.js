@@ -216,35 +216,45 @@ const CY_STYLE = [
             'opacity': 0.7
         }
     },
-{
-    selector: 'node[isShape]',
-    style: {
-        'shape': function(node) {
-            const shapeType = node.data('shape_type');
-            return shapeType === 'circle' ? 'ellipse' : shapeType;
-        },
-        'width': 'data(width)',
-        'height': 'data(height)',
-        'background-color': 'data(color)',
-        'background-opacity': 'data(opacity)',
-        'border-width': 2,
-        'border-color': '#333',
-        'border-opacity': 0.5,
-        'label': 'data(label)',          // ← исправлено
-        'text-wrap': 'wrap',
-        'text-max-width': function(node) {
-            let w = node.data('width');
-            if (typeof w === 'string') w = parseFloat(w);
-            if (isNaN(w)) w = 100;
-            return (w - 10) + 'px';
-        },
-        'text-valign': 'center',
-        'text-halign': 'center',
-        'font-size': function(node) { return node.data('fontSize') + 'px'; },
-        'color': '#000',
-        'z-index': 5
+    {
+        selector: 'node[isShape]',
+        style: {
+            'shape': function(node) {
+                const shapeType = node.data('shape_type');
+                return shapeType === 'circle' ? 'ellipse' : shapeType;
+            },
+            'width': 'data(width)',
+            'height': 'data(height)',
+            'background-color': 'data(color)',
+            'background-opacity': 'data(opacity)',
+            'border-width': 2,
+            'border-color': '#333',
+            'border-opacity': 0.5,
+            'label': 'data(label)',          // ← исправлено
+            'text-wrap': 'wrap',
+            'text-max-width': function(node) {
+                let w = node.data('width');
+                if (typeof w === 'string') w = parseFloat(w);
+                if (isNaN(w)) w = 100;
+                return (w - 10) + 'px';
+            },
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'font-size': function(node) { return node.data('fontSize') + 'px'; },
+            'color': '#000',
+            'z-index': 5
+        }
+    },
+    {
+        selector: 'node[isShape]:selected',
+        style: {
+            'border-color': '#007bff',
+            'border-width': 5,
+            'background-color': 'rgba(0,123,255,0.1)',
+            'transition-property': 'border-width, background-color',
+            'transition-duration': '0.2s'
+        }
     }
-}
 ];
 
 function updateGroupLabelColor() {
@@ -587,38 +597,46 @@ function initMap(mapId) {
 
     // Завершение перетаскивания группы выбранных узлов
     cy.on('dragfree', 'node:selected', function(evt) {
-        if (window.isOperator || dragLocked) return;
+    if (window.isOperator || dragLocked) return;
 
-        const draggedNode = evt.target;
-        if (draggedNode.data('isGroup')) return;
+    const draggedNode = evt.target;
+    if (draggedNode.data('isGroup')) return;
 
-        const selectedNodes = cy.nodes(':selected').filter(n => !n.data('isGroup'));
-        if (selectedNodes.length <= 1) return;
+    const selectedNodes = cy.nodes(':selected').filter(n => !n.data('isGroup'));
+    if (selectedNodes.length <= 1) return;
 
-        const oldPos = draggedNode._private.scratch._dragStartPos;
-        if (!oldPos) return;
+    const oldPos = draggedNode._private.scratch._dragStartPos;
+    if (!oldPos) return;
 
-        const newPos = draggedNode.position();
-        const deltaX = newPos.x - oldPos.x;
-        const deltaY = newPos.y - oldPos.y;
+    const newPos = draggedNode.position();
+    const deltaX = newPos.x - oldPos.x;
+    const deltaY = newPos.y - oldPos.y;
 
-        const updates = [];
-        selectedNodes.forEach(node => {
-            let x = node.position().x + deltaX;
-            let y = node.position().y + deltaY;
-            if (bgImageWidth && bgImageHeight) {
-                const bounded = boundNodePosition({ x, y });
-                x = bounded.x;
-                y = bounded.y;
-            }
-            node.position({ x, y });
-            updates.push({ id: node.id(), x: Math.round(x), y: Math.round(y) });
-        });
+    const deviceUpdates = [];
+    const shapeUpdates = [];
 
-        // batch-сохранение после debounce
-        if (groupBatchTimeout) clearTimeout(groupBatchTimeout);
-        groupBatchTimeout = setTimeout(() => {
-            const promises = updates.map(update =>
+    selectedNodes.forEach(node => {
+        let x = node.position().x + deltaX;
+        let y = node.position().y + deltaY;
+        if (bgImageWidth && bgImageHeight) {
+            const bounded = boundNodePosition({ x, y });
+            x = bounded.x;
+            y = bounded.y;
+        }
+        node.position({ x, y });
+        if (node.data('isShape')) {
+            const shapeId = node.id().replace('shape_', '');
+            shapeUpdates.push({ id: shapeId, x: Math.round(x), y: Math.round(y) });
+        } else {
+            deviceUpdates.push({ id: node.id(), x: Math.round(x), y: Math.round(y) });
+        }
+    });
+
+    if (groupBatchTimeout) clearTimeout(groupBatchTimeout);
+    groupBatchTimeout = setTimeout(() => {
+        const promises = [];
+        if (deviceUpdates.length) {
+            promises.push(...deviceUpdates.map(update =>
                 fetch(`/api/device/${update.id}/position`, {
                     method: 'PUT',
                     headers: {
@@ -626,14 +644,26 @@ function initMap(mapId) {
                         'X-CSRFToken': getCsrfToken()
                     },
                     body: JSON.stringify({ x: update.x, y: update.y })
-                }).catch(err => Logger.error('Ошибка при сохранении позиции:', err))
-            );
-            Promise.all(promises).catch(err => Logger.error('Групповое сохранение:', err));
-        }, 500);
+                }).catch(err => Logger.error('Ошибка при сохранении позиции устройства:', err))
+            ));
+        }
+        if (shapeUpdates.length) {
+            promises.push(...shapeUpdates.map(update =>
+                fetch(`/api/shape/${update.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ x: update.x, y: update.y })
+                }).catch(err => Logger.error('Ошибка при сохранении позиции фигуры:', err))
+            ));
+        }
+        Promise.all(promises).catch(err => Logger.error('Групповое сохранение:', err));
+    }, 500);
 
-        // очистка scratch
-        selectedNodes.forEach(node => delete node._private.scratch._dragStartPos);
-    });
+    selectedNodes.forEach(node => delete node._private.scratch._dragStartPos);
+});
 
     // Обработчик перетаскивания группы
     cy.on('dragfree', 'node[isGroup]', function(evt) {
@@ -923,6 +953,11 @@ if (data.shapes && data.shapes.length) {
         cy.add(groupNodes);
         cy.add(validNodes);      // теперь это массив исходных объектов с изменёнными data
         cy.add(validEdges);
+        cy.nodes().forEach(node => {
+            if (node.id().startsWith('shape_') && !node.data('isShape')) {
+                node.data('isShape', true);
+            }
+        });
 
         elementsLoaded = true;
         Logger.info('✅ Элементы загружены:', validNodes.length, 'узлов,', validEdges.length, 'связей');
