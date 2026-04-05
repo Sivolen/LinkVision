@@ -386,82 +386,58 @@ let wasDisconnected = false;
         })();
     }
 })();
-    // Обработчик формы редактирования карты
-    const editMapForm = document.getElementById('editMapForm');
-    if (editMapForm) {
-        editMapForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const mapId = document.getElementById('edit_map_id').value;
-            const name = document.getElementById('edit_map_name').value;
-            const fileInput = document.getElementById('edit_map_background');
-            const removeBg = document.getElementById('edit_map_remove_bg').checked;
+// Обработчик формы редактирования карты
+const editMapForm = document.getElementById('editMapForm');
+if (editMapForm) {
+    editMapForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const mapId = document.getElementById('edit_map_id').value;
+        const name = document.getElementById('edit_map_name').value;
+        const fileInput = document.getElementById('edit_map_background');
+        const removeBg = document.getElementById('edit_map_remove_bg').checked;
 
-            const formData = new FormData();
-            formData.append('name', name);
-            if (fileInput.files[0]) {
-                formData.append('background', fileInput.files[0]);
-            }
-            if (removeBg) {
-                formData.append('remove_background', 'true');
-            }
+        const formData = new FormData();
+        formData.append('name', name);
+        if (fileInput.files[0]) {
+            formData.append('background', fileInput.files[0]);
+        }
+        if (removeBg) {
+            formData.append('remove_background', 'true');
+        }
 
-            fetch(`/api/map/${mapId}`, {
-                method: 'PUT',
-                headers: {
-                    'X-CSRFToken': getCsrfToken()
-                },
-                body: formData
-            })
-            .then(async res => {
-                if (!res.ok) {
-                    const errorMsg = await getErrorMessage(res);
-                    throw new Error(errorMsg);
+        fetch(`/api/map/${mapId}`, {
+            method: 'PUT',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: formData
+        })
+        .then(async res => {
+            if (!res.ok) {
+                const errorMsg = await getErrorMessage(res);
+                throw new Error(errorMsg);
+            }
+            return res.json();
+        })
+        .then(data => {
+            const mapItem = document.querySelector(`.map-item[href="/map/${mapId}"] .map-item-name`);
+            if (mapItem) mapItem.textContent = data.name;
+            if (window.currentMapId == mapId) {
+                // Обновляем фон (если он изменился)
+                if (typeof window.updateMapBackground === 'function') {
+                    window.updateMapBackground(data.background);
                 }
-                return res.json();
-            })
-            .then(data => {
-                const mapItem = document.querySelector(`.map-item[href="/map/${mapId}"] .map-item-name`);
-                if (mapItem) mapItem.textContent = data.name;
-                if (window.currentMapId == mapId) {
-                    if (typeof updateMapBackground === 'function') updateMapBackground(data.background);
+                // Перезагружаем все элементы карты (устройства, связи)
+                if (typeof window.reloadMapElements === 'function') {
+                    window.reloadMapElements();
                 }
-                bootstrap.Modal.getInstance(document.getElementById('editMapModal')).hide();
-                showToast('Успешно', 'Карта обновлена', 'success');
-            })
-            .catch(err => {
-                Logger.error(err);
-                showToast('Ошибка', err.message || 'Ошибка при сохранении', 'error');
-            });
+            }
+            bootstrap.Modal.getInstance(document.getElementById('editMapModal')).hide();
+            showToast('Успешно', 'Карта обновлена', 'success');
+        })
+        .catch(err => {
+            Logger.error(err);
+            showToast('Ошибка', err.message || 'Ошибка при сохранении', 'error');
         });
-    }
-    window.exportMap = function() {
-    const mapId = document.getElementById('edit_map_id').value;
-    if (!mapId) {
-        showToast('Ошибка', 'Не удалось определить карту', 'error');
-        return;
-    }
-    fetch(`/api/map/${mapId}/export`, {
-        method: 'GET',
-        headers: { 'X-CSRFToken': getCsrfToken() }
-    })
-    .then(async res => {
-        if (!res.ok) throw new Error(await getErrorMessage(res));
-        return res.json();
-    })
-    .then(data => {
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `map_${mapId}_export.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast('Успешно', 'Карта экспортирована', 'success');
-    })
-    .catch(err => {
-        Logger.error('Error exporting map:', err);
-        showToast('Ошибка', err.message || 'Не удалось экспортировать карту', 'error');
     });
-};
+}

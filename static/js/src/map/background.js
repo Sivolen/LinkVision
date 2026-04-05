@@ -122,3 +122,23 @@ export function boundNodePosition(pos) {
         y: Math.min(Math.max(pos.y, margin), bgImageHeight - margin)
     };
 }
+
+export function updateMapBackground(background) {
+    const bgEl = document.getElementById('cy-background');
+    if (!bgEl) return;
+    if (background) {
+        bgEl.dataset.background = background;
+        loadBackground(background);
+    } else {
+        bgEl.dataset.background = '';
+        bgEl.style.backgroundImage = 'none';
+        bgEl.classList.remove('has-image');
+        bgImageWidth = null;
+        bgImageHeight = null;
+        setBackgroundLoaded(true);
+        const cy = getCy();
+        if (cy) {
+            cy.fit(null, 50);
+        }
+    }
+}
