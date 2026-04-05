@@ -1,6 +1,7 @@
 // index.js – инициализация всех модулей карты
 import { initCy, updateGroupLabelColor } from './core.js';
 import { loadBackground, setElementsLoaded, setBackgroundLoaded } from './background.js';
+import { updateMapBackground } from './background.js';
 import { loadElements } from './elements.js';
 import { initInteractions } from './interactions.js';
 import { initModes, setMode } from './modes.js';
@@ -116,3 +117,4 @@ window.reloadMapElements = () => import('./elements.js').then(m => m.reloadMapEl
 window.addDeviceToGraph = (d) => import('./elements.js').then(m => m.addDeviceToGraph(d));
 window.removeDeviceFromGraph = (id) => import('./elements.js').then(m => m.removeDeviceFromGraph(id));
 window.updateDevice = (d) => import('./elements.js').then(m => m.updateDevice(d));
+window.updateMapBackground = updateMapBackground;  // ← добавить
