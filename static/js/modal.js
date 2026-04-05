@@ -1083,3 +1083,275 @@ function initShapeModalEvents() {
         opacitySpan.textContent = `${initialPercent}%`;
     }
 }
+
+// ==================== СВЯЗИ (LINKS) ====================
+let linkModal = null;
+
+// Обновление предпросмотра интерфейсов
+function updateLinkPreview() {
+    const src = document.getElementById('link_src_iface')?.value || 'eth0';
+    const tgt = document.getElementById('link_tgt_iface')?.value || 'eth0';
+    const preview = document.getElementById('link_preview');
+    if (preview) preview.textContent = `${src} ↔ ${tgt}`;
+}
+
+// Открытие модалки для новой связи
+window.openLinkModal = function(sourceId, targetId) {
+    if (!linkModal) {
+        const el = document.getElementById('linkModal');
+        if (el) linkModal = new bootstrap.Modal(el);
+        else return;
+    }
+    document.getElementById('link_id').value = '';
+    document.getElementById('link_source').value = sourceId;
+    document.getElementById('link_target').value = targetId;
+    document.getElementById('link_src_iface').value = 'eth0';
+    document.getElementById('link_tgt_iface').value = 'eth0';
+    document.getElementById('link_type').value = '';
+    document.getElementById('link_line_color').value = '#6c757d';
+    document.getElementById('link_line_width').value = 2;
+    document.getElementById('link_line_style').value = 'solid';
+    document.getElementById('linkModalTitle').textContent = 'Новая связь';
+    document.getElementById('linkDeleteBtn').style.display = 'none';
+    document.getElementById('link_font_size').value = 8;
+    updateLinkPreview();
+
+    if (window.isOperator) {
+        document.querySelectorAll('#linkModal input, #linkModal select').forEach(el => el.disabled = true);
+        const saveBtn = document.querySelector('#linkModal .btn-primary');
+        const deleteBtn = document.querySelector('#linkModal .btn-danger');
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+    linkModal.show();
+};
+
+// Открытие модалки для редактирования существующей связи
+window.openLinkModalForEdit = function(edge) {
+    if (!linkModal) {
+        const el = document.getElementById('linkModal');
+        if (el) linkModal = new bootstrap.Modal(el);
+        else return;
+    }
+    const data = edge.data();
+    document.getElementById('link_id').value = data.id;
+    document.getElementById('link_source').value = data.source;
+    document.getElementById('link_target').value = data.target;
+    const labelParts = (data.label || 'eth0↔eth0').split('↔');
+    document.getElementById('link_src_iface').value = labelParts[0] || 'eth0';
+    document.getElementById('link_tgt_iface').value = labelParts[1] || 'eth0';
+    document.getElementById('link_type').value = data.link_type || '';
+    document.getElementById('link_line_color').value = data.color || '#6c757d';
+    document.getElementById('link_line_width').value = data.width || 2;
+    document.getElementById('link_line_style').value = data.style || 'solid';
+    document.getElementById('linkModalTitle').textContent = 'Редактировать связь';
+    document.getElementById('linkDeleteBtn').style.display = 'inline-block';
+    document.getElementById('linkDeleteBtn').onclick = () => window.deleteLink(data.id);
+    document.getElementById('link_font_size').value = data.font_size || 8;
+    updateLinkPreview();
+
+    if (window.isOperator) {
+        document.querySelectorAll('#linkModal input, #linkModal select').forEach(el => el.disabled = true);
+        const saveBtn = document.querySelector('#linkModal .btn-primary');
+        const deleteBtn = document.querySelector('#linkModal .btn-danger');
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+    linkModal.show();
+};
+
+// Сохранение связи (новая или редактирование)
+window.confirmCreateLink = function() {
+    const linkId = document.getElementById('link_id').value;
+    const src = document.getElementById('link_source')?.value;
+    const tgt = document.getElementById('link_target')?.value;
+    const srcIface = document.getElementById('link_src_iface')?.value || 'eth0';
+    const tgtIface = document.getElementById('link_tgt_iface')?.value || 'eth0';
+    const linkType = document.getElementById('link_type')?.value;
+    const lineColor = document.getElementById('link_line_color')?.value;
+    const lineWidth = parseInt(document.getElementById('link_line_width')?.value) || 2;
+    const lineStyle = document.getElementById('link_line_style')?.value;
+    const fontSize = parseInt(document.getElementById('link_font_size').value, 10) || 8;
+
+    if (!src || !tgt) {
+        showToast('Ошибка', 'Не выбраны устройства', 'error');
+        return;
+    }
+
+    window.setLinkSaving(true);
+    if (linkModal) linkModal.hide();
+
+    if (linkId) {
+        window.updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize);
+    } else {
+        window.createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize);
+    }
+};
+
+// Создание связи через API
+window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
+    const sourceId = typeof src === 'number' ? src : parseInt(src);
+    const targetId = typeof tgt === 'number' ? tgt : parseInt(tgt);
+    if (isNaN(sourceId) || isNaN(targetId)) {
+        showToast('Ошибка', 'Неверные ID устройств', 'error');
+        return;
+    }
+
+    fetch('/api/link', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            map_id: window.currentMapId,
+            source_id: sourceId,
+            target_id: targetId,
+            src_iface: srcIface,
+            tgt_iface: tgtIface,
+            link_type: linkType || null,
+            line_color: lineColor,
+            line_width: lineWidth,
+            line_style: lineStyle,
+            font_size: fontSize
+        })
+    })
+    .then(async res => {
+        if (!res.ok) throw new Error(await getErrorMessage(res));
+        return res.json();
+    })
+    .then(data => {
+        if (data.id && window.cy) {
+            window.cy.add({
+                group: 'edges',
+                data: {
+                    id: `link_${data.id}`,
+                    source: String(sourceId),
+                    target: String(targetId),
+                    label: `${srcIface}↔${tgtIface}`,
+                    link_type: linkType,
+                    color: lineColor,
+                    width: lineWidth,
+                    style: lineStyle,
+                    font_size: fontSize
+                }
+            });
+            if (typeof window.resetLinkMode === 'function') window.resetLinkMode();
+            showToast('Успешно', 'Связь создана', 'success');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        showToast('Ошибка', err.message || 'Не удалось создать связь', 'error');
+    })
+    .finally(() => window.setLinkSaving(false));
+};
+
+// Обновление существующей связи
+window.updateLink = function(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
+    const numericId = linkId.replace('link_', '');
+    fetch(`/api/link/${numericId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            source_interface: srcIface,
+            target_interface: tgtIface,
+            link_type: linkType || null,
+            line_color: lineColor,
+            line_width: lineWidth,
+            line_style: lineStyle,
+            font_size: fontSize
+        })
+    })
+    .then(async res => {
+        if (!res.ok) throw new Error(await getErrorMessage(res));
+        const edge = window.cy.getElementById(linkId);
+        if (edge.length) {
+            edge.data({
+                label: `${srcIface}↔${tgtIface}`,
+                link_type: linkType,
+                color: lineColor,
+                width: lineWidth,
+                style: lineStyle,
+                font_size: fontSize
+            });
+            window.cy.style().update();
+        }
+        showToast('Успешно', 'Связь обновлена', 'success');
+    })
+    .catch(err => {
+        console.error(err);
+        showToast('Ошибка', err.message || 'Не удалось обновить связь', 'error');
+    })
+    .finally(() => window.setLinkSaving(false));
+};
+
+// Удаление связи
+window.deleteLink = function(linkId) {
+    confirmAction('Удаление связи', 'Удалить эту связь?', () => {
+        const numericId = String(linkId).replace('link_', '');
+        fetch(`/api/link/${numericId}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        })
+        .then(async res => {
+            if (!res.ok) throw new Error(await getErrorMessage(res));
+            if (window.cy) window.cy.getElementById(String(linkId)).remove();
+            if (linkModal) linkModal.hide();
+            showToast('Успешно', 'Связь удалена', 'success');
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Ошибка', err.message || 'Не удалось удалить связь', 'error');
+        });
+    });
+};
+
+// Вспомогательная функция для индикации сохранения
+window.setLinkSaving = function(isSaving) {
+    const saveBtn = document.getElementById('saveLinkBtn');
+    const btnText = saveBtn?.querySelector('.btn-text');
+    const btnLoader = saveBtn?.querySelector('.btn-loader');
+    if (!saveBtn) return;
+    if (isSaving) {
+        if (btnText) btnText.classList.add('d-none');
+        if (btnLoader) btnLoader.classList.remove('d-none');
+        saveBtn.disabled = true;
+    } else {
+        if (btnText) btnText.classList.remove('d-none');
+        if (btnLoader) btnLoader.classList.add('d-none');
+        saveBtn.disabled = false;
+    }
+};
+// ==================== ПРЕСЕТЫ ДЛЯ СВЯЗЕЙ ====================
+window.applyLinkTypePreset = function(type) {
+    const presets = {
+        '100m':  { color: '#d1d5db', width: 2, style: 'solid' },
+        '1G':    { color: '#3b82f6', width: 3, style: 'solid' },
+        '10G':   { color: '#2563eb', width: 4, style: 'solid' },
+        '25G':   { color: '#4f46e5', width: 5, style: 'solid' },
+        '100G':  { color: '#6b7280', width: 6, style: 'solid' },
+        '400G':  { color: '#8b5cf6', width: 8, style: 'solid' },
+        'vlan':  { color: '#94a3b8', width: 2, style: 'dashed' },
+        'radio': { color: '#84cc16', width: 2, style: 'dotted' }
+    };
+    if (type && presets[type]) {
+        const colorInput = document.getElementById('link_line_color');
+        const widthInput = document.getElementById('link_line_width');
+        const styleSelect = document.getElementById('link_line_style');
+        if (colorInput) colorInput.value = presets[type].color;
+        if (widthInput) widthInput.value = presets[type].width;
+        if (styleSelect) styleSelect.value = presets[type].style;
+        // обновить предпросмотр (если функция существует)
+        if (typeof updateLinkPreview === 'function') updateLinkPreview();
+    }
+};
+window.openDeviceModal = openDeviceModal;
+window.openShapeModal = openShapeModal;
+window.openLinkModal = openLinkModal;
+window.openLinkModalForEdit = openLinkModalForEdit;
+window.saveDevice = saveDevice;
+window.deleteDevice = deleteDevice;
