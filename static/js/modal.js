@@ -129,7 +129,7 @@ document.getElementById('deviceModal')?.addEventListener('hidden.bs.modal', func
     if (paginationDiv) paginationDiv.style.display = 'none';
 });
 
-window.saveDevice = function() {
+window.saveDevice = async function() {
     const devId = document.getElementById('dev_id').value;
     const name = document.getElementById('dev_name').value.trim();
     const ip = document.getElementById('dev_ip').value.trim();
@@ -208,7 +208,7 @@ window.saveDevice = function() {
         }
         return res.json();
     })
-    .then(result => {
+    .then(async result => {
         if (!devId) {
             const newDevice = {
                 id: result.id,
@@ -225,7 +225,7 @@ window.saveDevice = function() {
                 height: result.height
             };
             if (typeof window.addDeviceToGraph === 'function') {
-                window.addDeviceToGraph(newDevice);
+                await window.addDeviceToGraph(newDevice);
             }
             showToast('Успешно', 'Устройство создано', 'success');
         } else {
@@ -277,6 +277,9 @@ window.deleteDevice = function(deviceId) {
             }
             if (typeof window.removeDeviceFromGraph === 'function') {
                 window.removeDeviceFromGraph(deviceId);
+            }
+            if (typeof window.reloadMapElements === 'function') {
+                window.reloadMapElements();
             }
             deviceModal.hide();
             showToast('Успешно', 'Устройство удалено', 'success');

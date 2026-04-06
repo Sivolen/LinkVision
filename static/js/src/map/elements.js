@@ -22,6 +22,7 @@ export function loadElements(mapId) {
             const groupNodes = [];
             const groupMap = {};
             (data.groups || []).forEach(g => {
+                if (g.device_count === 0) return;
                 const groupNode = {
                     group: 'nodes',
                     data: {
@@ -100,14 +101,47 @@ export function loadElements(mapId) {
         .catch(err => console.error('Load elements error:', err));
 }
 
-export function addDeviceToGraph(device) {
+export async function addDeviceToGraph(device) {
     const cy = getCy();
-    if (!cy || cy.getElementById(String(device.id)).length) return;
+    if (!cy) return;
+
+    // Проверяем, не существует ли уже устройство
+    if (cy.getElementById(String(device.id)).length) return;
+
     let groupParent = undefined;
     if (device.group_id) {
-        const groupNode = cy.getElementById(`group_${device.group_id}`);
-        if (groupNode.length) groupParent = `group_${device.group_id}`;
+        let groupNode = cy.getElementById(`group_${device.group_id}`);
+        // Если группы нет в графе – загружаем её данные с сервера
+        if (!groupNode.length) {
+            try {
+                const res = await fetch(`/api/map/${window.currentMapId}/groups`);
+                if (res.ok) {
+                    const groups = await res.json();
+                    const groupData = groups.find(g => g.id === device.group_id);
+                    if (groupData) {
+                        // Добавляем узел группы
+                        groupNode = cy.add({
+                            group: 'nodes',
+                            data: {
+                                id: `group_${groupData.id}`,
+                                name: groupData.name,
+                                color: groupData.color,
+                                isGroup: true,
+                                group_id: groupData.id,
+                                fontSize: groupData.font_size || 11
+                            }
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load group:', err);
+            }
+        }
+        if (groupNode && groupNode.length) {
+            groupParent = `group_${device.group_id}`;
+        }
     }
+
     cy.add({
         group: 'nodes',
         data: {
