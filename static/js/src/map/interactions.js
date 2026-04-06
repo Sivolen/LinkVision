@@ -2,6 +2,7 @@
 import { getCy } from './core.js';
 import { boundNodePosition, getBgDimensions } from './background.js';
 import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes.js';
+import { updateEdgeLabelsForNode } from './edgeLabels.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
@@ -20,6 +21,7 @@ export function initInteractions(cy) {
             if (bounded.x !== pos.x || bounded.y !== pos.y) node.position(bounded);
             pos = node.position();
         }
+        updateEdgeLabelsForNode(node);
         clearTimeout(dragTimeouts[node.id()]);
         dragTimeouts[node.id()] = setTimeout(() => {
             fetch(`/api/device/${node.id()}/position`, {
@@ -57,6 +59,7 @@ export function initInteractions(cy) {
                 deviceUpdates.push({ id: node.id(), x: Math.round(x), y: Math.round(y) });
             }
         });
+        selectedNodes.forEach(node => updateEdgeLabelsForNode(node));
         clearTimeout(groupBatchTimeout);
         groupBatchTimeout = setTimeout(() => {
             const promises = deviceUpdates.map(upd =>

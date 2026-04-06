@@ -1228,13 +1228,20 @@ window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkTyp
                     id: `link_${data.id}`,
                     source: String(sourceId),
                     target: String(targetId),
-                    label: `${srcIface}↔${tgtIface}`,
+                    label: `${srcIface} ↔ ${tgtIface}`,
+                    srcIface: srcIface,
+                    tgtIface: tgtIface,
                     link_type: linkType,
                     color: lineColor,
                     width: lineWidth,
                     style: lineStyle,
                     font_size: fontSize
                 }
+            });
+            // Обновить подпись сразу (хотя порядок может быть правильным, но для единообразия)
+            import('./edgeLabels.js').then(module => {
+                const edge = window.cy.getElementById(`link_${data.id}`);
+                if (edge.length) module.updateEdgeLabel(edge);
             });
             if (typeof window.resetLinkMode === 'function') window.resetLinkMode();
             showToast('Успешно', 'Связь создана', 'success');

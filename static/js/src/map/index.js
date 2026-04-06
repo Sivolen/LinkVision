@@ -117,4 +117,5 @@ window.reloadMapElements = () => import('./elements.js').then(m => m.reloadMapEl
 window.addDeviceToGraph = (d) => import('./elements.js').then(m => m.addDeviceToGraph(d));
 window.removeDeviceFromGraph = (id) => import('./elements.js').then(m => m.removeDeviceFromGraph(id));
 window.updateDevice = (d) => import('./elements.js').then(m => m.updateDevice(d));
-window.updateMapBackground = updateMapBackground;  // ← добавить
+window.updateMapBackground = updateMapBackground;
+window.updateAllEdgeLabels = () => import('./edgeLabels.js').then(m => m.updateAllEdgeLabels());
