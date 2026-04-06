@@ -1137,9 +1137,16 @@ window.openLinkModalForEdit = function(edge) {
     document.getElementById('link_id').value = data.id;
     document.getElementById('link_source').value = data.source;
     document.getElementById('link_target').value = data.target;
-    const labelParts = (data.label || 'eth0↔eth0').split('↔');
-    document.getElementById('link_src_iface').value = labelParts[0] || 'eth0';
-    document.getElementById('link_tgt_iface').value = labelParts[1] || 'eth0';
+    // Используем сохранённые оригинальные интерфейсы, если они есть, иначе парсим label
+    let srcIface = data.srcIface;
+    let tgtIface = data.tgtIface;
+    if (!srcIface || !tgtIface) {
+        const parts = (data.label || 'eth0↔eth0').split('↔');
+        srcIface = parts[0].trim();
+        tgtIface = parts[1].trim();
+    }
+    document.getElementById('link_src_iface').value = srcIface;
+    document.getElementById('link_tgt_iface').value = tgtIface;
     document.getElementById('link_type').value = data.link_type || '';
     document.getElementById('link_line_color').value = data.color || '#6c757d';
     document.getElementById('link_line_width').value = data.width || 2;
@@ -1222,13 +1229,24 @@ window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkTyp
     })
     .then(data => {
         if (data.id && window.cy) {
+            // Определяем порядок интерфейсов для подписи
+            const sourceNode = window.cy.getElementById(String(sourceId));
+            const targetNode = window.cy.getElementById(String(targetId));
+            const srcX = sourceNode.position().x;
+            const tgtX = targetNode.position().x;
+            let label;
+            if (srcX <= tgtX) {
+                label = `${srcIface} ↔ ${tgtIface}`;
+            } else {
+                label = `${tgtIface} ↔ ${srcIface}`;
+            }
             window.cy.add({
                 group: 'edges',
                 data: {
                     id: `link_${data.id}`,
                     source: String(sourceId),
                     target: String(targetId),
-                    label: `${srcIface} ↔ ${tgtIface}`,
+                    label: label,
                     srcIface: srcIface,
                     tgtIface: tgtIface,
                     link_type: linkType,
@@ -1238,14 +1256,10 @@ window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkTyp
                     font_size: fontSize
                 }
             });
-            // Обновить подпись сразу (хотя порядок может быть правильным, но для единообразия)
-            import('./edgeLabels.js').then(module => {
-                const edge = window.cy.getElementById(`link_${data.id}`);
-                if (edge.length) module.updateEdgeLabel(edge);
-            });
             if (typeof window.resetLinkMode === 'function') window.resetLinkMode();
             showToast('Успешно', 'Связь создана', 'success');
         }
+        if (linkModal) linkModal.hide();
     })
     .catch(err => {
         console.error(err);
@@ -1254,7 +1268,7 @@ window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkTyp
     .finally(() => window.setLinkSaving(false));
 };
 
-// Обновление существующей связи
+// Обновление существующей связи (единственная версия)
 window.updateLink = function(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
     const numericId = linkId.replace('link_', '');
     fetch(`/api/link/${numericId}`, {
@@ -1274,20 +1288,43 @@ window.updateLink = function(linkId, srcIface, tgtIface, linkType, lineColor, li
         })
     })
     .then(async res => {
-        if (!res.ok) throw new Error(await getErrorMessage(res));
+        if (!res.ok) {
+            const errorMsg = await getErrorMessage(res);
+            throw new Error(errorMsg);
+        }
+        // Обновляем ребро в графе
         const edge = window.cy.getElementById(linkId);
         if (edge.length) {
+            const sourceNode = edge.source();
+            const targetNode = edge.target();
+            const srcX = sourceNode.position().x;
+            const tgtX = targetNode.position().x;
+            let label;
+            if (srcX <= tgtX) {
+                label = `${srcIface} ↔ ${tgtIface}`;
+            } else {
+                label = `${tgtIface} ↔ ${srcIface}`;
+            }
             edge.data({
-                label: `${srcIface}↔${tgtIface}`,
+                label: label,
+                srcIface: srcIface,
+                tgtIface: tgtIface,
                 link_type: linkType,
                 color: lineColor,
                 width: lineWidth,
                 style: lineStyle,
                 font_size: fontSize
             });
+            // Обновляем стиль ребра (цвет, толщина, тип линии)
+            edge.style({
+                'line-color': lineColor,
+                'width': lineWidth,
+                'line-style': lineStyle
+            });
             window.cy.style().update();
         }
         showToast('Успешно', 'Связь обновлена', 'success');
+        if (linkModal) linkModal.hide();
     })
     .catch(err => {
         console.error(err);
@@ -1333,7 +1370,8 @@ window.setLinkSaving = function(isSaving) {
         saveBtn.disabled = false;
     }
 };
-// ==================== ПРЕСЕТЫ ДЛЯ СВЯЗЕЙ ====================
+
+// Пресеты для связи
 window.applyLinkTypePreset = function(type) {
     const presets = {
         '100m':  { color: '#d1d5db', width: 2, style: 'solid' },
@@ -1352,7 +1390,6 @@ window.applyLinkTypePreset = function(type) {
         if (colorInput) colorInput.value = presets[type].color;
         if (widthInput) widthInput.value = presets[type].width;
         if (styleSelect) styleSelect.value = presets[type].style;
-        // обновить предпросмотр (если функция существует)
         if (typeof updateLinkPreview === 'function') updateLinkPreview();
     }
 };

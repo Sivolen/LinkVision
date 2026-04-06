@@ -83,9 +83,10 @@ export function loadElements(mapId) {
                 e.data.target = String(e.data.target);
                 e.data.id = `link_${String(e.data.id)}`;
                 if (e.data.font_size === undefined) e.data.font_size = 8;
-                // сохраняем оригинальные интерфейсы
-                e.data.srcIface = e.data.label.split('↔')[0].trim();
-                e.data.tgtIface = e.data.label.split('↔')[1].trim();
+                // Сохраняем оригинальные интерфейсы для последующего обновления
+                const parts = (e.data.label || 'eth0↔eth0').split('↔');
+                e.data.srcIface = parts[0].trim();
+                e.data.tgtIface = parts[1].trim();
             });
             cy.add(validEdges);
             import('./edgeLabels.js').then(module => module.updateAllEdgeLabels());
