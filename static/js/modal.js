@@ -1384,7 +1384,8 @@ window.applyLinkTypePreset = function(type) {
         '100G':  { color: '#6b7280', width: 6, style: 'solid' },
         '400G':  { color: '#8b5cf6', width: 8, style: 'solid' },
         'vlan':  { color: '#94a3b8', width: 2, style: 'dashed' },
-        'radio': { color: '#84cc16', width: 2, style: 'dotted' }
+        'radio': { color: '#84cc16', width: 2, style: 'dotted' },
+        'tunnel': { color: '#06b6d4', width: 2, style: 'dashed' }
     };
     if (type && presets[type]) {
         const colorInput = document.getElementById('link_line_color');
