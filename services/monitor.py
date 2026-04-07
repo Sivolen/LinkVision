@@ -9,6 +9,7 @@ from cachetools import TTLCache
 
 try:
     from ping3 import ping
+
     PING3_AVAILABLE = True
 except ImportError:
     PING3_AVAILABLE = False
@@ -50,15 +51,19 @@ def ping_host(ip, count=1):
             time.sleep(0.2)
         return False
     else:
-        param = '-n' if platform.system().lower() == 'windows' else '-c'
+        param = "-n" if platform.system().lower() == "windows" else "-c"
         timeout_seconds = 2
         try:
-            if platform.system().lower() == 'windows':
-                cmd = ['ping', param, str(count), '-w', str(timeout_seconds * 1000), ip]
+            if platform.system().lower() == "windows":
+                cmd = ["ping", param, str(count), "-w", str(timeout_seconds * 1000), ip]
             else:
-                cmd = ['ping', param, str(count), '-W', str(timeout_seconds), ip]
-            output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                    timeout=timeout_seconds * count + 2)
+                cmd = ["ping", param, str(count), "-W", str(timeout_seconds), ip]
+            output = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=timeout_seconds * count + 2,
+            )
             return output.returncode == 0
         except Exception:
             return False
@@ -80,7 +85,7 @@ def get_setting(key, default):
 
 def monitor_loop():
     global last_emit_time, _monitor_stop_flag
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         monitor_logger.debug("Reloader: monitor started in main process")
     else:
         monitor_logger.debug("Monitor started")
@@ -99,7 +104,7 @@ def monitor_loop():
                     time.sleep(5)
                     continue
 
-                ping_count = get_setting('ping_count', 4)
+                ping_count = get_setting("ping_count", 4)
                 results = []
 
                 def check_device(dev):
@@ -108,14 +113,18 @@ def monitor_loop():
                         return dev, is_up
                     return dev, None
 
-                future_to_dev = {_executor.submit(check_device, dev): dev for dev in devices}
+                future_to_dev = {
+                    _executor.submit(check_device, dev): dev for dev in devices
+                }
                 for future in concurrent.futures.as_completed(future_to_dev):
                     try:
                         dev, is_up = future.result()
                         if is_up is not None:
                             results.append((dev, is_up))
                     except Exception as e:
-                        monitor_logger.error(f"Error checking device {future_to_dev[future].id}: {e}")
+                        monitor_logger.error(
+                            f"Error checking device {future_to_dev[future].id}: {e}"
+                        )
 
                 devices_to_update = []
                 history_entries = []
@@ -129,11 +138,13 @@ def monitor_loop():
                         if device.status != device_is_up:
                             devices_to_update.append((device, device_is_up))
                             old_status = device.status
-                            history_entries.append(DeviceHistory(
-                                device_id=device.id,
-                                old_status=old_status,
-                                new_status=device_is_up
-                            ))
+                            history_entries.append(
+                                DeviceHistory(
+                                    device_id=device.id,
+                                    old_status=old_status,
+                                    new_status=device_is_up,
+                                )
+                            )
                             last_emit_time[device.id] = current_time
 
                 if devices_to_update:
@@ -144,13 +155,17 @@ def monitor_loop():
                     db.session.commit()
 
                     for device, device_is_up in devices_to_update:
-                        room_name = f'map_{device.map_id}'
-                        status_str = 'true' if device_is_up else 'false'
-                        socketio.emit('device_status', {
-                            'id': device.id,
-                            'status': status_str,
-                            'map_id': device.map_id
-                        }, room=room_name)
+                        room_name = f"map_{device.map_id}"
+                        status_str = "true" if device_is_up else "false"
+                        socketio.emit(
+                            "device_status",
+                            {
+                                "id": device.id,
+                                "status": status_str,
+                                "map_id": device.map_id,
+                            },
+                            room=room_name,
+                        )
                         monitor_logger.info(
                             f"[{'UP' if device_is_up else 'DOWN'}] Sent: id={device.id}, status={status_str}, room={room_name}"
                         )
@@ -159,9 +174,11 @@ def monitor_loop():
             monitor_logger.error(f"Monitor error: {e}")
 
         elapsed = time.time() - start_time
-        interval = get_setting('ping_interval', 10)
+        interval = get_setting("ping_interval", 10)
         if elapsed > interval * 0.5:
-            monitor_logger.warning(f"Monitor cycle took {elapsed:.2f}s (interval {interval}s)")
+            monitor_logger.warning(
+                f"Monitor cycle took {elapsed:.2f}s (interval {interval}s)"
+            )
         time.sleep(max(0, interval - elapsed))
 
 
@@ -182,7 +199,7 @@ def stop_monitor():
     _monitor_started = False
 
     if _executor is not None:
-        _executor.shutdown(wait=False)   # не блокируем, пусть завершится в фоне
+        _executor.shutdown(wait=False)  # не блокируем, пусть завершится в фоне
         _executor = None
 
     monitor_logger.info("Monitor stopped")
