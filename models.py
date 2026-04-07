@@ -11,12 +11,13 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     is_operator = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    last_map_id = db.Column(db.Integer, db.ForeignKey('map.id'), nullable=True)
+    last_map_id = db.Column(db.Integer, db.ForeignKey("map.id"), nullable=True)
 
     # Явно указываем foreign_keys для связи maps
-    maps = db.relationship('Map', backref='owner', lazy='dynamic',
-                           foreign_keys='Map.owner_id')
-    last_map = db.relationship('Map', foreign_keys=[last_map_id])
+    maps = db.relationship(
+        "Map", backref="owner", lazy="dynamic", foreign_keys="Map.owner_id"
+    )
+    last_map = db.relationship("Map", foreign_keys=[last_map_id])
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -29,15 +30,15 @@ class DeviceType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
     icon_filename = db.Column(db.String(256))
-    width = db.Column(db.Integer, nullable=True)   # ширина иконки в пикселях
+    width = db.Column(db.Integer, nullable=True)  # ширина иконки в пикселях
     height = db.Column(db.Integer, nullable=True)  # высота иконки в пикселях
-    devices = db.relationship('Device', backref='type', lazy='dynamic')
+    devices = db.relationship("Device", backref="type", lazy="dynamic")
 
 
 class Device(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    map_id = db.Column(db.Integer, db.ForeignKey('map.id'), index=True)
-    type_id = db.Column(db.Integer, db.ForeignKey('device_type.id'))
+    map_id = db.Column(db.Integer, db.ForeignKey("map.id"), index=True)
+    type_id = db.Column(db.Integer, db.ForeignKey("device_type.id"))
     name = db.Column(db.String(64))
     ip_address = db.Column(db.String(45))
     font_size = db.Column(db.Integer, nullable=True)
@@ -45,25 +46,39 @@ class Device(db.Model):
     pos_y = db.Column(db.Float, default=0)
     status = db.Column(db.Boolean, default=True)
     last_check = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), index=True)
+    group_id = db.Column(db.Integer, db.ForeignKey("group.id"), index=True)
     monitoring_enabled = db.Column(db.Boolean, default=True)
 
-    source_links = db.relationship('Link', foreign_keys='Link.source_device_id', backref='source', lazy='dynamic', cascade='all, delete-orphan')
-    target_links = db.relationship('Link', foreign_keys='Link.target_device_id', backref='target', lazy='dynamic', cascade='all, delete-orphan')
+    source_links = db.relationship(
+        "Link",
+        foreign_keys="Link.source_device_id",
+        backref="source",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+    target_links = db.relationship(
+        "Link",
+        foreign_keys="Link.target_device_id",
+        backref="target",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
 
 
 class Link(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    map_id = db.Column(db.Integer, db.ForeignKey('map.id'), index=True)
-    source_device_id = db.Column(db.Integer, db.ForeignKey('device.id'), index=True)
-    target_device_id = db.Column(db.Integer, db.ForeignKey('device.id'), index=True)
+    map_id = db.Column(db.Integer, db.ForeignKey("map.id"), index=True)
+    source_device_id = db.Column(db.Integer, db.ForeignKey("device.id"), index=True)
+    target_device_id = db.Column(db.Integer, db.ForeignKey("device.id"), index=True)
     source_interface = db.Column(db.String(32), default="eth0")
     target_interface = db.Column(db.String(32), default="eth0")
     # Новые поля для кастомизации линии
-    link_type = db.Column(db.String(20), nullable=True)  # например: '100m', '1G', 'vlan', 'radio'
+    link_type = db.Column(
+        db.String(20), nullable=True
+    )  # например: '100m', '1G', 'vlan', 'radio'
     line_color = db.Column(db.String(7), default="#6c757d")  # hex-код цвета
-    line_width = db.Column(db.Integer, default=2)            # толщина линии в пикселях
-    line_style = db.Column(db.String(10), default="solid")   # solid, dashed, dotted
+    line_width = db.Column(db.Integer, default=2)  # толщина линии в пикселях
+    line_style = db.Column(db.String(10), default="solid")  # solid, dashed, dotted
     font_size = db.Column(db.Integer, default=8)
 
 
@@ -73,14 +88,18 @@ class Settings(db.Model):
 
 
 class Map(db.Model):
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     background_image = db.Column(db.String(256), nullable=True)  # новое поле
-    devices = db.relationship('Device', backref='map', cascade="all, delete-orphan", lazy='dynamic')
-    links = db.relationship('Link', backref='map', cascade="all, delete-orphan", lazy='dynamic')
+    devices = db.relationship(
+        "Device", backref="map", cascade="all, delete-orphan", lazy="dynamic"
+    )
+    links = db.relationship(
+        "Link", backref="map", cascade="all, delete-orphan", lazy="dynamic"
+    )
     # pan_x = db.Column(db.Float, default=0)
     # pan_y = db.Column(db.Float, default=0)
     # zoom = db.Column(db.Float, default=1)
@@ -88,12 +107,14 @@ class Map(db.Model):
 
 class DeviceHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.Integer, db.ForeignKey('device.id'), index=True)
+    device_id = db.Column(db.Integer, db.ForeignKey("device.id"), index=True)
     old_status = db.Column(db.Boolean)
     new_status = db.Column(db.Boolean)
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    timestamp = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )
 
-    device = db.relationship('Device', backref='history')
+    device = db.relationship("Device", backref="history")
 
 
 class Group(db.Model):
@@ -101,36 +122,43 @@ class Group(db.Model):
     name = db.Column(db.String(64), nullable=False)
     color = db.Column(db.String(7), default="#3498db")  # hex-код цвета
     font_size = db.Column(db.Integer, default=11)
-    map_id = db.Column(db.Integer, db.ForeignKey('map.id'))
-    map = db.relationship('Map', backref='groups')
-    devices = db.relationship('Device', backref='group', lazy='dynamic')
+    map_id = db.Column(db.Integer, db.ForeignKey("map.id"))
+    map = db.relationship("Map", backref="groups")
+    devices = db.relationship("Device", backref="group", lazy="dynamic")
 
 
 class UserMapSettings(db.Model):
     """Настройки просмотра карты для конкретного пользователя."""
-    __tablename__ = 'user_map_settings'
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True, index=True)
-    map_id = db.Column(db.Integer, db.ForeignKey('map.id'), primary_key=True, index=True)
+
+    __tablename__ = "user_map_settings"
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), primary_key=True, index=True
+    )
+    map_id = db.Column(
+        db.Integer, db.ForeignKey("map.id"), primary_key=True, index=True
+    )
     pan_x = db.Column(db.Float, default=0)
     pan_y = db.Column(db.Float, default=0)
     zoom = db.Column(db.Float, default=1)
 
-    user = db.relationship('User', backref='map_settings')
-    map = db.relationship('Map', backref='user_settings')
+    user = db.relationship("User", backref="map_settings")
+    map = db.relationship("Map", backref="user_settings")
 
 
 class MapShape(db.Model):
-    __tablename__ = 'map_shape'
+    __tablename__ = "map_shape"
     id = db.Column(db.Integer, primary_key=True)
-    map_id = db.Column(db.Integer, db.ForeignKey('map.id'), nullable=False, index=True)
-    shape_type = db.Column(db.String(20), nullable=False)  # square, rectangle, triangle, circle, diamond
+    map_id = db.Column(db.Integer, db.ForeignKey("map.id"), nullable=False, index=True)
+    shape_type = db.Column(
+        db.String(20), nullable=False
+    )  # square, rectangle, triangle, circle, diamond
     x = db.Column(db.Float, nullable=False)
     y = db.Column(db.Float, nullable=False)
     width = db.Column(db.Float, nullable=False)
     height = db.Column(db.Float, nullable=False)
     font_size = db.Column(db.Integer, default=12)
-    color = db.Column(db.String(7), nullable=False, default='#3498db')
+    color = db.Column(db.String(7), nullable=False, default="#3498db")
     opacity = db.Column(db.Float, nullable=False, default=1.0)
     description = db.Column(db.String(255), nullable=True)
 
-    map = db.relationship('Map', backref='shapes')
+    map = db.relationship("Map", backref="shapes")

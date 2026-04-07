@@ -23,12 +23,12 @@ def update_setting(key, value):
 
 def get_ping_settings():
     """Получить настройки пинга (count и interval)."""
-    count = get_setting('ping_count', '4')
-    interval = get_setting('ping_interval', '10')
+    count = get_setting("ping_count", "4")
+    interval = get_setting("ping_interval", "10")
     return int(count), int(interval)
 
 
 def update_ping_settings(ping_count, ping_interval):
     """Обновить настройки пинга."""
-    update_setting('ping_count', str(ping_count))
-    update_setting('ping_interval', str(ping_interval))
+    update_setting("ping_count", str(ping_count))
+    update_setting("ping_interval", str(ping_interval))

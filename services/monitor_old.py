@@ -8,6 +8,7 @@ from utils.logger import monitor_logger
 
 try:
     from ping3 import ping
+
     PING3_AVAILABLE = True
 except ImportError:
     PING3_AVAILABLE = False
@@ -37,15 +38,19 @@ def ping_host(ip, count=1):
             time.sleep(0.2)
         return False
     else:
-        param = '-n' if platform.system().lower() == 'windows' else '-c'
+        param = "-n" if platform.system().lower() == "windows" else "-c"
         timeout_seconds = 2
         try:
-            if platform.system().lower() == 'windows':
-                cmd = ['ping', param, str(count), '-w', str(timeout_seconds * 1000), ip]
+            if platform.system().lower() == "windows":
+                cmd = ["ping", param, str(count), "-w", str(timeout_seconds * 1000), ip]
             else:
-                cmd = ['ping', param, str(count), '-W', str(timeout_seconds), ip]
-            output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                    timeout=timeout_seconds * count + 2)
+                cmd = ["ping", param, str(count), "-W", str(timeout_seconds), ip]
+            output = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=timeout_seconds * count + 2,
+            )
             return output.returncode == 0
         except Exception:
             return False
@@ -61,7 +66,7 @@ def get_setting(key, default):
 
 def monitor_loop():
     global last_emit_time
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         monitor_logger.debug("Reloader: monitor started in main process")
     else:
         monitor_logger.debug("Monitor started")
@@ -74,7 +79,7 @@ def monitor_loop():
                     time.sleep(5)
                     continue
 
-                ping_count = get_setting('ping_count', 4)
+                ping_count = get_setting("ping_count", 4)
                 max_workers = min(50, len(devices))
 
                 results = []
@@ -85,28 +90,35 @@ def monitor_loop():
                         return dev, is_up
                     return dev, None
 
-                with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    future_to_dev = {executor.submit(check_device, dev): dev for dev in devices}
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=max_workers
+                ) as executor:
+                    future_to_dev = {
+                        executor.submit(check_device, dev): dev for dev in devices
+                    }
                     for future in concurrent.futures.as_completed(future_to_dev):
                         try:
                             dev, is_up = future.result()
                             if is_up is not None:
                                 results.append((dev, is_up))
                         except Exception as e:
-                            monitor_logger.error(f"Error checking device {future_to_dev[future].id}: {e}")
+                            monitor_logger.error(
+                                f"Error checking device {future_to_dev[future].id}: {e}"
+                            )
 
                 for device, is_up in results:
                     if not device.monitoring_enabled:
                         continue
                     import time as time_module
+
                     current_time = time_module.time()
                     with _lock:
                         last_time = last_emit_time.get(device.id, 0)
                         if current_time - last_time < 0.5:
                             continue
                         if device.status != is_up:
-                            room_name = f'map_{device.map_id}'
-                            status_str = 'true' if is_up else 'false'
+                            room_name = f"map_{device.map_id}"
+                            status_str = "true" if is_up else "false"
 
                             old_status = device.status
                             device.status = is_up
@@ -115,16 +127,20 @@ def monitor_loop():
                             history_entry = DeviceHistory(
                                 device_id=device.id,
                                 old_status=old_status,
-                                new_status=is_up
+                                new_status=is_up,
                             )
                             db.session.add(history_entry)
                             db.session.commit()
 
-                            socketio.emit('device_status', {
-                                'id': device.id,
-                                'status': status_str,
-                                'map_id': device.map_id
-                            }, room=room_name)
+                            socketio.emit(
+                                "device_status",
+                                {
+                                    "id": device.id,
+                                    "status": status_str,
+                                    "map_id": device.map_id,
+                                },
+                                room=room_name,
+                            )
 
                             monitor_logger.info(
                                 f"[{'UP' if is_up else 'DOWN'}] Sent: id={device.id}, status={status_str}, room={room_name}"
@@ -134,7 +150,7 @@ def monitor_loop():
         except Exception as e:
             monitor_logger.error(f"Monitor error: {e}")
 
-        interval = get_setting('ping_interval', 10)
+        interval = get_setting("ping_interval", 10)
         time.sleep(interval)
 
 

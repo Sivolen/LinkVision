@@ -22,8 +22,8 @@ def create_user(username, password, role):
     Создать пользователя.
     role: 'user', 'operator', 'admin'
     """
-    is_admin = (role == 'admin')
-    is_operator = (role == 'operator')
+    is_admin = role == "admin"
+    is_operator = role == "operator"
     user = User(username=username, is_admin=is_admin, is_operator=is_operator)
     user.set_password(password)
     db.session.add(user)
@@ -40,8 +40,8 @@ def update_user(user_id, username=None, password=None, role=None):
     if password:
         user.set_password(password)
     if role is not None:
-        user.is_admin = (role == 'admin')
-        user.is_operator = (role == 'operator')
+        user.is_admin = role == "admin"
+        user.is_operator = role == "operator"
     db.session.commit()
     admin_logger.info(f"User updated: ID={user_id}, role={role}")
     return user
