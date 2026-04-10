@@ -114,7 +114,8 @@ export const CY_STYLE = [
             'border-width': 5,
             'background-color': 'rgba(0,123,255,0.1)',
             'transition-property': 'border-width, background-color',
-            'transition-duration': '0.2s'
+            'transition-duration': '0.2s',
+            'z-index': 20
         }
     },
     {
@@ -140,16 +141,16 @@ export const CY_STYLE = [
             'border-opacity': 0.3,
             'border-style': 'dashed',
             'label': 'data(name)',
-            'font-size': function(node) { return node.data('fontSize') + 'px'; },
+            'font-size': node => node.data('fontSize') + 'px',
             'font-weight': 'bold',
-            // 'color': '#000000',
             'text-valign': 'top',
             'text-halign': 'center',
-            'padding': '5px',
-            'compound-sizing-wrt-labels': 'include',
-            'min-zoomed-font-size': 8,
-            'min-width': 30,
-            'min-height': 30
+            'padding': '10px',                         // ← отступ внутри группы
+            'compound-sizing-wrt-labels': 'include',   // ← учитывать подписи при расчёте размера
+            'min-width': '80px',                       // ← минимальная ширина
+            'min-height': '60px',                      // ← минимальная высота
+            'bounds-expansion': '20',                   // ← дополнительное расширение границ
+            'z-index': 0
         }
     },
     {
