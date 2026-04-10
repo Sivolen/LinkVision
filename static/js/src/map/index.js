@@ -61,17 +61,35 @@ export function initMap(id) {
     loadElements(mapId);
 
     // Обработчик статуса устройства
+    // Буфер для накопления изменений статусов
+    let statusBatch = [];
+    let statusBatchTimeout = null;
+
     window.socket.on('device_status', (data) => {
         if (Number(data.map_id) !== Number(mapId)) return;
         const node = cy.getElementById(String(data.id));
         if (!node.length) return;
         const statusValue = data.status === 'true' ? 'true' : 'false';
         if (node.data('status') === statusValue) return;
-        node.data('status', statusValue);
-        if (statusValue === 'false') addPulsingNode(cy, node);
-        else removePulsingNode(cy, node);
-        cy.style().update();
-        updateSidebarCounter(data.map_id, statusValue === 'false');
+
+        // Сохраняем изменение в буфер
+        statusBatch.push({ node, statusValue });
+
+        // Откладываем применение стилей на 50 мс
+        if (statusBatchTimeout) clearTimeout(statusBatchTimeout);
+        statusBatchTimeout = setTimeout(() => {
+            cy.batch(() => {
+                statusBatch.forEach(({ node, statusValue }) => {
+                    node.data('status', statusValue);
+                    if (statusValue === 'false') addPulsingNode(cy, node);
+                    else removePulsingNode(cy, node);
+                    updateSidebarCounter(data.map_id, statusValue === 'false');
+                });
+            });
+            cy.style().update(); // один раз обновляем стили для всех
+            statusBatch = [];
+            statusBatchTimeout = null;
+        }, 50);
     });
 }
 // Глобальные функции для панели инструментов

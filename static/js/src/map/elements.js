@@ -10,7 +10,7 @@ export function loadElements(mapId) {
     const cy = getCy();
     if (!cy) return;
 
-    // 🔥 ОЧИЩАЕМ ВСЕ СУЩЕСТВУЮЩИЕ ЭЛЕМЕНТЫ ПЕРЕД ЗАГРУЗКОЙ НОВЫХ
+    // Очищаем граф
     cy.elements().remove();
 
     fetchWithRetry(`/api/map/${mapId}/elements`)
@@ -18,90 +18,92 @@ export function loadElements(mapId) {
         .then(data => {
             const { width: bgW, height: bgH } = getBgImageSize();
 
-            // ГРУППЫ
-            const groupNodes = [];
-            const groupMap = {};
-            (data.groups || []).forEach(g => {
-                if (g.device_count === 0) return;
-                const groupNode = {
-                    group: 'nodes',
-                    data: {
-                        id: `group_${g.id}`,
-                        name: g.name,
-                        color: g.color,
-                        isGroup: true,
-                        group_id: g.id,
-                        fontSize: g.font_size || 11
-                    }
-                };
-                groupNodes.push(groupNode);
-                groupMap[g.id] = `group_${g.id}`;
-            });
-            cy.add(groupNodes);
-
-            // ФИГУРЫ (с проверкой на существование, хотя граф уже очищен)
-            (data.shapes || []).forEach(shape => {
-                const shapeId = `shape_${shape.id}`;
-                if (!cy.getElementById(shapeId).length) {
-                    cy.add({
+            // ⚡ ВСЕ ДОБАВЛЕНИЯ ОБЕРНУТЫ В batch()
+            cy.batch(() => {
+                // ГРУППЫ
+                const groupNodes = [];
+                const groupMap = {};
+                (data.groups || []).forEach(g => {
+                    if (g.device_count === 0) return;
+                    const groupNode = {
                         group: 'nodes',
                         data: {
-                            id: shapeId,
-                            isShape: true,
-                            shape_type: shape.shape_type,
-                            width: shape.width,
-                            height: shape.height,
-                            color: shape.color,
-                            opacity: shape.opacity,
-                            description: shape.description,
-                            label: wrapText(shape.description || '', 30),
-                            fontSize: shape.font_size || 12
-                        },
-                        position: { x: shape.x, y: shape.y }
-                    });
-                }
-            });
+                            id: `group_${g.id}`,
+                            name: g.name,
+                            color: g.color,
+                            isGroup: true,
+                            group_id: g.id,
+                            fontSize: g.font_size || 11
+                        }
+                    };
+                    groupNodes.push(groupNode);
+                    groupMap[g.id] = `group_${g.id}`;
+                });
+                cy.add(groupNodes);
 
-            // УСТРОЙСТВА
-            const validNodes = data.nodes.filter(n => n.data && n.data.id);
-            validNodes.forEach(n => {
-                n.data.id = String(n.data.id);
-                if (n.data.group_id && groupMap[n.data.group_id]) {
-                    n.data.parent = groupMap[n.data.group_id];
-                }
-                if (bgW && bgH && n.data.x !== undefined && n.data.y !== undefined) {
-                    const bounded = boundNodePosition({ x: n.data.x, y: n.data.y });
-                    n.data.x = bounded.x;
-                    n.data.y = bounded.y;
-                }
-            });
-            cy.add(validNodes);
+                // ФИГУРЫ
+                (data.shapes || []).forEach(shape => {
+                    const shapeId = `shape_${shape.id}`;
+                    if (!cy.getElementById(shapeId).length) {
+                        cy.add({
+                            group: 'nodes',
+                            data: {
+                                id: shapeId,
+                                isShape: true,
+                                shape_type: shape.shape_type,
+                                width: shape.width,
+                                height: shape.height,
+                                color: shape.color,
+                                opacity: shape.opacity,
+                                description: shape.description,
+                                label: wrapText(shape.description || '', 30),
+                                fontSize: shape.font_size || 12
+                            },
+                            position: { x: shape.x, y: shape.y }
+                        });
+                    }
+                });
 
-            // РЁБРА
-            const validEdges = data.edges.filter(e => e.data && e.data.source && e.data.target);
-            validEdges.forEach(e => {
-                e.data.source = String(e.data.source);
-                e.data.target = String(e.data.target);
-                e.data.id = `link_${String(e.data.id)}`;
-                if (e.data.font_size === undefined) e.data.font_size = 8;
-                // Сохраняем оригинальные интерфейсы для последующего обновления
-                const parts = (e.data.label || 'eth0↔eth0').split('↔');
-                e.data.srcIface = parts[0].trim();
-                e.data.tgtIface = parts[1].trim();
-            });
-            cy.add(validEdges);
+                // УСТРОЙСТВА
+                const validNodes = data.nodes.filter(n => n.data && n.data.id);
+                validNodes.forEach(n => {
+                    n.data.id = String(n.data.id);
+                    if (n.data.group_id && groupMap[n.data.group_id]) {
+                        n.data.parent = groupMap[n.data.group_id];
+                    }
+                    if (bgW && bgH && n.data.x !== undefined && n.data.y !== undefined) {
+                        const bounded = boundNodePosition({ x: n.data.x, y: n.data.y });
+                        n.data.x = bounded.x;
+                        n.data.y = bounded.y;
+                    }
+                });
+                cy.add(validNodes);
+
+                // РЁБРА
+                const validEdges = data.edges.filter(e => e.data && e.data.source && e.data.target);
+                validEdges.forEach(e => {
+                    e.data.source = String(e.data.source);
+                    e.data.target = String(e.data.target);
+                    e.data.id = `link_${String(e.data.id)}`;
+                    if (e.data.font_size === undefined) e.data.font_size = 8;
+                    const parts = (e.data.label || 'eth0↔eth0').split('↔');
+                    e.data.srcIface = parts[0].trim();
+                    e.data.tgtIface = parts[1].trim();
+                });
+                cy.add(validEdges);
+            }); // конец batch
+
+            // После batch обновляем подписи и группы
             import('./edgeLabels.js').then(module => module.updateAllEdgeLabels());
+            import('./groupResize.js').then(module => module.updateAllGroups());
             setElementsLoaded(true);
 
-            // ПУЛЬСАЦИЯ ДЛЯ НЕДОСТУПНЫХ УСТРОЙСТВ
+            // Пульсация для недоступных
             cy.nodes().forEach(node => {
                 if (node.data('status') === 'false') addPulsingNode(cy, node);
             });
         })
         .catch(err => console.error('Load elements error:', err));
-        cy.ready(() => {
-            import('./groupResize.js').then(module => module.updateAllGroups());
-        });
 }
 
 export async function addDeviceToGraph(device) {
