@@ -2186,3 +2186,18 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 [data-theme="dark"] #groupModal .modern-table td {
     background: transparent !important;
 }
+
+/* ============================================================================
+   КОНТЕКСТНОЕ МЕНЮ
+   ============================================================================ */
+.context-menu {
+    backdrop-filter: blur(8px);
+    transition: all 0.1s;
+}
+.context-menu-item {
+    transition: background 0.1s;
+}
+.context-menu-item i {
+    width: 20px;
+    text-align: center;
+}

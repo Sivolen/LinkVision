@@ -287,4 +287,181 @@ function animateNodeStyle(node, targetColor, targetWidth, duration = 200) {
             }
         });
     });
+        // ==================== КОНТЕКСТНОЕ МЕНЮ ====================
+    let contextMenu = null;
+
+    // Создание и показ меню с абсолютными координатами
+    function showContextMenu(items, mouseX, mouseY) {
+        if (contextMenu) contextMenu.remove();
+
+        const menu = document.createElement('div');
+        menu.className = 'context-menu';
+        menu.style.cssText = `
+            position: fixed;
+            top: ${mouseY}px;
+            left: ${mouseX}px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 10000;
+            min-width: 180px;
+            overflow: hidden;
+        `;
+
+        items.forEach(item => {
+            const btn = document.createElement('button');
+            btn.className = 'context-menu-item';
+            btn.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                width: 100%;
+                padding: 10px 16px;
+                background: transparent;
+                border: none;
+                color: var(--text-primary);
+                font-size: 0.9rem;
+                text-align: left;
+                cursor: pointer;
+                transition: background 0.15s;
+            `;
+            btn.innerHTML = `<i class="fas ${item.icon}" style="width: 20px;"></i> ${item.label}`;
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                item.action();
+                if (contextMenu) contextMenu.remove();
+            };
+            btn.onmouseenter = () => btn.style.backgroundColor = 'var(--accent-color)';
+            btn.onmouseleave = () => btn.style.backgroundColor = 'transparent';
+            menu.appendChild(btn);
+        });
+
+        document.body.appendChild(menu);
+        contextMenu = menu;
+
+        // Закрыть при клике вне
+        const closeHandler = (e) => {
+            if (!menu.contains(e.target)) {
+                if (contextMenu) contextMenu.remove();
+                document.removeEventListener('click', closeHandler);
+                document.removeEventListener('contextmenu', closeHandler);
+            }
+        };
+        setTimeout(() => {
+            document.addEventListener('click', closeHandler);
+            document.addEventListener('contextmenu', closeHandler);
+        }, 10);
+    }
+
+    // Получение абсолютных координат мыши из события Cytoscape
+    function getAbsoluteMousePosition(cyEvent) {
+        const originalEvent = cyEvent.originalEvent;
+        if (originalEvent && typeof originalEvent.clientX === 'number') {
+            return { x: originalEvent.clientX, y: originalEvent.clientY };
+        }
+        // fallback: используем renderedPosition + смещение canvas
+        const rendered = cyEvent.renderedPosition;
+        const canvasRect = document.getElementById('cy').getBoundingClientRect();
+        return { x: canvasRect.left + rendered.x, y: canvasRect.top + rendered.y };
+    }
+
+    // Обработчик правого клика на пустой области
+    cy.on('cxttap', function(event) {
+        if (event.target === cy) {
+            const { x, y } = getAbsoluteMousePosition(event);
+            showContextMenu([
+                { icon: 'fa-plus-circle', label: 'Создать устройство', action: () => window.openDeviceModal() },
+                { icon: 'fa-shapes', label: 'Создать фигуру', action: () => window.openShapeModal() }
+            ], x, y);
+        }
+    });
+
+    // Обработчик правого клика на узлах
+    cy.on('cxttap', 'node', function(evt) {
+        const node = evt.target;
+        const { x, y } = getAbsoluteMousePosition(evt);
+
+        if (node.data('isGroup')) {
+            showContextMenu([
+                { icon: 'fa-edit', label: 'Редактировать группу', action: () => {
+                    const id = node.data('group_id');
+                    const name = node.data('name');
+                    const color = node.data('color');
+                    const fontSize = node.data('fontSize');
+                    if (typeof window.editGroup === 'function') {
+                        window.editGroup(id, name, color, fontSize);
+                        if (typeof window.openGroupManager === 'function') window.openGroupManager();
+                    }
+                }},
+                { icon: 'fa-trash', label: 'Удалить группу', action: () => {
+                    if (typeof window.deleteGroup === 'function') {
+                        window.deleteGroup(node.data('group_id'), node.data('name'));
+                    }
+                }}
+            ], x, y);
+            return;
+        }
+
+        if (node.data('isShape')) {
+            showContextMenu([
+                { icon: 'fa-edit', label: 'Редактировать фигуру', action: () => window.openShapeModal(node) },
+                { icon: 'fa-trash', label: 'Удалить фигуру', action: () => {
+                    const id = node.id().replace('shape_', '');
+                    if (typeof window.deleteShape === 'function') window.deleteShape(id);
+                }}
+            ], x, y);
+            return;
+        }
+
+        // Устройство
+        const deviceId = node.id();
+        const deviceIp = node.data('ip');
+
+        const items = [
+            { icon: 'fa-edit', label: 'Редактировать', action: () => window.openDeviceModal(node) },
+            { icon: 'fa-trash', label: 'Удалить', action: () => {
+                if (typeof window.deleteDevice === 'function') window.deleteDevice(deviceId);
+            }}
+        ];
+        if (deviceIp && deviceIp.trim()) {
+            items.push({ icon: 'fa-copy', label: 'Копировать IP', action: () => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(deviceIp).then(() => {
+                        if (typeof showToast === 'function') showToast('Скопировано', `IP ${deviceIp}`, 'info');
+                    }).catch(() => fallbackCopy(deviceIp));
+                } else {
+                    fallbackCopy(deviceIp);
+                }
+            }});
+        }
+        items.push({ icon: 'fa-history', label: 'История изменений', action: () => {
+            if (typeof window.openDeviceModal === 'function') {
+                window.openDeviceModal(node);
+                setTimeout(() => {
+                    const historyTab = document.querySelector('a[href="#device-history"]');
+                    if (historyTab) {
+                        const tab = new bootstrap.Tab(historyTab);
+                        tab.show();
+                    }
+                }, 300);
+            }
+        }});
+        showContextMenu(items, x, y);
+    });
+
+    // Обработчик правого клика на рёбрах
+    cy.on('cxttap', 'edge', function(evt) {
+        const edge = evt.target;
+        const { x, y } = getAbsoluteMousePosition(evt);
+        const linkId = edge.id();
+        showContextMenu([
+            { icon: 'fa-edit', label: 'Редактировать связь', action: () => {
+                if (typeof window.openLinkModalForEdit === 'function') window.openLinkModalForEdit(edge);
+            }},
+            { icon: 'fa-trash', label: 'Удалить связь', action: () => {
+                if (typeof window.deleteLink === 'function') window.deleteLink(linkId);
+            }}
+        ], x, y);
+    });
 }
