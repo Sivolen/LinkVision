@@ -39,6 +39,9 @@ export function initInteractions(cy) {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
+            })
+            .then(() => {
+                if (typeof window.saveState === 'function') window.saveState('Перемещение устройства');
             }).catch(err => console.error(err));
             delete dragTimeouts[node.id()];
         }, 500);
@@ -82,7 +85,11 @@ export function initInteractions(cy) {
                     body: JSON.stringify({ x: upd.x, y: upd.y })
                 })
             );
-            Promise.all(promises).catch(console.error);
+            Promise.all(promises).catch(console.error)
+            .then(() => {
+            if (typeof window.saveState === 'function') window.saveState('Перемещение группы устройств');
+        })
+        .catch(console.error);
         }, 500);
         selectedNodes.forEach(n => delete n._private.scratch._dragStartPos);
     });

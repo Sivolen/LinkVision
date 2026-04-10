@@ -88,6 +88,7 @@ async function applyBulkEdit() {
     });
     if (!promises.length) { alert('Нет изменений'); return; }
     await Promise.all(promises);
+    if (typeof window.saveState === 'function') window.saveState('Массовое редактирование');
     bootstrap.Modal.getInstance(document.getElementById('bulkEditModal')).hide();
     reloadMapElements();
 }

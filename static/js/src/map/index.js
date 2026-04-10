@@ -13,6 +13,7 @@ import { initFullscreen } from './fullscreen.js';
 import { initPulse, addPulsingNode, removePulsingNode } from './pulse.js';
 import { initBulk } from './bulk.js';
 import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
+import { initUndoRedo } from './undoRedo.js';
 
 let mapId = null;
 
@@ -52,6 +53,9 @@ export function initMap(id) {
     const bgEl = document.getElementById('cy-background');
     if (bgEl && bgEl.dataset.background) loadBackground(bgEl.dataset.background);
     else setBackgroundLoaded(true);
+
+    const { saveState } = initUndoRedo(cy, () => mapId);
+    window.saveState = saveState;
 
     // Загружаем элементы
     loadElements(mapId);
