@@ -91,6 +91,16 @@
             </ul>
         </div>
     </div>
+    {% if current_user.is_admin %}
+    <div class="toolbar-group">
+        <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="Отменить (Ctrl+Z)" disabled>
+            <i class="fas fa-undo-alt"></i>
+        </button>
+        <button class="toolbar-btn" id="redoBtn" onclick="redo()" title="Повторить (Ctrl+Y)" disabled>
+            <i class="fas fa-redo-alt"></i>
+        </button>
+    </div>
+    {% endif %}
     <div class="toolbar-group">
     <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="Заблокировать/разблокировать перемещение устройств">
         <i class="fas fa-lock-open"></i>
@@ -106,16 +116,6 @@
 <!--            <i class="fas fa-save"></i> Сохранить-->
 <!--        </button>-->
 <!--    </div>-->
-    {% if current_user.is_admin %}
-    <div class="toolbar-group">
-        <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="Отменить (Ctrl+Z)" disabled>
-            <i class="fas fa-undo-alt"></i>
-        </button>
-        <button class="toolbar-btn" id="redoBtn" onclick="redo()" title="Повторить (Ctrl+Y)" disabled>
-            <i class="fas fa-redo-alt"></i>
-        </button>
-    </div>
-    {% endif %}
 </div>
 
 <div class="map-container">
