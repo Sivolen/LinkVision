@@ -1,6 +1,20 @@
 // styles.js – вынесенные стили Cytoscape
 export const CY_STYLE = [
     {
+        selector: 'node',
+        style: {
+            'transition-property': 'border-color, border-width',
+            'transition-duration': '0.15s'
+        }
+    },
+    {
+        selector: 'edge',
+        style: {
+            'transition-property': 'line-color, width',
+            'transition-duration': '0.2s'
+        }
+    },
+    {
         selector: 'node[iconUrl][iconUrl != ""]',
         style: {
             'shape': 'round-rectangle',
@@ -167,6 +181,7 @@ export const CY_STYLE = [
             'line-color': function(edge) { return edge.data('color') || '#6c757d'; },
             'line-style': function(edge) { return edge.data('style') || 'solid'; },
             'curve-style': 'bezier',
+            'control-point-step-size': 40,
             'label': 'data(label)',
             'font-size': function(edge) {
                 let size = edge.data('font_size');
