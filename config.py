@@ -33,7 +33,7 @@ class Config:
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "icons")
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload
 
-    VERSION = "1.7.0"
+    VERSION = "1.7.1"
 
     # Логирование
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
