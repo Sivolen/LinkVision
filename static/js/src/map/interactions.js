@@ -3,9 +3,20 @@ import { getCy } from './core.js';
 import { boundNodePosition, getBgDimensions } from './background.js';
 import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes.js';
 import { updateEdgeLabelsForNode } from './edgeLabels.js';
+import { updateGroupsForNode, updateAllGroups } from './groupResize.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
+
+function fallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (typeof showToast === 'function') showToast('Скопировано', `IP ${text} (резервный способ)`, 'info');
+}
 
 export function initInteractions(cy) {
     // Перетаскивание одиночного узла
@@ -59,8 +70,10 @@ export function initInteractions(cy) {
                 deviceUpdates.push({ id: node.id(), x: Math.round(x), y: Math.round(y) });
             }
         });
+        selectedNodes.forEach(node => updateGroupsForNode(node));
         selectedNodes.forEach(node => updateEdgeLabelsForNode(node));
         clearTimeout(groupBatchTimeout);
+        updateAllGroups();
         groupBatchTimeout = setTimeout(() => {
             const promises = deviceUpdates.map(upd =>
                 fetch(`/api/device/${upd.id}/position`, {
@@ -101,9 +114,15 @@ export function initInteractions(cy) {
         window.copyTimer = setTimeout(() => {
             const ip = node.data('ip');
             if (ip && ip.trim()) {
-                navigator.clipboard.writeText(ip).then(() => {
-                    if (typeof showToast === 'function') showToast('Скопировано', `IP ${ip}`, 'info');
-                });
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(ip).then(() => {
+                        if (typeof showToast === 'function') showToast('Скопировано', `IP ${ip}`, 'info');
+                    }).catch(() => {
+                        fallbackCopy(ip);
+                    });
+                } else {
+                    fallbackCopy(ip);
+                }
             }
         }, 200);
         if (window.currentMode !== 'select') cy.nodes().selected(false);

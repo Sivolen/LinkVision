@@ -99,6 +99,9 @@ export function loadElements(mapId) {
             });
         })
         .catch(err => console.error('Load elements error:', err));
+        cy.ready(() => {
+            import('./groupResize.js').then(module => module.updateAllGroups());
+        });
 }
 
 export async function addDeviceToGraph(device) {
@@ -111,6 +114,7 @@ export async function addDeviceToGraph(device) {
     let groupParent = undefined;
     if (device.group_id) {
         let groupNode = cy.getElementById(`group_${device.group_id}`);
+        if (groupNode.length) groupParent = `group_${device.group_id}`;
         // Если группы нет в графе – загружаем её данные с сервера
         if (!groupNode.length) {
             try {
