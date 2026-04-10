@@ -227,6 +227,7 @@ window.saveDevice = async function() {
             if (typeof window.addDeviceToGraph === 'function') {
                 await window.addDeviceToGraph(newDevice);
             }
+            if (typeof window.saveState === 'function') window.saveState('Создание устройства');
             showToast('Успешно', 'Устройство создано', 'success');
         } else {
             if (typeof window.updateDevice === 'function') {
@@ -240,6 +241,7 @@ window.saveDevice = async function() {
                 });
             }
             if (typeof reloadMapElements === 'function') reloadMapElements();
+            if (typeof window.saveState === 'function') window.saveState('Редактирование устройства');
             showToast('Успешно', 'Устройство обновлено', 'success');
         }
         deviceModal.hide();
@@ -278,6 +280,7 @@ window.deleteDevice = function(deviceId) {
             if (typeof window.removeDeviceFromGraph === 'function') {
                 window.removeDeviceFromGraph(deviceId);
             }
+            if (typeof window.saveState === 'function') window.saveState('Удаление устройства');
             if (typeof window.reloadMapElements === 'function') {
                 window.reloadMapElements();
             }
@@ -738,6 +741,7 @@ window.deleteGroup = async function(id, name) {
             loadGroupsList();
             if (currentGroupId === id) resetGroupForm();
             if (typeof reloadMapElements === 'function') reloadMapElements();
+            if (typeof window.saveState === 'function') window.saveState('Удаление группы');
         } catch (err) {
             Logger.error('Delete error:', err);
             showToast('Ошибка', err.message || 'Не удалось удалить группу', 'error');
@@ -968,6 +972,7 @@ window.saveShape = function() {
     })
     .then(() => {
         reloadMapElements();
+        if (typeof window.saveState === 'function') window.saveState(id ? 'Редактирование фигуры' : 'Создание фигуры');
         shapeModal.hide();
         showToast('Успешно', id ? 'Фигура обновлена' : 'Фигура создана', 'success');
     })
@@ -986,6 +991,7 @@ window.deleteShape = function(id) {
         .then(async res => {
             if (!res.ok) throw new Error(await getErrorMessage(res));
             reloadMapElements();
+            if (typeof window.saveState === 'function') window.saveState('Удаление фигуры');
             shapeModal.hide();
             showToast('Успешно', 'Фигура удалена', 'success');
         })
@@ -1259,6 +1265,7 @@ window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkTyp
                     font_size: fontSize
                 }
             });
+            if (typeof window.saveState === 'function') window.saveState('Создание связи');
             if (typeof window.resetLinkMode === 'function') window.resetLinkMode();
             showToast('Успешно', 'Связь создана', 'success');
         }
@@ -1325,6 +1332,7 @@ window.updateLink = function(linkId, srcIface, tgtIface, linkType, lineColor, li
                 'line-style': lineStyle
             });
             window.cy.style().update();
+            if (typeof window.saveState === 'function') window.saveState('Редактирование связи');
         }
         showToast('Успешно', 'Связь обновлена', 'success');
         if (linkModal) linkModal.hide();
@@ -1347,6 +1355,7 @@ window.deleteLink = function(linkId) {
         .then(async res => {
             if (!res.ok) throw new Error(await getErrorMessage(res));
             if (window.cy) window.cy.getElementById(String(linkId)).remove();
+            if (typeof window.saveState === 'function') window.saveState('Удаление связи');
             if (linkModal) linkModal.hide();
             showToast('Успешно', 'Связь удалена', 'success');
         })

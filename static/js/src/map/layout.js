@@ -74,6 +74,7 @@ async function saveAllPositions() {
         if (!res.ok) throw new Error(await getErrorMessage(res));
         const data = await res.json();
         showToast('Успешно', `Сохранены позиции ${data.updated} устройств`, 'success');
+        if (typeof window.saveState === 'function') window.saveState('Авто-раскладка');
     } catch (err) {
         console.error(err);
         showToast('Ошибка', err.message, 'error');

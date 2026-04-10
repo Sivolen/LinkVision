@@ -75,6 +75,14 @@
             </ul>
         </div>
     </div>
+    <div class="toolbar-group">
+        <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="Отменить (Ctrl+Z)" disabled>
+            <i class="fas fa-undo-alt"></i> Отменить
+        </button>
+        <button class="toolbar-btn" id="redoBtn" onclick="redo()" title="Повторить (Ctrl+Y)" disabled>
+            <i class="fas fa-redo-alt"></i> Повторить
+        </button>
+    </div>
     {% endif %}
 
     <div class="search-filter-bar toolbar-group">
