@@ -1,98 +1,260 @@
 /* ============================================================================
-   LinkVision - Современный дизайн (финальная версия)
-   ============================================================================ */
-
+LinkVision - Современный дизайн (финальная версия)
+============================================================================ */
 :root {
-    /* Светлая тема */
-    --bg-primary: #f1f5f9;
-    --bg-secondary: #ffffff;
-    --bg-sidebar: rgba(248, 250, 252, 0.85);
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-sidebar: #1e293b;
-    --border-color: #e2e8f0;
-    --accent-color: #4682b4;
-    --accent-hover: #5a9bd4;
-    --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
-    --cy-background: #ffffff;
-    --cy-grid: #cbd5e1;
-    --sidebar-blur: blur(12px);
-}
-
-[data-theme="dark"] {
-    /* Тёмная тема */
-    --bg-primary: #0b1120;
-    --bg-secondary: #1e293b;
-    --bg-sidebar: rgba(15, 23, 42, 0.8);
-    --text-primary: #f1f5f9;
-    --text-secondary: #94a3b8;
-    --text-sidebar: #f1f5f9;
-    --border-color: #334155;
-    --accent-color: #7cb9e8;
-    --accent-hover: #9ac7f0;
-    --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
-    --cy-background: #0b1120;
-    --cy-grid: #1e293b;
-    --sidebar-blur: blur(12px);
-}
-
-[data-theme="dark"] .theme-toggle:hover,
-[data-theme="dark"] .sidebar-maps .btn-outline-light:hover {
-    background: var(--accent-color) !important;
-    border-color: var(--accent-color) !important;
-    color: white !important;
+  /* Светлая тема */
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #ffffff;
+  --bg-sidebar: rgba(248, 250, 252, 0.85);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-sidebar: #1e293b;
+  --border-color: #e2e8f0;
+  --accent-color: #4682b4;
+  --accent-hover: #5a9bd4;
+  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+  --cy-background: #ffffff;
+  --cy-grid: #cbd5e1;
+  --sidebar-blur: blur(12px);
 }
 
 /* ============================================================================
-   БАЗОВЫЕ СТИЛИ
-   ============================================================================ */
+ТЁМНАЯ ТЕМА (обновлённая конфигурация)
+============================================================================ */
+[data-theme="dark"] {
+  /* Основные фоны – тёплый тёмно-серый вместо сине-чёрного */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-sidebar: rgba(30, 30, 30, 0.9);
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --text-sidebar: #f0f0f0;
+  --border-color: #404040;
+  --accent-color: #6c8ebf;      /* приглушённый синий */
+  --accent-hover: #7e9ec9;
+  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  --cy-background: #1e1e1e;
+  --cy-grid: #2c2c2c;
+  --sidebar-blur: blur(12px);
+}
+
+/* Дополнительные корректировки для элементов интерфейса в тёмной теме */
+[data-theme="dark"] .toolbar-group {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .toolbar-btn {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .toolbar-btn:hover,
+[data-theme="dark"] .toolbar-btn.active {
+  background: var(--accent-color);
+  color: #fff;
+}
+
+[data-theme="dark"] .search-filter-bar .input-group-text,
+[data-theme="dark"] .search-filter-bar .form-control,
+[data-theme="dark"] .search-filter-bar .btn-outline-secondary {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .map-item.active {
+  background: var(--accent-color);
+  color: #fff;
+}
+
+[data-theme="dark"] .map-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .status-dot.online {
+  background: #4ade80;
+  box-shadow: 0 0 10px #4ade80;
+}
+
+[data-theme="dark"] .status-dot.offline {
+  background: #f87171;
+  box-shadow: 0 0 10px #f87171;
+}
+
+/* Таблицы */
+[data-theme="dark"] .modern-table tbody tr {
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .modern-table tbody td {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn-action {
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .btn-action:hover {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+/* Модальные окна */
+[data-theme="dark"] .modal-content {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+  border-color: var(--border-color);
+}
+
+/* Формы */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 4px rgba(108, 142, 191, 0.2);
+}
+
+/* Админ-карточки */
+[data-theme="dark"] .admin-card {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+/* Бейджи статусов */
+[data-theme="dark"] .badge.bg-success {
+  background-color: #166534 !important;
+  color: #bbf7d0 !important;
+}
+
+[data-theme="dark"] .badge.bg-danger {
+  background-color: #991b1b !important;
+  color: #fecaca !important;
+}
+
+/* Сохранённые необходимые переопределения для тёмной темы (формы, вкладки, кнопка закрытия) */
+[data-theme="dark"] input[type="file"] {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  cursor: pointer;
+}
+
+[data-theme="dark"] input[type="file"]::file-selector-button {
+  background-color: #3a3a3a;
+  color: #e0e0e0;
+  border: 1px solid #555;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  margin-right: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+[data-theme="dark"] input[type="file"]::file-selector-button:hover {
+  background-color: #4a4a4a;
+}
+
+[data-theme="dark"] input[type="file"]:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+[data-theme="dark"] .modal-header .btn-close {
+  filter: invert(1);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link {
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  background-color: transparent;
+}
+
+[data-theme="dark"] .nav-tabs .nav-link:hover {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link.active {
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--bg-secondary);
+}
+
+[data-theme="dark"] .card-header-tabs .nav-link {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .card-header-tabs .nav-link.active {
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--bg-secondary);
+}
+
+/* ============================================================================
+БАЗОВЫЕ СТИЛИ
+============================================================================ */
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    transition: background-color 0.2s, color 0.2s;
-    line-height: 1.5;
-    overflow-x: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: background-color 0.2s, color 0.2s;
+  line-height: 1.5;
+  overflow-x: hidden;
 }
 
 /* ============================================================================
-   САЙДБАР (стеклянный эффект)
-   ============================================================================ */
+САЙДБАР (стеклянный эффект)
+============================================================================ */
 .main-content.no-sidebar {
-    margin-left: 0 !important;
+  margin-left: 0 !important;
 }
 
 .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 280px;
-    height: 100vh;
-    background: var(--bg-sidebar);
-    backdrop-filter: var(--sidebar-blur);
-    -webkit-backdrop-filter: var(--sidebar-blur);
-    color: var(--text-sidebar);
-    z-index: 1000;
-    transition: width 0.25s ease;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.08);
-    border-right: 1px solid rgba(255, 255, 255, 0.15);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background: var(--bg-sidebar);
+  backdrop-filter: var(--sidebar-blur);
+  -webkit-backdrop-filter: var(--sidebar-blur);
+  color: var(--text-sidebar);
+  z-index: 1000;
+  transition: width 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 /* Свёрнутый сайдбар */
 .sidebar.collapsed {
-    width: 80px;
+  width: 80px;
 }
 
 .sidebar.collapsed .sidebar-header {
-    padding: 12px 8px;
+  padding: 12px 8px;
 }
 
 .sidebar.collapsed .sidebar-logo .logo-text,
@@ -104,7 +266,7 @@ body {
 .sidebar.collapsed .admin-menu-item span,
 .sidebar.collapsed .theme-toggle span,
 .sidebar.collapsed .status-indicator {
-    display: none !important;
+  display: none !important;
 }
 
 .sidebar.collapsed .sidebar-user i,
@@ -112,1946 +274,1828 @@ body {
 .sidebar.collapsed .map-item .map-item-icon,
 .sidebar.collapsed .admin-menu-item i,
 .sidebar.collapsed .theme-toggle i {
-    margin: 0;
-    font-size: 1.4rem;
+  margin: 0;
+  font-size: 1.4rem;
 }
 
 /* Центрирование всех элементов в свёрнутом сайдбаре */
 .sidebar.collapsed .sidebar-user {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 10px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
 }
 
 /* Заголовок "Карты" по центру */
 .sidebar.collapsed .sidebar-maps h5 {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .sidebar.collapsed .sidebar-maps h5 i {
-    margin: 0;
+  margin: 0;
 }
 
 /* Элементы карт */
 .sidebar.collapsed .map-item {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 10px 0;
-    position: relative;
-    width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+  position: relative;
+  width: 100%;
 }
 
 /* Иконка карты точно по центру */
 .sidebar.collapsed .map-item .map-item-icon {
-    margin-right: 0;
-    width: auto;
-    text-align: center;
+  margin-right: 0;
+  width: auto;
+  text-align: center;
 }
 
 /* Контейнер для бейджа и кнопок */
 .sidebar.collapsed .map-item .map-item-right {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: auto;
-    margin-left: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: auto;
+  margin-left: 0;
 }
 
 /* Скрываем кнопки действий, но оставляем бейдж */
 .sidebar.collapsed .map-item .map-item-actions {
-    display: none;
+  display: none;
 }
 
 /* Бейдж */
 .sidebar.collapsed .map-item .badge {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 0.6rem;
-    padding: 0.15rem 0.4rem;
-    min-width: 18px;
-    height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 18px;
-    background: #ef4444;
-    color: white;
-    font-weight: 600;
-    z-index: 10;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.6rem;
+  padding: 0.15rem 0.4rem;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: #ef4444;
+  color: white;
+  font-weight: 600;
+  z-index: 10;
 }
 
 /* Кнопки админ-меню, темы/выхода и "Новая карта"/"Импорт" в свёрнутом виде */
 .sidebar.collapsed .admin-menu-item,
 .sidebar.collapsed .theme-toggle,
 .sidebar.collapsed .sidebar-maps .btn {
-    width: 44px !important;
-    height: 44px;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 14px;
-    margin: 0 auto 8px auto;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--text-sidebar);
-    transition: all 0.2s;
-    flex: none; /* отменяем растягивание */
+  width: 44px !important;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 14px;
+  margin: 0 auto 8px auto;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-sidebar);
+  transition: all 0.2s;
+  flex: none; /* отменяем растягивание */
 }
 
 .sidebar.collapsed .admin-menu-item i,
 .sidebar.collapsed .theme-toggle i,
 .sidebar.collapsed .sidebar-maps .btn i {
-    margin: 0;
-    font-size: 1.2rem;
+  margin: 0;
+  font-size: 1.2rem;
 }
 
 .sidebar.collapsed .admin-menu-item span,
 .sidebar.collapsed .theme-toggle span,
 .sidebar.collapsed .sidebar-maps .btn span {
-    display: none;
+  display: none;
 }
 
 /* Анимация наведения для кнопок в свёрнутом сайдбаре */
 .sidebar.collapsed .admin-menu-item:hover,
 .sidebar.collapsed .theme-toggle:hover,
 .sidebar.collapsed .sidebar-maps .btn:hover {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
-    color: white;
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
 }
 
 /* Шапка сайдбара */
 .sidebar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
 }
 
-[data-theme="dark"] .sidebar-header {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
+.sidebar-header {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .sidebar-logo img {
-    height: 36px;
-    width: auto;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  height: 36px;
+  width: auto;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .logo-text {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--text-sidebar);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-sidebar);
 }
 
 .logo-letter {
-    color: var(--accent-color);
+  color: var(--accent-color);
 }
 
 .sidebar-toggle {
-    background: transparent;
-    border: none;
-    color: var(--text-sidebar);
-    font-size: 1.2rem;
-    cursor: pointer;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    transition: background 0.2s;
+  background: transparent;
+  border: none;
+  color: var(--text-sidebar);
+  font-size: 1.2rem;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  transition: background 0.2s;
 }
 
 .sidebar-toggle:hover {
-    background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.05);
 }
 
-[data-theme="dark"] .sidebar-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Пользователь */
 .sidebar-user {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    font-size: 0.9rem;
-    flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
-[data-theme="dark"] .sidebar-user {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
+.sidebar-user {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-user i {
-    font-size: 1.4rem;
-    opacity: 0.8;
+  font-size: 1.4rem;
+  opacity: 0.8;
 }
 
 .sidebar-user .badge {
-    font-size: 0.7rem;
-    padding: 0.3rem 0.5rem;
-    border-radius: 30px;
-    font-weight: 500;
+  font-size: 0.7rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 30px;
+  font-weight: 500;
 }
 
 /* Карты в сайдбаре */
 .sidebar-maps {
-    padding: 16px;
-    flex: 1 1 auto;
-    overflow-y: auto;
+  padding: 16px;
+  flex: 1 1 auto;
+  overflow-y: auto;
 }
 
 .sidebar-maps h5 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    opacity: 0.6;
-    margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.6;
+  margin-bottom: 16px;
 }
 
 .map-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 16px 0;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
 }
 
 .map-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    margin-bottom: 4px;
-    border-radius: 14px;
-    text-decoration: none;
-    color: var(--text-sidebar);
-    transition: background 0.2s;
-    position: relative;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: var(--text-sidebar);
+  transition: background 0.2s;
+  position: relative;
 }
 
 .map-item:hover {
-    background: rgba(0, 0, 0, 0.04);
+  background: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="dark"] .map-item:hover {
-    background: rgba(255, 255, 255, 0.06);
+.map-item:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .map-item.active {
-    background: var(--accent-color);
-    color: white;
+  background: var(--accent-color);
+  color: white;
 }
 
 .map-item-icon {
-    margin-right: 12px;
-    font-size: 1.1rem;
-    width: 20px;
-    text-align: center;
+  margin-right: 12px;
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
 }
 
 .map-item-name {
-    flex: 1;
-    font-size: 0.9rem;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .map-item-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
 
 .map-item-actions {
-    display: flex;
-    gap: 4px;
-    opacity: 0;
-    transition: opacity 0.2s;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
 .map-item:hover .map-item-actions {
-    opacity: 1;
+  opacity: 1;
 }
 
 .btn-map-action {
-    background: transparent;
-    border: none;
-    color: inherit;
-    width: 26px;
-    height: 26px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background 0.2s;
-    font-size: 0.9rem;
+  background: transparent;
+  border: none;
+  color: inherit;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 0.9rem;
 }
 
 .btn-map-action:hover {
-    background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.1);
 }
 
-[data-theme="dark"] .btn-map-action:hover {
-    background: rgba(255, 255, 255, 0.15);
+.btn-map-action:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .map-item .badge {
-    background: #ef4444;
-    color: white;
-    font-size: 0.65rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: 30px;
-    font-weight: 600;
+  background: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 30px;
+  font-weight: 600;
 }
 
 /* Кнопки в сайдбаре (Новая карта, Импорт) */
 .sidebar-maps .btn-outline-light {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--text-sidebar);
-    border-radius: 14px;
-    padding: 8px 12px;
-    font-weight: 500;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-sidebar);
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
 }
 
 .sidebar-maps .btn-outline-light:hover {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
-    color: white;
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
 }
 
-[data-theme="dark"] .sidebar-maps .btn-outline-light {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
+.sidebar-maps .btn-outline-light {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Футер сайдбара */
 .sidebar-footer {
-    padding: 16px;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-    background: inherit;
-    flex-shrink: 0;
-    margin-top: auto;
+  padding: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: inherit;
+  flex-shrink: 0;
+  margin-top: auto;
 }
 
-[data-theme="dark"] .sidebar-footer {
-    border-top-color: rgba(255, 255, 255, 0.1);
+.sidebar-footer {
+  border-top-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Группа кнопок Тема/Выход - по умолчанию горизонтально */
 .sidebar-footer .d-flex {
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    margin-bottom: 12px;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 /* В свёрнутом сайдбаре - вертикально */
 .sidebar.collapsed .sidebar-footer .d-flex {
-    flex-direction: column;
+  flex-direction: column;
 }
 
-/* Кнопки Тема и Выход в развёрнутом виде (как btn-outline-light) */
+/* Кнопки Тема и Выход в развёрнутом виде */
 .theme-toggle {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--text-sidebar);
-    border-radius: 14px;
-    padding: 8px 12px;
-    font-weight: 500;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    text-align: center;
-    text-decoration: none;
-    flex: 1;  /* растягиваются по ширине */
-    cursor: pointer;
-    font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-sidebar);
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  text-decoration: none;
+  flex: 1; /* растягиваются по ширине */
+  cursor: pointer;
+  font-size: 0.9rem;
 }
 
 .theme-toggle:hover {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
-    color: white;
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
 }
 
-[data-theme="dark"] .theme-toggle {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
+.theme-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* В свёрнутом сайдбаре кнопки становятся круглыми иконками */
 .sidebar.collapsed .theme-toggle {
-    width: 44px !important;
-    height: 44px;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 14px;
-    margin: 0 auto 8px auto;
-    flex: none;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--text-sidebar);
+  width: 44px !important;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 14px;
+  margin: 0 auto 8px auto;
+  flex: none;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-sidebar);
 }
 
 .sidebar.collapsed .theme-toggle i {
-    margin: 0;
-    font-size: 1.2rem;
+  margin: 0;
+  font-size: 1.2rem;
 }
 
 .sidebar.collapsed .theme-toggle span {
-    display: none;
+  display: none;
 }
 
 .sidebar.collapsed .theme-toggle:hover {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
-    color: white;
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
 }
 
 /* Админ-меню */
 .admin-menu {
-    margin-top: 8px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-[data-theme="dark"] .admin-menu {
-    border-top-color: rgba(255, 255, 255, 0.1);
+.admin-menu {
+  border-top-color: rgba(255, 255, 255, 0.1);
 }
 
 .admin-menu small {
-    display: block;
-    margin-bottom: 8px;
-    color: var(--text-secondary);
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    opacity: 0.7;
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.7;
 }
 
 .admin-menu-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    border-radius: 12px;
-    color: var(--text-sidebar);
-    text-decoration: none;
-    transition: background 0.2s;
-    margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  color: var(--text-sidebar);
+  text-decoration: none;
+  transition: background 0.2s;
+  margin-bottom: 2px;
 }
 
 .admin-menu-item:hover {
-    background: rgba(0, 0, 0, 0.04);
+  background: rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="dark"] .admin-menu-item:hover {
-    background: rgba(255, 255, 255, 0.06);
+.admin-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .admin-menu-item i {
-    margin-right: 12px;
-    width: 20px;
-    text-align: center;
-    font-size: 1rem;
+  margin-right: 12px;
+  width: 20px;
+  text-align: center;
+  font-size: 1rem;
 }
 
 /* Индикатор состояния */
 .status-indicator {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-    font-size: 0.75rem;
-    color: var(--text-sidebar);
-    opacity: 0.7;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 0.75rem;
+  color: var(--text-sidebar);
+  opacity: 0.7;
 }
 
-[data-theme="dark"] .status-indicator {
-    border-top-color: rgba(255, 255, 255, 0.1);
+.status-indicator {
+  border-top-color: rgba(255, 255, 255, 0.1);
 }
 
 .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #94a3b8;
-    transition: background 0.2s, box-shadow 0.2s;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  transition: background 0.2s, box-shadow 0.2s;
 }
 
 .status-dot.online {
-    background: #10b981;
-    box-shadow: 0 0 10px #10b981;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
 }
 
 .status-dot.offline {
-    background: #ef4444;
-    box-shadow: 0 0 10px #ef4444;
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
 }
 
 .version-badge {
-    margin-left: auto;
-    background: rgba(0, 0, 0, 0.04);
-    padding: 2px 6px;
-    border-radius: 30px;
-    font-size: 0.6rem;
-    font-weight: 500;
+  margin-left: auto;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 2px 6px;
+  border-radius: 30px;
+  font-size: 0.6rem;
+  font-weight: 500;
 }
 
-[data-theme="dark"] .version-badge {
-    background: rgba(255, 255, 255, 0.1);
+.version-badge {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* ============================================================================
-   ОСНОВНОЙ КОНТЕНТ
-   ============================================================================ */
+ОСНОВНОЙ КОНТЕНТ
+============================================================================ */
 .main-content {
-    margin-left: 280px;
-    padding: 24px;
-    transition: margin-left 0.25s ease;
-    min-height: 100vh;
-    background: var(--bg-primary);
+  margin-left: 280px;
+  padding: 24px;
+  transition: margin-left 0.25s ease;
+  min-height: 100vh;
+  background: var(--bg-primary);
 }
 
 .sidebar.collapsed + .main-content {
-    margin-left: 80px;
+  margin-left: 80px;
 }
 
 .mobile-menu-toggle {
-    display: none;
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 1100;
-    background: var(--accent-color);
-    color: white;
-    border: none;
-    width: 48px;
-    height: 48px;
-    border-radius: 24px;
-    font-size: 1.5rem;
-    box-shadow: 0 8px 20px rgba(70, 130, 180, 0.4);
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s;
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1100;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  font-size: 1.5rem;
+  box-shadow: 0 8px 20px rgba(70, 130, 180, 0.4);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
 }
 
 .mobile-menu-toggle:hover {
-    transform: scale(1.05);
+  transform: scale(1.05);
 }
 
 /* ============================================================================
-   КАРТА
-   ============================================================================ */
+КАРТА
+============================================================================ */
 .map-container {
-    position: relative;
-    width: 100%;
-    height: calc(100vh - 140px);
-    overflow: hidden;
-    border-radius: 24px;
-    box-shadow: var(--card-shadow);
-    background: var(--cy-background);
-    border: 1px solid var(--border-color);
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 140px);
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: var(--card-shadow);
+  background: var(--cy-background);
+  border: 1px solid var(--border-color);
 }
 
 .cy-background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    background-color: var(--cy-background);
-    background-repeat: no-repeat;
-    background-position: 0 0;
-    transform-origin: 0 0;
-    will-change: transform;
-    pointer-events: none;
-    z-index: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--cy-background);
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  transform-origin: 0 0;
+  will-change: transform;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .cy-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 2;
-    background: transparent;
-    background-image: radial-gradient(circle at 1px 1px, var(--cy-grid) 1px, transparent 1px);
-    background-size: 25px 25px;
-    background-position: 0 0;
-    background-repeat: repeat;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  background: transparent;
+  background-image: radial-gradient(circle at 1px 1px, var(--cy-grid) 1px, transparent 1px);
+  background-size: 25px 25px;
+  background-position: 0 0;
+  background-repeat: repeat;
 }
 
 #cy {
-    width: 100%;
-    height: 100%;
-    position: relative;
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
 /* ============================================================================
-   ПАНЕЛЬ ИНСТРУМЕНТОВ
-   ============================================================================ */
+ПАНЕЛЬ ИНСТРУМЕНТОВ
+============================================================================ */
 .toolbar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .toolbar-group {
-    display: flex;
-    gap: 2px;
-    background: var(--bg-secondary);
-    padding: 4px;
-    border-radius: 18px;
-    box-shadow: var(--card-shadow);
-    border: 1px solid var(--border-color);
+  display: flex;
+  gap: 2px;
+  background: var(--bg-secondary);
+  padding: 4px;
+  border-radius: 18px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
 }
 
 .toolbar-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-primary);
-    padding: 6px 14px;
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.85rem;
-    font-weight: 500;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .toolbar-btn:hover {
-    background: var(--accent-color);
-    color: white;
+  background: var(--accent-color);
+  color: white;
 }
 
 .toolbar-btn.active {
-    background: var(--accent-color);
-    color: white;
+  background: var(--accent-color);
+  color: white;
 }
 
 /* Поиск */
 .search-filter-bar {
-    flex: 0 1 auto;
+  flex: 0 1 auto;
 }
 
 .search-filter-bar .input-group {
-    flex-wrap: nowrap;
-    align-items: stretch;
+  flex-wrap: nowrap;
+  align-items: stretch;
 }
 
 .search-filter-bar .input-group-text {
-    background: var(--bg-secondary);
-    border: 2px solid var(--border-color);
-    border-right: none;
-    border-radius: 18px 0 0 18px;
-    color: var(--text-secondary);
-    padding: 0 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-right: none;
+  border-radius: 18px 0 0 18px;
+  color: var(--text-secondary);
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .search-filter-bar .form-control {
-    width: 220px;
-    padding: 6px 12px;
-    border-radius: 0 !important;
-    border-left: none;
-    border-right: none;
-    border: 2px solid var(--border-color);
-    background: var(--bg-secondary);
-    font-size: 0.85rem;
+  width: 220px;
+  padding: 6px 12px;
+  border-radius: 0 !important;
+  border-left: none;
+  border-right: none;
+  border: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 0.85rem;
 }
 
 .search-filter-bar .form-control:focus {
-    border-color: var(--accent-color);
-    box-shadow: none;
-    position: relative;
-    z-index: 5;
+  border-color: var(--accent-color);
+  box-shadow: none;
+  position: relative;
+  z-index: 5;
 }
 
 .search-filter-bar .btn-outline-secondary {
-    border: 2px solid var(--border-color);
-    border-left: none;
-    border-radius: 0 18px 18px 0;
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    padding: 0 12px;
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    gap: 4px;
+  border: 2px solid var(--border-color);
+  border-left: none;
+  border-radius: 0 18px 18px 0;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  padding: 0 12px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .search-filter-bar .btn-outline-secondary:hover {
-    background: var(--accent-color);
-    color: white;
-    border-color: var(--accent-color);
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
 }
 
 /* ============================================================================
-   МОДАЛЬНЫЕ ОКНА
-   ============================================================================ */
+МОДАЛЬНЫЕ ОКНА
+============================================================================ */
 .modal-content {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 28px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    overflow: hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 28px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
 }
 
 modal-header,
 .modal-footer {
-    background: transparent; /* убираем отдельный фон */
-    border-color: var(--border-color);
-    padding: 1.2rem 1.8rem;
+  background: transparent;
+  border-color: var(--border-color);
+  padding: 1.2rem 1.8rem;
 }
 
 .modal-title {
-    font-size: 1.2rem;
-    font-weight: 600;
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 
 .modal-body {
-    padding: 1.8rem;
+  padding: 1.8rem;
 }
 
 .modal-header {
-    border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-footer {
-    border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color);
 }
 
 .modal-footer .btn {
-    border-radius: 14px;
-    padding: 0.5rem 1.5rem;
-    font-weight: 500;
-    transition: all 0.2s;
+  border-radius: 14px;
+  padding: 0.5rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.2s;
 }
 
 .modal-footer .btn-primary {
-    background: var(--accent-color);
-    border: none;
+  background: var(--accent-color);
+  border: none;
 }
 
 .modal-footer .btn-primary:hover {
-    background: var(--accent-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(70, 130, 180, 0.3);
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(70, 130, 180, 0.3);
 }
 
 .modal-footer .btn-secondary {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .modal-footer .btn-secondary:hover {
-    background: var(--border-color);
+  background: var(--border-color);
 }
 
 /* ============================================================================
-   ФОРМЫ
-   ============================================================================ */
+ФОРМЫ
+============================================================================ */
 .form-control, .form-select {
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border: 2px solid var(--border-color);
-    border-radius: 16px;
-    padding: 0.6rem 1rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    font-size: 0.95rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  padding: 0.6rem 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-size: 0.95rem;
 }
 
 .form-control:focus, .form-select:focus {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 4px rgba(70, 130, 180, 0.15);
-    outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 4px rgba(70, 130, 180, 0.15);
+  outline: none;
 }
 
 .form-label {
-    font-weight: 500;
-    color: var(--text-secondary);
-    margin-bottom: 0.4rem;
-    font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
 }
 
 /* ============================================================================
-   КАРТОЧКИ АДМИНКИ
-   ============================================================================ */
+КАРТОЧКИ АДМИНКИ
+============================================================================ */
 .admin-card {
-    background: var(--bg-secondary);
-    border-radius: 24px;
-    box-shadow: var(--card-shadow);
-    margin-bottom: 1.8rem;
-    overflow: hidden;
-    border: 1px solid var(--border-color);
-    transition: box-shadow 0.2s;
+  background: var(--bg-secondary);
+  border-radius: 24px;
+  box-shadow: var(--card-shadow);
+  margin-bottom: 1.8rem;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  transition: box-shadow 0.2s;
 }
 
 .admin-card:hover {
-    box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.1);
 }
 
 .admin-card .card-header {
-    background: transparent;
-    color: var(--text-primary);
-    padding: 1.2rem 1.8rem;
-    font-weight: 600;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 1rem;
-    letter-spacing: 0.3px;
+  background: transparent;
+  color: var(--text-primary);
+  padding: 1.2rem 1.8rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 1rem;
+  letter-spacing: 0.3px;
 }
 
 .admin-card .card-header i {
-    margin-right: 8px;
-    color: var(--accent-color);
+  margin-right: 8px;
+  color: var(--accent-color);
 }
 
 .admin-card .card-body {
-    padding: 1.8rem;
+  padding: 1.8rem;
 }
 
 /* ============================================================================
-   ТАБЛИЦЫ
-   ============================================================================ */
+ТАБЛИЦЫ
+============================================================================ */
 .modern-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 8px;
-    margin-top: 1rem;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+  margin-top: 1rem;
 }
 
 .modern-table thead th {
-    color: var(--text-secondary);
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.5px;
-    padding: 0.5rem 1rem;
-    text-align: left;
-    border-bottom: 2px solid var(--border-color);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
 }
 
 .modern-table tbody tr {
-    background: var(--bg-secondary);
-    border-radius: 18px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-    transition: box-shadow 0.2s;
+  background: var(--bg-secondary);
+  border-radius: 18px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  transition: box-shadow 0.2s;
 }
 
 .modern-table tbody tr:hover {
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
 }
 
 .modern-table tbody td {
-    padding: 1rem;
-    font-size: 0.95rem;
-    color: var(--text-primary);
+  padding: 1rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
 }
 
 .modern-table tbody td:first-child {
-    border-radius: 18px 0 0 18px;
-    padding-left: 1.5rem;
+  border-radius: 18px 0 0 18px;
+  padding-left: 1.5rem;
 }
 
 .modern-table tbody td:last-child {
-    border-radius: 0 18px 18px 0;
-    padding-right: 1.5rem;
+  border-radius: 0 18px 18px 0;
+  padding-right: 1.5rem;
 }
 
 .modern-table .badge {
-    padding: 0.4rem 0.8rem;
-    border-radius: 30px;
-    font-weight: 500;
-    font-size: 0.75rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 30px;
+  font-weight: 500;
+  font-size: 0.75rem;
 }
 
 .table-actions {
-    display: flex;
-    gap: 6px;
+  display: flex;
+  gap: 6px;
 }
 
 .btn-action {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    transition: all 0.2s;
-    cursor: pointer;
-    text-decoration: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  cursor: pointer;
+  text-decoration: none;
 }
 
 .btn-action:hover {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
-    color: white;
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
 }
 
 /* ============================================================================
-   ПОЛЕ С ИКОНКОЙ ГЛАЗА
-   ============================================================================ */
+ПОЛЕ С ИКОНКОЙ ГЛАЗА
+============================================================================ */
 .password-field-wrapper {
-    position: relative;
+  position: relative;
 }
 
 .password-field-wrapper .toggle-password {
-    position: absolute;
-    right: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    color: var(--text-secondary);
-    z-index: 10;
-    font-size: 1.1rem;
-    transition: color 0.2s;
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: var(--text-secondary);
+  z-index: 10;
+  font-size: 1.1rem;
+  transition: color 0.2s;
 }
 
 .password-field-wrapper .toggle-password:hover {
-    color: var(--accent-color);
-}
-
-/* ============================================================================
-   АДАПТИВНОСТЬ
-   ============================================================================ */
-@media (max-width: 768px) {
-    .sidebar {
-        transform: translateX(-100%);
-        transition: transform 0.25s ease;
-        width: 280px !important;
-        background: var(--bg-sidebar);
-        backdrop-filter: blur(16px);
-    }
-
-    .sidebar.show {
-        transform: translateX(0);
-    }
-
-    .sidebar.collapsed {
-        width: 280px !important;
-    }
-
-    .sidebar.collapsed .sidebar-logo .logo-text,
-    .sidebar.collapsed .sidebar-user span,
-    .sidebar.collapsed .sidebar-maps span,
-    .sidebar.collapsed .map-item .map-item-name,
-    .sidebar.collapsed .map-item-actions,
-    .sidebar.collapsed .admin-menu-item span,
-    .sidebar.collapsed .theme-toggle span,
-    .sidebar.collapsed .status-indicator {
-        display: block !important;
-    }
-
-    .sidebar.collapsed .map-item {
-        justify-content: flex-start;
-        padding: 8px 12px;
-    }
-
-    .sidebar.collapsed .map-item .badge {
-        position: static;
-    }
-
-    .sidebar.collapsed .admin-menu-item,
-    .sidebar.collapsed .theme-toggle,
-    .sidebar.collapsed .sidebar-maps .btn {
-        width: auto !important;
-        height: auto;
-        padding: 8px 12px;
-        border-radius: 14px;
-        margin: 0;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        flex: 1; /* на мобильных они снова растягиваются */
-    }
-
-    .sidebar.collapsed .admin-menu-item i,
-    .sidebar.collapsed .theme-toggle i,
-    .sidebar.collapsed .sidebar-maps .btn i {
-        margin-right: 8px;
-    }
-
-    .sidebar.collapsed .admin-menu-item span,
-    .sidebar.collapsed .theme-toggle span,
-    .sidebar.collapsed .sidebar-maps .btn span {
-        display: inline;
-    }
-
-    .sidebar.collapsed .d-flex {
-        flex-direction: row;
-    }
-
-    .main-content {
-        margin-left: 0 !important;
-    }
-
-    .mobile-menu-toggle {
-        display: flex;
-    }
-
-    .toolbar {
-        margin-top: 60px;
-    }
-
-    .search-filter-bar .form-control {
-        width: 160px;
-    }
-}
-
-/* ============================================================================
-   УВЕДОМЛЕНИЯ
-   ============================================================================ */
-.alert {
-    border-radius: 20px;
-    border: none;
-    padding: 1rem 1.5rem;
-    margin-bottom: 1.5rem;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    box-shadow: var(--card-shadow);
-    border-left: 4px solid var(--accent-color);
-}
-
-.alert-info {
-    background: var(--accent-color);
-    color: white;
-    border-left-color: transparent;
-}
-
-.alert .btn-close {
-    filter: brightness(0) invert(1);
-}
-/* ============================================================================
-   ДОПОЛНЕНИЯ ДЛЯ СТРАНИЦ АДМИНКИ
-   ============================================================================ */
-
-/* Увеличиваем отступ после заголовка */
-.page-title {
-    margin-bottom: 2rem;
-}
-
-/* Общие стили для кнопок внутри admin-card */
-.admin-card .btn {
-    border-radius: 14px;
-    padding: 0.6rem 1rem;
-    font-weight: 500;
-    transition: all 0.2s;
-    border: none;
-}
-
-.admin-card .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(70, 130, 180, 0.3);
-}
-
-/* Специально для кнопки "Добавить" (btn-success) - делаем её синей */
-.admin-card .btn-success {
-    background: var(--accent-color);
-    color: white;
-}
-
-.admin-card .btn-success:hover {
-    background: var(--accent-hover);
-}
-
-/* ============================================================================
-   Стили для выпадающих списков (dropdown)
-   ============================================================================ */
-.dropdown-menu {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 18px;
-    box-shadow: var(--card-shadow);
-    padding: 8px 0;
-    margin-top: 4px;
-    backdrop-filter: blur(10px); /* лёгкое размытие для эффекта стекла (опционально) */
-}
-
-.dropdown-item {
-    color: var(--text-primary);
-    padding: 10px 20px;
-    font-size: 0.9rem;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-.dropdown-item:hover,
-.dropdown-item:focus {
-    background-color: var(--accent-color);
-    color: white;
-}
-
-.dropdown-item.active,
-.dropdown-item:active {
-    background-color: var(--accent-color);
-    color: white;
-}
-
-.dropdown-divider {
-    border-top: 1px solid var(--border-color);
-    margin: 8px 0;
-}
-
-/* Стили для кнопки-триггера (если нужно подкорректировать) */
-.toolbar-btn.dropdown-toggle {
-    /* уже стилизовано через .toolbar-btn, дополнительно можно задать */
-}
-
-.toolbar-btn.dropdown-toggle::after {
-    margin-left: 8px;
-    vertical-align: middle;
-}
-
-/* ============================================================================
-   Пагинация (для таблиц)
-   ============================================================================ */
-.pagination-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-color);
-}
-
-.pagination-btn {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    border-radius: 14px;
-    padding: 8px 16px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: var(--card-shadow);
-}
-
-.pagination-btn:hover:not(:disabled) {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
-    color: white;
-}
-
-.pagination-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.pagination-info {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-
-/* ============================================================================
-   Унификация таблиц в модальных окнах (как на страницах админки)
-   ============================================================================ */
-.modal .modern-table {
-    border-collapse: separate !important;
-    border-spacing: 0 8px !important;
-}
-
-.modal .modern-table tbody tr {
-    background: var(--bg-secondary);
-    border-radius: 16px !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.modal .modern-table td:first-child {
-    border-radius: 16px 0 0 16px !important;
-    padding-left: 1.5rem !important;
-}
-
-.modal .modern-table td:last-child {
-    border-radius: 0 16px 16px 0 !important;
-    padding-right: 1.5rem !important;
-}
-
-/* ============================================================================
-   Приглушённые цвета для статусов UP/DOWN
-   ============================================================================ */
-.badge.bg-success {
-    background-color: #d1fae5 !important; /* мягкий мятный */
-    color: #065f46 !important;            /* тёмно-зелёный текст */
-}
-
-.badge.bg-danger {
-    background-color: #fee2e2 !important; /* мягкий розовый */
-    color: #991b1b !important;            /* тёмно-красный текст */
-}
-
-/* Тёмная тема */
-[data-theme="dark"] .badge.bg-success {
-    background-color: #064e3b !important; /* тёмно-зелёный */
-    color: #d1fae5 !important;            /* светлый мятный текст */
-}
-
-[data-theme="dark"] .badge.bg-danger {
-    background-color: #7f1d1d !important; /* тёмно-красный */
-    color: #fee2e2 !important;            /* светлый розовый текст */
-}
-/* ============================================================================
-МОДАЛКА ГРУПП — единый стиль с приложением
-============================================================================ */
-
-/* Переопределяем модалку под общий дизайн */
-#groupModal .modal-content {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 28px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    overflow: hidden;
-}
-
-#groupModal .modal-header {
-    background: transparent;
-    border-bottom: 1px solid var(--border-color);
-    padding: 1.2rem 1.8rem;
-}
-
-#groupModal .modal-body {
-    padding: 1.8rem;
-}
-
-#groupModal .modal-footer {
-    padding: 1rem 1.5rem;            /* стандартные отступы Bootstrap */
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    justify-content: flex-end;       /* кнопки справа */
-    gap: 0.75rem;                    /* расстояние между кнопками */
-}
-
-#groupModal .modal-title {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-/* ============================================================================
-ФОРМА — как в остальном приложении
-============================================================================ */
-
-#groupModal .form-label {
-    font-weight: 500;
-    color: var(--text-secondary);
-    margin-bottom: 0.4rem;
-    font-size: 0.9rem;
-}
-
-#groupModal .form-control,
-#groupModal .form-select {
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border: 2px solid var(--border-color);
-    border-radius: 16px;
-    padding: 0.6rem 1rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    font-size: 0.95rem;
-}
-
-#groupModal .form-control:focus,
-#groupModal .form-select:focus {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 4px rgba(70, 130, 180, 0.15);
-    outline: none;
-}
-
-/* ============================================================================
-ЦВЕТОВОЙ ПИКЕР — в стиле приложения
-============================================================================ */
-
-.color-picker-simple {
-    position: relative;
-    width: 100%;
-}
-
-.color-btn {
-    width: 100%;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 0 16px;
-    background: var(--bg-primary);
-    border: 2px solid var(--border-color);
-    border-radius: 16px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: left;
-    font-size: 0.95rem;
-    color: var(--text-primary);
-}
-
-.color-btn:hover,
-.color-btn.active {
-    border-color: var(--accent-color);
-    background: var(--bg-secondary);
-}
-
-.color-box {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    border: 2px solid rgba(255,255,255,0.5);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    flex-shrink: 0;
-}
-
-.color-btn #colorCode {
-    flex: 1;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-}
-
-.color-btn i {
-    color: var(--text-secondary);
-    font-size: 12px;
-    transition: transform 0.2s;
-}
-
-.color-btn.active i {
-    transform: rotate(180deg);
-}
-
-/* Панель цветов */
-.color-panel {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    right: 0;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-    z-index: 9999;
-}
-
-.color-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.color-swatch {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: 2px solid transparent;
-    cursor: pointer;
-    padding: 0;
-    transition: all 0.15s;
-}
-
-.color-swatch:hover {
-    transform: scale(1.1);
-    border-color: rgba(255,255,255,0.8);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.color-swatch.active {
-    border-color: var(--text-primary);
-    box-shadow: 0 0 0 2px var(--bg-secondary), 0 0 0 4px var(--accent-color);
-}
-
-.color-custom {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--border-color);
-}
-
-.color-custom input[type="color"] {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background: none;
-}
-
-.color-custom input[type="color"]::-webkit-color-swatch {
-    border: 2px solid var(--border-color);
-    border-radius: 6px;
-}
-
-.color-custom input[type="color"]::-moz-color-swatch {
-    border: 2px solid var(--border-color);
-    border-radius: 6px;
-}
-
-.color-custom label {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    cursor: pointer;
-}
-
-/* ============================================================================
-КНОПКИ ФОРМЫ — как во всём приложении
-============================================================================ */
-
-.form-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
-    margin-top: 1.5rem;
-}
-
-#groupModal .btn {
-    border-radius: 14px;
-    padding: 0.5rem 1.5rem;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
-#groupModal .btn-primary {
-    background: var(--accent-color);
-    border: none;
-    color: white;
-}
-
-#groupModal .btn-primary:hover {
-    background: var(--accent-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(70, 130, 180, 0.3);
-}
-
-#groupModal .btn-secondary {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-}
-
-#groupModal .btn-secondary:hover {
-    background: var(--border-color);
-}
-
-/* ============================================================================
-ТАБЛИЦА ГРУПП — как в админке
-============================================================================ */
-
-.groups-section {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border-color);
-}
-
-.section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-}
-
-.section-header h6 {
-    color: var(--text-primary);
-    font-weight: 600;
-    margin: 0;
-}
-
-.section-header .badge {
-    background: var(--bg-primary);
-    color: var(--text-secondary);
-    font-weight: 500;
-    padding: 0.35em 0.65em;
-    border-radius: 30px;
-}
-
-/* Поиск */
-.search-wrapper {
-    position: relative;
-    margin-bottom: 1rem;
-}
-
-.search-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-secondary);
-    pointer-events: none;
-    z-index: 2;
-}
-
-.search-input {
-    padding-left: 2.5rem;
-    height: 40px;
-    font-size: 0.875rem;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border: 2px solid var(--border-color);
-    border-radius: 16px;
-}
-
-.search-input:focus {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 4px rgba(70, 130, 180, 0.15);
-    outline: none;
-}
-
-/* Таблица */
-#groupModal .modern-table {
-    border-collapse: separate !important;
-    border-spacing: 0 8px !important;
-    margin: 0;
-}
-
-#groupModal .modern-table thead th {
-    color: var(--text-secondary);
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.5px;
-    padding: 0.5rem 1rem;
-    text-align: left;
-    border-bottom: 2px solid var(--border-color);
-}
-
-#groupModal .modern-table tbody tr {
-    background: var(--bg-secondary);
-    border-radius: 18px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-    transition: box-shadow 0.2s;
-}
-
-#groupModal .modern-table tbody tr:hover {
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
-}
-
-#groupModal .modern-table tbody td {
-    padding: 1rem;
-    font-size: 0.95rem;
-    color: var(--text-primary);
-    border: none;
-}
-
-#groupModal .modern-table tbody td:first-child {
-    border-radius: 18px 0 0 18px;
-    padding-left: 1.5rem;
-}
-
-#groupModal .modern-table tbody td:last-child {
-    border-radius: 0 18px 18px 0;
-    padding-right: 1.5rem;
-}
-
-#groupModal .modern-table .color-preview {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    display: inline-block;
-    border: 2px solid rgba(255,255,255,0.5);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-#groupModal .modern-table .badge {
-    padding: 0.4rem 0.8rem;
-    border-radius: 30px;
-    font-weight: 500;
-    font-size: 0.75rem;
-}
-
-/* Кнопки действий */
-.table-actions {
-    display: flex;
-    gap: 6px;
-    justify-content: flex-end;
-}
-
-.btn-action {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    transition: all 0.2s;
-    cursor: pointer;
-}
-
-.btn-action:hover {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
-    color: white;
-}
-
-.btn-action.btn-danger:hover {
-    background: #ef4444;
-    border-color: #ef4444;
-}
-
-.btn-action i {
-    font-size: 0.875rem;
-}
-
-/* ============================================================================
-ПУСТОЕ СОСТОЯНИЕ И ЗАГРУЗКА
-============================================================================ */
-
-.empty-state {
-    text-align: center;
-    padding: 2.5rem 1rem;
-    color: var(--text-secondary);
-}
-
-.empty-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-    color: var(--text-secondary);
-}
-
-.skeleton-loader {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.5rem 0;
-}
-
-.skeleton-row {
-    height: 52px;
-    background: linear-gradient(90deg,
-        var(--bg-primary) 25%,
-        var(--bg-secondary) 50%,
-        var(--bg-primary) 75%);
-    background-size: 200% 100%;
-    border-radius: 12px;
-    animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-/* ============================================================================
-TOAST УВЕДОМЛЕНИЯ — в стиле приложения
-============================================================================ */
-
-.toast {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-}
-
-.toast-header {
-    background: transparent;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--text-primary);
-}
-
-.toast-body {
-    color: var(--text-primary);
-}
-
-/* ============================================================================
-АНИМАЦИИ
-============================================================================ */
-
-@keyframes rowFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.group-row-enter {
-    animation: rowFadeIn 0.25s ease forwards;
+  color: var(--accent-color);
 }
 
 /* ============================================================================
 АДАПТИВНОСТЬ
 ============================================================================ */
-
 @media (max-width: 768px) {
-    #groupModal .modal-body {
-        padding: 1.2rem;
-    }
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    width: 280px !important;
+    background: var(--bg-sidebar);
+    backdrop-filter: blur(16px);
+  }
 
-    #groupModal .form-actions {
-        flex-direction: column;
-    }
+  .sidebar.show {
+    transform: translateX(0);
+  }
 
-    #groupModal .form-actions .btn {
-        width: 100%;
-    }
+  .sidebar.collapsed {
+    width: 280px !important;
+  }
 
-    .color-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
+  .sidebar.collapsed .sidebar-logo .logo-text,
+  .sidebar.collapsed .sidebar-user span,
+  .sidebar.collapsed .sidebar-maps span,
+  .sidebar.collapsed .map-item .map-item-name,
+  .sidebar.collapsed .map-item-actions,
+  .sidebar.collapsed .admin-menu-item span,
+  .sidebar.collapsed .theme-toggle span,
+  .sidebar.collapsed .status-indicator {
+    display: block !important;
+  }
+
+  .sidebar.collapsed .map-item {
+    justify-content: flex-start;
+    padding: 8px 12px;
+  }
+
+  .sidebar.collapsed .map-item .badge {
+    position: static;
+  }
+
+  .sidebar.collapsed .admin-menu-item,
+  .sidebar.collapsed .theme-toggle,
+  .sidebar.collapsed .sidebar-maps .btn {
+    width: auto !important;
+    height: auto;
+    padding: 8px 12px;
+    border-radius: 14px;
+    margin: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    flex: 1; /* на мобильных они снова растягиваются */
+  }
+
+  .sidebar.collapsed .admin-menu-item i,
+  .sidebar.collapsed .theme-toggle i,
+  .sidebar.collapsed .sidebar-maps .btn i {
+    margin-right: 8px;
+  }
+
+  .sidebar.collapsed .admin-menu-item span,
+  .sidebar.collapsed .theme-toggle span,
+  .sidebar.collapsed .sidebar-maps .btn span {
+    display: inline;
+  }
+
+  .sidebar.collapsed .d-flex {
+    flex-direction: row;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+  }
+
+  .mobile-menu-toggle {
+    display: flex;
+  }
+
+  .toolbar {
+    margin-top: 60px;
+  }
+
+  .search-filter-bar .form-control {
+    width: 160px;
+  }
 }
+
+/* ============================================================================
+УВЕДОМЛЕНИЯ
+============================================================================ */
+.alert {
+  border-radius: 20px;
+  border: none;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: var(--card-shadow);
+  border-left: 4px solid var(--accent-color);
+}
+
+.alert-info {
+  background: var(--accent-color);
+  color: white;
+  border-left-color: transparent;
+}
+
+.alert .btn-close {
+  filter: brightness(0) invert(1);
+}
+
+/* ============================================================================
+ДОПОЛНЕНИЯ ДЛЯ СТРАНИЦ АДМИНКИ
+============================================================================ */
+.page-title {
+  margin-bottom: 2rem;
+}
+
+.admin-card .btn {
+  border-radius: 14px;
+  padding: 0.6rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: none;
+}
+
+.admin-card .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(70, 130, 180, 0.3);
+}
+
+.admin-card .btn-success {
+  background: var(--accent-color);
+  color: white;
+}
+
+.admin-card .btn-success:hover {
+  background: var(--accent-hover);
+}
+
+/* ============================================================================
+Стили для выпадающих списков (dropdown)
+============================================================================ */
+.dropdown-menu {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  box-shadow: var(--card-shadow);
+  padding: 8px 0;
+  margin-top: 4px;
+  backdrop-filter: blur(10px);
+}
+
+.dropdown-item {
+  color: var(--text-primary);
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+.dropdown-divider {
+  border-top: 1px solid var(--border-color);
+  margin: 8px 0;
+}
+
+.toolbar-btn.dropdown-toggle::after {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* ============================================================================
+Пагинация (для таблиц)
+============================================================================ */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.pagination-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 14px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--card-shadow);
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* ============================================================================
+Унификация таблиц в модальных окнах (как на страницах админки)
+============================================================================ */
+.modal .modern-table {
+  border-collapse: separate !important;
+  border-spacing: 0 8px !important;
+}
+
+.modal .modern-table tbody tr {
+  background: var(--bg-secondary);
+  border-radius: 16px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.modal .modern-table td:first-child {
+  border-radius: 16px 0 0 16px !important;
+  padding-left: 1.5rem !important;
+}
+
+.modal .modern-table td:last-child {
+  border-radius: 0 16px 16px 0 !important;
+  padding-right: 1.5rem !important;
+}
+
+/* ============================================================================
+Приглушённые цвета для статусов UP/DOWN
+============================================================================ */
+.badge.bg-success {
+  background-color: #d1fae5 !important; /* мягкий мятный */
+  color: #065f46 !important;            /* тёмно-зелёный текст */
+}
+
+.badge.bg-danger {
+  background-color: #fee2e2 !important; /* мягкий розовый */
+  color: #991b1b !important;            /* тёмно-красный текст */
+}
+
+/* ============================================================================
+МОДАЛКА ГРУПП — единый стиль с приложением
+============================================================================ */
+#groupModal .modal-content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 28px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+#groupModal .modal-header {
+  background: transparent;
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.2rem 1.8rem;
+}
+
+#groupModal .modal-body {
+  padding: 1.8rem;
+}
+
+#groupModal .modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+#groupModal .modal-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ============================================================================
+ФОРМА — как в остальном приложении
+============================================================================ */
+#groupModal .form-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+}
+
+#groupModal .form-control,
+#groupModal .form-select {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  padding: 0.6rem 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-size: 0.95rem;
+}
+
+#groupModal .form-control:focus,
+#groupModal .form-select:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 4px rgba(70, 130, 180, 0.15);
+  outline: none;
+}
+
+/* ============================================================================
+ЦВЕТОВОЙ ПИКЕР — в стиле приложения
+============================================================================ */
+.color-picker-simple {
+  position: relative;
+  width: 100%;
+}
+
+.color-btn {
+  width: 100%;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.color-btn:hover,
+.color-btn.active {
+  border-color: var(--accent-color);
+  background: var(--bg-secondary);
+}
+
+.color-box {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,0.5);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+}
+
+.color-btn #colorCode {
+  flex: 1;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.color-btn i {
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.color-btn.active i {
+  transform: rotate(180deg);
+}
+
+/* Панель цветов */
+.color-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  z-index: 9999;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.color-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+  border-color: rgba(255,255,255,0.8);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.color-swatch.active {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--bg-secondary), 0 0 0 4px var(--accent-color);
+}
+
+.color-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.color-custom input[type="color"] {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: none;
+}
+
+.color-custom input[type="color"]::-webkit-color-swatch {
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.color-custom input[type="color"]::-moz-color-swatch {
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.color-custom label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+/* ============================================================================
+КНОПКИ ФОРМЫ — как во всём приложении
+============================================================================ */
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+#groupModal .btn {
+  border-radius: 14px;
+  padding: 0.5rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+#groupModal .btn-primary {
+  background: var(--accent-color);
+  border: none;
+  color: white;
+}
+
+#groupModal .btn-primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(70, 130, 180, 0.3);
+}
+
+#groupModal .btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+#groupModal .btn-secondary:hover {
+  background: var(--border-color);
+}
+
+/* ============================================================================
+ТАБЛИЦА ГРУПП — как в админке
+============================================================================ */
+.groups-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.section-header h6 {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin: 0;
+}
+
+.section-header .badge {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+  border-radius: 30px;
+}
+
+/* Поиск */
+.search-wrapper {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.search-input {
+  padding-left: 2.5rem;
+  height: 40px;
+  font-size: 0.875rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+}
+
+.search-input:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 4px rgba(70, 130, 180, 0.15);
+  outline: none;
+}
+
+/* Таблица */
+#groupModal .modern-table {
+  border-collapse: separate !important;
+  border-spacing: 0 8px !important;
+  margin: 0;
+}
+
+#groupModal .modern-table thead th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
+}
+
+#groupModal .modern-table tbody tr {
+  background: var(--bg-secondary);
+  border-radius: 18px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  transition: box-shadow 0.2s;
+}
+
+#groupModal .modern-table tbody tr:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+}
+
+#groupModal .modern-table tbody td {
+  padding: 1rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  border: none;
+}
+
+#groupModal .modern-table tbody td:first-child {
+  border-radius: 18px 0 0 18px;
+  padding-left: 1.5rem;
+}
+
+#groupModal .modern-table tbody td:last-child {
+  border-radius: 0 18px 18px 0;
+  padding-right: 1.5rem;
+}
+
+#groupModal .modern-table .color-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-block;
+  border: 2px solid rgba(255,255,255,0.5);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#groupModal .modern-table .badge {
+  padding: 0.4rem 0.8rem;
+  border-radius: 30px;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+/* Кнопки действий */
+.table-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.btn-action {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-action:hover {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.btn-action.btn-danger:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.btn-action i {
+  font-size: 0.875rem;
+}
+
+/* ============================================================================
+ПУСТОЕ СОСТОЯНИЕ И ЗАГРУЗКА
+============================================================================ */
+.empty-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--text-secondary);
+}
+
+.empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+  color: var(--text-secondary);
+}
+
+.skeleton-loader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.skeleton-row {
+  height: 52px;
+  background: linear-gradient(90deg,
+    var(--bg-primary) 25%,
+    var(--bg-secondary) 50%,
+    var(--bg-primary) 75%);
+  background-size: 200% 100%;
+  border-radius: 12px;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================================================
+TOAST УВЕДОМЛЕНИЯ — в стиле приложения
+============================================================================ */
+.toast {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+}
+
+.toast-header {
+  background: transparent;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.toast-body {
+  color: var(--text-primary);
+}
+
+/* ============================================================================
+АНИМАЦИИ
+============================================================================ */
+@keyframes rowFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.group-row-enter {
+  animation: rowFadeIn 0.25s ease forwards;
+}
+
 /* ============================================================================
 ИСПРАВЛЕНИЯ МОДАЛКИ ГРУПП
 ============================================================================ */
-
-/* 1. Иконка в поле ввода (fa-tag) - правильное позиционирование */
 #groupModal .input-wrapper {
-    position: relative;
-    display: block;
+  position: relative;
+  display: block;
 }
 
 #groupModal .input-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-secondary);
-    pointer-events: none;
-    z-index: 3;
-    font-size: 1rem;
-    line-height: 1;
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+  z-index: 3;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 #groupModal .input-wrapper .form-control {
-    padding-left: 2.75rem;
+  padding-left: 2.75rem;
 }
 
-/* 2. Иконка поиска - правильное позиционирование */
 #groupModal .search-wrapper {
-    position: relative;
-    display: block;
+  position: relative;
+  display: block;
 }
 
 #groupModal .search-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-secondary);
-    pointer-events: none;
-    z-index: 3;
-    font-size: 1rem;
-    line-height: 1;
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+  z-index: 3;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 #groupModal .search-input {
-    padding-left: 2.75rem;
+  padding-left: 2.75rem;
 }
 
-/* 3. Футер - нормальная ширина */
 #groupModal .modal-footer {
-    padding: 1rem 1.5rem;
-    gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  gap: 0.5rem;
 }
 
-/* 4. Кнопка "Закрыть" в стиле приложения */
 #groupModal .modal-footer .btn-secondary {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 0.5rem 1.25rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-    border-radius: 14px;
-    transition: all 0.2s;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 14px;
+  transition: all 0.2s;
 }
 
 #groupModal .modal-footer .btn-secondary:hover {
-    background: var(--border-color);
-    color: var(--text-primary);
+  background: var(--border-color);
+  color: var(--text-primary);
 }
 
-/* Кнопка "Отмена" в стиле btn-sm */
 #groupModal .modal-footer .btn-sm {
-    padding: 0.4rem 1rem;
-    font-size: 0.85rem;
-    border-radius: 12px;
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  border-radius: 12px;
 }
 
-/* Убираем лишние отступы у кнопок в футере */
 #groupModal .modal-footer .btn {
-    margin: 0;
+  margin: 0;
 }
-/* ============================================================================
-   КНОПКИ В МОДАЛКЕ ГРУПП — единый размер и стиль
-   ============================================================================ */
+
 #groupModal .btn-ghost,
 #groupModal .modal-footer .btn {
-    height: 42px;                    /* фиксированная высота, как у основных кнопок */
-    padding: 0 1.25rem;               /* горизонтальные отступы */
-    line-height: 1;                   /* вертикальное центрирование */
-    font-size: 0.9rem;                /* размер шрифта */
-    font-weight: 500;                 /* насыщенность */
-    border-radius: 14px;               /* скругление */
-    transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  height: 42px;
+  padding: 0 1.25rem;
+  line-height: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 14px;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Кнопка «Сбросить» (btn-ghost) уже имеет свои цвета, оставляем как есть */
 #groupModal .btn-ghost {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
+
 #groupModal .btn-ghost:hover {
-    background: var(--border-color);
-    color: var(--text-primary);
+  background: var(--border-color);
+  color: var(--text-primary);
 }
 
-/* Кнопка «Закрыть» в футере — если она использует btn-secondary */
-#groupModal .modal-footer .btn-secondary {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-}
-#groupModal .modal-footer .btn-secondary:hover {
-    background: var(--border-color);
-    color: var(--text-primary);
-}
-/* ============================================================================
-   ИСПРАВЛЕНИЕ ФУТЕРА И КНОПКИ ЗАКРЫТЬ В МОДАЛКЕ ГРУПП
-   ============================================================================ */
-
-/* Футер: прижимаем содержимое к правому краю, добавляем отступы */
-#groupModal .modal-footer {
-    justify-content: flex-end !important;
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    gap: 0.75rem;
-}
-
-/* Кнопка «Закрыть»: такой же размер, как и основная кнопка */
 #groupModal .modal-footer .btn-ghost {
-    height: 42px;                    /* как у .btn-primary */
-    padding: 0 1.25rem;
-    line-height: 1;
-    font-size: 0.9rem;
-    font-weight: 500;
-    border-radius: 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    transition: all 0.2s;
+  height: 42px;
+  padding: 0 1.25rem;
+  line-height: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  transition: all 0.2s;
 }
 
 #groupModal .modal-footer .btn-ghost:hover {
-    background: var(--border-color);
-    color: var(--text-primary);
+  background: var(--border-color);
+  color: var(--text-primary);
 }
 
-/* Если в будущем появятся другие кнопки в футере, они будут одинаковой высоты */
 #groupModal .modal-footer .btn {
-    height: 42px;
-    padding: 0 1.25rem;
-    font-size: 0.9rem;
-    border-radius: 14px;
-}
-/* Тёмная тема: исправление видимости текста в инпутах при фокусе */
-[data-theme="dark"] .form-control:focus {
-    color: #212529;            /* тёмный текст */
-    background-color: #fff;    /* белый фон */
-    border-color: #86b7fe;
-    outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-/* Стилизация кнопки выбора файла для тёмной темы */
-[data-theme="dark"] input[type="file"] {
-    background-color: #2c2c2c;
-    color: #e0e0e0;
-    border: 1px solid #444;
-    border-radius: 0.375rem;
-    padding: 0.375rem 0.75rem;
-    cursor: pointer;
-}
-
-[data-theme="dark"] input[type="file"]::file-selector-button {
-    background-color: #3a3a3a;
-    color: #e0e0e0;
-    border: 1px solid #555;
-    border-radius: 0.25rem;
-    padding: 0.25rem 0.75rem;
-    margin-right: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-[data-theme="dark"] input[type="file"]::file-selector-button:hover {
-    background-color: #4a4a4a;
-}
-
-[data-theme="dark"] input[type="file"]:focus {
-    border-color: #86b7fe;
-    outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  height: 42px;
+  padding: 0 1.25rem;
+  font-size: 0.9rem;
+  border-radius: 14px;
 }
 
 .spinner {
-    display: inline-block;
-    width: 1rem;
-    height: 1rem;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-radius: 50%;
-    border-top-color: #fff;
-    animation: spin 0.8s linear infinite;
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
 }
+
 @keyframes spin {
-    to { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
+
 /* Тёмная тема: гарантия читаемости текста в модалках и формах */
 [data-theme="dark"] .modal-title,
 [data-theme="dark"] .modal-body,
@@ -2059,78 +2103,86 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 [data-theme="dark"] .form-label,
 [data-theme="dark"] .form-check-label,
 [data-theme="dark"] .form-text {
-    color: var(--text-primary);
+  color: var(--text-primary);
 }
 
-[data-theme="dark"] .modal-header .btn-close {
-    filter: invert(1);
-}
-/* Тёмная тема: исправление цвета вкладок (nav-tabs) */
-[data-theme="dark"] .nav-tabs .nav-link {
-    color: var(--text-secondary);
-    border-color: var(--border-color);
-    background-color: transparent;
-}
-
-[data-theme="dark"] .nav-tabs .nav-link:hover {
-    border-color: var(--border-color);
-    color: var(--text-primary);
-}
-
-[data-theme="dark"] .nav-tabs .nav-link.active {
-    color: var(--text-primary);
-    background-color: var(--bg-secondary);
-    border-bottom-color: var(--bg-secondary);
-}
-
-/* Для вкладок внутри карточек (card-header-tabs) */
-[data-theme="dark"] .card-header-tabs .nav-link {
-    color: var(--text-secondary);
-}
-
-[data-theme="dark"] .card-header-tabs .nav-link.active {
-    color: var(--text-primary);
-    background-color: var(--bg-secondary);
-    border-bottom-color: var(--bg-secondary);
-}
 .fullscreen-hidden {
-    display: none !important;
+  display: none !important;
 }
 
 .exit-fullscreen-btn {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 10000;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    border: none;
-    border-radius: 30px;
-    padding: 10px 20px;
-    font-size: 1rem;
-    cursor: pointer;
-    backdrop-filter: blur(8px);
-    transition: background 0.2s;
-    align-items: center;
-    gap: 8px;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  background: rgba(0,0,0,0.7);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 0.2s;
+  align-items: center;
+  gap: 8px;
 }
+
 .exit-fullscreen-btn:hover {
-    background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.9);
 }
+
 .fullscreen-map {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    z-index: 9999 !important;
-    border-radius: 0 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 9999 !important;
+  border-radius: 0 !important;
 }
+
 .color-btn i {
-    margin-left: auto;
-    color: var(--text-secondary);
-    font-size: 12px;
-    transition: transform 0.2s;
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+/* ============================================================================
+ФИКС ШАПКИ ТАБЛИЦЫ В МОДАЛКЕ ГРУПП (ТЁМНАЯ ТЕМА)
+============================================================================ */
+[data-theme="dark"] #groupModal .modern-table thead,
+[data-theme="dark"] #groupModal .modern-table thead tr,
+[data-theme="dark"] #groupModal .modern-table thead th {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+/* ============================================================================
+ИСПРАВЛЕНИЕ ТАБЛИЦЫ В МОДАЛКЕ ГРУПП (ТЁМНАЯ ТЕМА)
+============================================================================ */
+[data-theme="dark"] #groupModal .modern-table tbody tr {
+    background-color: var(--bg-secondary) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] #groupModal .modern-table tbody td {
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Фикс белых бейджей (bg-light text-dark) внутри модалки в тёмной теме */
+[data-theme="dark"] #groupModal .badge.bg-light {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color);
+}
+
+/* Убираем лишние бордеры у ячеек, чтобы сохранить стиль "парящих строк" */
+[data-theme="dark"] #groupModal .modern-table td {
+    background: transparent !important;
 }
