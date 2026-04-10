@@ -1,30 +1,36 @@
-// undoRedo.js – управление историей действий на карте
+// undoRedo.js – управление историей действий на карте с сохранением viewport
 let history = [];
 let currentIndex = -1;
 let maxHistory = 50;
-let isUndoRedo = false;  // флаг, чтобы не записывать в историю при восстановлении
+let isUndoRedo = false;
 
 export function initUndoRedo(cy, getMapId) {
     // Сохраняем начальное состояние
     saveState('initial');
 
-    // Функция сохранения текущего состояния
     async function saveState(description = '') {
         if (isUndoRedo) return;
         const mapId = getMapId();
         if (!mapId) return;
 
         try {
+            // Получаем снапшот карты (устройства, связи, группы, фигуры)
             const res = await fetch(`/api/map/${mapId}/export`);
             if (!res.ok) throw new Error('Failed to export map');
             const snapshot = await res.json();
 
-            // Удаляем "будущие" состояния, если мы не в конце стека
+            // Сохраняем текущий viewport
+            const viewport = {
+                pan: cy.pan(),
+                zoom: cy.zoom()
+            };
+
+            // Удаляем "будущие" состояния
             if (currentIndex < history.length - 1) {
                 history = history.slice(0, currentIndex + 1);
             }
 
-            history.push({ snapshot, description });
+            history.push({ snapshot, description, viewport });
             if (history.length > maxHistory) history.shift();
             currentIndex = history.length - 1;
             updateButtons();
@@ -33,7 +39,6 @@ export function initUndoRedo(cy, getMapId) {
         }
     }
 
-    // Восстановление состояния по индексу
     async function restoreState(index) {
         if (index < 0 || index >= history.length) return;
         const state = history[index];
@@ -44,7 +49,7 @@ export function initUndoRedo(cy, getMapId) {
             const mapId = getMapId();
             if (!mapId) return;
 
-            // Отправляем импорт сохранённого состояния на сервер
+            // Восстанавливаем данные карты на сервере
             const res = await fetch('/api/map/import', {
                 method: 'POST',
                 headers: {
@@ -55,10 +60,26 @@ export function initUndoRedo(cy, getMapId) {
             });
             if (!res.ok) throw new Error('Failed to restore state');
 
-            // Перезагружаем карту
+            // Перезагружаем элементы карты
             if (typeof window.reloadMapElements === 'function') {
                 await window.reloadMapElements();
             }
+
+            // Восстанавливаем viewport (если он сохранён)
+            if (state.viewport) {
+                cy.viewport({
+                    pan: state.viewport.pan,
+                    zoom: state.viewport.zoom
+                });
+                // Принудительно обновляем фон и границы
+                if (typeof window.updateBackgroundTransform === 'function') {
+                    window.updateBackgroundTransform();
+                }
+                if (typeof window.enforcePanBounds === 'function') {
+                    window.enforcePanBounds();
+                }
+            }
+
             currentIndex = index;
             updateButtons();
         } catch (err) {
@@ -68,7 +89,6 @@ export function initUndoRedo(cy, getMapId) {
         }
     }
 
-    // Отмена (Undo)
     window.undo = function() {
         if (currentIndex > 0) {
             restoreState(currentIndex - 1);
@@ -77,7 +97,6 @@ export function initUndoRedo(cy, getMapId) {
         }
     };
 
-    // Повтор (Redo)
     window.redo = function() {
         if (currentIndex < history.length - 1) {
             restoreState(currentIndex + 1);
@@ -86,7 +105,6 @@ export function initUndoRedo(cy, getMapId) {
         }
     };
 
-    // Обновление состояния кнопок (можно добавить визуальные подсказки)
     function updateButtons() {
         const undoBtn = document.getElementById('undoBtn');
         const redoBtn = document.getElementById('redoBtn');
