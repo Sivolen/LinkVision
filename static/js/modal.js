@@ -280,21 +280,56 @@ window.saveDevice = async function() {
             }
             if (typeof window.saveState === 'function') window.saveState('Создание устройства');
             showToast('Успешно', 'Устройство создано', 'success');
-        } else {
-            if (typeof window.updateDevice === 'function') {
-                window.updateDevice({
-                    id: devId,
-                    name: data.name,
-                    ips: data.ips,
-                    type_id: data.type_id,
-                    group_id: data.group_id,
-                    monitoring_enabled: data.monitoring_enabled
-                });
+            } else {
+                if (typeof window.updateDevice === 'function') {
+                    window.updateDevice({
+                        id: devId,
+                        name: data.name,
+                        ips: data.ips,
+                        type_id: data.type_id,
+                        group_id: data.group_id,
+                        monitoring_enabled: data.monitoring_enabled,
+                        font_size: data.font_size
+                    });
+                }
+
+                // Если мониторинг выключен – перезагружаем карту, чтобы убрать пульсацию
+                if (!monitoring) {
+                    if (typeof window.stopAllPulsing === 'function') {
+                        window.stopAllPulsing();
+                    }
+                    const node = window.cy ? window.cy.getElementById(String(devId)) : null;
+                    if (node && node.length) {
+                        // Сохраняем настоящий статус
+                        const originalStatus = node.data('status');
+                        node.data('_original_status', originalStatus);
+                        // Временно ставим статус 'up', чтобы убрать жёлтый/красный
+                        node.data('status', 'up');
+                        node.data('monitoring_enabled', 'false');
+                        if (typeof window.applyGrayStyle === 'function') {
+                            window.applyGrayStyle(node);
+                        }
+                        window.cy.style().update();
+                    }
+
+                } else {
+                    const node = window.cy ? window.cy.getElementById(String(devId)) : null;
+                    if (node && node.length) {
+                        node.data('monitoring_enabled', 'true');
+                        // Восстанавливаем статус
+                        const savedStatus = node.data('_original_status');
+                        if (savedStatus && (savedStatus === 'down' || savedStatus === 'partial')) {
+                            node.data('status', savedStatus);
+                            if (typeof window.addPulsingNode === 'function') {
+                                window.addPulsingNode(window.cy, node, savedStatus);
+                            }
+                        }
+                        window.cy.style().update();
+                    }
+                }
+                if (typeof window.saveState === 'function') window.saveState('Редактирование устройства');
+                showToast('Успешно', 'Устройство обновлено', 'success');
             }
-            if (typeof reloadMapElements === 'function') reloadMapElements();
-            if (typeof window.saveState === 'function') window.saveState('Редактирование устройства');
-            showToast('Успешно', 'Устройство обновлено', 'success');
-        }
         deviceModal.hide();
     })
     .catch(err => {

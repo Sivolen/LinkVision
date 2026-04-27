@@ -253,15 +253,19 @@ export const CY_STYLE = [
             'text-background-color': '#e7f3ff'
         }
     },
-    {
-        selector: 'node[monitoring_enabled="false"]',
-        style: {
-            'border-color': '#6c757d',
-            'border-style': 'dotted',
-            'border-width': 3,
-            'opacity': 0.7
-        }
-    },
+// Поместите ЭТОТ БЛОК в САМЫЙ КОНЕЦ массива CY_STYLE (перед закрывающей ])
+{
+    selector: 'node[monitoring_enabled="false"]',
+    style: {
+        'border-color': '#6c757d !important',
+        'border-style': 'dotted !important',
+        'border-width': '3px !important',
+        'opacity': '0.7 !important',
+        'background-color': 'var(--bg-secondary) !important',
+        'color': 'var(--text-secondary) !important',
+        'overlay-opacity': '0 !important'
+    }
+},
     {
         selector: 'node[isShape]',
         style: {

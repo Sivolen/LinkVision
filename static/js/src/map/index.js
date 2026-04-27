@@ -71,6 +71,20 @@ export function initMap(id) {
         const node = cy.getElementById(String(data.id));
         if (!node.length) return;
         const newStatus = data.status; // 'up', 'down', 'partial'
+
+        // Надёжная проверка мониторинга (поддерживает и строку, и булево)
+        const monitoringRaw = node.data('monitoring_enabled');
+        const monitoringEnabled = monitoringRaw === true || monitoringRaw === 'true';
+
+        // Если мониторинг выключен – игнорируем статус и принудительно убираем пульсацию
+        if (!monitoringEnabled) {
+            if (typeof removePulsingNode === 'function') removePulsingNode(cy, node);
+            if (typeof window.applyGrayStyle === 'function') window.applyGrayStyle(node);
+            // Принудительно ставим статус up, чтобы убрать жёлтый цвет от статусных стилей
+            node.data('status', 'up');
+            return;
+        }
+
         if (node.data('status') === newStatus) return;
 
         statusBatch.push({ node, newStatus });
@@ -86,7 +100,6 @@ export function initMap(id) {
                     } else {
                         removePulsingNode(cy, node);
                     }
-                    // Обновляем счётчик в сайдбаре: down или partial считаются проблемными
                     updateSidebarCounter(data.map_id, (newStatus === 'down' || newStatus === 'partial'));
                 });
             });
@@ -145,3 +158,6 @@ window.removeDeviceFromGraph = (id) => import('./elements.js').then(m => m.remov
 window.updateDevice = (d) => import('./elements.js').then(m => m.updateDevice(d));
 window.updateMapBackground = updateMapBackground;
 window.updateAllEdgeLabels = () => import('./edgeLabels.js').then(m => m.updateAllEdgeLabels());
+// Экспорт функций пульсации в глобальную область
+window.addPulsingNode = addPulsingNode;
+window.removePulsingNode = removePulsingNode;
