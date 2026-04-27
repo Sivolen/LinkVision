@@ -53,7 +53,7 @@ export function removePulsingNode(cy, node) {
         pulseInterval = null;
     }
 }
-// Принудительно удалить узел из пульсации (по ID)
+
 export function forceRemovePulsingNode(cy, nodeId) {
     if (pulsingNodesRed.has(nodeId)) pulsingNodesRed.delete(nodeId);
     if (pulsingNodesYellow.has(nodeId)) pulsingNodesYellow.delete(nodeId);
@@ -67,6 +67,7 @@ export function forceRemovePulsingNode(cy, nodeId) {
         pulseInterval = null;
     }
 }
+
 export function stopAllPulsing() {
     if (pulseInterval) {
         clearInterval(pulseInterval);
@@ -75,6 +76,7 @@ export function stopAllPulsing() {
     pulsingNodesRed.clear();
     pulsingNodesYellow.clear();
 }
+
 window.stopAllPulsing = stopAllPulsing;
 window.forceRemovePulsingNode = forceRemovePulsingNode;
 window.addPulsingNode = addPulsingNode;

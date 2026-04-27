@@ -1,4 +1,3 @@
-// index.js – инициализация всех модулей карты
 import { initCy, updateGroupLabelColor } from './core.js';
 import { loadBackground, setElementsLoaded, setBackgroundLoaded } from './background.js';
 import { updateMapBackground } from './background.js';
@@ -20,14 +19,12 @@ let mapId = null;
 export function initMap(id) {
     mapId = id;
     if (!mapId || isNaN(parseInt(mapId))) {
-        // пустая карта
         initCy(null);
         setElementsLoaded(true);
         setBackgroundLoaded(true);
         return;
     }
 
-    // Socket join
     if (window.socket) {
         if (window.socket.connected) window.socket.emit('join_room', `map_${mapId}`);
         else window.socket.once('connect', () => window.socket.emit('join_room', `map_${mapId}`));
@@ -37,7 +34,6 @@ export function initMap(id) {
     window.cy = cy;
     updateGroupLabelColor();
 
-    // Подключаем все обработчики
     initInteractions(cy);
     initModes(cy);
     initViewport(cy);
@@ -49,7 +45,6 @@ export function initMap(id) {
     initBulk(cy);
     initSidebarCounter(cy);
 
-    // Фон
     const bgEl = document.getElementById('cy-background');
     if (bgEl && bgEl.dataset.background) loadBackground(bgEl.dataset.background);
     else setBackgroundLoaded(true);
@@ -57,12 +52,8 @@ export function initMap(id) {
     const { saveState } = initUndoRedo(cy, () => mapId);
     window.saveState = saveState;
 
-    // Загружаем элементы
     loadElements(mapId);
 
-    // Обработчик статуса устройства
-    // Буфер для накопления изменений статусов
-    // Обработчик статуса устройства (поддержка up/down/partial)
     let statusBatch = [];
     let statusBatchTimeout = null;
 
@@ -72,15 +63,12 @@ export function initMap(id) {
         if (!node.length) return;
         const newStatus = data.status; // 'up', 'down', 'partial'
 
-        // Надёжная проверка мониторинга (поддерживает и строку, и булево)
         const monitoringRaw = node.data('monitoring_enabled');
-        const monitoringEnabled = monitoringRaw === true || monitoringRaw === 'true';
+        const monitoringEnabled = (monitoringRaw === true || monitoringRaw === 'true');
 
-        // Если мониторинг выключен – игнорируем статус и принудительно убираем пульсацию
         if (!monitoringEnabled) {
             if (typeof removePulsingNode === 'function') removePulsingNode(cy, node);
             if (typeof window.applyGrayStyle === 'function') window.applyGrayStyle(node);
-            // Принудительно ставим статус up, чтобы убрать жёлтый цвет от статусных стилей
             node.data('status', 'up');
             return;
         }
@@ -93,48 +81,36 @@ export function initMap(id) {
             cy.batch(() => {
                 statusBatch.forEach(({ node, newStatus }) => {
                     node.data('status', newStatus);
+                    removePulsingNode(cy, node);
                     if (newStatus === 'down') {
                         addPulsingNode(cy, node, 'down');
                     } else if (newStatus === 'partial') {
                         addPulsingNode(cy, node, 'partial');
-                    } else {
-                        removePulsingNode(cy, node);
                     }
                     updateSidebarCounter(data.map_id, (newStatus === 'down' || newStatus === 'partial'));
                 });
             });
             cy.style().update();
+            if (typeof window.loadSidebarMaps === 'function') {
+                setTimeout(() => window.loadSidebarMaps(), 100);
+            }
             statusBatch = [];
             statusBatchTimeout = null;
         }, 50);
     });
 }
-// Глобальные функции для панели инструментов
+
 window.zoomIn = () => {
     const cy = window.cy;
-    if (cy) {
-        cy.zoom({
-            level: cy.zoom() * 1.2,
-            renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 }
-        });
-    }
+    if (cy) cy.zoom({ level: cy.zoom() * 1.2, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
 };
-
 window.zoomOut = () => {
     const cy = window.cy;
-    if (cy) {
-        cy.zoom({
-            level: cy.zoom() * 0.8,
-            renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 }
-        });
-    }
+    if (cy) cy.zoom({ level: cy.zoom() * 0.8, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
 };
-
 window.resetZoom = () => {
     const cy = window.cy;
-    if (cy) {
-        cy.fit(null, 50);
-    }
+    if (cy) cy.fit(null, 50);
 };
 window.fitImageToView = () => {
     const cy = window.cy;
@@ -148,7 +124,6 @@ window.fitImageToView = () => {
         cy.fit(null, 50);
     }
 };
-// Глобальный доступ для внешних вызовов (из modal.js, toolbar)
 window.initMap = initMap;
 window.setMode = setMode;
 window.saveViewportToServer = saveViewportToServer;
@@ -158,6 +133,5 @@ window.removeDeviceFromGraph = (id) => import('./elements.js').then(m => m.remov
 window.updateDevice = (d) => import('./elements.js').then(m => m.updateDevice(d));
 window.updateMapBackground = updateMapBackground;
 window.updateAllEdgeLabels = () => import('./edgeLabels.js').then(m => m.updateAllEdgeLabels());
-// Экспорт функций пульсации в глобальную область
 window.addPulsingNode = addPulsingNode;
 window.removePulsingNode = removePulsingNode;

@@ -192,7 +192,6 @@ window.saveDevice = async function() {
         return;
     }
 
-    // Валидация IP-адресов
     const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^(([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4})?::([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}$/;
     for (let ip of ips) {
@@ -209,11 +208,8 @@ window.saveDevice = async function() {
         group_id: groupId ? parseInt(groupId) : null,
         monitoring_enabled: monitoring
     };
-    if (fontSize !== '') {
-        data.font_size = parseInt(fontSize, 10);
-    } else {
-        data.font_size = null;
-    }
+    if (fontSize !== '') data.font_size = parseInt(fontSize, 10);
+    else data.font_size = null;
 
     if (!devId) {
         if (!window.currentMapId) {
@@ -239,24 +235,17 @@ window.saveDevice = async function() {
     const saveBtn = document.getElementById('saveDeviceBtn');
     const btnText = saveBtn?.querySelector('.btn-text');
     const btnLoader = saveBtn?.querySelector('.btn-loader');
-
     if (btnText) btnText.classList.add('d-none');
     if (btnLoader) btnLoader.classList.remove('d-none');
     if (saveBtn) saveBtn.disabled = true;
 
     fetch(url, {
         method: method,
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify(data)
     })
     .then(async res => {
-        if (!res.ok) {
-            const errorMsg = await getErrorMessage(res);
-            throw new Error(errorMsg);
-        }
+        if (!res.ok) throw new Error(await getErrorMessage(res));
         return res.json();
     })
     .then(async result => {
@@ -270,66 +259,38 @@ window.saveDevice = async function() {
                 monitoring_enabled: data.monitoring_enabled,
                 x: data.x,
                 y: data.y,
-                status: 'true',
+                status: 'up',
                 iconUrl: result.iconUrl,
                 width: result.width,
                 height: result.height
             };
-            if (typeof window.addDeviceToGraph === 'function') {
-                await window.addDeviceToGraph(newDevice);
-            }
+            if (typeof window.addDeviceToGraph === 'function') await window.addDeviceToGraph(newDevice);
             if (typeof window.saveState === 'function') window.saveState('Создание устройства');
             showToast('Успешно', 'Устройство создано', 'success');
-            } else {
-                if (typeof window.updateDevice === 'function') {
-                    window.updateDevice({
-                        id: devId,
-                        name: data.name,
-                        ips: data.ips,
-                        type_id: data.type_id,
-                        group_id: data.group_id,
-                        monitoring_enabled: data.monitoring_enabled,
-                        font_size: data.font_size
-                    });
-                }
+} else {
+    if (typeof window.updateDevice === 'function') {
+        window.updateDevice({
+            id: devId,
+            name: data.name,
+            ips: data.ips,
+            type_id: data.type_id,
+            group_id: data.group_id,
+            monitoring_enabled: data.monitoring_enabled,
+            font_size: data.font_size
+        });
+    }
 
-                // Если мониторинг выключен – перезагружаем карту, чтобы убрать пульсацию
-                if (!monitoring) {
-                    if (typeof window.stopAllPulsing === 'function') {
-                        window.stopAllPulsing();
-                    }
-                    const node = window.cy ? window.cy.getElementById(String(devId)) : null;
-                    if (node && node.length) {
-                        // Сохраняем настоящий статус
-                        const originalStatus = node.data('status');
-                        node.data('_original_status', originalStatus);
-                        // Временно ставим статус 'up', чтобы убрать жёлтый/красный
-                        node.data('status', 'up');
-                        node.data('monitoring_enabled', 'false');
-                        if (typeof window.applyGrayStyle === 'function') {
-                            window.applyGrayStyle(node);
-                        }
-                        window.cy.style().update();
-                    }
+    // Перезагружаем карту и сайдбар
+    if (typeof window.reloadMapElements === 'function') {
+        window.reloadMapElements();
+    }
+    if (typeof window.loadSidebarMaps === 'function') {
+        setTimeout(() => window.loadSidebarMaps(), 200);
+    }
 
-                } else {
-                    const node = window.cy ? window.cy.getElementById(String(devId)) : null;
-                    if (node && node.length) {
-                        node.data('monitoring_enabled', 'true');
-                        // Восстанавливаем статус
-                        const savedStatus = node.data('_original_status');
-                        if (savedStatus && (savedStatus === 'down' || savedStatus === 'partial')) {
-                            node.data('status', savedStatus);
-                            if (typeof window.addPulsingNode === 'function') {
-                                window.addPulsingNode(window.cy, node, savedStatus);
-                            }
-                        }
-                        window.cy.style().update();
-                    }
-                }
-                if (typeof window.saveState === 'function') window.saveState('Редактирование устройства');
-                showToast('Успешно', 'Устройство обновлено', 'success');
-            }
+    if (typeof window.saveState === 'function') window.saveState('Редактирование устройства');
+    showToast('Успешно', 'Устройство обновлено', 'success');
+}
         deviceModal.hide();
     })
     .catch(err => {

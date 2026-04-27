@@ -133,6 +133,11 @@ def update_device(device_id, **kwargs):
         if key in allowed_fields:
             setattr(device, key, value)
 
+    # Если мониторинг был выключен, а теперь включён – сбрасываем статус на 'up'
+    if 'monitoring_enabled' in kwargs and kwargs['monitoring_enabled'] is True:
+        device.status = 'up'
+        device.last_check = db.func.now()
+
     if 'ips' in kwargs:
         new_ips = kwargs['ips']
         if new_ips is not None:

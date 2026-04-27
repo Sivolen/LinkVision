@@ -20,7 +20,7 @@ function getStatusBadgeClass(status) {
     const s = String(status).toLowerCase();
     if (s === 'up' || s === 'true' || s === 'online') return 'bg-success';
     if (s === 'down' || s === 'false' || s === 'offline') return 'bg-danger';
-    if (s === 'partial') return 'bg-warning';   // жёлтый
+    if (s === 'partial') return 'bg-warning';
     if (s === 'warning') return 'bg-warning';
     return 'bg-secondary';
 }
