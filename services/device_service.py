@@ -26,7 +26,9 @@ def get_device_by_id(device_id):
 
 
 def get_device_history(device_id, page=1, per_page=10):
-    query = DeviceHistory.query.filter_by(device_id=device_id).order_by(DeviceHistory.timestamp.desc())
+    query = DeviceHistory.query.filter_by(device_id=device_id).order_by(
+        DeviceHistory.timestamp.desc()
+    )
     total = query.count()
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
     items = [
@@ -55,29 +57,33 @@ def get_device_details(device_id):
     for link in device.source_links:
         neighbor = link.target
         if neighbor:
-            neighbors.append({
-                "device_id": neighbor.id,
-                "device_name": neighbor.name,
-                "interface": link.source_interface,
-                "neighbor_interface": link.target_interface,
-                "link_type": link.link_type,
-                "color": link.line_color,
-                "width": link.line_width,
-                "style": link.line_style,
-            })
+            neighbors.append(
+                {
+                    "device_id": neighbor.id,
+                    "device_name": neighbor.name,
+                    "interface": link.source_interface,
+                    "neighbor_interface": link.target_interface,
+                    "link_type": link.link_type,
+                    "color": link.line_color,
+                    "width": link.line_width,
+                    "style": link.line_style,
+                }
+            )
     for link in device.target_links:
         neighbor = link.source
         if neighbor:
-            neighbors.append({
-                "device_id": neighbor.id,
-                "device_name": neighbor.name,
-                "interface": link.target_interface,
-                "neighbor_interface": link.source_interface,
-                "link_type": link.link_type,
-                "color": link.line_color,
-                "width": link.line_width,
-                "style": link.line_style,
-            })
+            neighbors.append(
+                {
+                    "device_id": neighbor.id,
+                    "device_name": neighbor.name,
+                    "interface": link.target_interface,
+                    "neighbor_interface": link.source_interface,
+                    "link_type": link.link_type,
+                    "color": link.line_color,
+                    "width": link.line_width,
+                    "style": link.line_style,
+                }
+            )
 
     return {
         "id": device.id,
@@ -97,7 +103,17 @@ def get_device_details(device_id):
     }
 
 
-def create_device(map_id, type_id, name, ips=None, x=100, y=100, group_id=None, monitoring_enabled=True, font_size=None):
+def create_device(
+    map_id,
+    type_id,
+    name,
+    ips=None,
+    x=100,
+    y=100,
+    group_id=None,
+    monitoring_enabled=True,
+    font_size=None,
+):
     device = Device(
         map_id=map_id,
         type_id=type_id,
@@ -107,7 +123,7 @@ def create_device(map_id, type_id, name, ips=None, x=100, y=100, group_id=None, 
         pos_y=y,
         group_id=group_id,
         monitoring_enabled=monitoring_enabled,
-        status='up'
+        status="up",
     )
     db.session.add(device)
     db.session.flush()
@@ -128,18 +144,26 @@ def create_device(map_id, type_id, name, ips=None, x=100, y=100, group_id=None, 
 
 def update_device(device_id, **kwargs):
     device = Device.query.get_or_404(device_id)
-    allowed_fields = ['name', 'type_id', 'pos_x', 'pos_y', 'group_id', 'monitoring_enabled', 'font_size']
+    allowed_fields = [
+        "name",
+        "type_id",
+        "pos_x",
+        "pos_y",
+        "group_id",
+        "monitoring_enabled",
+        "font_size",
+    ]
     for key, value in kwargs.items():
         if key in allowed_fields:
             setattr(device, key, value)
 
     # Если мониторинг был выключен, а теперь включён – сбрасываем статус на 'up'
-    if 'monitoring_enabled' in kwargs and kwargs['monitoring_enabled'] is True:
-        device.status = 'up'
+    if "monitoring_enabled" in kwargs and kwargs["monitoring_enabled"] is True:
+        device.status = "up"
         device.last_check = db.func.now()
 
-    if 'ips' in kwargs:
-        new_ips = kwargs['ips']
+    if "ips" in kwargs:
+        new_ips = kwargs["ips"]
         if new_ips is not None:
             for ip in new_ips:
                 if ip and ip.strip():

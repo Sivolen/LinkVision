@@ -8,6 +8,7 @@
 - Преобразование статусов из булевых в строки ('up'/'down')
 - Удаление старой колонки ip_address
 """
+
 import os
 import shutil
 import sqlite3
@@ -28,7 +29,7 @@ def backup_database(db_path):
 
 def run_migration():
     # Определяем путь к БД
-    db_path = Config.SQLALCHEMY_DATABASE_URI.replace('sqlite:///', '')
+    db_path = Config.SQLALCHEMY_DATABASE_URI.replace("sqlite:///", "")
     if not os.path.isabs(db_path):
         db_path = os.path.join(os.getcwd(), db_path)
 
@@ -46,7 +47,9 @@ def run_migration():
     cursor.execute("PRAGMA foreign_keys = ON")
 
     # 2. Проверяем, есть ли таблица device_ips
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='device_ips'")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='device_ips'"
+    )
     if not cursor.fetchone():
         print("Создаём таблицу device_ips...")
         cursor.execute("""
@@ -64,20 +67,21 @@ def run_migration():
     # 3. Если есть колонка ip_address в таблице device, переносим данные
     cursor.execute("PRAGMA table_info(device)")
     columns = [col[1] for col in cursor.fetchall()]
-    if 'ip_address' in columns:
+    if "ip_address" in columns:
         print("Переносим IP-адреса из старой колонки...")
         devices = cursor.execute(
-            "SELECT id, ip_address FROM device WHERE ip_address IS NOT NULL AND ip_address != ''").fetchall()
+            "SELECT id, ip_address FROM device WHERE ip_address IS NOT NULL AND ip_address != ''"
+        ).fetchall()
         for dev in devices:
             # Проверяем, не перенесён ли уже этот IP
             exists = cursor.execute(
                 "SELECT 1 FROM device_ips WHERE device_id = ? AND ip_address = ?",
-                (dev['id'], dev['ip_address'])
+                (dev["id"], dev["ip_address"]),
             ).fetchone()
             if not exists:
                 cursor.execute(
                     "INSERT INTO device_ips (device_id, ip_address) VALUES (?, ?)",
-                    (dev['id'], dev['ip_address'])
+                    (dev["id"], dev["ip_address"]),
                 )
         conn.commit()
         print(f"Перенесено {len(devices)} IP-адресов.")
@@ -92,16 +96,22 @@ def run_migration():
     # 4. Преобразуем статус в строку
     cursor.execute("PRAGMA table_info(device)")
     columns = [col[1] for col in cursor.fetchall()]
-    if 'status' in columns:
+    if "status" in columns:
         # Проверяем тип колонки
-        cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='device'")
+        cursor.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='device'"
+        )
         create_sql = cursor.fetchone()[0]
-        if 'BOOLEAN' in create_sql.upper() or 'INTEGER' in create_sql.upper():
+        if "BOOLEAN" in create_sql.upper() or "INTEGER" in create_sql.upper():
             print("Преобразуем статус из булева в строку...")
             # Добавляем временную колонку
-            cursor.execute("ALTER TABLE device ADD COLUMN status_new VARCHAR(10) DEFAULT 'up'")
+            cursor.execute(
+                "ALTER TABLE device ADD COLUMN status_new VARCHAR(10) DEFAULT 'up'"
+            )
             # Переносим данные
-            cursor.execute("UPDATE device SET status_new = CASE WHEN status = 1 THEN 'up' ELSE 'down' END")
+            cursor.execute(
+                "UPDATE device SET status_new = CASE WHEN status = 1 THEN 'up' ELSE 'down' END"
+            )
             # Удаляем старую
             cursor.execute("ALTER TABLE device DROP COLUMN status")
             # Переименовываем новую
@@ -116,14 +126,20 @@ def run_migration():
     # 5. Преобразуем old_status и new_status в таблице device_history
     cursor.execute("PRAGMA table_info(device_history)")
     hist_columns = [col[1] for col in cursor.fetchall()]
-    if 'old_status' in hist_columns:
+    if "old_status" in hist_columns:
         # Проверяем тип
-        cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='device_history'")
+        cursor.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='device_history'"
+        )
         create_hist_sql = cursor.fetchone()[0]
-        if 'BOOLEAN' in create_hist_sql.upper() or 'INTEGER' in create_hist_sql.upper():
+        if "BOOLEAN" in create_hist_sql.upper() or "INTEGER" in create_hist_sql.upper():
             print("Преобразуем old_status и new_status в device_history...")
-            cursor.execute("ALTER TABLE device_history ADD COLUMN old_status_new VARCHAR(10)")
-            cursor.execute("ALTER TABLE device_history ADD COLUMN new_status_new VARCHAR(10)")
+            cursor.execute(
+                "ALTER TABLE device_history ADD COLUMN old_status_new VARCHAR(10)"
+            )
+            cursor.execute(
+                "ALTER TABLE device_history ADD COLUMN new_status_new VARCHAR(10)"
+            )
             cursor.execute("""
                 UPDATE device_history 
                 SET old_status_new = CASE WHEN old_status = 1 THEN 'up' ELSE 'down' END,
@@ -131,8 +147,12 @@ def run_migration():
             """)
             cursor.execute("ALTER TABLE device_history DROP COLUMN old_status")
             cursor.execute("ALTER TABLE device_history DROP COLUMN new_status")
-            cursor.execute("ALTER TABLE device_history RENAME COLUMN old_status_new TO old_status")
-            cursor.execute("ALTER TABLE device_history RENAME COLUMN new_status_new TO new_status")
+            cursor.execute(
+                "ALTER TABLE device_history RENAME COLUMN old_status_new TO old_status"
+            )
+            cursor.execute(
+                "ALTER TABLE device_history RENAME COLUMN new_status_new TO new_status"
+            )
             conn.commit()
             print("История преобразована.")
         else:
@@ -141,14 +161,17 @@ def run_migration():
     # 6. Добавляем внешний ключ, если его нет
     cursor.execute("PRAGMA foreign_key_list(device_ips)")
     fks = cursor.fetchall()
-    if not any(fk[2] == 'device' for fk in fks):
+    if not any(fk[2] == "device" for fk in fks):
         print("Добавляем внешний ключ для device_ips...")
         try:
             cursor.execute(
-                "ALTER TABLE device_ips ADD CONSTRAINT fk_device_ips_device FOREIGN KEY (device_id) REFERENCES device(id) ON DELETE CASCADE")
+                "ALTER TABLE device_ips ADD CONSTRAINT fk_device_ips_device FOREIGN KEY (device_id) REFERENCES device(id) ON DELETE CASCADE"
+            )
         except sqlite3.OperationalError as e:
             # В SQLite нельзя добавить FK через ALTER, нужно пересоздать таблицу
-            print("SQLite не поддерживает добавление внешнего ключа через ALTER. Пропускаем.")
+            print(
+                "SQLite не поддерживает добавление внешнего ключа через ALTER. Пропускаем."
+            )
             print("Внешний ключ будет создан при следующем запуске приложения.")
     else:
         print("Внешний ключ уже существует.")

@@ -9,6 +9,7 @@ from cachetools import TTLCache
 
 try:
     from ping3 import ping
+
     PING3_AVAILABLE = True
 except ImportError:
     PING3_AVAILABLE = False
@@ -56,8 +57,12 @@ def ping_host(ip, count=1):
                 cmd = ["ping", param, str(count), "-w", str(timeout_seconds * 1000), ip]
             else:
                 cmd = ["ping", param, str(count), "-W", str(timeout_seconds), ip]
-            output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                    timeout=timeout_seconds * count + 2)
+            output = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=timeout_seconds * count + 2,
+            )
             return output.returncode == 0
         except Exception:
             return False
@@ -80,20 +85,20 @@ def check_device(device_id, app):
     with app.app_context():
         device = Device.query.get(device_id)
         if not device:
-            return device_id, 'down'
+            return device_id, "down"
         if not device.monitoring_enabled or not device.ips:
-            return device_id, 'down'
+            return device_id, "down"
         ping_count = get_setting("ping_count", 4)
         results = []
         for ip_obj in device.ips:
             is_up = ping_host(ip_obj.ip_address, ping_count)
             results.append(is_up)
         if all(results):
-            new_status = 'up'
+            new_status = "up"
         elif any(results):
-            new_status = 'partial'
+            new_status = "partial"
         else:
-            new_status = 'down'
+            new_status = "down"
         return device_id, new_status
 
 
@@ -114,13 +119,18 @@ def monitor_loop():
             # Получаем список устройств
             with app_instance.app_context():
                 devices = [d for d in Device.query.all() if d.monitoring_enabled]
-                monitor_logger.info(f"Found {len(devices)} devices with monitoring enabled")
+                monitor_logger.info(
+                    f"Found {len(devices)} devices with monitoring enabled"
+                )
                 if not devices:
                     time.sleep(5)
                     continue
 
             # Запускаем проверку
-            futures = {_executor.submit(check_device, dev.id, app_instance): dev for dev in devices}
+            futures = {
+                _executor.submit(check_device, dev.id, app_instance): dev
+                for dev in devices
+            }
             results = []
             for future in concurrent.futures.as_completed(futures):
                 try:
@@ -149,7 +159,9 @@ def monitor_loop():
                             )
                         )
                         last_emit_time[device.id] = current_time
-                        monitor_logger.info(f"Device {device.id} status change: {device.status} -> {new_status}")
+                        monitor_logger.info(
+                            f"Device {device.id} status change: {device.status} -> {new_status}"
+                        )
 
             if devices_to_update:
                 with app_instance.app_context():
@@ -181,12 +193,15 @@ def monitor_loop():
         except Exception as e:
             monitor_logger.error(f"Monitor error: {e}")
             import traceback
+
             monitor_logger.error(traceback.format_exc())
 
         elapsed = time.time() - start_time
         interval = get_setting("ping_interval", 10)
         sleep_time = max(0, interval - elapsed)
-        monitor_logger.debug(f"Cycle completed in {elapsed:.2f}s, sleeping {sleep_time:.2f}s")
+        monitor_logger.debug(
+            f"Cycle completed in {elapsed:.2f}s, sleeping {sleep_time:.2f}s"
+        )
         time.sleep(sleep_time)
 
     monitor_logger.info("Monitor loop terminated")

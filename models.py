@@ -40,11 +40,13 @@ class Device(db.Model):
     map_id = db.Column(db.Integer, db.ForeignKey("map.id"), index=True)
     type_id = db.Column(db.Integer, db.ForeignKey("device_type.id"))
     name = db.Column(db.String(64))
-    ips = db.relationship('DeviceIP', back_populates='device', cascade='all, delete-orphan')
+    ips = db.relationship(
+        "DeviceIP", back_populates="device", cascade="all, delete-orphan"
+    )
     font_size = db.Column(db.Integer, nullable=True)
     pos_x = db.Column(db.Float, default=0)
     pos_y = db.Column(db.Float, default=0)
-    status = db.Column(db.String(10), default='up')
+    status = db.Column(db.String(10), default="up")
     last_check = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     group_id = db.Column(db.Integer, db.ForeignKey("group.id"), index=True)
     monitoring_enabled = db.Column(db.Boolean, default=True)
@@ -66,12 +68,14 @@ class Device(db.Model):
 
 
 class DeviceIP(db.Model):
-    __tablename__ = 'device_ips'
+    __tablename__ = "device_ips"
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.Integer, db.ForeignKey('device.id', ondelete='CASCADE'), nullable=False)
+    device_id = db.Column(
+        db.Integer, db.ForeignKey("device.id", ondelete="CASCADE"), nullable=False
+    )
     ip_address = db.Column(db.String(45), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.now())
-    device = db.relationship('Device', back_populates='ips')
+    device = db.relationship("Device", back_populates="ips")
 
 
 class Link(db.Model):
