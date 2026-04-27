@@ -68,18 +68,24 @@ def get_device(id):
     device = device_service.get_device_by_id(id)
     if not device:
         return jsonify({"error": "Device not found"}), 404
-    if not (current_user.is_admin or device.map.owner_id == current_user.id or current_user.is_operator):
+    if not (
+        current_user.is_admin
+        or device.map.owner_id == current_user.id
+        or current_user.is_operator
+    ):
         return jsonify({"error": "Доступ запрещён"}), 403
-    return jsonify({
-        "id": device.id,
-        "name": device.name,
-        "ips": [ip.ip_address for ip in device.ips],
-        "type_id": device.type_id,
-        "pos_x": device.pos_x,
-        "pos_y": device.pos_y,
-        "status": device.status,
-        "monitoring_enabled": device.monitoring_enabled,
-    })
+    return jsonify(
+        {
+            "id": device.id,
+            "name": device.name,
+            "ips": [ip.ip_address for ip in device.ips],
+            "type_id": device.type_id,
+            "pos_x": device.pos_x,
+            "pos_y": device.pos_y,
+            "status": device.status,
+            "monitoring_enabled": device.monitoring_enabled,
+        }
+    )
 
 
 @api_bp.route("/device/<int:id>/history")
@@ -191,7 +197,7 @@ def create_device():
     if not data.get("name"):
         return jsonify({"error": "name is required"}), 400
 
-    ips = data.get('ips', [])
+    ips = data.get("ips", [])
     for ip in ips:
         if ip and ip.strip():
             try:
@@ -221,10 +227,18 @@ def create_device():
         width = None
         height = None
         if dtype and dtype.icon_filename:
-            icon_url = url_for("static", filename=f"uploads/icons/{dtype.icon_filename}") + f"?v={dtype.id}"
+            icon_url = (
+                url_for("static", filename=f"uploads/icons/{dtype.icon_filename}")
+                + f"?v={dtype.id}"
+            )
             width = dtype.width
             height = dtype.height
-        return jsonify({"id": dev.id, "iconUrl": icon_url, "width": width, "height": height}), 201
+        return (
+            jsonify(
+                {"id": dev.id, "iconUrl": icon_url, "width": width, "height": height}
+            ),
+            201,
+        )
     except ValueError as e:
         api_logger.warning(f"Validation error creating device: {e}")
         return jsonify({"error": str(e)}), 400
@@ -244,27 +258,36 @@ def update_device(id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json
-    allowed_fields = ["name", "type_id", "pos_x", "pos_y", "group_id", "monitoring_enabled"]
+    allowed_fields = [
+        "name",
+        "type_id",
+        "pos_x",
+        "pos_y",
+        "group_id",
+        "monitoring_enabled",
+    ]
     update_data = {k: v for k, v in data.items() if k in allowed_fields}
 
-    if 'ips' in data:
-        ips = data['ips']
+    if "ips" in data:
+        ips = data["ips"]
         for ip in ips:
             if ip and ip.strip():
                 try:
                     ipaddress.ip_address(ip.strip())
                 except ValueError:
                     return jsonify({"error": f"Неверный IP: {ip}"}), 400
-        update_data['ips'] = ips
+        update_data["ips"] = ips
 
-    if 'font_size' in data:
-        update_data['font_size'] = data['font_size']
+    if "font_size" in data:
+        update_data["font_size"] = data["font_size"]
 
     try:
-        if 'type_id' in update_data:
-            device_service.validate_device_type(update_data['type_id'])
-        if 'group_id' in update_data:
-            device_service.validate_group_for_map(update_data['group_id'], device.map_id)
+        if "type_id" in update_data:
+            device_service.validate_device_type(update_data["type_id"])
+        if "group_id" in update_data:
+            device_service.validate_group_for_map(
+                update_data["group_id"], device.map_id
+            )
         device_service.update_device(id, **update_data)
         # Инвалидация кэша сайдбара для владельца карты
         device = device_service.get_device_by_id(id)

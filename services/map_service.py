@@ -11,7 +11,8 @@ from models import (
     User,
     UserMapSettings,
     db,
-    MapShape, DeviceIP,
+    MapShape,
+    DeviceIP,
 )
 from utils.logger import api_logger, main_logger
 
@@ -70,14 +71,16 @@ def get_sidebar_maps_data(user):
         down_count = Device.query.filter(
             Device.map_id == m.id,
             Device.monitoring_enabled == True,
-            Device.status != 'up'
+            Device.status != "up",
         ).count()
-        result.append({
-            "id": m.id,
-            "name": m.name,
-            "owner_id": m.owner_id,
-            "down_count": down_count,
-        })
+        result.append(
+            {
+                "id": m.id,
+                "name": m.name,
+                "owner_id": m.owner_id,
+                "down_count": down_count,
+            }
+        )
     sidebar_cache[cache_key] = result
     return result
 
@@ -156,7 +159,7 @@ def get_map_elements(map_id):
             height = dev.type.height
 
         # Формируем строку IP-адресов
-        ip_label = ', '.join([ip.ip_address for ip in dev.ips]) if dev.ips else ''
+        ip_label = ", ".join([ip.ip_address for ip in dev.ips]) if dev.ips else ""
 
         nodes.append(
             {
@@ -252,20 +255,22 @@ def export_map_data(map_id):
     map_obj = Map.query.get_or_404(map_id)
     devices = []
     for dev in map_obj.devices:
-        devices.append({
-            "id": dev.id,
-            "name": dev.name,
-            "ips": [ip.ip_address for ip in dev.ips],  # добавлено
-            "type_id": dev.type_id,
-            "type_name": dev.type.name if dev.type else None,
-            "pos_x": dev.pos_x,
-            "pos_y": dev.pos_y,
-            "status": dev.status,
-            "icon_filename": dev.type.icon_filename if dev.type else None,
-            "width": dev.type.width if dev.type else None,
-            "height": dev.type.height if dev.type else None,
-            "group_id": dev.group_id,
-        })
+        devices.append(
+            {
+                "id": dev.id,
+                "name": dev.name,
+                "ips": [ip.ip_address for ip in dev.ips],  # добавлено
+                "type_id": dev.type_id,
+                "type_name": dev.type.name if dev.type else None,
+                "pos_x": dev.pos_x,
+                "pos_y": dev.pos_y,
+                "status": dev.status,
+                "icon_filename": dev.type.icon_filename if dev.type else None,
+                "width": dev.type.width if dev.type else None,
+                "height": dev.type.height if dev.type else None,
+                "group_id": dev.group_id,
+            }
+        )
 
     links = []
     for link in map_obj.links:
