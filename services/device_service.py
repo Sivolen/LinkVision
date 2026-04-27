@@ -1,9 +1,9 @@
-from models import Device, DeviceHistory, db, DeviceType, Group
+import ipaddress
+from models import Device, DeviceIP, DeviceHistory, db, DeviceType, Group
 from utils.logger import api_logger
 
 
 def validate_device_type(type_id):
-    """Проверяет существование типа устройства."""
     dtype = DeviceType.query.get(type_id)
     if not dtype:
         raise ValueError(f"Device type with id {type_id} not found")
@@ -11,7 +11,6 @@ def validate_device_type(type_id):
 
 
 def validate_group_for_map(group_id, map_id):
-    """Проверяет, что группа принадлежит указанной карте."""
     if group_id is None:
         return None
     group = Group.query.get(group_id)
@@ -23,32 +22,22 @@ def validate_group_for_map(group_id, map_id):
 
 
 def get_device_by_id(device_id):
-    """Получить устройство по ID или None."""
     return Device.query.get(device_id)
 
 
 def get_device_history(device_id, page=1, per_page=10):
-    """Получить историю изменений статуса устройства с пагинацией."""
-    query = DeviceHistory.query.filter_by(device_id=device_id).order_by(
-        DeviceHistory.timestamp.desc()
-    )
-
-    # Общее количество записей
+    query = DeviceHistory.query.filter_by(device_id=device_id).order_by(DeviceHistory.timestamp.desc())
     total = query.count()
-
-    # Пагинация
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-
     items = [
         {
             "id": h.id,
-            "old_status": "true" if h.old_status else "false",
-            "new_status": "true" if h.new_status else "false",
+            "old_status": h.old_status,
+            "new_status": h.new_status,
             "timestamp": h.timestamp.isoformat(),
         }
         for h in paginated.items
     ]
-
     return {
         "items": items,
         "page": page,
@@ -66,39 +55,34 @@ def get_device_details(device_id):
     for link in device.source_links:
         neighbor = link.target
         if neighbor:
-            neighbors.append(
-                {
-                    "device_id": neighbor.id,
-                    "device_name": neighbor.name,
-                    "interface": link.source_interface,
-                    "neighbor_interface": link.target_interface,
-                    "link_type": link.link_type,
-                    "color": link.line_color,
-                    "width": link.line_width,
-                    "style": link.line_style,
-                }
-            )
-
+            neighbors.append({
+                "device_id": neighbor.id,
+                "device_name": neighbor.name,
+                "interface": link.source_interface,
+                "neighbor_interface": link.target_interface,
+                "link_type": link.link_type,
+                "color": link.line_color,
+                "width": link.line_width,
+                "style": link.line_style,
+            })
     for link in device.target_links:
         neighbor = link.source
         if neighbor:
-            neighbors.append(
-                {
-                    "device_id": neighbor.id,
-                    "device_name": neighbor.name,
-                    "interface": link.target_interface,
-                    "neighbor_interface": link.source_interface,
-                    "link_type": link.link_type,
-                    "color": link.line_color,
-                    "width": link.line_width,
-                    "style": link.line_style,
-                }
-            )
+            neighbors.append({
+                "device_id": neighbor.id,
+                "device_name": neighbor.name,
+                "interface": link.target_interface,
+                "neighbor_interface": link.source_interface,
+                "link_type": link.link_type,
+                "color": link.line_color,
+                "width": link.line_width,
+                "style": link.line_style,
+            })
 
     return {
         "id": device.id,
         "name": device.name,
-        "ip_address": device.ip_address,
+        "ips": [ip.ip_address for ip in device.ips],
         "type_id": device.type_id,
         "type_name": device.type.name if device.type else None,
         "pos_x": device.pos_x,
@@ -113,58 +97,65 @@ def get_device_details(device_id):
     }
 
 
-def create_device(
-    map_id,
-    type_id,
-    name,
-    ip_address=None,
-    x=100,
-    y=100,
-    group_id=None,
-    monitoring_enabled=True,
-    font_size=None,
-):
-    """Создать новое устройство."""
+def create_device(map_id, type_id, name, ips=None, x=100, y=100, group_id=None, monitoring_enabled=True, font_size=None):
     device = Device(
         map_id=map_id,
         type_id=type_id,
         name=name,
-        ip_address=ip_address,
         font_size=font_size,
         pos_x=x,
         pos_y=y,
         group_id=group_id,
         monitoring_enabled=monitoring_enabled,
+        status='up'
     )
     db.session.add(device)
+    db.session.flush()
+
+    if ips:
+        for ip in ips:
+            if ip and ip.strip():
+                try:
+                    ipaddress.ip_address(ip.strip())
+                except ValueError:
+                    raise ValueError(f"Invalid IP address: {ip}")
+                db.session.add(DeviceIP(device_id=device.id, ip_address=ip.strip()))
+
     db.session.commit()
-    api_logger.info(f"Device created: ID={device.id}, name={device.name}, map={map_id}")
+    api_logger.info(f"Device created: ID={device.id}, name={device.name}, ips={ips}")
     return device
 
 
 def update_device(device_id, **kwargs):
-    """Обновить поля устройства (name, ip_address, type_id, pos_x, pos_y, group_id, monitoring_enabled)."""
     device = Device.query.get_or_404(device_id)
-    allowed_fields = [
-        "name",
-        "ip_address",
-        "type_id",
-        "pos_x",
-        "pos_y",
-        "group_id",
-        "monitoring_enabled",
-        "font_size",
-    ]
+    allowed_fields = ['name', 'type_id', 'pos_x', 'pos_y', 'group_id', 'monitoring_enabled', 'font_size']
     for key, value in kwargs.items():
         if key in allowed_fields:
             setattr(device, key, value)
+
+    if 'ips' in kwargs:
+        new_ips = kwargs['ips']
+        if new_ips is not None:
+            for ip in new_ips:
+                if ip and ip.strip():
+                    try:
+                        ipaddress.ip_address(ip.strip())
+                    except ValueError:
+                        raise ValueError(f"Invalid IP address: {ip}")
+            existing = {ip.ip_address for ip in device.ips}
+            new_set = {ip.strip() for ip in new_ips if ip and ip.strip()}
+            for ip_obj in device.ips[:]:
+                if ip_obj.ip_address not in new_set:
+                    db.session.delete(ip_obj)
+            for ip_str in new_set - existing:
+                db.session.add(DeviceIP(device_id=device.id, ip_address=ip_str))
+
     db.session.commit()
-    api_logger.info(f"Device updated: ID={device_id}, fields={list(kwargs.keys())}")
+    api_logger.info(f"Device updated: ID={device_id}")
     return device
 
 
 def delete_device(device_id):
-    """Удалить устройство."""
     device = Device.query.get_or_404(device_id)
     db.session.delete(device)
     db.session.commit()
@@ -172,7 +163,6 @@ def delete_device(device_id):
 
 
 def update_device_position(device_id, x, y):
-    """Обновить только позицию устройства."""
     device = Device.query.get_or_404(device_id)
     device.pos_x = x
     device.pos_y = y
@@ -182,19 +172,12 @@ def update_device_position(device_id, x, y):
 
 
 def get_all_device_types():
-    """Вернуть список всех типов устройств."""
     return DeviceType.query.all()
 
 
 def update_devices_positions(updates):
-    """
-    Обновляет позиции нескольких устройств.
-    updates: список словарей {'id': device_id, 'x': x, 'y': y}
-    Возвращает количество обновлённых устройств.
-    """
     if not updates:
         return 0
-
     updated = 0
     for item in updates:
         device_id = item.get("id")

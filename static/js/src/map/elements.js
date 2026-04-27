@@ -100,7 +100,9 @@ export function loadElements(mapId) {
 
             // Пульсация для недоступных
             cy.nodes().forEach(node => {
-                if (node.data('status') === 'false') addPulsingNode(cy, node);
+                const status = node.data('status');
+                if (status === 'down') addPulsingNode(cy, node, 'down');
+                else if (status === 'partial') addPulsingNode(cy, node, 'partial');
             });
         })
         .catch(err => console.error('Load elements error:', err));
@@ -109,15 +111,11 @@ export function loadElements(mapId) {
 export async function addDeviceToGraph(device) {
     const cy = getCy();
     if (!cy) return;
-
-    // Проверяем, не существует ли уже устройство
     if (cy.getElementById(String(device.id)).length) return;
 
     let groupParent = undefined;
     if (device.group_id) {
         let groupNode = cy.getElementById(`group_${device.group_id}`);
-        if (groupNode.length) groupParent = `group_${device.group_id}`;
-        // Если группы нет в графе – загружаем её данные с сервера
         if (!groupNode.length) {
             try {
                 const res = await fetch(`/api/map/${window.currentMapId}/groups`);
@@ -125,7 +123,6 @@ export async function addDeviceToGraph(device) {
                     const groups = await res.json();
                     const groupData = groups.find(g => g.id === device.group_id);
                     if (groupData) {
-                        // Добавляем узел группы
                         groupNode = cy.add({
                             group: 'nodes',
                             data: {
@@ -139,13 +136,9 @@ export async function addDeviceToGraph(device) {
                         });
                     }
                 }
-            } catch (err) {
-                console.error('Failed to load group:', err);
-            }
+            } catch (err) { console.error(err); }
         }
-        if (groupNode && groupNode.length) {
-            groupParent = `group_${device.group_id}`;
-        }
+        if (groupNode && groupNode.length) groupParent = `group_${device.group_id}`;
     }
 
     cy.add({
@@ -153,12 +146,12 @@ export async function addDeviceToGraph(device) {
         data: {
             id: String(device.id),
             name: device.name,
-            ip: device.ip,
+            ips: device.ips || [],   // массив IP
             type_id: device.type_id,
             group_id: device.group_id,
             parent: groupParent,
             monitoring_enabled: device.monitoring_enabled,
-            status: device.status || 'true',
+            status: device.status || 'up',   // 'up', 'down', 'partial'
             iconUrl: device.iconUrl || '',
             width: device.width || null,
             height: device.height || null,
@@ -181,11 +174,12 @@ export function updateDevice(device) {
     if (node.length) {
         node.data({
             name: device.name,
-            ip: device.ip_address || device.ip,
+            ips: device.ips || [],
             type_id: device.type_id,
             group_id: device.group_id,
             monitoring_enabled: device.monitoring_enabled
         });
+        // обновить группу-родителя
         let groupParent = undefined;
         if (device.group_id) {
             const groupNode = cy.getElementById(`group_${device.group_id}`);

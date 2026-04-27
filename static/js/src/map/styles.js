@@ -14,6 +14,7 @@ export const CY_STYLE = [
             'transition-duration': '0.2s'
         }
     },
+    // Узлы с иконкой
     {
         selector: 'node[iconUrl][iconUrl != ""]',
         style: {
@@ -44,8 +45,9 @@ export const CY_STYLE = [
             'text-background-shape': 'roundrectangle'
         }
     },
+    // Узлы с иконкой: статус UP
     {
-        selector: 'node[iconUrl][iconUrl != ""][status="true"]',
+        selector: 'node[iconUrl][iconUrl != ""][status="up"]',
         style: {
             'border-color': '#28a745',
             'border-style': 'solid',
@@ -53,8 +55,9 @@ export const CY_STYLE = [
             'opacity': 1
         }
     },
+    // Узлы с иконкой: статус DOWN
     {
-        selector: 'node[iconUrl][iconUrl != ""][status="false"]',
+        selector: 'node[iconUrl][iconUrl != ""][status="down"]',
         style: {
             'border-color': '#dc3545',
             'border-style': 'dashed',
@@ -65,8 +68,22 @@ export const CY_STYLE = [
             'overlay-padding': '4px'
         }
     },
+    // Узлы с иконкой: статус PARTIAL (жёлтый)
     {
-        selector: 'node[!iconUrl][status="true"], node[iconUrl=""][status="true"]',
+        selector: 'node[iconUrl][iconUrl != ""][status="partial"]',
+        style: {
+            'border-color': '#ffc107',
+            'border-style': 'solid',
+            'border-width': 3,
+            'opacity': 1,
+            'overlay-color': '#ffc107',
+            'overlay-opacity': 0.2,
+            'overlay-padding': '4px'
+        }
+    },
+    // Узлы БЕЗ иконки: статус UP
+    {
+        selector: 'node[!iconUrl][status="up"], node[iconUrl=""][status="up"]',
         style: {
             'shape': 'round-rectangle',
             'width': 60,
@@ -80,7 +97,7 @@ export const CY_STYLE = [
             },
             'text-wrap': 'wrap',
             'text-max-width': '70px',
-           'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
+            'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
             'font-weight': 'bold',
             'color': '#155724',
             'text-valign': 'center',
@@ -91,8 +108,9 @@ export const CY_STYLE = [
             'text-background-shape': 'roundrectangle'
         }
     },
+    // Узлы БЕЗ иконки: статус DOWN
     {
-        selector: 'node[!iconUrl][status="false"], node[iconUrl=""][status="false"]',
+        selector: 'node[!iconUrl][status="down"], node[iconUrl=""][status="down"]',
         style: {
             'shape': 'round-rectangle',
             'width': 60,
@@ -121,6 +139,38 @@ export const CY_STYLE = [
             'overlay-padding': '4px'
         }
     },
+    // Узлы БЕЗ иконки: статус PARTIAL
+    {
+        selector: 'node[!iconUrl][status="partial"], node[iconUrl=""][status="partial"]',
+        style: {
+            'shape': 'round-rectangle',
+            'width': 60,
+            'height': 60,
+            'background-color': '#fff3cd',
+            'border-width': 3,
+            'border-color': '#ffc107',
+            'border-style': 'solid',
+            'label': function(node) {
+                return node.data('name') + '\n' + (node.data('ip') || '');
+            },
+            'text-wrap': 'wrap',
+            'text-max-width': '70px',
+            'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
+            'font-weight': 'bold',
+            'color': '#856404',
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'text-background-color': '#ffffff',
+            'text-background-opacity': 1,
+            'text-background-padding': '3px',
+            'text-background-shape': 'roundrectangle',
+            'opacity': 0.9,
+            'overlay-color': '#ffc107',
+            'overlay-opacity': 0.2,
+            'overlay-padding': '4px'
+        }
+    },
+    // Выделенный узел
     {
         selector: 'node:selected',
         style: {
@@ -159,11 +209,11 @@ export const CY_STYLE = [
             'font-weight': 'bold',
             'text-valign': 'top',
             'text-halign': 'center',
-            'padding': '10px',                         // ← отступ внутри группы
-            'compound-sizing-wrt-labels': 'include',   // ← учитывать подписи при расчёте размера
-            'min-width': '80px',                       // ← минимальная ширина
-            'min-height': '60px',                      // ← минимальная высота
-            'bounds-expansion': '20',                   // ← дополнительное расширение границ
+            'padding': '10px',
+            'compound-sizing-wrt-labels': 'include',
+            'min-width': '80px',
+            'min-height': '60px',
+            'bounds-expansion': '20',
             'z-index': 0
         }
     },
@@ -226,7 +276,7 @@ export const CY_STYLE = [
             'border-width': 2,
             'border-color': '#333',
             'border-opacity': 0.5,
-            'label': 'data(label)',          // ← исправлено
+            'label': 'data(label)',
             'text-wrap': 'wrap',
             'text-max-width': function(node) {
                 let w = node.data('width');

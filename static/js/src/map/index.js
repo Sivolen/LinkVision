@@ -62,6 +62,7 @@ export function initMap(id) {
 
     // Обработчик статуса устройства
     // Буфер для накопления изменений статусов
+    // Обработчик статуса устройства (поддержка up/down/partial)
     let statusBatch = [];
     let statusBatchTimeout = null;
 
@@ -69,24 +70,27 @@ export function initMap(id) {
         if (Number(data.map_id) !== Number(mapId)) return;
         const node = cy.getElementById(String(data.id));
         if (!node.length) return;
-        const statusValue = data.status === 'true' ? 'true' : 'false';
-        if (node.data('status') === statusValue) return;
+        const newStatus = data.status; // 'up', 'down', 'partial'
+        if (node.data('status') === newStatus) return;
 
-        // Сохраняем изменение в буфер
-        statusBatch.push({ node, statusValue });
-
-        // Откладываем применение стилей на 50 мс
+        statusBatch.push({ node, newStatus });
         if (statusBatchTimeout) clearTimeout(statusBatchTimeout);
         statusBatchTimeout = setTimeout(() => {
             cy.batch(() => {
-                statusBatch.forEach(({ node, statusValue }) => {
-                    node.data('status', statusValue);
-                    if (statusValue === 'false') addPulsingNode(cy, node);
-                    else removePulsingNode(cy, node);
-                    updateSidebarCounter(data.map_id, statusValue === 'false');
+                statusBatch.forEach(({ node, newStatus }) => {
+                    node.data('status', newStatus);
+                    if (newStatus === 'down') {
+                        addPulsingNode(cy, node, 'down');
+                    } else if (newStatus === 'partial') {
+                        addPulsingNode(cy, node, 'partial');
+                    } else {
+                        removePulsingNode(cy, node);
+                    }
+                    // Обновляем счётчик в сайдбаре: down или partial считаются проблемными
+                    updateSidebarCounter(data.map_id, (newStatus === 'down' || newStatus === 'partial'));
                 });
             });
-            cy.style().update(); // один раз обновляем стили для всех
+            cy.style().update();
             statusBatch = [];
             statusBatchTimeout = null;
         }, 50);
