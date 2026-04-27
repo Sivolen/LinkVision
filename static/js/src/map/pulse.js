@@ -1,42 +1,55 @@
-// pulse.js – пульсация красной рамки у недоступных устройств
-let pulsingNodes = new Set();
+// pulse.js – пульсация для down (красная) и partial (жёлтая)
+let pulsingNodesRed = new Set();
+let pulsingNodesYellow = new Set();
 let pulseInterval = null;
 let pulsePhase = 0;
 const pulseStep = 0.015;
 const minOpacity = 0.15;
-const maxOpacity = 0.4;
+const maxOpacity = 0.45;
 
-export function initPulse(cy) {
-    // ничего не делаем, просто сохраняем cy для глобальных вызовов
-}
+export function initPulse(cy) {}
 
-export function addPulsingNode(cy, node) {
+export function addPulsingNode(cy, node, type = 'down') {
     const id = node.id();
-    if (!pulsingNodes.has(id)) {
-        pulsingNodes.add(id);
-        if (!pulseInterval) {
-            pulsePhase = 0;
-            pulseInterval = setInterval(() => {
-                pulsePhase += pulseStep;
-                if (pulsePhase > 1) pulsePhase -= 2;
-                const opacity = minOpacity + (maxOpacity - minOpacity) * (0.5 + 0.5 * Math.sin(pulsePhase * Math.PI));
-                pulsingNodes.forEach(nid => {
-                    const n = cy.getElementById(nid);
-                    if (n.length) n.style('overlay-opacity', opacity);
-                });
-            }, 50);
+    if (type === 'down') {
+        if (!pulsingNodesRed.has(id)) {
+            pulsingNodesRed.add(id);
+            pulsingNodesYellow.delete(id);
+            node.style('overlay-color', '#dc3545');
         }
+    } else if (type === 'partial') {
+        if (!pulsingNodesYellow.has(id)) {
+            pulsingNodesYellow.add(id);
+            pulsingNodesRed.delete(id);
+            node.style('overlay-color', '#ffc107');
+        }
+    }
+    if (!pulseInterval && (pulsingNodesRed.size > 0 || pulsingNodesYellow.size > 0)) {
+        pulsePhase = 0;
+        pulseInterval = setInterval(() => {
+            pulsePhase += pulseStep;
+            if (pulsePhase > 1) pulsePhase -= 2;
+            const opacity = minOpacity + (maxOpacity - minOpacity) * (0.5 + 0.5 * Math.sin(pulsePhase * Math.PI));
+            pulsingNodesRed.forEach(nid => {
+                const n = cy.getElementById(nid);
+                if (n.length) n.style('overlay-opacity', opacity);
+            });
+            pulsingNodesYellow.forEach(nid => {
+                const n = cy.getElementById(nid);
+                if (n.length) n.style('overlay-opacity', opacity);
+            });
+        }, 50);
     }
 }
 
 export function removePulsingNode(cy, node) {
     const id = node.id();
-    if (pulsingNodes.has(id)) {
-        pulsingNodes.delete(id);
-        node.style('overlay-opacity', null);
-        if (pulsingNodes.size === 0 && pulseInterval) {
-            clearInterval(pulseInterval);
-            pulseInterval = null;
-        }
+    pulsingNodesRed.delete(id);
+    pulsingNodesYellow.delete(id);
+    node.style('overlay-opacity', null);
+    node.style('overlay-color', null);
+    if (pulsingNodesRed.size === 0 && pulsingNodesYellow.size === 0 && pulseInterval) {
+        clearInterval(pulseInterval);
+        pulseInterval = null;
     }
 }

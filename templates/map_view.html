@@ -159,11 +159,21 @@
                             <input type="text" id="dev_name" class="form-control" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">IP адрес</label>
-                            <input type="text" id="dev_ip" class="form-control" placeholder="8.8.8.8"
-                                   pattern="^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$"
-                                   title="Введите корректный IPv4-адрес (например, 192.168.1.1)">
-                            <small class="text-muted">Поддерживаются IPv4 и IPv6</small>
+                            <label class="form-label fw-semibold">IP-адреса</label>
+                            <div id="ips-container" class="ip-list">
+                                <div class="ip-row">
+                                    <div class="ip-input-wrapper">
+                                        <input type="text" class="form-control ip-input" placeholder="IPv4 или IPv6">
+                                        <button class="btn-remove-ip" type="button" title="Удалить IP">&times;</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end mt-2">
+                                <button type="button" id="add-ip-btn" class="btn-outline-light">
+                                    <i class="fas fa-plus-circle"></i> Добавить IP
+                                </button>
+                            </div>
+                            <small class="text-muted d-block mt-2">Нажмите Enter, чтобы добавить новый IP</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Тип устройства *</label>

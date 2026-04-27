@@ -11,7 +11,7 @@ from models import (
     User,
     UserMapSettings,
     db,
-    MapShape,
+    MapShape, DeviceIP,
 )
 from utils.logger import api_logger, main_logger
 
@@ -71,7 +71,11 @@ def get_sidebar_maps_data(user):
     maps = get_available_maps(user)
     result = []
     for m in maps:
-        down_count = Device.query.filter_by(map_id=m.id, status=False).count()
+        # Считаем устройства со статусом не 'up' (down или partial)
+        down_count = Device.query.filter(
+            Device.map_id == m.id,
+            Device.status != 'up'
+        ).count()
         result.append(
             {
                 "id": m.id,
@@ -83,14 +87,6 @@ def get_sidebar_maps_data(user):
     sidebar_cache[cache_key] = result
     main_logger.debug(f"Sidebar cache miss for user {user.id}, stored")
     return result
-
-
-def create_new_map(name, owner_id):
-    """Создать новую карту."""
-    new_map = Map(name=name, owner_id=owner_id)
-    db.session.add(new_map)
-    db.session.commit()
-    return new_map
 
 
 def delete_map_and_cleanup(map_id, app):
@@ -166,17 +162,20 @@ def get_map_elements(map_id):
             width = dev.type.width
             height = dev.type.height
 
+        # Формируем строку IP-адресов
+        ip_label = ', '.join([ip.ip_address for ip in dev.ips]) if dev.ips else ''
+
         nodes.append(
             {
                 "group": "nodes",
                 "data": {
                     "id": str(dev.id),
-                    "label": f"{dev.name}\n{dev.ip_address or ''}",
-                    "status": "true" if dev.status else "false",
+                    "label": f"{dev.name}\n{ip_label}",
+                    "status": dev.status,  # 'up', 'down', 'partial'
                     "monitoring_enabled": "true" if dev.monitoring_enabled else "false",
                     "iconUrl": icon_url or "",
                     "name": dev.name,
-                    "ip": dev.ip_address,
+                    "ip": ip_label,
                     "fontSize": dev.font_size,
                     "type": dev.type.name if dev.type else "Unknown",
                     "width": width,
@@ -227,7 +226,7 @@ def get_map_elements(map_id):
             "color": sh.color,
             "opacity": sh.opacity,
             "description": sh.description,
-            "font_size": sh.font_size,  # добавлено
+            "font_size": sh.font_size,
         }
         for sh in map_obj.shapes
     ]
@@ -260,22 +259,20 @@ def export_map_data(map_id):
     map_obj = Map.query.get_or_404(map_id)
     devices = []
     for dev in map_obj.devices:
-        devices.append(
-            {
-                "id": dev.id,
-                "name": dev.name,
-                "ip_address": dev.ip_address,
-                "type_id": dev.type_id,
-                "type_name": dev.type.name if dev.type else None,
-                "pos_x": dev.pos_x,
-                "pos_y": dev.pos_y,
-                "status": dev.status,
-                "icon_filename": dev.type.icon_filename if dev.type else None,
-                "width": dev.type.width if dev.type else None,
-                "height": dev.type.height if dev.type else None,
-                "group_id": dev.group_id,
-            }
-        )
+        devices.append({
+            "id": dev.id,
+            "name": dev.name,
+            "ips": [ip.ip_address for ip in dev.ips],  # добавлено
+            "type_id": dev.type_id,
+            "type_name": dev.type.name if dev.type else None,
+            "pos_x": dev.pos_x,
+            "pos_y": dev.pos_y,
+            "status": dev.status,
+            "icon_filename": dev.type.icon_filename if dev.type else None,
+            "width": dev.type.width if dev.type else None,
+            "height": dev.type.height if dev.type else None,
+            "group_id": dev.group_id,
+        })
 
     links = []
     for link in map_obj.links:
@@ -476,14 +473,16 @@ def import_map(data, current_user):
             map_id=map_obj.id,
             type_id=type_id,
             name=dev_data["name"],
-            ip_address=dev_data.get("ip_address"),
             pos_x=dev_data.get("pos_x", 100),
             pos_y=dev_data.get("pos_y", 100),
-            status=dev_data.get("status", True),
+            status=dev_data.get("status", "up"),
             group_id=new_group_id,
         )
         db.session.add(dev)
         db.session.flush()
+        for ip_str in dev_data.get("ips", []):
+            if ip_str:
+                db.session.add(DeviceIP(device_id=dev.id, ip_address=ip_str))
         device_id_map[dev_data["id"]] = dev.id
 
     for link_data in data.get("links", []):

@@ -14,6 +14,58 @@ let _formHandlerAttached = false;
 let shapeModal = null;
 let currentShapeId = null;
 
+// ==================== УПРАВЛЕНИЕ СПИСКОМ IP ====================
+function addIpRow(value = '') {
+    const container = document.getElementById('ips-container');
+    if (!container) return;
+    const row = document.createElement('div');
+    row.className = 'ip-row';
+    row.innerHTML = `
+        <div class="ip-input-wrapper">
+            <input type="text" class="form-control ip-input" placeholder="IPv4 или IPv6" value="${escapeHtml(value)}">
+            <button class="btn-remove-ip" type="button" title="Удалить IP">&times;</button>
+        </div>
+    `;
+    const removeBtn = row.querySelector('.btn-remove-ip');
+    removeBtn.addEventListener('click', () => {
+        if (container.children.length > 1) row.remove();
+        else row.querySelector('.ip-input').value = '';
+    });
+    const ipInput = row.querySelector('.ip-input');
+    ipInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = ipInput.value.trim();
+            if (val) {
+                addIpRow('');
+                ipInput.disabled = true;
+                const newInput = container.lastChild.querySelector('.ip-input');
+                newInput.focus();
+            }
+        }
+    });
+    container.appendChild(row);
+    return row;
+}
+
+function getIpsFromForm() {
+    return Array.from(document.querySelectorAll('#ips-container .ip-input'))
+        .map(inp => inp.value.trim())
+        .filter(v => v);
+}
+
+function setIpsInForm(ips) {
+    const container = document.getElementById('ips-container');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!ips || ips.length === 0) {
+        addIpRow('');
+    } else {
+        ips.forEach(ip => addIpRow(ip));
+        addIpRow('');
+    }
+}
+
 // ==================== Устройство ====================
 window.openDeviceModal = function(node) {
     if (!deviceModal) {
@@ -24,7 +76,6 @@ window.openDeviceModal = function(node) {
 
     const devId = document.getElementById('dev_id');
     const devName = document.getElementById('dev_name');
-    const devIp = document.getElementById('dev_ip');
     const devType = document.getElementById('dev_type');
     const deleteBtn = document.getElementById('deleteDeviceBtn');
     const neighborsBody = document.getElementById('device-neighbors-body');
@@ -36,18 +87,15 @@ window.openDeviceModal = function(node) {
     const infoTabLink = document.querySelector('a[href="#device-info"]');
 
     const historyBody = document.getElementById('device-history-body');
-
     const fontSizeInput = document.getElementById('dev_font_size');
 
     if (historyBody) historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Переключитесь на вкладку "История"</td></tr>';
-
     const paginationDiv = document.getElementById('history-pagination');
     if (paginationDiv) paginationDiv.style.display = 'none';
 
     if (node) {
         devId.value = node.id();
         devName.value = node.data('name') || '';
-        devIp.value = node.data('ip') || '';
         deleteBtn.style.display = 'inline-block';
         deleteBtn.onclick = () => window.deleteDevice(node.id());
 
@@ -57,11 +105,13 @@ window.openDeviceModal = function(node) {
         fetch(`/api/device/${node.id()}/details`)
             .then(res => res.ok ? res.json() : Promise.reject('Ошибка'))
             .then(data => {
-                // Загружаем типы и после загрузки устанавливаем значение
                 loadDeviceTypes(devType, () => {
                     if (data.type_id) devType.value = data.type_id;
                 });
-                if (data.ip_address) devIp.value = data.ip_address;
+                // Загружаем список IP
+                if (data.ips) setIpsInForm(data.ips);
+                else setIpsInForm([]);
+
                 if (data.neighbors && data.neighbors.length > 0) {
                     neighborsBody.innerHTML = '';
                     data.neighbors.forEach(n => {
@@ -87,16 +137,16 @@ window.openDeviceModal = function(node) {
     } else {
         devId.value = '';
         devName.value = '';
-        devIp.value = '';
         fontSizeInput.value = '';
         if (devType) devType.value = '';
         deleteBtn.style.display = 'none';
-        neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет данных</td></tr>';
+        neighborsBody.innerHTML = '</tr><td colspan="5" class="text-center text-muted">Нет данных</td></tr>';
         loadGroups(devGroup);
+        setIpsInForm([]); // чистый список для нового устройства
 
         if (historyTabItem) historyTabItem.style.display = 'none';
         if (neighborsTabItem) neighborsTabItem.style.display = 'none';
-        loadDeviceTypes(devType); // просто загружаем список
+        loadDeviceTypes(devType);
     }
 
     if (infoTabLink) {
@@ -106,7 +156,8 @@ window.openDeviceModal = function(node) {
 
     if (window.isOperator) {
         devName.disabled = true;
-        devIp.disabled = true;
+        document.querySelectorAll('#ips-container .ip-input').forEach(inp => inp.disabled = true);
+        document.getElementById('add-ip-btn')?.setAttribute('disabled', 'disabled');
         devType.disabled = true;
         devGroup.disabled = true;
         if (monitoringCheck) monitoringCheck.disabled = true;
@@ -121,10 +172,8 @@ window.openDeviceModal = function(node) {
 document.getElementById('deviceModal')?.addEventListener('hidden.bs.modal', function() {
     const historyBody = document.getElementById('device-history-body');
     if (historyBody) historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Переключитесь на вкладку "История"</td></tr>';
-
     const neighborsBody = document.getElementById('device-neighbors-body');
     if (neighborsBody) neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Загрузка...</td></tr>';
-
     const paginationDiv = document.getElementById('history-pagination');
     if (paginationDiv) paginationDiv.style.display = 'none';
 });
@@ -132,29 +181,30 @@ document.getElementById('deviceModal')?.addEventListener('hidden.bs.modal', func
 window.saveDevice = async function() {
     const devId = document.getElementById('dev_id').value;
     const name = document.getElementById('dev_name').value.trim();
-    const ip = document.getElementById('dev_ip').value.trim();
     const typeId = document.getElementById('dev_type').value;
     const groupId = document.getElementById('dev_group').value;
     const monitoring = document.getElementById('dev_monitoring').checked;
     const fontSize = document.getElementById('dev_font_size').value;
+    const ips = getIpsFromForm();
 
     if (!name || !typeId) {
         showToast('Ошибка', 'Имя и тип устройства обязательны', 'error');
         return;
     }
-    // Валидация IP-адреса (если указан)
-    if (ip && ip.trim()) {
-        // Упрощённая проверка IPv4 и IPv6
-        const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-        const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^(([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4})?::([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}$/;
-        if (!ipv4Regex.test(ip.trim()) && !ipv6Regex.test(ip.trim())) {
-            showToast('Ошибка', 'Неверный формат IP-адреса', 'error');
+
+    // Валидация IP-адресов
+    const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^(([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4})?::([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}$/;
+    for (let ip of ips) {
+        if (ip && ip.trim() && !ipv4Regex.test(ip.trim()) && !ipv6Regex.test(ip.trim())) {
+            showToast('Ошибка', `Неверный IP-адрес: ${ip}`, 'error');
             return;
         }
     }
+
     const data = {
         name: name,
-        ip_address: ip || null,
+        ips: ips,
         type_id: parseInt(typeId),
         group_id: groupId ? parseInt(groupId) : null,
         monitoring_enabled: monitoring
@@ -162,8 +212,9 @@ window.saveDevice = async function() {
     if (fontSize !== '') {
         data.font_size = parseInt(fontSize, 10);
     } else {
-        data.font_size = null;   // сброс к значению по умолчанию
+        data.font_size = null;
     }
+
     if (!devId) {
         if (!window.currentMapId) {
             showToast('Ошибка', 'Не удалось определить текущую карту', 'error');
@@ -213,7 +264,7 @@ window.saveDevice = async function() {
             const newDevice = {
                 id: result.id,
                 name: data.name,
-                ip: data.ip_address,
+                ips: data.ips,
                 type_id: data.type_id,
                 group_id: data.group_id,
                 monitoring_enabled: data.monitoring_enabled,
@@ -234,7 +285,7 @@ window.saveDevice = async function() {
                 window.updateDevice({
                     id: devId,
                     name: data.name,
-                    ip: data.ip_address,
+                    ips: data.ips,
                     type_id: data.type_id,
                     group_id: data.group_id,
                     monitoring_enabled: data.monitoring_enabled
@@ -256,6 +307,7 @@ window.saveDevice = async function() {
         if (saveBtn) saveBtn.disabled = false;
     });
 };
+
 window.deleteDevice = function(deviceId) {
     confirmAction('Удаление устройства', 'Вы уверены, что хотите удалить это устройство?', () => {
         fetch(`/api/device/${deviceId}`, {
@@ -310,7 +362,7 @@ function loadDeviceTypes(selectEl, callback) {
     fetch('/api/types')
     .then(res => res.ok ? res.json() : [])
     .then(types => {
-        window.deviceTypes = types; // сохраняем глобально
+        window.deviceTypes = types;
         selectEl.innerHTML = '<option value="">-- Выберите тип --</option>';
         types.forEach(t => {
             const option = document.createElement('option');
@@ -432,7 +484,7 @@ function loadHistoryPage(newPage) {
     loadHistory(currentDeviceId, newPage);
 }
 
-// ==================== ГРУППЫ — ИСПРАВЛЕННАЯ ВЕРСИЯ ====================
+// ==================== ГРУППЫ ====================
 
 // ===== Цветовой пикер =====
 function initColorPicker() {
@@ -447,13 +499,11 @@ function initColorPicker() {
         return;
     }
 
-    // Заменяем кнопку, чтобы удалить старые обработчики
     const newBtn = btn.cloneNode(true);
     if (btn.parentNode) {
         btn.parentNode.replaceChild(newBtn, btn);
     }
 
-    // Обновляем ссылки на элементы после замены
     const newPanel = document.getElementById('colorPanel');
     const newInput = document.getElementById('group_color');
     const newPreview = document.getElementById('colorPreview');
@@ -645,23 +695,23 @@ async function loadGroupsList() {
             return;
         }
 
-    tbody.innerHTML = groups.map((group, idx) => `
-        <tr style="animation: rowFadeIn 0.25s ease ${idx * 50}ms forwards; opacity: 0">
-            <td><span class="fw-medium">${escapeHtml(group.name)}</span></td>
-            <td><span class="color-preview" style="background:${group.color}" title="${group.color}"></span></td>
-            <td class="text-center"><span class="badge bg-light text-dark">${group.device_count || 0}</span></td>
-            <td class="text-end">
-                <div class="table-actions">
-                    <button type="button" class="btn-action" data-action="edit" data-id="${group.id}" data-name="${escapeHtml(group.name)}" data-color="${group.color}" data-fontsize="${group.font_size || 11}">
-                        <i class="fas fa-pen"></i>
-                    </button>
-                    <button type="button" class="btn-action btn-danger" data-action="delete" data-id="${group.id}" data-name="${escapeHtml(group.name)}">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+        tbody.innerHTML = groups.map((group, idx) => `
+            <tr style="animation: rowFadeIn 0.25s ease ${idx * 50}ms forwards; opacity: 0">
+                <td><span class="fw-medium">${escapeHtml(group.name)}</span></td>
+                <td><span class="color-preview" style="background:${group.color}" title="${group.color}"></span></td>
+                <td class="text-center"><span class="badge bg-light text-dark">${group.device_count || 0}</span></td>
+                <td class="text-end">
+                    <div class="table-actions">
+                        <button type="button" class="btn-action" data-action="edit" data-id="${group.id}" data-name="${escapeHtml(group.name)}" data-color="${group.color}" data-fontsize="${group.font_size || 11}">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button type="button" class="btn-action btn-danger" data-action="delete" data-id="${group.id}" data-name="${escapeHtml(group.name)}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
 
     } catch (err) {
         Logger.error('Load groups error:', err);
@@ -704,6 +754,7 @@ function initTableActions() {
         });
     });
 }
+
 // ===== Редактирование =====
 window.editGroup = function(id, name, color, fontSize) {
     currentGroupId = id;
@@ -719,7 +770,6 @@ window.editGroup = function(id, name, color, fontSize) {
     }
     if (window.setColor) window.setColor(color);
     if (fontSizeInput) fontSizeInput.value = fontSize || 11;
-
 
     const btnText = document.querySelector('#submitBtn .btn-text');
     if (btnText) btnText.textContent = 'Сохранить';
@@ -805,45 +855,7 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-// ==================== Инициализация (ОДИН раз!) ====================
-document.addEventListener('DOMContentLoaded', function() {
-    Logger.info('📄 modal.js loaded');
-
-    // Обработчик переключения на вкладку истории
-    const historyTab = document.querySelector('a[href="#device-history"]');
-    if (historyTab) {
-        historyTab.addEventListener('shown.bs.tab', function() {
-            const deviceId = document.getElementById('dev_id').value;
-            if (deviceId) loadHistory(deviceId, 1);
-        });
-    }
-
-    // Обработчики кнопок пагинации
-    const prevBtn = document.getElementById('history-prev');
-    const nextBtn = document.getElementById('history-next');
-    if (prevBtn) {
-        prevBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadHistoryPage(currentHistoryPage - 1);
-        });
-    }
-    if (nextBtn) {
-        nextBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadHistoryPage(currentHistoryPage + 1);
-        });
-    }
-
-    // Инициализация для групп
-    initFormHandler();
-    initTableActions();
-    initToast();
-    initModalEvents();
-    preloadDeviceTypes();
-
-    Logger.info('✅ modal.js инициализирован');
-});
-
+// ==================== Фигуры ====================
 window.openShapeModal = function(shapeNode = null) {
     if (!shapeModal) {
         const el = document.getElementById('shapeModal');
@@ -861,7 +873,6 @@ window.openShapeModal = function(shapeNode = null) {
     const deleteBtn = document.getElementById('deleteShapeBtn');
 
     if (shapeNode) {
-        // Редактирование
         currentShapeId = shapeNode.id().replace('shape_', '');
         typeSelect.value = shapeNode.data('shape_type');
         widthInput.value = shapeNode.data('width');
@@ -872,7 +883,6 @@ window.openShapeModal = function(shapeNode = null) {
         deleteBtn.style.display = 'inline-block';
         deleteBtn.onclick = () => deleteShape(currentShapeId);
     } else {
-        // Создание новой фигуры
         currentShapeId = null;
         typeSelect.value = 'square';
         widthInput.value = 80;
@@ -894,11 +904,9 @@ window.openShapeModal = function(shapeNode = null) {
         fontSizeInput.value = 12;
     }
 
-    // Инициализация цветового пикера (заменяет кнопку и вешает обработчики)
     initShapeColorPicker();
     initShapeModalEvents();
 
-    // Устанавливаем цвет в пикер, если редактируем
     if (shapeNode) {
         const color = shapeNode.data('color');
         if (window.setShapeColor) {
@@ -919,7 +927,6 @@ window.saveShape = function() {
     const opacity = parseFloat(document.getElementById('shape_opacity').value);
     const description = document.getElementById('shape_description').value;
 
-    // Определяем позицию: если создаём новую, ставим в центр видимой области
     let x, y;
     if (!id) {
         if (cy) {
@@ -932,7 +939,6 @@ window.saveShape = function() {
             x = 100; y = 100;
         }
     } else {
-        // При редактировании позицию не меняем, она будет обновлена только при перемещении
         const node = cy.getElementById(`shape_${id}`);
         if (node.length) {
             x = node.position().x;
@@ -1014,13 +1020,11 @@ function initShapeColorPicker() {
         return;
     }
 
-    // Заменяем кнопку, чтобы удалить старые обработчики
     const newBtn = btn.cloneNode(true);
     if (btn.parentNode) {
         btn.parentNode.replaceChild(newBtn, btn);
     }
 
-    // Обновляем ссылки на элементы после замены
     const newPanel = document.getElementById('shapeColorPanel');
     const newInput = document.getElementById('shape_color');
     const newPreview = document.getElementById('shapeColorPreview');
@@ -1072,13 +1076,12 @@ function initShapeColorPicker() {
         e.stopPropagation();
     });
 
-    // Устанавливаем начальный цвет из поля ввода
     const defaultColor = newInput.value || '#3498db';
     setColor(defaultColor);
 
-    // Экспортируем функцию для внешнего использования
     window.setShapeColor = setColor;
 }
+
 function initShapeModalEvents() {
     const opacitySlider = document.getElementById('shape_opacity');
     const opacitySpan = document.getElementById('opacity_value');
@@ -1087,7 +1090,6 @@ function initShapeModalEvents() {
             const percent = Math.round(this.value * 100);
             opacitySpan.textContent = `${percent}%`;
         });
-        // Установить начальное значение
         const initialPercent = Math.round(opacitySlider.value * 100);
         opacitySpan.textContent = `${initialPercent}%`;
     }
@@ -1096,7 +1098,6 @@ function initShapeModalEvents() {
 // ==================== СВЯЗИ (LINKS) ====================
 let linkModal = null;
 
-// Обновление предпросмотра интерфейсов
 function updateLinkPreview() {
     const src = document.getElementById('link_src_iface')?.value || 'eth0';
     const tgt = document.getElementById('link_tgt_iface')?.value || 'eth0';
@@ -1104,7 +1105,6 @@ function updateLinkPreview() {
     if (preview) preview.textContent = `${src} ↔ ${tgt}`;
 }
 
-// Открытие модалки для новой связи
 window.openLinkModal = function(sourceId, targetId) {
     if (!linkModal) {
         const el = document.getElementById('linkModal');
@@ -1135,7 +1135,6 @@ window.openLinkModal = function(sourceId, targetId) {
     linkModal.show();
 };
 
-// Открытие модалки для редактирования существующей связи
 window.openLinkModalForEdit = function(edge) {
     if (!linkModal) {
         const el = document.getElementById('linkModal');
@@ -1146,7 +1145,6 @@ window.openLinkModalForEdit = function(edge) {
     document.getElementById('link_id').value = data.id;
     document.getElementById('link_source').value = data.source;
     document.getElementById('link_target').value = data.target;
-    // Используем сохранённые оригинальные интерфейсы, если они есть, иначе парсим label
     let srcIface = data.srcIface;
     let tgtIface = data.tgtIface;
     if (!srcIface || !tgtIface) {
@@ -1176,7 +1174,6 @@ window.openLinkModalForEdit = function(edge) {
     linkModal.show();
 };
 
-// Сохранение связи (новая или редактирование)
 window.confirmCreateLink = function() {
     const linkId = document.getElementById('link_id').value;
     const src = document.getElementById('link_source')?.value;
@@ -1204,7 +1201,6 @@ window.confirmCreateLink = function() {
     }
 };
 
-// Создание связи через API
 window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
     const sourceId = typeof src === 'number' ? src : parseInt(src);
     const targetId = typeof tgt === 'number' ? tgt : parseInt(tgt);
@@ -1238,7 +1234,6 @@ window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkTyp
     })
     .then(data => {
         if (data.id && window.cy) {
-            // Определяем порядок интерфейсов для подписи
             const sourceNode = window.cy.getElementById(String(sourceId));
             const targetNode = window.cy.getElementById(String(targetId));
             const srcX = sourceNode.position().x;
@@ -1278,7 +1273,6 @@ window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkTyp
     .finally(() => window.setLinkSaving(false));
 };
 
-// Обновление существующей связи (единственная версия)
 window.updateLink = function(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
     const numericId = linkId.replace('link_', '');
     fetch(`/api/link/${numericId}`, {
@@ -1302,7 +1296,6 @@ window.updateLink = function(linkId, srcIface, tgtIface, linkType, lineColor, li
             const errorMsg = await getErrorMessage(res);
             throw new Error(errorMsg);
         }
-        // Обновляем ребро в графе
         const edge = window.cy.getElementById(linkId);
         if (edge.length) {
             const sourceNode = edge.source();
@@ -1325,7 +1318,6 @@ window.updateLink = function(linkId, srcIface, tgtIface, linkType, lineColor, li
                 style: lineStyle,
                 font_size: fontSize
             });
-            // Обновляем стиль ребра (цвет, толщина, тип линии)
             edge.style({
                 'line-color': lineColor,
                 'width': lineWidth,
@@ -1344,7 +1336,6 @@ window.updateLink = function(linkId, srcIface, tgtIface, linkType, lineColor, li
     .finally(() => window.setLinkSaving(false));
 };
 
-// Удаление связи
 window.deleteLink = function(linkId) {
     confirmAction('Удаление связи', 'Удалить эту связь?', () => {
         const numericId = String(linkId).replace('link_', '');
@@ -1366,7 +1357,6 @@ window.deleteLink = function(linkId) {
     });
 };
 
-// Вспомогательная функция для индикации сохранения
 window.setLinkSaving = function(isSaving) {
     const saveBtn = document.getElementById('saveLinkBtn');
     const btnText = saveBtn?.querySelector('.btn-text');
@@ -1383,7 +1373,6 @@ window.setLinkSaving = function(isSaving) {
     }
 };
 
-// Пресеты для связи
 window.applyLinkTypePreset = function(type) {
     const presets = {
         '100m':  { color: '#d1d5db', width: 2, style: 'solid' },
@@ -1406,6 +1395,7 @@ window.applyLinkTypePreset = function(type) {
         if (typeof updateLinkPreview === 'function') updateLinkPreview();
     }
 };
+
 // ==================== ЭКСПОРТ КАРТЫ ====================
 window.exportMap = function() {
     const mapId = document.getElementById('edit_map_id').value;
@@ -1438,6 +1428,50 @@ window.exportMap = function() {
         showToast('Ошибка', err.message || 'Не удалось экспортировать карту', 'error');
     });
 };
+
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
+document.addEventListener('DOMContentLoaded', function() {
+    Logger.info('📄 modal.js loaded');
+
+    // Обработчик переключения на вкладку истории
+    const historyTab = document.querySelector('a[href="#device-history"]');
+    if (historyTab) {
+        historyTab.addEventListener('shown.bs.tab', function() {
+            const deviceId = document.getElementById('dev_id').value;
+            if (deviceId) loadHistory(deviceId, 1);
+        });
+    }
+
+    // Обработчики кнопок пагинации
+    const prevBtn = document.getElementById('history-prev');
+    const nextBtn = document.getElementById('history-next');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadHistoryPage(currentHistoryPage - 1);
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadHistoryPage(currentHistoryPage + 1);
+        });
+    }
+
+    // Инициализация для групп
+    initFormHandler();
+    initTableActions();
+    initToast();
+    initModalEvents();
+    preloadDeviceTypes();
+
+    // Инициализация кнопки добавления IP
+    document.getElementById('add-ip-btn')?.addEventListener('click', () => addIpRow(''));
+
+    Logger.info('✅ modal.js инициализирован');
+});
+
+// Экспорты
 window.openDeviceModal = openDeviceModal;
 window.openShapeModal = openShapeModal;
 window.openLinkModal = openLinkModal;
