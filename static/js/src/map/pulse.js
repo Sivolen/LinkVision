@@ -53,3 +53,29 @@ export function removePulsingNode(cy, node) {
         pulseInterval = null;
     }
 }
+// Принудительно удалить узел из пульсации (по ID)
+export function forceRemovePulsingNode(cy, nodeId) {
+    if (pulsingNodesRed.has(nodeId)) pulsingNodesRed.delete(nodeId);
+    if (pulsingNodesYellow.has(nodeId)) pulsingNodesYellow.delete(nodeId);
+    const node = cy.getElementById(nodeId);
+    if (node.length) {
+        node.style('overlay-opacity', null);
+        node.style('overlay-color', null);
+    }
+    if (pulsingNodesRed.size === 0 && pulsingNodesYellow.size === 0 && pulseInterval) {
+        clearInterval(pulseInterval);
+        pulseInterval = null;
+    }
+}
+export function stopAllPulsing() {
+    if (pulseInterval) {
+        clearInterval(pulseInterval);
+        pulseInterval = null;
+    }
+    pulsingNodesRed.clear();
+    pulsingNodesYellow.clear();
+}
+window.stopAllPulsing = stopAllPulsing;
+window.forceRemovePulsingNode = forceRemovePulsingNode;
+window.addPulsingNode = addPulsingNode;
+window.removePulsingNode = removePulsingNode;

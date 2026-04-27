@@ -98,11 +98,12 @@ export function loadElements(mapId) {
             import('./groupResize.js').then(module => module.updateAllGroups());
             setElementsLoaded(true);
 
-            // Пульсация для недоступных
+            // Пульсация для недоступных (только если мониторинг включён)
             cy.nodes().forEach(node => {
-                const status = node.data('status');
-                if (status === 'down') addPulsingNode(cy, node, 'down');
-                else if (status === 'partial') addPulsingNode(cy, node, 'partial');
+                const monitoringEnabled = node.data('monitoring_enabled');
+                if (monitoringEnabled === 'false' || monitoringEnabled === false) {
+                    applyGrayStyle(node);
+                }
             });
         })
         .catch(err => console.error('Load elements error:', err));
@@ -199,3 +200,20 @@ export function reloadMapElements() {
     const mapId = window.currentMapId;
     if (mapId) loadElements(mapId);
 }
+
+// Принудительно применяем серый стиль для выключенного мониторинга
+export function applyGrayStyle(node) {
+    if (!node || !node.length) return;
+    node.style('border-color', '#6c757d');
+    node.style('border-style', 'dotted');
+    node.style('border-width', '3px');
+    node.style('opacity', '0.7');
+    node.style('background-color', 'var(--bg-secondary)');
+    node.style('color', 'var(--text-secondary)');
+    node.style('overlay-opacity', '0');
+    node.style('overlay-color', 'transparent');   // добавить эту строку
+    if (typeof window.removePulsingNode === 'function') {
+        window.removePulsingNode(window.cy, node);
+    }
+}
+window.applyGrayStyle = applyGrayStyle;
