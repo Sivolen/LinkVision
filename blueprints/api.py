@@ -266,6 +266,9 @@ def update_device(id):
         if 'group_id' in update_data:
             device_service.validate_group_for_map(update_data['group_id'], device.map_id)
         device_service.update_device(id, **update_data)
+        # Инвалидация кэша сайдбара для владельца карты
+        device = device_service.get_device_by_id(id)
+        map_service.invalidate_sidebar_cache(device.map.owner_id)
         return jsonify({"status": "ok", "id": id})
     except ValueError as e:
         api_logger.warning(f"Validation error updating device {id}: {e}")

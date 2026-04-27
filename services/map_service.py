@@ -60,32 +60,25 @@ def get_available_maps(user):
 
 
 def get_sidebar_maps_data(user):
-    """
-    Вернуть данные для сайдбара с кэшированием.
-    """
     cache_key = f"sidebar_{user.id}"
     if cache_key in sidebar_cache:
-        main_logger.debug(f"Sidebar cache hit for user {user.id}")
         return sidebar_cache[cache_key]
 
     maps = get_available_maps(user)
     result = []
     for m in maps:
-        # Считаем устройства со статусом не 'up' (down или partial)
         down_count = Device.query.filter(
             Device.map_id == m.id,
+            Device.monitoring_enabled == True,
             Device.status != 'up'
         ).count()
-        result.append(
-            {
-                "id": m.id,
-                "name": m.name,
-                "owner_id": m.owner_id,
-                "down_count": down_count,
-            }
-        )
+        result.append({
+            "id": m.id,
+            "name": m.name,
+            "owner_id": m.owner_id,
+            "down_count": down_count,
+        })
     sidebar_cache[cache_key] = result
-    main_logger.debug(f"Sidebar cache miss for user {user.id}, stored")
     return result
 
 

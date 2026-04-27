@@ -68,7 +68,7 @@ export const CY_STYLE = [
             'overlay-padding': '4px'
         }
     },
-    // Узлы с иконкой: статус PARTIAL (жёлтый)
+    // Узлы с иконкой: статус PARTIAL
     {
         selector: 'node[iconUrl][iconUrl != ""][status="partial"]',
         style: {
@@ -253,19 +253,16 @@ export const CY_STYLE = [
             'text-background-color': '#e7f3ff'
         }
     },
-// Поместите ЭТОТ БЛОК в САМЫЙ КОНЕЦ массива CY_STYLE (перед закрывающей ])
-{
-    selector: 'node[monitoring_enabled="false"]',
-    style: {
-        'border-color': '#6c757d !important',
-        'border-style': 'dotted !important',
-        'border-width': '3px !important',
-        'opacity': '0.7 !important',
-        'background-color': 'var(--bg-secondary) !important',
-        'color': 'var(--text-secondary) !important',
-        'overlay-opacity': '0 !important'
-    }
-},
+    {
+        selector: 'node[monitoring_enabled="false"]',
+        style: {
+            'border-color': '#6c757d',
+            'border-style': 'dotted',
+            'border-width': '3px',
+            'opacity': '0.7',
+            'overlay-opacity': '0'
+        }
+    },
     {
         selector: 'node[isShape]',
         style: {

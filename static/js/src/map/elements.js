@@ -1,16 +1,12 @@
-// elements.js – загрузка, добавление, удаление элементов графа
 import { getCy } from './core.js';
 import { boundNodePosition, setElementsLoaded, getBgImageSize } from './background.js';
 import { addPulsingNode } from './pulse.js';
 
-// wrapText – глобальная функция из common.js
 const wrapText = window.wrapText || ((text) => text);
 
 export function loadElements(mapId) {
     const cy = getCy();
     if (!cy) return;
-
-    // Очищаем граф
     cy.elements().remove();
 
     fetchWithRetry(`/api/map/${mapId}/elements`)
@@ -18,14 +14,13 @@ export function loadElements(mapId) {
         .then(data => {
             const { width: bgW, height: bgH } = getBgImageSize();
 
-            // ⚡ ВСЕ ДОБАВЛЕНИЯ ОБЕРНУТЫ В batch()
             cy.batch(() => {
                 // ГРУППЫ
                 const groupNodes = [];
                 const groupMap = {};
                 (data.groups || []).forEach(g => {
                     if (g.device_count === 0) return;
-                    const groupNode = {
+                    groupNodes.push({
                         group: 'nodes',
                         data: {
                             id: `group_${g.id}`,
@@ -35,8 +30,7 @@ export function loadElements(mapId) {
                             group_id: g.id,
                             fontSize: g.font_size || 11
                         }
-                    };
-                    groupNodes.push(groupNode);
+                    });
                     groupMap[g.id] = `group_${g.id}`;
                 });
                 cy.add(groupNodes);
@@ -91,18 +85,25 @@ export function loadElements(mapId) {
                     e.data.tgtIface = parts[1].trim();
                 });
                 cy.add(validEdges);
-            }); // конец batch
+            });
 
-            // После batch обновляем подписи и группы
-            import('./edgeLabels.js').then(module => module.updateAllEdgeLabels());
-            import('./groupResize.js').then(module => module.updateAllGroups());
+            import('./edgeLabels.js').then(m => m.updateAllEdgeLabels());
+            import('./groupResize.js').then(m => m.updateAllGroups());
             setElementsLoaded(true);
 
-            // Пульсация для недоступных (только если мониторинг включён)
+            // Применяем стили при загрузке
             cy.nodes().forEach(node => {
-                const monitoringEnabled = node.data('monitoring_enabled');
-                if (monitoringEnabled === 'false' || monitoringEnabled === false) {
+                const monitoringRaw = node.data('monitoring_enabled');
+                const isMonitoringOff = (monitoringRaw === 'false' || monitoringRaw === false);
+                if (isMonitoringOff) {
                     applyGrayStyle(node);
+                } else {
+                    const status = node.data('status');
+                    if (status === 'down') {
+                        addPulsingNode(cy, node, 'down');
+                    } else if (status === 'partial') {
+                        addPulsingNode(cy, node, 'partial');
+                    }
                 }
             });
         })
@@ -113,7 +114,6 @@ export async function addDeviceToGraph(device) {
     const cy = getCy();
     if (!cy) return;
     if (cy.getElementById(String(device.id)).length) return;
-
     let groupParent = undefined;
     if (device.group_id) {
         let groupNode = cy.getElementById(`group_${device.group_id}`);
@@ -141,18 +141,17 @@ export async function addDeviceToGraph(device) {
         }
         if (groupNode && groupNode.length) groupParent = `group_${device.group_id}`;
     }
-
     cy.add({
         group: 'nodes',
         data: {
             id: String(device.id),
             name: device.name,
-            ips: device.ips || [],   // массив IP
+            ips: device.ips || [],
             type_id: device.type_id,
             group_id: device.group_id,
             parent: groupParent,
-            monitoring_enabled: device.monitoring_enabled,
-            status: device.status || 'up',   // 'up', 'down', 'partial'
+            monitoring_enabled: device.monitoring_enabled ? 'true' : 'false',
+            status: device.status || 'up',
             iconUrl: device.iconUrl || '',
             width: device.width || null,
             height: device.height || null,
@@ -178,9 +177,8 @@ export function updateDevice(device) {
             ips: device.ips || [],
             type_id: device.type_id,
             group_id: device.group_id,
-            monitoring_enabled: device.monitoring_enabled
+            monitoring_enabled: device.monitoring_enabled ? 'true' : 'false'
         });
-        // обновить группу-родителя
         let groupParent = undefined;
         if (device.group_id) {
             const groupNode = cy.getElementById(`group_${device.group_id}`);
@@ -201,17 +199,15 @@ export function reloadMapElements() {
     if (mapId) loadElements(mapId);
 }
 
-// Принудительно применяем серый стиль для выключенного мониторинга
+// Принудительное применение серого стиля для выключенного мониторинга
 export function applyGrayStyle(node) {
     if (!node || !node.length) return;
     node.style('border-color', '#6c757d');
     node.style('border-style', 'dotted');
     node.style('border-width', '3px');
     node.style('opacity', '0.7');
-    node.style('background-color', 'var(--bg-secondary)');
-    node.style('color', 'var(--text-secondary)');
     node.style('overlay-opacity', '0');
-    node.style('overlay-color', 'transparent');   // добавить эту строку
+    node.style('overlay-color', 'transparent');
     if (typeof window.removePulsingNode === 'function') {
         window.removePulsingNode(window.cy, node);
     }
