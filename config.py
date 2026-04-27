@@ -32,8 +32,14 @@ class Config:
 
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "icons")
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 30,  # основное количество соединений
+        'max_overflow': 50,  # дополнительных при перегрузке
+        'pool_recycle': 3600,  # пересоздавать соединения раз в час
+        'pool_pre_ping': True,  # проверять соединение перед использованием
+    }
 
-    VERSION = "1.7.1"
+    VERSION = "1.8.0"
 
     # Логирование
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")

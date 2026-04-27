@@ -33,7 +33,7 @@ def init_monitor(app):
         except:
             pass
         _executor = None
-    _executor = concurrent.futures.ThreadPoolExecutor(max_workers=50)
+    _executor = concurrent.futures.ThreadPoolExecutor(max_workers=20)
     monitor_logger.info("Monitor initialized with new executor")
 
 
