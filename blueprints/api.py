@@ -6,6 +6,7 @@ from services import device_service, map_service
 from utils.logger import api_logger
 from functools import wraps
 from utils.file_validation import safe_save_upload
+from services.device_service import get_cached_types
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -151,13 +152,7 @@ def get_groups(map_id):
 @api_bp.route("/types")
 @login_required
 def get_types():
-    types = device_service.get_all_device_types()
-    return jsonify(
-        [
-            {"id": t.id, "name": t.name, "width": t.width, "height": t.height}
-            for t in types
-        ]
-    )
+    return jsonify(get_cached_types())
 
 
 @api_bp.route("/map/<int:id>/export", methods=["GET"])

@@ -1,5 +1,4 @@
 import os
-
 from cachetools import TTLCache
 from flask import url_for
 from models import (
@@ -15,6 +14,8 @@ from models import (
     DeviceIP,
 )
 from utils.logger import api_logger, main_logger
+
+groups_cache = TTLCache(maxsize=100, ttl=60)
 
 # Кэш для сайдбара: ключ = user_id, значение = результат, TTL 5 секунд
 sidebar_cache = TTLCache(maxsize=100, ttl=10)
@@ -80,7 +81,7 @@ def get_sidebar_maps_data(user):
         db.session.query(Device.map_id, func.count(Device.id).label("down_count"))
         .filter(
             Device.map_id.in_(map_ids),
-            Device.monitoring_enabled == True,
+            Device.monitoring_enabled is True,
             Device.status != "up",
         )
         .group_by(Device.map_id)
@@ -258,9 +259,12 @@ def get_map_elements(map_id):
 
 
 def get_map_groups(map_id):
-    """Получить список групп карты."""
+    cache_key = f"groups_{map_id}"
+    if cache_key in groups_cache:
+        return groups_cache[cache_key]
+
     groups = Group.query.filter_by(map_id=map_id).all()
-    return [
+    result = [
         {
             "id": g.id,
             "name": g.name,
@@ -270,6 +274,8 @@ def get_map_groups(map_id):
         }
         for g in groups
     ]
+    groups_cache[cache_key] = result
+    return result
 
 
 def export_map_data(map_id):
