@@ -17,7 +17,7 @@ from models import (
 from utils.logger import api_logger, main_logger
 
 # Кэш для сайдбара: ключ = user_id, значение = результат, TTL 5 секунд
-sidebar_cache = TTLCache(maxsize=100, ttl=5)
+sidebar_cache = TTLCache(maxsize=100, ttl=10)
 
 
 def get_shape_by_id(shape_id):
@@ -63,17 +63,36 @@ def get_available_maps(user):
 def get_sidebar_maps_data(user):
     cache_key = f"sidebar_{user.id}"
     if cache_key in sidebar_cache:
+        main_logger.debug(f"Sidebar cache hit for user {user.id}")
         return sidebar_cache[cache_key]
 
     maps = get_available_maps(user)
-    result = []
-    for m in maps:
-        # Считаем устройства с проблемами: мониторинг включён И статус не 'up'
-        down_count = Device.query.filter(
-            Device.map_id == m.id,
+    if not maps:
+        return []
+
+    # Получаем ID всех доступных карт
+    map_ids = [m.id for m in maps]
+
+    # ОДИН запрос для подсчёта проблемных устройств по всем картам
+    from sqlalchemy import func
+
+    stats = (
+        db.session.query(Device.map_id, func.count(Device.id).label("down_count"))
+        .filter(
+            Device.map_id.in_(map_ids),
             Device.monitoring_enabled == True,
             Device.status != "up",
-        ).count()
+        )
+        .group_by(Device.map_id)
+        .all()
+    )
+
+    # Преобразуем в словарь для быстрого доступа
+    stat_dict = {stat[0]: stat[1] for stat in stats}
+
+    result = []
+    for m in maps:
+        down_count = stat_dict.get(m.id, 0)
         result.append(
             {
                 "id": m.id,
@@ -82,7 +101,9 @@ def get_sidebar_maps_data(user):
                 "down_count": down_count,
             }
         )
+
     sidebar_cache[cache_key] = result
+    main_logger.debug(f"Sidebar cache miss for user {user.id}, stored")
     return result
 
 
