@@ -1,7 +1,6 @@
 import time
 import threading
 import concurrent.futures
-import os
 from extensions import db, socketio
 from models import Device, Settings, DeviceHistory
 from utils.logger import monitor_logger
@@ -81,27 +80,6 @@ def get_setting(key, default):
     return default
 
 
-def check_device(device_id, app):
-    with app.app_context():
-        device = Device.query.get(device_id)
-        if not device:
-            return device_id, "down"
-        if not device.monitoring_enabled or not device.ips:
-            return device_id, "down"
-        ping_count = get_setting("ping_count", 4)
-        results = []
-        for ip_obj in device.ips:
-            is_up = ping_host(ip_obj.ip_address, ping_count)
-            results.append(is_up)
-        if all(results):
-            new_status = "up"
-        elif any(results):
-            new_status = "partial"
-        else:
-            new_status = "down"
-        return device_id, new_status
-
-
 def monitor_loop():
     global last_emit_time, _monitor_stop_flag, _executor
     monitor_logger.debug("Monitor loop started")
@@ -116,9 +94,9 @@ def monitor_loop():
                 time.sleep(5)
                 continue
 
-            # Получаем список устройств
+            # ---- ПОДГОТОВКА ДАННЫХ ДО ПОТОКОВ (ОДИН РАЗ ЗА ЦИКЛ) ----
             with app_instance.app_context():
-                devices = [d for d in Device.query.all() if d.monitoring_enabled]
+                devices = Device.query.filter_by(monitoring_enabled=True).all()
                 monitor_logger.info(
                     f"Found {len(devices)} devices with monitoring enabled"
                 )
@@ -126,21 +104,47 @@ def monitor_loop():
                     time.sleep(5)
                     continue
 
-            # Запускаем проверку
+                # Предзагружаем IP адреса для каждого устройства
+                device_ips = {}
+                for dev in devices:
+                    device_ips[dev.id] = [ip.ip_address for ip in dev.ips]
+
+                # Настройки (получаем один раз за цикл)
+                ping_count = get_setting("ping_count", 4)
+                ping_interval = get_setting("ping_interval", 10)
+
+            # ---- ФУНКЦИЯ ПРОВЕРКИ (БЕЗ ДОСТУПА К БД) ----
+            def _check_device(dev_id, ips, pcnt):
+                if not ips:
+                    return dev_id, "down"
+                results = []
+                for ip in ips:
+                    is_up = ping_host(ip, pcnt)
+                    results.append(is_up)
+                if all(results):
+                    return dev_id, "up"
+                elif any(results):
+                    return dev_id, "partial"
+                else:
+                    return dev_id, "down"
+
+            # ---- ЗАПУСК ПРОВЕРОК В ПОТОКАХ ----
             futures = {
-                _executor.submit(check_device, dev.id, app_instance): dev
+                _executor.submit(
+                    _check_device, dev.id, device_ips[dev.id], ping_count
+                ): dev
                 for dev in devices
             }
             results = []
             for future in concurrent.futures.as_completed(futures):
                 try:
-                    device_id, new_status = future.result()
+                    dev_id, new_status = future.result()
                     dev = futures[future]
                     results.append((dev, new_status))
                 except Exception as e:
                     monitor_logger.error(f"Error checking device: {e}")
 
-            # Обработка изменений
+            # ---- ОБРАБОТКА ИЗМЕНЕНИЙ (КАК БЫЛО) ----
             devices_to_update = []
             history_entries = []
             current_time = time.time()
@@ -197,8 +201,9 @@ def monitor_loop():
             monitor_logger.error(traceback.format_exc())
 
         elapsed = time.time() - start_time
-        interval = get_setting("ping_interval", 10)
-        sleep_time = max(0, interval - elapsed)
+        sleep_time = max(
+            0, ping_interval - elapsed
+        )  # используем предзагруженный ping_interval
         monitor_logger.debug(
             f"Cycle completed in {elapsed:.2f}s, sleeping {sleep_time:.2f}s"
         )

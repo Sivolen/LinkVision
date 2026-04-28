@@ -72,14 +72,16 @@ def get_sidebar_maps_data(user):
         down_count = Device.query.filter(
             Device.map_id == m.id,
             Device.monitoring_enabled == True,
-            Device.status != 'up'
+            Device.status != "up",
         ).count()
-        result.append({
-            "id": m.id,
-            "name": m.name,
-            "owner_id": m.owner_id,
-            "down_count": down_count,
-        })
+        result.append(
+            {
+                "id": m.id,
+                "name": m.name,
+                "owner_id": m.owner_id,
+                "down_count": down_count,
+            }
+        )
     sidebar_cache[cache_key] = result
     return result
 
