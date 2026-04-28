@@ -17,6 +17,7 @@ from extensions import db
 from models import Map
 from services import user_service, device_type_service, settings_service
 from utils.logger import admin_logger
+from services.device_service import invalidate_types_cache
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -144,6 +145,7 @@ def create_type():
 
     try:
         device_type_service.create_device_type(name, width, height, icon)
+        invalidate_types_cache()
         flash("Тип устройства создан")
     except Exception as e:
         admin_logger.error(f"Error creating device type: {e}")
@@ -165,6 +167,7 @@ def edit_type(id):
 
         try:
             device_type_service.update_device_type(id, name, width, height, icon)
+            invalidate_types_cache()
             flash("Тип устройства обновлён")
             return redirect(url_for("admin.types"))
         except Exception as e:
@@ -179,6 +182,7 @@ def edit_type(id):
 def delete_type(id):
     try:
         device_type_service.delete_device_type(id)
+        invalidate_types_cache()
         flash("Тип устройства удалён")
     except Exception as e:
         admin_logger.error(f"Error deleting device type: {e}")
