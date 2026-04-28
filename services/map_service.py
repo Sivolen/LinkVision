@@ -70,7 +70,7 @@ def get_sidebar_maps_data(user):
     for m in maps:
         down_count = Device.query.filter(
             Device.map_id == m.id,
-            Device.monitoring_enabled == True,
+            Device.monitoring_enabled is True,
             Device.status != "up",
         ).count()
         result.append(
@@ -259,7 +259,7 @@ def export_map_data(map_id):
             {
                 "id": dev.id,
                 "name": dev.name,
-                "ips": [ip.ip_address for ip in dev.ips],  # добавлено
+                "ips": [ip.ip_address for ip in dev.ips],  # сохраняем список IP
                 "type_id": dev.type_id,
                 "type_name": dev.type.name if dev.type else None,
                 "pos_x": dev.pos_x,
@@ -478,9 +478,16 @@ def import_map(data, current_user):
         )
         db.session.add(dev)
         db.session.flush()
+
+        # Добавляем IP с дедупликацией (защита от дублей внутри импортируемого JSON)
+        seen_ips = set()
         for ip_str in dev_data.get("ips", []):
-            if ip_str:
-                db.session.add(DeviceIP(device_id=dev.id, ip_address=ip_str))
+            if ip_str and ip_str.strip():
+                clean_ip = ip_str.strip()
+                if clean_ip not in seen_ips:
+                    seen_ips.add(clean_ip)
+                    db.session.add(DeviceIP(device_id=dev.id, ip_address=clean_ip))
+
         device_id_map[dev_data["id"]] = dev.id
 
     for link_data in data.get("links", []):

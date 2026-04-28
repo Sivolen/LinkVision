@@ -5,7 +5,7 @@ import { boundNodePosition, getBgDimensions } from './background.js';
 let layoutRunning = false;
 
 export function initLayout(cy) {
-    window.applyLayout = (layoutName) => {
+    window.applyLayout = (layoutName, direction = null) => {
         if (layoutRunning) return;
         layoutRunning = true;
         const layoutOptions = {
@@ -16,23 +16,16 @@ export function initLayout(cy) {
             padding: 30
         };
         if (layoutName === 'cose') {
-            Object.assign(layoutOptions, {
-                idealEdgeLength: 100,
-                nodeOverlap: 20,
-                refresh: 20,
-                componentSpacing: 100,
-                nodeRepulsion: 400000,
-                edgeElasticity: 100,
-                nestingFactor: 5,
-                gravity: 80,
-                numIter: 1000,
-                initialTemp: 200,
-                coolingFactor: 0.95,
-                minTemp: 1.0
-            });
+            // ... существующие параметры ...
         } else if (layoutName === 'breadthfirst') {
             layoutOptions.directed = true;
             layoutOptions.spacingFactor = 1.5;
+            // Добавляем направление, если оно передано
+            if (direction) {
+                // Важно: в Cy 3.33+ параметр называется 'direction', а не 'orient'
+                layoutOptions.direction = direction;   // 'top-bottom', 'bottom-top', 'left-right', 'right-left'
+            }
+            // Можно также указать корневой узел, если нужно (layoutOptions.roots = [...])
         }
         const layout = cy.layout(layoutOptions);
         layout.on('layoutstop', () => {
@@ -41,10 +34,26 @@ export function initLayout(cy) {
         });
         layout.run();
     };
-    window.confirmLayout = (layoutName) => {
-        const names = { grid:'Сетка', circle:'Круг', concentric:'Концентрический', breadthfirst:'Дерево', cose:'Силовой' };
-        if (confirm(`Применить раскладку "${names[layoutName] || layoutName}"?`)) {
-            window.applyLayout(layoutName);
+    window.confirmLayout = (layoutName, direction = null) => {
+        const names = {
+            grid: 'Сетка',
+            circle: 'Круг',
+            concentric: 'Концентрический',
+            breadthfirst: 'Дерево',
+            cose: 'Силовой'
+        };
+        let msg = `Применить раскладку "${names[layoutName] || layoutName}"`;
+        if (direction) {
+            const dirNames = {
+                'top-bottom': 'сверху вниз',
+                'bottom-top': 'снизу вверх',
+                'left-right': 'слева направо',
+                'right-left': 'справа налево'
+            };
+            msg += ` (${dirNames[direction]})`;
+        }
+        if (confirm(`${msg}?`)) {
+            window.applyLayout(layoutName, direction);
         }
     };
 }

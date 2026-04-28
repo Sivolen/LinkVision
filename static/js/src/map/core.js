@@ -22,7 +22,7 @@ export function initCy(mapId, onReady) {
         autounselectify: true,
         minZoom: 0.1,
         maxZoom: 5,
-        wheelSensitivity: 0.5,
+        wheelSensitivity: 2,
         fit: false
     });
 
