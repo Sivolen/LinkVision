@@ -49,9 +49,15 @@ function addIpRow(value = '') {
 }
 
 function getIpsFromForm() {
-    return Array.from(document.querySelectorAll('#ips-container .ip-input'))
-        .map(inp => inp.value.trim())
-        .filter(v => v);
+    const inputs = document.querySelectorAll('#ips-container .ip-input');
+    const ips = [];
+    inputs.forEach(inp => {
+        const val = inp.value.trim();
+        if (val && !ips.includes(val)) {
+            ips.push(val);
+        }
+    });
+    return ips;
 }
 
 function setIpsInForm(ips) {
