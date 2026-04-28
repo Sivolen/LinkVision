@@ -114,6 +114,7 @@ export async function addDeviceToGraph(device) {
     const cy = getCy();
     if (!cy) return;
     if (cy.getElementById(String(device.id)).length) return;
+
     let groupParent = undefined;
     if (device.group_id) {
         let groupNode = cy.getElementById(`group_${device.group_id}`);
@@ -141,11 +142,16 @@ export async function addDeviceToGraph(device) {
         }
         if (groupNode && groupNode.length) groupParent = `group_${device.group_id}`;
     }
+
+    // Формируем строку IP для отображения в подписи
+    const ipLabel = (device.ips && device.ips.length) ? device.ips.join(', ') : '';
+
     cy.add({
         group: 'nodes',
         data: {
             id: String(device.id),
             name: device.name,
+            ip: ipLabel,
             ips: device.ips || [],
             type_id: device.type_id,
             group_id: device.group_id,
