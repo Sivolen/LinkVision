@@ -68,19 +68,18 @@ def get_sidebar_maps_data(user):
     maps = get_available_maps(user)
     result = []
     for m in maps:
+        # Считаем устройства с проблемами: мониторинг включён И статус не 'up'
         down_count = Device.query.filter(
             Device.map_id == m.id,
-            Device.monitoring_enabled is True,
-            Device.status != "up",
+            Device.monitoring_enabled == True,
+            Device.status != 'up'
         ).count()
-        result.append(
-            {
-                "id": m.id,
-                "name": m.name,
-                "owner_id": m.owner_id,
-                "down_count": down_count,
-            }
-        )
+        result.append({
+            "id": m.id,
+            "name": m.name,
+            "owner_id": m.owner_id,
+            "down_count": down_count,
+        })
     sidebar_cache[cache_key] = result
     return result
 

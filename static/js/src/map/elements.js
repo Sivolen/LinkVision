@@ -106,6 +106,9 @@ export function loadElements(mapId) {
                     }
                 }
             });
+            if (typeof window.loadSidebarMaps === 'function') {
+                setTimeout(() => window.loadSidebarMaps(), 300);
+            }
         })
         .catch(err => console.error('Load elements error:', err));
 }
