@@ -128,14 +128,18 @@ def create_device(
     db.session.add(device)
     db.session.flush()
 
-    if ips:
+    if ips and isinstance(ips, list):
+        seen = set()
         for ip in ips:
-            if ip and ip.strip():
-                try:
-                    ipaddress.ip_address(ip.strip())
-                except ValueError:
-                    raise ValueError(f"Invalid IP address: {ip}")
-                db.session.add(DeviceIP(device_id=device.id, ip_address=ip.strip()))
+            if ip and isinstance(ip, str):
+                ip_clean = ip.strip()
+                if ip_clean and ip_clean not in seen:
+                    try:
+                        ipaddress.ip_address(ip_clean)
+                    except ValueError:
+                        raise ValueError(f"Invalid IP address: {ip_clean}")
+                    db.session.add(DeviceIP(device_id=device.id, ip_address=ip_clean))
+                    seen.add(ip_clean)
 
     db.session.commit()
     api_logger.info(f"Device created: ID={device.id}, name={device.name}, ips={ips}")
@@ -164,20 +168,35 @@ def update_device(device_id, **kwargs):
 
     if "ips" in kwargs:
         new_ips = kwargs["ips"]
-        if new_ips is not None:
+        if new_ips is not None and isinstance(new_ips, list):
+            # --- ОЧИСТКА И ДЕДУПЛИКАЦИЯ ВХОДЯЩЕГО СПИСКА ---
+            clean_new = []
             for ip in new_ips:
-                if ip and ip.strip():
-                    try:
-                        ipaddress.ip_address(ip.strip())
-                    except ValueError:
-                        raise ValueError(f"Invalid IP address: {ip}")
-            existing = {ip.ip_address for ip in device.ips}
-            new_set = {ip.strip() for ip in new_ips if ip and ip.strip()}
+                if ip and isinstance(ip, str):
+                    ip_clean = ip.strip()
+                    if ip_clean and ip_clean not in clean_new:
+                        try:
+                            ipaddress.ip_address(ip_clean)
+                        except ValueError:
+                            raise ValueError(f"Invalid IP address: {ip_clean}")
+                        clean_new.append(ip_clean)
+
+            # Существующие IP (множество строк)
+            existing_set = {ip.ip_address for ip in device.ips}
+
+            # Удаляем IP, которых нет в новом списке
             for ip_obj in device.ips[:]:
-                if ip_obj.ip_address not in new_set:
+                if ip_obj.ip_address not in clean_new:
                     db.session.delete(ip_obj)
-            for ip_str in new_set - existing:
-                db.session.add(DeviceIP(device_id=device.id, ip_address=ip_str))
+
+            # Добавляем только те, которых ещё нет
+            for ip_str in clean_new:
+                if ip_str not in existing_set:
+                    db.session.add(DeviceIP(device_id=device.id, ip_address=ip_str))
+        else:
+            # Если new_ips = None или не список – удаляем все IP устройства
+            for ip_obj in device.ips[:]:
+                db.session.delete(ip_obj)
 
     db.session.commit()
     api_logger.info(f"Device updated: ID={device_id}")
