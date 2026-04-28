@@ -91,9 +91,6 @@ export function initMap(id) {
                 });
             });
             cy.style().update();
-            if (typeof window.loadSidebarMaps === 'function') {
-                setTimeout(() => window.loadSidebarMaps(), 100);
-            }
             statusBatch = [];
             statusBatchTimeout = null;
         }, 50);
