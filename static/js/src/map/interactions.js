@@ -241,59 +241,58 @@ function animateNodeStyle(node, targetColor, targetWidth, duration = 200) {
     requestAnimationFrame(step);
 }
     // Подсветка связей при наведении на устройство
-    cy.on('mouseover', 'node', function(evt) {
-        if (window.isOperator) return;
-        const node = evt.target;
-        if (node.data('isGroup') || node.data('isShape')) return;
+// Вместо animateEdgeStyle / animateNodeStyle используем прямые стили:
+cy.on('mouseover', 'node', function(evt) {
+    if (window.isOperator) return;
+    const node = evt.target;
+    if (node.data('isGroup') || node.data('isShape')) return;
 
-        const edges = node.connectedEdges();
-        const neighbors = edges.connectedNodes();
+    const edges = node.connectedEdges();
+    const neighbors = edges.connectedNodes();
 
-        edges.forEach(edge => {
-            if (!edge._private.originalStyle) {
-                edge._private.originalStyle = {
-                    'line-color': edge.style('line-color'),
-                    'width': edge.style('width')
-                };
-            }
-            animateEdgeStyle(edge, '#f59e0b', 3, 200);
-        });
-
-        neighbors.union(node).forEach(n => {
-            if (!n._private.originalBorderStyle) {
-                n._private.originalBorderStyle = {
-                    'border-color': n.style('border-color'),
-                    'border-width': n.style('border-width')
-                };
-            }
-            animateNodeStyle(n, '#f59e0b', 3, 200);
-        });
+    edges.forEach(edge => {
+        if (!edge._private.originalStyle) {
+            edge._private.originalStyle = {
+                'line-color': edge.style('line-color'),
+                'width': edge.style('width')
+            };
+        }
+        edge.style({ 'line-color': '#f59e0b', 'width': 3 });
     });
 
-    cy.on('mouseout', 'node', function(evt) {
-        if (window.isOperator) return;
-        const node = evt.target;
-        if (node.data('isGroup') || node.data('isShape')) return;
-
-        const edges = node.connectedEdges();
-        const neighbors = edges.connectedNodes();
-
-        edges.forEach(edge => {
-            if (edge._private.originalStyle) {
-                const orig = edge._private.originalStyle;
-                animateEdgeStyle(edge, orig['line-color'], parseFloat(orig['width']), 200);
-                delete edge._private.originalStyle;
-            }
-        });
-
-        neighbors.union(node).forEach(n => {
-            if (n._private.originalBorderStyle) {
-                const orig = n._private.originalBorderStyle;
-                animateNodeStyle(n, orig['border-color'], parseFloat(orig['border-width']), 200);
-                delete n._private.originalBorderStyle;
-            }
-        });
+    neighbors.union(node).forEach(n => {
+        if (!n._private.originalBorderStyle) {
+            n._private.originalBorderStyle = {
+                'border-color': n.style('border-color'),
+                'border-width': n.style('border-width')
+            };
+        }
+        n.style({ 'border-color': '#f59e0b', 'border-width': 3 });
     });
+});
+
+cy.on('mouseout', 'node', function(evt) {
+    if (window.isOperator) return;
+    const node = evt.target;
+    if (node.data('isGroup') || node.data('isShape')) return;
+
+    const edges = node.connectedEdges();
+    const neighbors = edges.connectedNodes();
+
+    edges.forEach(edge => {
+        if (edge._private.originalStyle) {
+            const orig = edge._private.originalStyle;
+            edge.style({ 'line-color': orig['line-color'], 'width': orig['width'] });
+        }
+    });
+
+    neighbors.union(node).forEach(n => {
+        if (n._private.originalBorderStyle) {
+            const orig = n._private.originalBorderStyle;
+            n.style({ 'border-color': orig['border-color'], 'border-width': orig['border-width'] });
+        }
+    });
+});
         // ==================== КОНТЕКСТНОЕ МЕНЮ ====================
     let contextMenu = null;
 
