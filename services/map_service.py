@@ -71,40 +71,29 @@ def get_sidebar_maps_data(user):
     if not maps:
         return []
 
-    # Получаем ID всех доступных карт
     map_ids = [m.id for m in maps]
 
-    # ОДИН запрос для подсчёта проблемных устройств по всем картам
     from sqlalchemy import func
+    stats = db.session.query(
+        Device.map_id, func.count(Device.id).label("down_count")
+    ).filter(
+        Device.map_id.in_(map_ids),
+        Device.status != "up"
+    ).group_by(Device.map_id).all()
 
-    stats = (
-        db.session.query(Device.map_id, func.count(Device.id).label("down_count"))
-        .filter(
-            Device.map_id.in_(map_ids),
-            Device.monitoring_enabled is True,
-            Device.status != "up",
-        )
-        .group_by(Device.map_id)
-        .all()
-    )
-
-    # Преобразуем в словарь для быстрого доступа
     stat_dict = {stat[0]: stat[1] for stat in stats}
 
     result = []
     for m in maps:
         down_count = stat_dict.get(m.id, 0)
-        result.append(
-            {
-                "id": m.id,
-                "name": m.name,
-                "owner_id": m.owner_id,
-                "down_count": down_count,
-            }
-        )
+        result.append({
+            "id": m.id,
+            "name": m.name,
+            "owner_id": m.owner_id,
+            "down_count": down_count,
+        })
 
     sidebar_cache[cache_key] = result
-    main_logger.debug(f"Sidebar cache miss for user {user.id}, stored")
     return result
 
 
