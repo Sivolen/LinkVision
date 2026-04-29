@@ -78,6 +78,7 @@ def get_sidebar_maps_data(user):
         Device.map_id, func.count(Device.id).label("down_count")
     ).filter(
         Device.map_id.in_(map_ids),
+        Device.monitoring_enabled == True,
         Device.status != "up"
     ).group_by(Device.map_id).all()
 
