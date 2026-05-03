@@ -78,7 +78,7 @@ def create_app():
         return db.session.get(User, int(user_id))
 
     with app.app_context():
-        db.create_all()
+        # db.create_all()
 
         # --- Создание администратора, если ни одного нет ---
         if not User.query.filter_by(is_admin=True).first():
