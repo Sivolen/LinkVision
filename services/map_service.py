@@ -49,6 +49,14 @@ def invalidate_sidebar_cache(user_id):
         main_logger.debug(f"Sidebar cache invalidated for user {user_id}")
 
 
+def invalidate_groups_cache(map_id):
+    """Удалить закэшированный список групп для указанной карты."""
+    cache_key = f"groups_{map_id}"
+    if cache_key in groups_cache:
+        del groups_cache[cache_key]
+        main_logger.debug(f"Groups cache invalidated for map {map_id}")
+
+
 def get_map_by_id(map_id):
     """Получить карту по ID или вернуть None."""
     return Map.query.get(map_id)
