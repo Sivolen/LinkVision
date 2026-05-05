@@ -3,6 +3,7 @@ import ipaddress
 from flask import Blueprint, request, jsonify, current_app, url_for
 from flask_login import login_required, current_user
 from services import device_service, map_service
+from services.map_service import invalidate_groups_cache
 from utils.logger import api_logger
 from functools import wraps
 from utils.file_validation import safe_save_upload
@@ -538,6 +539,7 @@ def create_group():
         group = map_service.create_group(
             map_id, data["name"], data.get("color", "#3498db"), font_size
         )
+        invalidate_groups_cache(map_id)
         return jsonify({"id": group.id}), 201
     except ValueError as e:
         api_logger.warning(f"Validation error creating group: {e}")
@@ -570,6 +572,7 @@ def update_group(id):
             color=data.get("color"),
             font_size=data.get("font_size"),
         )
+        invalidate_groups_cache(group.map_id)
         return jsonify({"status": "updated"})
     except ValueError as e:
         api_logger.warning(f"Validation error updating group {id}: {e}")
@@ -591,6 +594,8 @@ def delete_group(id):
         return jsonify({"error": "Доступ запрещён"}), 403
     try:
         map_service.delete_group(id)
+        if group:
+            invalidate_groups_cache(group.map_id)
         return jsonify({"status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting group: {e}")
