@@ -53,9 +53,13 @@ export function initMap(id) {
     window.saveState = saveState;
 
     loadElements(mapId);
-
-    let statusBatch = [];
-    let statusBatchTimeout = null;
+    // Сохраняем начальное состояние после того, как элементы загружены
+    if (typeof window.saveState === 'function') {
+        // Небольшая задержка, чтобы убедиться, что все элементы отрисованы
+        setTimeout(() => window.saveState('initial'), 500);
+    }
+        let statusBatch = [];
+        let statusBatchTimeout = null;
 
     window.socket.on('device_status', (data) => {
         if (Number(data.map_id) !== Number(mapId)) return;

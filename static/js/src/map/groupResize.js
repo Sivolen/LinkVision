@@ -24,3 +24,4 @@ export function updateAllGroups() {
     if (!cy) return;
     cy.nodes('node[isGroup]').forEach(group => updateGroupSize(group));
 }
+window.updateAllGroups = updateAllGroups;

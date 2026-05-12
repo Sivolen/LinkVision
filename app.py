@@ -5,6 +5,7 @@ from pathlib import Path
 from flask import Flask, request
 from flask_socketio import join_room
 from flask_wtf.csrf import CSRFProtect
+from sqlalchemy import event
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import Config
@@ -79,7 +80,12 @@ def create_app():
 
     with app.app_context():
         # db.create_all()
-
+        if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+            @event.listens_for(db.engine, 'connect')
+            def set_sqlite_pragma(dbapi_connection, connection_record):
+                cursor = dbapi_connection.cursor()
+                cursor.execute('PRAGMA foreign_keys=ON')
+                cursor.close()
         # --- Создание администратора, если ни одного нет ---
         if not User.query.filter_by(is_admin=True).first():
             import secrets
