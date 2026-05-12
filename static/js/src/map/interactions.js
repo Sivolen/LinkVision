@@ -21,6 +21,7 @@ function fallbackCopy(text) {
 export function initInteractions(cy) {
     // Перетаскивание одиночного узла
     cy.on('dragfree', 'node', function(evt) {
+    console.log('dragfree, saving state');
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
         if (window.isOperator || window.dragLocked) return;
@@ -51,6 +52,7 @@ export function initInteractions(cy) {
     cy.on('dragfree', 'node:selected', function(evt) {
         if (window.isOperator || window.dragLocked) return;
         const draggedNode = evt.target;
+        // Пропускаем группы – они не будут сохраняться в историю
         if (draggedNode.data('isGroup')) return;
         const selectedNodes = cy.nodes(':selected').filter(n => !n.data('isGroup'));
         if (selectedNodes.length <= 1) return;
@@ -87,12 +89,43 @@ export function initInteractions(cy) {
             );
             Promise.all(promises).catch(console.error)
             .then(() => {
-            if (typeof window.saveState === 'function') window.saveState('Перемещение группы устройств');
-        })
-        .catch(console.error);
+                if (typeof window.saveState === 'function') window.saveState('Перемещение группы устройств');
+            })
+            .catch(console.error);
         }, 500);
         selectedNodes.forEach(n => delete n._private.scratch._dragStartPos);
     });
+    // Перетаскивание одиночной фигуры
+cy.on('dragfree', 'node[isShape]', function(evt) {
+    if (window.isOperator || window.dragLocked) return;
+    const node = evt.target;
+    let pos = node.position();
+    const { width, height } = getBgDimensions();
+    if (width && height) {
+        const bounded = boundNodePosition(pos);
+        if (bounded.x !== pos.x || bounded.y !== pos.y) {
+            node.position(bounded);
+            pos = bounded;
+        }
+    }
+    const shapeId = node.id().replace('shape_', '');
+    clearTimeout(dragTimeouts[shapeId]);
+    dragTimeouts[shapeId] = setTimeout(() => {
+        fetch(`/api/shape/${shapeId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+            body: JSON.stringify({ x: pos.x, y: pos.y })
+        }).catch(err => console.error('Error saving shape position:', err));
+        delete dragTimeouts[shapeId];
+    }, 500);
+    if (typeof window.saveState === 'function') window.saveState('Перемещение фигуры');
+});
+// Перетаскивание группы
+//cy.on('dragfree', 'node[isGroup]', function(evt) {
+//    if (window.isOperator || window.dragLocked) return;
+//    // Сохраняем состояние после перемещения группы
+//    if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
+//});
 
     // Клики по узлам
     cy.on('tap', 'node', function(evt) {

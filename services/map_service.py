@@ -448,7 +448,7 @@ def get_group_by_id(group_id):
 
 
 def import_map(data, current_user):
-    """Импортировать карту из JSON-данных."""
+    """Импортировать карту из JSON-данных с дедупликацией IP."""
     map_id = data.get("id")
     if map_id:
         map_obj = Map.query.get(map_id)
@@ -505,7 +505,7 @@ def import_map(data, current_user):
         db.session.add(dev)
         db.session.flush()
 
-        # Добавляем IP с дедупликацией (защита от дублей внутри импортируемого JSON)
+        # ДЕДУПЛИКАЦИЯ IP ПРИ ИМПОРТЕ
         seen_ips = set()
         for ip_str in dev_data.get("ips", []):
             if ip_str and ip_str.strip():
