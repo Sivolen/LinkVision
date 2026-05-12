@@ -49,16 +49,16 @@ function restoreState(index) {
 
         // Не вызываем updateAllGroups – группы не участвуют
 
-        if (state.viewport) {
-            cy.viewport({
-                pan: state.viewport.pan,
-                zoom: state.viewport.zoom
-            });
-            if (typeof window.updateBackgroundTransform === 'function')
-                window.updateBackgroundTransform();
-            if (typeof window.enforcePanBounds === 'function')
-                window.enforcePanBounds();
-        }
+//        if (state.viewport) {
+//            cy.viewport({
+//                pan: state.viewport.pan,
+//                zoom: state.viewport.zoom
+//            });
+//            if (typeof window.updateBackgroundTransform === 'function')
+//                window.updateBackgroundTransform();
+//            if (typeof window.enforcePanBounds === 'function')
+//                window.enforcePanBounds();
+//        }
 
         currentIndex = index;
         updateButtons();
