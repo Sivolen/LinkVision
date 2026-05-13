@@ -96,30 +96,30 @@ export function initInteractions(cy) {
         selectedNodes.forEach(n => delete n._private.scratch._dragStartPos);
     });
     // Перетаскивание одиночной фигуры
-cy.on('dragfree', 'node[isShape]', function(evt) {
-    if (window.isOperator || window.dragLocked) return;
-    const node = evt.target;
-    let pos = node.position();
-    const { width, height } = getBgDimensions();
-    if (width && height) {
-        const bounded = boundNodePosition(pos);
-        if (bounded.x !== pos.x || bounded.y !== pos.y) {
-            node.position(bounded);
-            pos = bounded;
+    cy.on('dragfree', 'node[isShape]', function(evt) {
+        if (window.isOperator || window.dragLocked) return;
+        const node = evt.target;
+        let pos = node.position();
+        const { width, height } = getBgDimensions();
+        if (width && height) {
+            const bounded = boundNodePosition(pos);
+            if (bounded.x !== pos.x || bounded.y !== pos.y) {
+                node.position(bounded);
+                pos = bounded;
+            }
         }
-    }
-    const shapeId = node.id().replace('shape_', '');
-    clearTimeout(dragTimeouts[shapeId]);
-    dragTimeouts[shapeId] = setTimeout(() => {
-        fetch(`/api/shape/${shapeId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify({ x: pos.x, y: pos.y })
-        }).catch(err => console.error('Error saving shape position:', err));
-        delete dragTimeouts[shapeId];
-    }, 500);
-    if (typeof window.saveState === 'function') window.saveState('Перемещение фигуры');
-});
+        const shapeId = node.id().replace('shape_', '');
+        clearTimeout(dragTimeouts[shapeId]);
+        dragTimeouts[shapeId] = setTimeout(() => {
+            fetch(`/api/shape/${shapeId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ x: pos.x, y: pos.y })
+            }).catch(err => console.error('Error saving shape position:', err));
+            delete dragTimeouts[shapeId];
+        }, 500);
+        if (typeof window.saveState === 'function') window.saveState('Перемещение фигуры');
+    });
 // Перетаскивание группы
 //cy.on('dragfree', 'node[isGroup]', function(evt) {
 //    if (window.isOperator || window.dragLocked) return;
