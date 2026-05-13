@@ -28,77 +28,77 @@ export function initUndoRedo(cy, getMapId) {
         updateButtons();
     }
 
-function restoreState(index) {
-    if (index < 0 || index >= history.length) return;
-    const state = history[index];
-    if (!state) return;
+    function restoreState(index) {
+        if (index < 0 || index >= history.length) return;
+        const state = history[index];
+        if (!state) return;
 
-    isUndoRedo = true;
-    try {
-        cy.batch(() => {
-            for (const [id, pos] of Object.entries(state.positions)) {
-                const node = cy.getElementById(id);
-                if (node.length) {
-                    node.position(pos);
+        isUndoRedo = true;
+        try {
+            cy.batch(() => {
+                for (const [id, pos] of Object.entries(state.positions)) {
+                    const node = cy.getElementById(id);
+                    if (node.length) {
+                        node.position(pos);
+                    }
                 }
-            }
-        });
-        cy.style().update();
-        cy.resize();
-        syncPositionsToServer(cy);
+            });
+            cy.style().update();
+            cy.resize();
+            syncPositionsToServer(cy);
 
-        // Не вызываем updateAllGroups – группы не участвуют
+            // Не вызываем updateAllGroups – группы не участвуют
 
-//        if (state.viewport) {
-//            cy.viewport({
-//                pan: state.viewport.pan,
-//                zoom: state.viewport.zoom
-//            });
-//            if (typeof window.updateBackgroundTransform === 'function')
-//                window.updateBackgroundTransform();
-//            if (typeof window.enforcePanBounds === 'function')
-//                window.enforcePanBounds();
-//        }
+    //        if (state.viewport) {
+    //            cy.viewport({
+    //                pan: state.viewport.pan,
+    //                zoom: state.viewport.zoom
+    //            });
+    //            if (typeof window.updateBackgroundTransform === 'function')
+    //                window.updateBackgroundTransform();
+    //            if (typeof window.enforcePanBounds === 'function')
+    //                window.enforcePanBounds();
+    //        }
 
-        currentIndex = index;
-        updateButtons();
-    } catch (err) {
-        console.error('Restore error:', err);
-    } finally {
-        isUndoRedo = false;
+            currentIndex = index;
+            updateButtons();
+        } catch (err) {
+            console.error('Restore error:', err);
+        } finally {
+            isUndoRedo = false;
+        }
     }
-}
-// Синхронизация позиций устройств и фигур с сервером
-function syncPositionsToServer(cy) {
-    const nodes = cy.nodes().filter(n => !n.data('isGroup'));
-    const updates = nodes.map(node => {
-        const pos = node.position();
-        return { id: node.id(), x: Math.round(pos.x), y: Math.round(pos.y) };
-    }).filter(u => u.id && !isNaN(u.x) && !isNaN(u.y));
-    if (updates.length === 0) return;
+    // Синхронизация позиций устройств и фигур с сервером
+    function syncPositionsToServer(cy) {
+        const nodes = cy.nodes().filter(n => !n.data('isGroup'));
+        const updates = nodes.map(node => {
+            const pos = node.position();
+            return { id: node.id(), x: Math.round(pos.x), y: Math.round(pos.y) };
+        }).filter(u => u.id && !isNaN(u.x) && !isNaN(u.y));
+        if (updates.length === 0) return;
 
-    // Разделяем на устройства и фигуры
-    const deviceUpdates = updates.filter(u => !u.id.startsWith('shape_'));
-    const shapeUpdates = updates.filter(u => u.id.startsWith('shape_'));
+        // Разделяем на устройства и фигуры
+        const deviceUpdates = updates.filter(u => !u.id.startsWith('shape_'));
+        const shapeUpdates = updates.filter(u => u.id.startsWith('shape_'));
 
-    const promises = [];
-    for (const upd of deviceUpdates) {
-        promises.push(fetch(`/api/device/${upd.id}/position`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify({ x: upd.x, y: upd.y })
-        }));
+        const promises = [];
+        for (const upd of deviceUpdates) {
+            promises.push(fetch(`/api/device/${upd.id}/position`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ x: upd.x, y: upd.y })
+            }));
+        }
+        for (const upd of shapeUpdates) {
+            const shapeId = upd.id.replace('shape_', '');
+            promises.push(fetch(`/api/shape/${shapeId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ x: upd.x, y: upd.y })
+            }));
+        }
+        Promise.all(promises).catch(err => console.error('Sync positions error:', err));
     }
-    for (const upd of shapeUpdates) {
-        const shapeId = upd.id.replace('shape_', '');
-        promises.push(fetch(`/api/shape/${shapeId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify({ x: upd.x, y: upd.y })
-        }));
-    }
-    Promise.all(promises).catch(err => console.error('Sync positions error:', err));
-}
     function updateButtons() {
         const undoBtn = document.getElementById('undoBtn');
         const redoBtn = document.getElementById('redoBtn');
