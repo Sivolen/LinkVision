@@ -6,7 +6,9 @@ let bgImageHeight = null;
 let backgroundLoaded = false;
 let elementsLoaded = false;
 let pendingFit = false;
+let skipAutoFit = false;
 
+export function setSkipAutoFit(value) { skipAutoFit = value; }
 export function setElementsLoaded(loaded) { elementsLoaded = loaded; checkReadyAndFit(); }
 export function setBackgroundLoaded(loaded) { backgroundLoaded = loaded; checkReadyAndFit(); }
 export function setPendingFit(value) { pendingFit = value; }
@@ -99,7 +101,7 @@ export function fitImageToView() {
 }
 
 function checkReadyAndFit() {
-    if (backgroundLoaded && elementsLoaded && !pendingFit) {
+    if (!skipAutoFit && backgroundLoaded && elementsLoaded && !pendingFit) {
         const cyEl = document.getElementById('cy');
         const panX = parseFloat(cyEl.dataset.panX) || 0;
         const panY = parseFloat(cyEl.dataset.panY) || 0;
@@ -142,3 +144,4 @@ export function updateMapBackground(background) {
         }
     }
 }
+window.setSkipAutoFit = setSkipAutoFit;

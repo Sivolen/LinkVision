@@ -287,25 +287,51 @@ window.saveDevice = async function() {
         });
     }
 
-    // Перезагружаем карту и сайдбар
+    // Сохраняем текущий viewport
+    let savedViewport = null;
+    if (window.cy) {
+        savedViewport = {
+            pan: window.cy.pan(),
+            zoom: window.cy.zoom()
+        };
+    }
+
+    // Отключаем автофит на время перезагрузки
+    if (typeof window.setSkipAutoFit === 'function') {
+        window.setSkipAutoFit(true);
+    }
+
+    // Перезагружаем карту
     if (typeof window.reloadMapElements === 'function') {
         window.reloadMapElements();
     }
-    // Восстанавливаем viewport после загрузки (с небольшой задержкой)
+
+    // Восстанавливаем viewport после загрузки
     if (savedViewport && window.cy) {
-        setTimeout(() => {
+        const restore = () => {
             window.cy.viewport({
                 pan: savedViewport.pan,
                 zoom: savedViewport.zoom
             });
+            window.cy.style().update();
             if (typeof window.updateBackgroundTransform === 'function') {
                 window.updateBackgroundTransform();
             }
             if (typeof window.enforcePanBounds === 'function') {
                 window.enforcePanBounds();
             }
-        }, 100);
+        };
+        setTimeout(restore, 200);
+        setTimeout(restore, 500); // повтор для надёжности
     }
+
+    // Включаем автофит обратно
+    setTimeout(() => {
+        if (typeof window.setSkipAutoFit === 'function') {
+            window.setSkipAutoFit(false);
+        }
+    }, 600);
+
     if (typeof window.loadSidebarMaps === 'function') {
         setTimeout(() => window.loadSidebarMaps(), 200);
     }
