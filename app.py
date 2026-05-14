@@ -2,7 +2,7 @@ import atexit
 import secrets
 from pathlib import Path
 
-from flask import Flask, request
+from flask import Flask, request, render_template
 from flask_socketio import join_room
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import event
@@ -150,6 +150,10 @@ def create_app():
         from config import Config
 
         return {"app_version": Config.VERSION, "debug_mode": app.debug}
+
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('404.html'), 404
 
     return app
 
