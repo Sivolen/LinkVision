@@ -13,6 +13,8 @@ let _formHandlerAttached = false;
 // Фигуры
 let shapeModal = null;
 let currentShapeId = null;
+let savedViewport = null;
+
 
 // ==================== УПРАВЛЕНИЕ СПИСКОМ IP ====================
 function addIpRow(value = '') {
@@ -288,6 +290,21 @@ window.saveDevice = async function() {
     // Перезагружаем карту и сайдбар
     if (typeof window.reloadMapElements === 'function') {
         window.reloadMapElements();
+    }
+    // Восстанавливаем viewport после загрузки (с небольшой задержкой)
+    if (savedViewport && window.cy) {
+        setTimeout(() => {
+            window.cy.viewport({
+                pan: savedViewport.pan,
+                zoom: savedViewport.zoom
+            });
+            if (typeof window.updateBackgroundTransform === 'function') {
+                window.updateBackgroundTransform();
+            }
+            if (typeof window.enforcePanBounds === 'function') {
+                window.enforcePanBounds();
+            }
+        }, 100);
     }
     if (typeof window.loadSidebarMaps === 'function') {
         setTimeout(() => window.loadSidebarMaps(), 200);
