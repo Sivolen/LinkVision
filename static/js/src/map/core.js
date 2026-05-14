@@ -25,6 +25,21 @@ export function initCy(mapId, onReady) {
         wheelSensitivity: 2,
         fit: false
     });
+    // Принудительное применение стиля выделения (перекрывает все CSS)
+    cy.on('select unselect', 'node', () => {
+        cy.nodes().forEach(node => {
+            if (node.selected()) {
+                node.style('border-color', '#007bff');
+                node.style('border-width', '5px');
+                node.style('background-color', 'rgba(0,123,255,0.1)');
+            } else {
+                // Сбрасываем инлайн-стили, чтобы вернулись CSS-стили
+                node.style('border-color', null);
+                node.style('border-width', null);
+                node.style('background-color', null);
+            }
+        });
+    });
 
     // События
     cy.on('pan zoom', () => {

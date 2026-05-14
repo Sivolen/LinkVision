@@ -21,6 +21,14 @@ groups_cache = TTLCache(maxsize=100, ttl=60)
 sidebar_cache = TTLCache(maxsize=100, ttl=10)
 
 
+def create_new_map(name, owner_id, background_image=None):
+    """Создать новую карту."""
+    new_map = Map(name=name, owner_id=owner_id, background_image=background_image)
+    db.session.add(new_map)
+    db.session.commit()
+    return new_map
+
+
 def get_shape_by_id(shape_id):
     return MapShape.query.get(shape_id)
 
