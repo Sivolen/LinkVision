@@ -1,6 +1,7 @@
 import ipaddress
-from models import Device, DeviceIP, DeviceHistory, db, DeviceType, Group
+from models import Device, DeviceIP, DeviceHistory, db, DeviceType, Group, Map
 from utils.logger import api_logger
+from sqlalchemy.exc import IntegrityError
 
 
 def validate_device_type(type_id):
@@ -114,36 +115,50 @@ def create_device(
     monitoring_enabled=True,
     font_size=None,
 ):
-    device = Device(
-        map_id=map_id,
-        type_id=type_id,
-        name=name,
-        font_size=font_size,
-        pos_x=x,
-        pos_y=y,
-        group_id=group_id,
-        monitoring_enabled=monitoring_enabled,
-        status="up",
-    )
-    db.session.add(device)
-    db.session.flush()
+    # Проверяем существование карты и типа
+    map_obj = db.session.get(Map, map_id)
+    if not map_obj:
+        raise ValueError(f"Карта с id {map_id} не найдена")
+    type_obj = db.session.get(DeviceType, type_id)
+    if not type_obj:
+        raise ValueError(f"Тип устройства с id {type_id} не найден")
+    try:
+        device = Device(
+            map_id=map_id,
+            type_id=type_id,
+            name=name,
+            font_size=font_size,
+            pos_x=x,
+            pos_y=y,
+            group_id=group_id if group_id and group_id > 0 else None,
+            monitoring_enabled=monitoring_enabled,
+            status="up",
+        )
+        db.session.add(device)
+        db.session.commit()
 
-    if ips and isinstance(ips, list):
-        seen = set()
-        for ip in ips:
-            if ip and isinstance(ip, str):
-                ip_clean = ip.strip()
-                if ip_clean and ip_clean not in seen:
-                    try:
-                        ipaddress.ip_address(ip_clean)
-                    except ValueError:
-                        raise ValueError(f"Invalid IP address: {ip_clean}")
-                    db.session.add(DeviceIP(device_id=device.id, ip_address=ip_clean))
-                    seen.add(ip_clean)
+        if ips and isinstance(ips, list):
+            seen = set()
+            for ip in ips:
+                if ip and isinstance(ip, str):
+                    ip_clean = ip.strip()
+                    if ip_clean and ip_clean not in seen:
+                        # валидация IP уже выполнена в API
+                        db.session.add(DeviceIP(device_id=device.id, ip_address=ip_clean))
+                        seen.add(ip_clean)
+            db.session.commit()
 
-    db.session.commit()
-    api_logger.info(f"Device created: ID={device.id}, name={device.name}, ips={ips}")
-    return device
+        api_logger.info(f"Device created: ID={device.id}, name={device.name}, ips={ips}")
+        return device
+
+    except IntegrityError as e:
+        db.session.rollback()
+        api_logger.error(f"Integrity error creating device: {e}")
+        raise ValueError("Не удалось создать устройство: нарушение ссылочной целостности. Проверьте map_id и type_id.")
+    except Exception as e:
+        db.session.rollback()
+        api_logger.error(f"Error creating device: {e}")
+        raise
 
 
 def update_device(device_id, **kwargs):

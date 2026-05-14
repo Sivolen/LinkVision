@@ -40,7 +40,7 @@ def dashboard():
     if current_user.is_operator:
         return render_template("no_maps.html")
     else:
-        return redirect(url_for("main.create_map_page"))
+        return redirect(url_for("admin.maps_list"))
 
 
 # @main_bp.route('/map/create-page')

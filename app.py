@@ -79,7 +79,7 @@ def create_app():
         return db.session.get(User, int(user_id))
 
     with app.app_context():
-        # db.create_all()
+        db.create_all()
         if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
             @event.listens_for(db.engine, 'connect')
             def set_sqlite_pragma(dbapi_connection, connection_record):
