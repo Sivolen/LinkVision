@@ -1,6 +1,5 @@
 import os
 from flask import current_app
-from werkzeug.utils import secure_filename
 from models import DeviceType, db
 from utils.file_validation import safe_save_upload
 from utils.logger import admin_logger
