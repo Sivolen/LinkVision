@@ -172,10 +172,10 @@ export const CY_STYLE = [
     },
     // Выделенный узел
     {
-        selector: 'node:selected[status]',
+        selector: 'node:selected, node[selected]',
         style: {
             'border-color': '#007bff',
-            'border-width': 5,
+            'border-width': '5px',
             'background-color': 'rgba(0,123,255,0.1)',
             'transition-property': 'border-width, background-color',
             'transition-duration': '0.2s',
