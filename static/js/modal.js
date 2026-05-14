@@ -1017,7 +1017,42 @@ window.saveShape = function() {
         return res.json();
     })
     .then(() => {
+        // ---- Сохраняем viewport перед перезагрузкой ----
+        let savedViewport = null;
+        if (window.cy) {
+            savedViewport = {
+                pan: window.cy.pan(),
+                zoom: window.cy.zoom()
+            };
+        }
+        // Отключаем автофит на время перезагрузки
+        if (typeof window.setSkipAutoFit === 'function') {
+            window.setSkipAutoFit(true);
+        }
+        // Перезагружаем карту
         reloadMapElements();
+        // Восстанавливаем viewport
+        if (savedViewport && window.cy) {
+            const restore = () => {
+                window.cy.viewport({
+                    pan: savedViewport.pan,
+                    zoom: savedViewport.zoom
+                });
+                window.cy.style().update();
+                if (typeof window.updateBackgroundTransform === 'function')
+                    window.updateBackgroundTransform();
+                if (typeof window.enforcePanBounds === 'function')
+                    window.enforcePanBounds();
+            };
+            setTimeout(restore, 200);
+            setTimeout(restore, 500);
+        }
+        // Включаем автофит обратно
+        setTimeout(() => {
+            if (typeof window.setSkipAutoFit === 'function')
+                window.setSkipAutoFit(false);
+        }, 600);
+        // --------------------------------------------
         shapeModal.hide();
         showToast('Успешно', id ? 'Фигура обновлена' : 'Фигура создана', 'success');
     })
@@ -1035,7 +1070,38 @@ window.deleteShape = function(id) {
         })
         .then(async res => {
             if (!res.ok) throw new Error(await getErrorMessage(res));
+            // ---- Сохраняем viewport ----
+            let savedViewport = null;
+            if (window.cy) {
+                savedViewport = {
+                    pan: window.cy.pan(),
+                    zoom: window.cy.zoom()
+                };
+            }
+            if (typeof window.setSkipAutoFit === 'function') {
+                window.setSkipAutoFit(true);
+            }
             reloadMapElements();
+            if (savedViewport && window.cy) {
+                const restore = () => {
+                    window.cy.viewport({
+                        pan: savedViewport.pan,
+                        zoom: savedViewport.zoom
+                    });
+                    window.cy.style().update();
+                    if (typeof window.updateBackgroundTransform === 'function')
+                        window.updateBackgroundTransform();
+                    if (typeof window.enforcePanBounds === 'function')
+                        window.enforcePanBounds();
+                };
+                setTimeout(restore, 200);
+                setTimeout(restore, 500);
+            }
+            setTimeout(() => {
+                if (typeof window.setSkipAutoFit === 'function')
+                    window.setSkipAutoFit(false);
+            }, 600);
+            // ---------------------------------
             shapeModal.hide();
             showToast('Успешно', 'Фигура удалена', 'success');
         })
