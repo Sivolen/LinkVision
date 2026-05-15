@@ -29,3 +29,37 @@ export function saveViewportToServer() {
         }).catch(err => console.debug('Viewport save failed:', err.message));
     }, 500);
 }
+
+export function withViewportRestore(callback, skipAutoFit = true) {
+    const cy = getCy();
+    let savedViewport = null;
+    if (cy) {
+        savedViewport = { pan: cy.pan(), zoom: cy.zoom() };
+    }
+    if (skipAutoFit && typeof window.setSkipAutoFit === 'function') {
+        window.setSkipAutoFit(true);
+    }
+
+    // Выполняем действие (обычно reloadMapElements)
+    callback();
+
+    // Восстанавливаем viewport
+    if (savedViewport && cy) {
+        const restore = () => {
+            cy.viewport({ pan: savedViewport.pan, zoom: savedViewport.zoom });
+            cy.style().update();
+            if (typeof window.updateBackgroundTransform === 'function') {
+                window.updateBackgroundTransform();
+            }
+            if (typeof window.enforcePanBounds === 'function') {
+                window.enforcePanBounds();
+            }
+        };
+        setTimeout(restore, 200);
+        setTimeout(restore, 500); // повтор для надёжности
+    }
+
+    if (skipAutoFit && typeof window.setSkipAutoFit === 'function') {
+        setTimeout(() => window.setSkipAutoFit(false), 600);
+    }
+}

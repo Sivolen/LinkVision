@@ -146,27 +146,29 @@ export async function addDeviceToGraph(device) {
         if (groupNode && groupNode.length) groupParent = `group_${device.group_id}`;
     }
 
-    // Формируем строку IP для отображения в подписи
     const ipLabel = (device.ips && device.ips.length) ? device.ips.join(', ') : '';
 
-    cy.add({
-        group: 'nodes',
-        data: {
-            id: String(device.id),
-            name: device.name,
-            ip: ipLabel,
-            ips: device.ips || [],
-            type_id: device.type_id,
-            group_id: device.group_id,
-            parent: groupParent,
-            monitoring_enabled: device.monitoring_enabled ? 'true' : 'false',
-            status: device.status || 'up',
-            iconUrl: device.iconUrl || '',
-            width: device.width || null,
-            height: device.height || null,
-            fontSize: device.font_size || null
-        },
-        position: { x: device.x || 100, y: device.y || 100 }
+    // Добавляем узел внутри batch
+    cy.batch(() => {
+        cy.add({
+            group: 'nodes',
+            data: {
+                id: String(device.id),
+                name: device.name,
+                ip: ipLabel,
+                ips: device.ips || [],
+                type_id: device.type_id,
+                group_id: device.group_id,
+                parent: groupParent,
+                monitoring_enabled: device.monitoring_enabled ? 'true' : 'false',
+                status: device.status || 'up',
+                iconUrl: device.iconUrl || '',
+                width: device.width || null,
+                height: device.height || null,
+                fontSize: device.font_size || null
+            },
+            position: { x: device.x || 100, y: device.y || 100 }
+        });
     });
     cy.style().update();
 }
