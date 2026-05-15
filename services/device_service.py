@@ -1,4 +1,7 @@
 import ipaddress
+
+from cachetools import TTLCache
+
 from models import Device, DeviceIP, DeviceHistory, db, DeviceType, Group, Map
 from utils.logger import api_logger
 from sqlalchemy.exc import IntegrityError
@@ -265,26 +268,18 @@ def update_devices_positions(updates):
 
 
 # --- Кэш для типов устройств ---
-_types_cache = None
-_types_cache_lock = __import__("threading").Lock()
+_types_cache = TTLCache(maxsize=1, ttl=600)
 
 
 def get_cached_types():
-    """Вернуть список типов устройств из кэша (бесконечный TTL, инвалидация вручную)."""
-    global _types_cache
-    if _types_cache is None:
-        with _types_cache_lock:
-            if _types_cache is None:
-                types = DeviceType.query.all()
-                _types_cache = [
-                    {"id": t.id, "name": t.name, "width": t.width, "height": t.height}
-                    for t in types
-                ]
-    return _types_cache
+    if "types" not in _types_cache:
+        types = DeviceType.query.all()
+        _types_cache["types"] = [
+            {"id": t.id, "name": t.name, "width": t.width, "height": t.height}
+            for t in types
+        ]
+    return _types_cache["types"]
 
 
 def invalidate_types_cache():
-    """Сбросить кэш типов устройств (вызывать после изменения DeviceType)."""
-    global _types_cache
-    with _types_cache_lock:
-        _types_cache = None
+    _types_cache.pop("types", None)
