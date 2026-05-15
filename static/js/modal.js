@@ -287,50 +287,39 @@ window.saveDevice = async function() {
         });
     }
 
-    // Сохраняем текущий viewport
-    let savedViewport = null;
-    if (window.cy) {
-        savedViewport = {
-            pan: window.cy.pan(),
-            zoom: window.cy.zoom()
-        };
-    }
-
-    // Отключаем автофит на время перезагрузки
-    if (typeof window.setSkipAutoFit === 'function') {
-        window.setSkipAutoFit(true);
-    }
-
-    // Перезагружаем карту
-    if (typeof window.reloadMapElements === 'function') {
-        window.reloadMapElements();
-    }
-
-    // Восстанавливаем viewport после загрузки
-    if (savedViewport && window.cy) {
-        const restore = () => {
-            window.cy.viewport({
-                pan: savedViewport.pan,
-                zoom: savedViewport.zoom
-            });
-            window.cy.style().update();
-            if (typeof window.updateBackgroundTransform === 'function') {
-                window.updateBackgroundTransform();
+    // Используем общую функцию восстановления viewport
+    if (typeof window.withViewportRestore === 'function') {
+        window.withViewportRestore(() => {
+            if (typeof window.reloadMapElements === 'function') {
+                window.reloadMapElements();
             }
-            if (typeof window.enforcePanBounds === 'function') {
-                window.enforcePanBounds();
-            }
-        };
-        setTimeout(restore, 200);
-        setTimeout(restore, 500); // повтор для надёжности
-    }
-
-    // Включаем автофит обратно
-    setTimeout(() => {
-        if (typeof window.setSkipAutoFit === 'function') {
-            window.setSkipAutoFit(false);
+        });
+    } else {
+        // fallback (старый код) - можно оставить на всякий случай
+        let savedViewport = null;
+        if (window.cy) {
+            savedViewport = { pan: window.cy.pan(), zoom: window.cy.zoom() };
         }
-    }, 600);
+        if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(true);
+        if (typeof window.reloadMapElements === 'function') window.reloadMapElements();
+        if (savedViewport && window.cy) {
+            setTimeout(() => {
+                window.cy.viewport({ pan: savedViewport.pan, zoom: savedViewport.zoom });
+                window.cy.style().update();
+                if (typeof window.updateBackgroundTransform === 'function') window.updateBackgroundTransform();
+                if (typeof window.enforcePanBounds === 'function') window.enforcePanBounds();
+            }, 200);
+            setTimeout(() => {
+                window.cy.viewport({ pan: savedViewport.pan, zoom: savedViewport.zoom });
+                window.cy.style().update();
+                if (typeof window.updateBackgroundTransform === 'function') window.updateBackgroundTransform();
+                if (typeof window.enforcePanBounds === 'function') window.enforcePanBounds();
+            }, 500);
+        }
+        setTimeout(() => {
+            if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(false);
+        }, 600);
+    }
 
     if (typeof window.loadSidebarMaps === 'function') {
         setTimeout(() => window.loadSidebarMaps(), 200);
@@ -361,8 +350,29 @@ window.deleteDevice = function(deviceId) {
                 if (typeof window.removeDeviceFromGraph === 'function') {
                     window.removeDeviceFromGraph(deviceId);
                 }
+
+                // Используем общую функцию восстановления viewport
+                if (typeof window.withViewportRestore === 'function') {
+                    window.withViewportRestore(() => {
+                        if (typeof window.reloadMapElements === 'function') {
+                            window.reloadMapElements();
+                        }
+                    });
+                } else {
+                    // fallback
+                    let savedViewport = null;
+                    if (window.cy) savedViewport = { pan: window.cy.pan(), zoom: window.cy.zoom() };
+                    if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(true);
+                    if (typeof window.reloadMapElements === 'function') window.reloadMapElements();
+                    if (savedViewport && window.cy) {
+                        setTimeout(() => window.cy.viewport(savedViewport), 200);
+                        setTimeout(() => window.cy.viewport(savedViewport), 500);
+                    }
+                    setTimeout(() => { if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(false); }, 600);
+                }
+
                 deviceModal.hide();
-                showToast('Информация', 'Устройство уже было удалено', 'info');
+                showToast('Успешно', 'Устройство удалено', 'success');
                 return;
             }
             if (!res.ok) {
@@ -1051,42 +1061,22 @@ window.saveShape = function() {
         return res.json();
     })
     .then(() => {
-        // ---- Сохраняем viewport перед перезагрузкой ----
-        let savedViewport = null;
-        if (window.cy) {
-            savedViewport = {
-                pan: window.cy.pan(),
-                zoom: window.cy.zoom()
-            };
+        if (typeof window.withViewportRestore === 'function') {
+            window.withViewportRestore(() => {
+                reloadMapElements();
+            });
+        } else {
+            // fallback
+            let savedViewport = null;
+            if (window.cy) savedViewport = { pan: window.cy.pan(), zoom: window.cy.zoom() };
+            if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(true);
+            reloadMapElements();
+            if (savedViewport && window.cy) {
+                setTimeout(() => window.cy.viewport(savedViewport), 200);
+                setTimeout(() => window.cy.viewport(savedViewport), 500);
+            }
+            setTimeout(() => { if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(false); }, 600);
         }
-        // Отключаем автофит на время перезагрузки
-        if (typeof window.setSkipAutoFit === 'function') {
-            window.setSkipAutoFit(true);
-        }
-        // Перезагружаем карту
-        reloadMapElements();
-        // Восстанавливаем viewport
-        if (savedViewport && window.cy) {
-            const restore = () => {
-                window.cy.viewport({
-                    pan: savedViewport.pan,
-                    zoom: savedViewport.zoom
-                });
-                window.cy.style().update();
-                if (typeof window.updateBackgroundTransform === 'function')
-                    window.updateBackgroundTransform();
-                if (typeof window.enforcePanBounds === 'function')
-                    window.enforcePanBounds();
-            };
-            setTimeout(restore, 200);
-            setTimeout(restore, 500);
-        }
-        // Включаем автофит обратно
-        setTimeout(() => {
-            if (typeof window.setSkipAutoFit === 'function')
-                window.setSkipAutoFit(false);
-        }, 600);
-        // --------------------------------------------
         shapeModal.hide();
         showToast('Успешно', id ? 'Фигура обновлена' : 'Фигура создана', 'success');
     })
@@ -1104,38 +1094,21 @@ window.deleteShape = function(id) {
         })
         .then(async res => {
             if (!res.ok) throw new Error(await getErrorMessage(res));
-            // ---- Сохраняем viewport ----
-            let savedViewport = null;
-            if (window.cy) {
-                savedViewport = {
-                    pan: window.cy.pan(),
-                    zoom: window.cy.zoom()
-                };
+            if (typeof window.withViewportRestore === 'function') {
+                window.withViewportRestore(() => {
+                    reloadMapElements();
+                });
+            } else {
+                let savedViewport = null;
+                if (window.cy) savedViewport = { pan: window.cy.pan(), zoom: window.cy.zoom() };
+                if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(true);
+                reloadMapElements();
+                if (savedViewport && window.cy) {
+                    setTimeout(() => window.cy.viewport(savedViewport), 200);
+                    setTimeout(() => window.cy.viewport(savedViewport), 500);
+                }
+                setTimeout(() => { if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(false); }, 600);
             }
-            if (typeof window.setSkipAutoFit === 'function') {
-                window.setSkipAutoFit(true);
-            }
-            reloadMapElements();
-            if (savedViewport && window.cy) {
-                const restore = () => {
-                    window.cy.viewport({
-                        pan: savedViewport.pan,
-                        zoom: savedViewport.zoom
-                    });
-                    window.cy.style().update();
-                    if (typeof window.updateBackgroundTransform === 'function')
-                        window.updateBackgroundTransform();
-                    if (typeof window.enforcePanBounds === 'function')
-                        window.enforcePanBounds();
-                };
-                setTimeout(restore, 200);
-                setTimeout(restore, 500);
-            }
-            setTimeout(() => {
-                if (typeof window.setSkipAutoFit === 'function')
-                    window.setSkipAutoFit(false);
-            }, 600);
-            // ---------------------------------
             shapeModal.hide();
             showToast('Успешно', 'Фигура удалена', 'success');
         })
@@ -1382,21 +1355,23 @@ window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkTyp
             } else {
                 label = `${tgtIface} ↔ ${srcIface}`;
             }
-            window.cy.add({
-                group: 'edges',
-                data: {
-                    id: `link_${data.id}`,
-                    source: String(sourceId),
-                    target: String(targetId),
-                    label: label,
-                    srcIface: srcIface,
-                    tgtIface: tgtIface,
-                    link_type: linkType,
-                    color: lineColor,
-                    width: lineWidth,
-                    style: lineStyle,
-                    font_size: fontSize
-                }
+            window.cy.batch(() => {
+                window.cy.add({
+                    group: 'edges',
+                    data: {
+                        id: `link_${data.id}`,
+                        source: String(sourceId),
+                        target: String(targetId),
+                        label: label,
+                        srcIface: srcIface,
+                        tgtIface: tgtIface,
+                        link_type: linkType,
+                        color: lineColor,
+                        width: lineWidth,
+                        style: lineStyle,
+                        font_size: fontSize
+                    }
+                });
             });
             if (typeof window.resetLinkMode === 'function') window.resetLinkMode();
             showToast('Успешно', 'Связь создана', 'success');
