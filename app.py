@@ -155,6 +155,17 @@ def create_app():
     def page_not_found(e):
         return render_template('404.html'), 404
 
+    @socketio.on('request_status')
+    def handle_request_status(data):
+        map_id = data.get('map_id')
+        if not map_id:
+            return
+        from models import Device
+        with app.app_context():
+            devices = Device.query.filter_by(map_id=map_id, monitoring_enabled=True).all()
+            statuses = [{"id": d.id, "status": d.status} for d in devices]
+            socketio.emit('device_status_batch', statuses, room=f"map_{map_id}")
+
     return app
 
 

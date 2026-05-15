@@ -371,6 +371,7 @@ let wasDisconnected = false;
                 if (window.debugMode) Logger.info('Socket reconnected after', attemptNumber, 'attempts');
                 if (window.currentMapId) {
                     window.socket.emit('join_room', `map_${window.currentMapId}`);
+                    window.socket.emit('request_status', { map_id: window.currentMapId });
                 }
                 updateBackendStatus(true);
                 if (wasDisconnected) {
