@@ -354,9 +354,7 @@ window.deleteDevice = function(deviceId) {
     confirmAction('Удаление устройства', 'Вы уверены, что хотите удалить это устройство?', () => {
         fetch(`/api/device/${deviceId}`, {
             method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCsrfToken()
-            }
+            headers: { 'X-CSRFToken': getCsrfToken() }
         })
         .then(async res => {
             if (res.status === 404) {
@@ -374,9 +372,45 @@ window.deleteDevice = function(deviceId) {
             if (typeof window.removeDeviceFromGraph === 'function') {
                 window.removeDeviceFromGraph(deviceId);
             }
+
+            // ---- Сохраняем viewport перед перезагрузкой ----
+            let savedViewport = null;
+            if (window.cy) {
+                savedViewport = { pan: window.cy.pan(), zoom: window.cy.zoom() };
+            }
+            if (typeof window.setSkipAutoFit === 'function') {
+                window.setSkipAutoFit(true);
+            }
+
             if (typeof window.reloadMapElements === 'function') {
                 window.reloadMapElements();
             }
+
+            // Восстанавливаем viewport
+            if (savedViewport && window.cy) {
+                const restore = () => {
+                    window.cy.viewport({
+                        pan: savedViewport.pan,
+                        zoom: savedViewport.zoom
+                    });
+                    window.cy.style().update();
+                    if (typeof window.updateBackgroundTransform === 'function') {
+                        window.updateBackgroundTransform();
+                    }
+                    if (typeof window.enforcePanBounds === 'function') {
+                        window.enforcePanBounds();
+                    }
+                };
+                setTimeout(restore, 200);
+                setTimeout(restore, 500); // повтор для надёжности
+            }
+
+            setTimeout(() => {
+                if (typeof window.setSkipAutoFit === 'function') {
+                    window.setSkipAutoFit(false);
+                }
+            }, 600);
+
             deviceModal.hide();
             showToast('Успешно', 'Устройство удалено', 'success');
         })
