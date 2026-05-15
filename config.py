@@ -39,7 +39,7 @@ class Config:
         "pool_pre_ping": True,  # проверять соединение перед использованием
     }
 
-    VERSION = "1.8.0"
+    VERSION = "1.9.0"
 
     # Логирование
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
