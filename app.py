@@ -3,6 +3,7 @@ import secrets
 from pathlib import Path
 
 from flask import Flask, request, render_template
+from flask_migrate import Migrate
 from flask_socketio import join_room
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import event
@@ -69,6 +70,8 @@ def create_app():
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     init_extensions(app)
 
+    migrate = Migrate(app, db)
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(main_bp)
@@ -79,7 +82,7 @@ def create_app():
         return db.session.get(User, int(user_id))
 
     with app.app_context():
-        db.create_all()
+        # db.create_all()
         if "sqlite" in app.config["SQLALCHEMY_DATABASE_URI"]:
 
             @event.listens_for(db.engine, "connect")

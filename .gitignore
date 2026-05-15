@@ -66,3 +66,5 @@ yarn-error.log
 .env.*.local
 /migrations/
 /static/uploads/
+
+migrations/versions/*.pyc
