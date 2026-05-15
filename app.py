@@ -80,12 +80,14 @@ def create_app():
 
     with app.app_context():
         db.create_all()
-        if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
-            @event.listens_for(db.engine, 'connect')
+        if "sqlite" in app.config["SQLALCHEMY_DATABASE_URI"]:
+
+            @event.listens_for(db.engine, "connect")
             def set_sqlite_pragma(dbapi_connection, connection_record):
                 cursor = dbapi_connection.cursor()
-                cursor.execute('PRAGMA foreign_keys=ON')
+                cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
+
         # --- Создание администратора, если ни одного нет ---
         if not User.query.filter_by(is_admin=True).first():
             import secrets
@@ -153,18 +155,21 @@ def create_app():
 
     @app.errorhandler(404)
     def page_not_found(e):
-        return render_template('404.html'), 404
+        return render_template("404.html"), 404
 
-    @socketio.on('request_status')
+    @socketio.on("request_status")
     def handle_request_status(data):
-        map_id = data.get('map_id')
+        map_id = data.get("map_id")
         if not map_id:
             return
         from models import Device
+
         with app.app_context():
-            devices = Device.query.filter_by(map_id=map_id, monitoring_enabled=True).all()
+            devices = Device.query.filter_by(
+                map_id=map_id, monitoring_enabled=True
+            ).all()
             statuses = [{"id": d.id, "status": d.status} for d in devices]
-            socketio.emit('device_status_batch', statuses, room=f"map_{map_id}")
+            socketio.emit("device_status_batch", statuses, room=f"map_{map_id}")
 
     return app
 

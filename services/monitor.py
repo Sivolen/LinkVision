@@ -8,6 +8,7 @@ from cachetools import TTLCache
 
 try:
     from ping3 import ping
+
     PING3_AVAILABLE = True
 except ImportError:
     PING3_AVAILABLE = False
@@ -21,6 +22,7 @@ _executor = None
 _lock = threading.Lock()
 settings_cache = TTLCache(maxsize=10, ttl=2)
 
+
 def init_monitor(app):
     global app_instance, _executor
     with _lock:
@@ -29,6 +31,7 @@ def init_monitor(app):
         app_instance = app
         _executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         monitor_logger.info("Monitor initialized with new executor")
+
 
 def start_monitor():
     global _monitor_thread, _monitor_stop_flag
@@ -44,6 +47,7 @@ def start_monitor():
         _monitor_thread.start()
         monitor_logger.info("Monitor started")
 
+
 def stop_monitor():
     global _monitor_stop_flag, _monitor_thread, _executor
     with _lock:
@@ -55,6 +59,7 @@ def stop_monitor():
             _executor = None
         _monitor_thread = None
         monitor_logger.info("Monitor stopped")
+
 
 def ping_host(ip, count=1):
     if PING3_AVAILABLE:
@@ -75,10 +80,16 @@ def ping_host(ip, count=1):
                 cmd = ["ping", param, str(count), "-w", str(timeout_seconds * 1000), ip]
             else:
                 cmd = ["ping", param, str(count), "-W", str(timeout_seconds), ip]
-            output = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout_seconds * count + 2)
+            output = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=timeout_seconds * count + 2,
+            )
             return output.returncode == 0
         except Exception:
             return False
+
 
 def get_setting(key, default):
     cache_key = f"setting_{key}"
@@ -91,6 +102,7 @@ def get_setting(key, default):
             settings_cache[cache_key] = value
             return value
     return default
+
 
 def monitor_loop():
     global last_emit_time, _monitor_stop_flag, _executor
@@ -110,7 +122,9 @@ def monitor_loop():
             # ---- ПОДГОТОВКА ДАННЫХ ДО ПОТОКОВ (ОДИН РАЗ ЗА ЦИКЛ) ----
             with app_instance.app_context():
                 devices = Device.query.filter_by(monitoring_enabled=True).all()
-                monitor_logger.info(f"Found {len(devices)} devices with monitoring enabled")
+                monitor_logger.info(
+                    f"Found {len(devices)} devices with monitoring enabled"
+                )
                 if not devices:
                     time.sleep(5)
                     continue
@@ -141,10 +155,14 @@ def monitor_loop():
             futures = {}
             for dev in devices:
                 try:
-                    future = _executor.submit(_check_device, dev.id, device_ips[dev.id], ping_count)
+                    future = _executor.submit(
+                        _check_device, dev.id, device_ips[dev.id], ping_count
+                    )
                     futures[future] = dev
                 except RuntimeError as e:
-                    monitor_logger.error(f"Failed to submit check for device {dev.id}: {e}")
+                    monitor_logger.error(
+                        f"Failed to submit check for device {dev.id}: {e}"
+                    )
                     continue
 
             results = []
@@ -167,13 +185,17 @@ def monitor_loop():
                         continue
                     if device.status != new_status:
                         devices_to_update.append((device, new_status))
-                        history_entries.append(DeviceHistory(
-                            device_id=device.id,
-                            old_status=device.status,
-                            new_status=new_status,
-                        ))
+                        history_entries.append(
+                            DeviceHistory(
+                                device_id=device.id,
+                                old_status=device.status,
+                                new_status=new_status,
+                            )
+                        )
                         last_emit_time[device.id] = current_time
-                        monitor_logger.info(f"Device {device.id} status change: {device.status} -> {new_status}")
+                        monitor_logger.info(
+                            f"Device {device.id} status change: {device.status} -> {new_status}"
+                        )
 
             if devices_to_update:
                 with app_instance.app_context():
@@ -187,23 +209,32 @@ def monitor_loop():
 
                     for device, new_status in devices_to_update:
                         room_name = f"map_{device.map_id}"
-                        socketio.emit("device_status", {
-                            "id": device.id,
-                            "status": new_status,
-                            "map_id": device.map_id,
-                        }, room=room_name)
-                        monitor_logger.info(f"[{new_status.upper()}] Sent: id={device.id}, status={new_status}, room={room_name}")
+                        socketio.emit(
+                            "device_status",
+                            {
+                                "id": device.id,
+                                "status": new_status,
+                                "map_id": device.map_id,
+                            },
+                            room=room_name,
+                        )
+                        monitor_logger.info(
+                            f"[{new_status.upper()}] Sent: id={device.id}, status={new_status}, room={room_name}"
+                        )
             else:
                 monitor_logger.debug("No status changes this cycle")
 
         except Exception as e:
             monitor_logger.error(f"Monitor error: {e}")
             import traceback
+
             monitor_logger.error(traceback.format_exc())
 
         elapsed = time.time() - start_time
         sleep_time = max(0, ping_interval - elapsed)
-        monitor_logger.debug(f"Cycle completed in {elapsed:.2f}s, sleeping {sleep_time:.2f}s")
+        monitor_logger.debug(
+            f"Cycle completed in {elapsed:.2f}s, sleeping {sleep_time:.2f}s"
+        )
         time.sleep(sleep_time)
 
     monitor_logger.info("Monitor loop terminated")

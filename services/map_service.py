@@ -1,6 +1,8 @@
 import os
 from cachetools import TTLCache
 from flask import url_for
+from sqlalchemy.orm import joinedload
+from sqlalchemy import func
 from models import (
     Map,
     Group,
@@ -90,25 +92,31 @@ def get_sidebar_maps_data(user):
     map_ids = [m.id for m in maps]
 
     from sqlalchemy import func
-    stats = db.session.query(
-        Device.map_id, func.count(Device.id).label("down_count")
-    ).filter(
-        Device.map_id.in_(map_ids),
-        Device.monitoring_enabled is True,
-        Device.status != "up"
-    ).group_by(Device.map_id).all()
+
+    stats = (
+        db.session.query(Device.map_id, func.count(Device.id).label("down_count"))
+        .filter(
+            Device.map_id.in_(map_ids),
+            Device.monitoring_enabled,
+            Device.status != "up",
+        )
+        .group_by(Device.map_id)
+        .all()
+    )
 
     stat_dict = {stat[0]: stat[1] for stat in stats}
 
     result = []
     for m in maps:
         down_count = stat_dict.get(m.id, 0)
-        result.append({
-            "id": m.id,
-            "name": m.name,
-            "owner_id": m.owner_id,
-            "down_count": down_count,
-        })
+        result.append(
+            {
+                "id": m.id,
+                "name": m.name,
+                "owner_id": m.owner_id,
+                "down_count": down_count,
+            }
+        )
 
     sidebar_cache[cache_key] = result
     return result
@@ -168,11 +176,38 @@ def update_user_viewport(user_id, map_id, pan_x, pan_y, zoom):
 
 def get_map_elements(map_id):
     """Получить все элементы карты (устройства, связи, группы) для Cytoscape."""
-    map_obj = Map.query.get_or_404(map_id)
+    # Проверка существования карты (выбросит 404, если нет)
+    Map.query.get_or_404(map_id)
+
+    # Устройства с подгрузкой типов и IP (один запрос)
+    devices = (
+        Device.query.options(joinedload(Device.type), joinedload(Device.ips))
+        .filter_by(map_id=map_id)
+        .all()
+    )
+
+    # Связи, фигуры, группы
+    links = Link.query.filter_by(map_id=map_id).all()
+    shapes = MapShape.query.filter_by(map_id=map_id).all()
+    groups = Group.query.filter_by(map_id=map_id).all()
+
+    # Группы, в которых есть хотя бы одно устройство (один запрос)
+    group_device_counts = (
+        db.session.query(Group.id, func.count(Device.id).label("device_count"))
+        .outerjoin(Device, Device.group_id == Group.id)
+        .filter(Group.map_id == map_id)
+        .group_by(Group.id)
+        .having(func.count(Device.id) > 0)
+        .all()
+    )
+
+    group_ids_with_devices = {gid for gid, _ in group_device_counts}
+
     nodes = []
     edges = []
 
-    for dev in map_obj.devices:
+    # Формируем узлы (устройства)
+    for dev in devices:
         icon_url = None
         width = None
         height = None
@@ -187,7 +222,6 @@ def get_map_elements(map_id):
             width = dev.type.width
             height = dev.type.height
 
-        # Формируем строку IP-адресов
         ip_label = ", ".join([ip.ip_address for ip in dev.ips]) if dev.ips else ""
 
         nodes.append(
@@ -196,7 +230,7 @@ def get_map_elements(map_id):
                 "data": {
                     "id": str(dev.id),
                     "label": f"{dev.name}\n{ip_label}",
-                    "status": dev.status,  # 'up', 'down', 'partial'
+                    "status": dev.status,
                     "monitoring_enabled": "true" if dev.monitoring_enabled else "false",
                     "iconUrl": icon_url or "",
                     "name": dev.name,
@@ -211,7 +245,8 @@ def get_map_elements(map_id):
             }
         )
 
-    for link in map_obj.links:
+    # Формируем рёбра (связи)
+    for link in links:
         if not (link.source_device_id and link.target_device_id):
             api_logger.warning(f"Skipping broken link {link.id}")
             continue
@@ -240,7 +275,9 @@ def get_map_elements(map_id):
                 },
             }
         )
-    shapes = [
+
+    # Формируем фигуры
+    shapes_out = [
         {
             "id": sh.id,
             "shape_type": sh.shape_type,
@@ -253,15 +290,17 @@ def get_map_elements(map_id):
             "description": sh.description,
             "font_size": sh.font_size,
         }
-        for sh in map_obj.shapes
+        for sh in shapes
     ]
 
-    groups = [
+    # Формируем группы (только с устройствами)
+    groups_out = [
         {"id": g.id, "name": g.name, "color": g.color, "font_size": g.font_size}
-        for g in map_obj.groups
-        if g.devices.count() > 0
+        for g in groups
+        if g.id in group_ids_with_devices
     ]
-    return {"nodes": nodes, "edges": edges, "groups": groups, "shapes": shapes}
+
+    return {"nodes": nodes, "edges": edges, "groups": groups_out, "shapes": shapes_out}
 
 
 def get_map_groups(map_id):
