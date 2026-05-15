@@ -144,17 +144,23 @@ def create_device(
                     ip_clean = ip.strip()
                     if ip_clean and ip_clean not in seen:
                         # валидация IP уже выполнена в API
-                        db.session.add(DeviceIP(device_id=device.id, ip_address=ip_clean))
+                        db.session.add(
+                            DeviceIP(device_id=device.id, ip_address=ip_clean)
+                        )
                         seen.add(ip_clean)
             db.session.commit()
 
-        api_logger.info(f"Device created: ID={device.id}, name={device.name}, ips={ips}")
+        api_logger.info(
+            f"Device created: ID={device.id}, name={device.name}, ips={ips}"
+        )
         return device
 
     except IntegrityError as e:
         db.session.rollback()
         api_logger.error(f"Integrity error creating device: {e}")
-        raise ValueError("Не удалось создать устройство: нарушение ссылочной целостности. Проверьте map_id и type_id.")
+        raise ValueError(
+            "Не удалось создать устройство: нарушение ссылочной целостности. Проверьте map_id и type_id."
+        )
     except Exception as e:
         db.session.rollback()
         api_logger.error(f"Error creating device: {e}")

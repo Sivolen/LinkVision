@@ -208,7 +208,8 @@ def create_device():
             device_service.validate_group_for_map(data["group_id"], data["map_id"])
         api_logger.info(f"Creating device: {data}")
         api_logger.info(
-            f"Creating device: map_id={data.get('map_id')}, type_id={data.get('type_id')}, name={data.get('name')}")
+            f"Creating device: map_id={data.get('map_id')}, type_id={data.get('type_id')}, name={data.get('name')}"
+        )
         dev = device_service.create_device(
             map_id=data["map_id"],
             type_id=data["type_id"],
