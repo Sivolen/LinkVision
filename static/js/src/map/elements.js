@@ -173,7 +173,15 @@ export async function addDeviceToGraph(device) {
 
 export function removeDeviceFromGraph(deviceId) {
     const cy = getCy();
-    if (cy) cy.getElementById(String(deviceId)).remove();
+    if (!cy) return;
+    const node = cy.getElementById(String(deviceId));
+    if (node.length) {
+        // Останавливаем пульсацию, если она была
+        if (typeof window.removePulsingNode === 'function') {
+            window.removePulsingNode(cy, node);
+        }
+        node.remove();
+    }
 }
 
 export function updateDevice(device) {

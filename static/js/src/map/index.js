@@ -99,6 +99,42 @@ export function initMap(id) {
             statusBatchTimeout = null;
         }, 50);
     });
+    window.socket.on('device_status_batch', (statuses) => {
+        if (!cy) return;
+        cy.batch(() => {
+            statuses.forEach(item => {
+                const node = cy.getElementById(String(item.id));
+                if (node.length && node.data('status') !== item.status) {
+                    const oldStatus = node.data('status');
+                    node.data('status', item.status);
+                    // Остановить старую пульсацию, если была
+                    if (typeof removePulsingNode === 'function') {
+                        removePulsingNode(cy, node);
+                    }
+                    // Запустить новую пульсацию для down/partial
+                    if (item.status === 'down') {
+                        if (typeof addPulsingNode === 'function') {
+                            addPulsingNode(cy, node, 'down');
+                        }
+                    } else if (item.status === 'partial') {
+                        if (typeof addPulsingNode === 'function') {
+                            addPulsingNode(cy, node, 'partial');
+                        }
+                    }
+                    // Обновить счётчик проблемных устройств в сайдбаре
+                    if (typeof updateSidebarCounter === 'function') {
+                        // Если статус изменился с up на down/partial – увеличиваем счётчик
+                        const becameDown = (item.status === 'down' || item.status === 'partial') && (oldStatus === 'up');
+                        const becameUp = item.status === 'up' && (oldStatus === 'down' || oldStatus === 'partial');
+                        if (becameDown) updateSidebarCounter(mapId, true);
+                        if (becameUp) updateSidebarCounter(mapId, false);
+                    }
+                }
+            });
+        });
+        // Принудительно обновляем стили (для применения селекторов статусов)
+        cy.style().update();
+    });
 }
 
 window.zoomIn = () => {
