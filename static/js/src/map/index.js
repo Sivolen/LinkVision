@@ -136,23 +136,18 @@ export function initMap(id) {
         // Принудительно обновляем стили (для применения селекторов статусов)
         cy.style().update();
     });
-    window.socket.on('map_updated', (data) => {
-        if (skipNextMapUpdate) {
-            console.log('⏭️ Skipping map reload (self change)');
-            skipNextMapUpdate = false;
-            return;
-        }
-        if (Number(data.map_id) === mapId) {
-            console.log('🔄 Reloading map from other client');
-            if (typeof window.withViewportRestore === 'function') {
-                window.withViewportRestore(() => {
-                    window.reloadMapElements();
-                });
-            } else {
-                window.reloadMapElements();
-            }
-        }
-    });
+window.socket.on('map_updated', (data) => {
+    if (skipNextMapUpdate) {
+        console.log('⏭️ Skipping map reload (self change)');
+        return;   // не сбрасываем флаг здесь
+    }
+    if (Number(data.map_id) === mapId) {
+        console.log('🔄 Reloading map from other client');
+        window.withViewportRestore(() => {
+            window.reloadMapElements();
+        });
+    }
+});
 }
 
 window.setSkipNextMapUpdate = () => {

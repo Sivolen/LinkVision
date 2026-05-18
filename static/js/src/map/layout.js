@@ -75,6 +75,7 @@ async function saveAllPositions() {
     if (!updates.length) return;
     const toast = showToast('Сохранение', 'Сохранение позиций...', 'info', { autoHide: false });
     try {
+        window.setSkipNextMapUpdate();
         const res = await fetch('/api/devices/positions', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },

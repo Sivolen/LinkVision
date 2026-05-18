@@ -101,7 +101,7 @@ export function initInteractions(cy) {
                 .catch(console.error)
                 .finally(() => {
                     // Сбрасываем флаг через 500 мс, чтобы map_updated от своего же запроса был проигнорирован
-                    setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+                    setTimeout(() => window.clearSkipNextMapUpdate(), 2000);
                 });
         }, 500);
         selectedNodes.forEach(n => delete n._private.scratch._dragStartPos);
@@ -122,21 +122,71 @@ export function initInteractions(cy) {
         const shapeId = node.id().replace('shape_', '');
         clearTimeout(dragTimeouts[shapeId]);
         dragTimeouts[shapeId] = setTimeout(() => {
+            window.setSkipNextMapUpdate();
             fetch(`/api/shape/${shapeId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify({ x: pos.x, y: pos.y })
-            }).catch(err => console.error('Error saving shape position:', err));
+            })
+            .catch(err => console.error('Error saving shape position:', err))
+            .finally(() => {
+                setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            });
             delete dragTimeouts[shapeId];
         }, 500);
         if (typeof window.saveState === 'function') window.saveState('Перемещение фигуры');
     });
-// Перетаскивание группы
-//cy.on('dragfree', 'node[isGroup]', function(evt) {
-//    if (window.isOperator || window.dragLocked) return;
-//    // Сохраняем состояние после перемещения группы
-//    if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
-//});
+    // Перетаскивание группы
+    //cy.on('dragfree', 'node[isGroup]', function(evt) {
+    //    if (window.isOperator || window.dragLocked) return;
+    //    // Сохраняем состояние после перемещения группы
+    //    if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
+    //});
+    cy.on('dragfree', 'node[isGroup]', function(evt) {
+        if (window.isOperator || window.dragLocked) return;
+        const groupNode = evt.target;
+        const children = groupNode.children();
+        if (!children.length) return;
+
+        // Ограничение позиции группы границами фона (если есть)
+        let pos = groupNode.position();
+        const { width, height } = getBgDimensions();
+        if (width && height) {
+            const bounded = boundNodePosition(pos);
+            if (bounded.x !== pos.x || bounded.y !== pos.y) groupNode.position(bounded);
+            pos = groupNode.position();
+        }
+
+        // Собираем новые позиции всех дочерних устройств
+        const updates = children.map(child => ({
+            id: child.id(),
+            x: Math.round(child.position().x),
+            y: Math.round(child.position().y)
+        }));
+
+        clearTimeout(dragTimeouts[groupNode.id()]);
+        dragTimeouts[groupNode.id()] = setTimeout(() => {
+            window.setSkipNextMapUpdate();   // ставим флаг
+
+            Promise.all(updates.map(upd =>
+                fetch(`/api/device/${upd.id}/position`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify({ x: upd.x, y: upd.y })
+                })
+            ))
+            .then(() => {
+                if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
+            })
+            .catch(err => console.error('Error moving group:', err))
+            .finally(() => {
+                // Сбрасываем флаг через 2 секунды – достаточно, чтобы пережить все приходящие map_updated
+                setTimeout(() => window.clearSkipNextMapUpdate(), 2000);
+            });
+
+            delete dragTimeouts[groupNode.id()];
+        }, 500);
+    });
 
     // Клики по узлам
     cy.on('tap', 'node', function(evt) {
