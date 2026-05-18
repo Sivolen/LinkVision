@@ -36,6 +36,12 @@ class DeviceType(db.Model):
 
 
 class Device(db.Model):
+    __tablename__ = 'device'
+    __table_args__ = (
+        db.Index('idx_device_map_monitoring_status', 'map_id', 'monitoring_enabled', 'status'),
+        db.Index('idx_device_map_id', 'map_id'),
+        db.Index('idx_device_status', 'status'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     map_id = db.Column(db.Integer, db.ForeignKey("map.id"), index=True)
     type_id = db.Column(db.Integer, db.ForeignKey("device_type.id"))
@@ -79,6 +85,10 @@ class DeviceIP(db.Model):
 
 
 class Link(db.Model):
+    __tablename__ = 'link'
+    __table_args__ = (
+        db.Index('idx_link_map_id', 'map_id'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     map_id = db.Column(db.Integer, db.ForeignKey("map.id"), index=True)
     source_device_id = db.Column(db.Integer, db.ForeignKey("device.id"), index=True)
@@ -119,6 +129,10 @@ class Map(db.Model):
 
 
 class DeviceHistory(db.Model):
+    __tablename__ = 'device_history'
+    __table_args__ = (
+        db.Index('idx_device_history_device_id_timestamp', 'device_id', 'timestamp'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     device_id = db.Column(db.Integer, db.ForeignKey("device.id"), index=True)
     old_status = db.Column(db.String(10))

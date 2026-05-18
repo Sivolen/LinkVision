@@ -11,6 +11,10 @@ export function getCy() {
 
 export function initCy(mapId, onReady) {
     if (cy) {
+        // Останавливаем пульсацию перед уничтожением старого экземпляра
+        if (typeof window.stopAllPulsing === 'function') {
+            window.stopAllPulsing();
+        }
         cy.destroy();
     }
     cy = cytoscape({
