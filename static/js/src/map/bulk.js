@@ -89,48 +89,23 @@ async function applyBulkEdit() {
     if (!promises.length) { alert('Нет изменений'); return; }
     await Promise.all(promises);
 
-    // Сохраняем текущий viewport
-    let savedViewport = null;
-    if (window.cy) {
-        savedViewport = {
-            pan: window.cy.pan(),
-            zoom: window.cy.zoom()
-        };
-    }
-
-    // Отключаем автофит на время перезагрузки
-    if (typeof window.setSkipAutoFit === 'function') {
-        window.setSkipAutoFit(true);
-    }
-
-    // Перезагружаем карту
-    reloadMapElements();
-
-    // Восстанавливаем viewport после загрузки
-    if (savedViewport && window.cy) {
-        const restore = () => {
-            window.cy.viewport({
-                pan: savedViewport.pan,
-                zoom: savedViewport.zoom
-            });
-            window.cy.style().update();
-            if (typeof window.updateBackgroundTransform === 'function') {
-                window.updateBackgroundTransform();
-            }
-            if (typeof window.enforcePanBounds === 'function') {
-                window.enforcePanBounds();
-            }
-        };
-        setTimeout(restore, 200);
-        setTimeout(restore, 500);
-    }
-
-    // Включаем автофит обратно
-    setTimeout(() => {
-        if (typeof window.setSkipAutoFit === 'function') {
-            window.setSkipAutoFit(false);
+    // Используем общую функцию восстановления viewport
+    if (typeof window.withViewportRestore === 'function') {
+        window.withViewportRestore(() => {
+            reloadMapElements();
+        });
+    } else {
+        // fallback (старый код)
+        let savedViewport = null;
+        if (window.cy) savedViewport = { pan: window.cy.pan(), zoom: window.cy.zoom() };
+        if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(true);
+        reloadMapElements();
+        if (savedViewport && window.cy) {
+            setTimeout(() => window.cy.viewport(savedViewport), 200);
+            setTimeout(() => window.cy.viewport(savedViewport), 500);
         }
-    }, 600);
+        setTimeout(() => { if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(false); }, 600);
+    }
 
     bootstrap.Modal.getInstance(document.getElementById('bulkEditModal')).hide();
 }
