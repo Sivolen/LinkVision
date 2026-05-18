@@ -247,6 +247,8 @@ window.saveDevice = async function() {
     if (btnLoader) btnLoader.classList.remove('d-none');
     if (saveBtn) saveBtn.disabled = true;
 
+    window.setSkipNextMapUpdate();
+
     fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
@@ -336,11 +338,13 @@ window.saveDevice = async function() {
         if (btnText) btnText.classList.remove('d-none');
         if (btnLoader) btnLoader.classList.add('d-none');
         if (saveBtn) saveBtn.disabled = false;
+        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
     });
 };
 
 window.deleteDevice = function(deviceId) {
     confirmAction('Удаление устройства', 'Вы уверены, что хотите удалить это устройство?', () => {
+        window.setSkipNextMapUpdate();
         fetch(`/api/device/${deviceId}`, {
             method: 'DELETE',
             headers: { 'X-CSRFToken': getCsrfToken() }
@@ -427,6 +431,9 @@ window.deleteDevice = function(deviceId) {
         .catch(err => {
             Logger.error('Ошибка удаления устройства:', err);
             showToast('Ошибка', err.message || 'Не удалось удалить устройство', 'error');
+        })
+        .finally(() => {
+            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
         });
     });
 };
@@ -693,7 +700,7 @@ function initFormHandler() {
             const body = isEdit
                 ? { name, color, font_size: fontSize }
                 : { map_id: window.currentMapId, name, color, font_size: fontSize };
-
+            window.setSkipNextMapUpdate();
             const res = await fetch(url, {
                 method,
                 headers: {
@@ -720,6 +727,7 @@ function initFormHandler() {
             if (btnText) btnText.classList.remove('d-none');
             if (btnLoader) btnLoader.classList.add('d-none');
             if (submitBtn) submitBtn.disabled = false;
+            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
         }
     });
 
@@ -862,7 +870,8 @@ window.editGroup = function(id, name, color, fontSize) {
 
 // ===== Удаление =====
 window.deleteGroup = async function(id, name) {
-    confirmAction('Удаление группы', `Удалить группу "${name}"? Устройства останутся без привязки.`, async () => {
+    confirmAction('Удаление группы', `Удалить группу "${name}"? ...`, async () => {
+        window.setSkipNextMapUpdate();
         try {
             const res = await fetch(`/api/group/${id}`, {
                 method: 'DELETE',
@@ -879,6 +888,8 @@ window.deleteGroup = async function(id, name) {
         } catch (err) {
             Logger.error('Delete error:', err);
             showToast('Ошибка', err.message || 'Не удалось удалить группу', 'error');
+        } finally {
+            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
         }
     });
 };
@@ -1047,7 +1058,7 @@ window.saveShape = function() {
 
     const url = id ? `/api/shape/${id}` : '/api/shape';
     const method = id ? 'PUT' : 'POST';
-
+    window.setSkipNextMapUpdate();
     fetch(url, {
         method: method,
         headers: {
@@ -1083,11 +1094,15 @@ window.saveShape = function() {
     .catch(err => {
         Logger.error('Error saving shape:', err);
         showToast('Ошибка', err.message, 'error');
+    })
+    .finally(() => {
+        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
     });
 };
 
 window.deleteShape = function(id) {
     confirmAction('Удаление фигуры', 'Удалить эту фигуру?', () => {
+        window.setSkipNextMapUpdate();
         fetch(`/api/shape/${id}`, {
             method: 'DELETE',
             headers: { 'X-CSRFToken': getCsrfToken() }
@@ -1115,6 +1130,9 @@ window.deleteShape = function(id) {
         .catch(err => {
             Logger.error('Error deleting shape:', err);
             showToast('Ошибка', err.message, 'error');
+        })
+        .finally(() => {
+            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
         });
     });
 };
@@ -1319,7 +1337,7 @@ window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkTyp
         showToast('Ошибка', 'Неверные ID устройств', 'error');
         return;
     }
-
+    window.setSkipNextMapUpdate();
     fetch('/api/link', {
         method: 'POST',
         headers: {
@@ -1382,11 +1400,15 @@ window.createLinkWithInterfaces = function(src, tgt, srcIface, tgtIface, linkTyp
         console.error(err);
         showToast('Ошибка', err.message || 'Не удалось создать связь', 'error');
     })
-    .finally(() => window.setLinkSaving(false));
+    .finally(() => {
+        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+        window.setLinkSaving(false);
+    });
 };
 
 window.updateLink = function(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
     const numericId = linkId.replace('link_', '');
+    window.setSkipNextMapUpdate();
     fetch(`/api/link/${numericId}`, {
         method: 'PUT',
         headers: {
@@ -1444,12 +1466,16 @@ window.updateLink = function(linkId, srcIface, tgtIface, linkType, lineColor, li
         console.error(err);
         showToast('Ошибка', err.message || 'Не удалось обновить связь', 'error');
     })
-    .finally(() => window.setLinkSaving(false));
+    .finally(() => {
+        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+        window.setLinkSaving(false);
+    });
 };
 
 window.deleteLink = function(linkId) {
     confirmAction('Удаление связи', 'Удалить эту связь?', () => {
         const numericId = String(linkId).replace('link_', '');
+        window.setSkipNextMapUpdate();
         fetch(`/api/link/${numericId}`, {
             method: 'DELETE',
             headers: { 'X-CSRFToken': getCsrfToken() }
@@ -1463,6 +1489,9 @@ window.deleteLink = function(linkId) {
         .catch(err => {
             console.error(err);
             showToast('Ошибка', err.message || 'Не удалось удалить связь', 'error');
+        })
+        .finally(() => {
+            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
         });
     });
 };
