@@ -205,6 +205,7 @@ let wasDisconnected = false;
         event.preventDefault();
         event.stopPropagation();
         confirmAction('Удаление карты', 'Удалить эту карту?', () => {
+            window.setSkipNextMapUpdate();
             fetch(`/api/map/${mapId}`, {
                 method: 'DELETE',
                 headers: { 'X-CSRFToken': getCsrfToken() }
@@ -229,7 +230,8 @@ let wasDisconnected = false;
             .catch(err => {
                 Logger.error('Error deleting map:', err);
                 showToast('Ошибка', 'Не удалось удалить карту', 'error');
-            });
+            })
+            .finally(() => setTimeout(() => window.clearSkipNextMapUpdate(), 2000));
         });
     };
 
@@ -256,6 +258,7 @@ let wasDisconnected = false;
                 try {
                     const data = JSON.parse(ev.target.result);
                     data.id = null;
+                    window.setSkipNextMapUpdate();
                     fetch('/api/map/import', {
                         method: 'POST',
                         headers: {
@@ -282,7 +285,8 @@ let wasDisconnected = false;
                     .catch(err => {
                         Logger.error(err);
                         alert(err.message || 'Ошибка при импорте');
-                    });
+                    })
+                    .finally(() => setTimeout(() => window.clearSkipNextMapUpdate(), 2000));
                 } catch (ex) {
                     alert('Некорректный JSON-файл');
                 }
@@ -405,7 +409,7 @@ if (editMapForm) {
         if (removeBg) {
             formData.append('remove_background', 'true');
         }
-
+        window.setSkipNextMapUpdate();
         fetch(`/api/map/${mapId}`, {
             method: 'PUT',
             headers: {
@@ -439,6 +443,7 @@ if (editMapForm) {
         .catch(err => {
             Logger.error(err);
             showToast('Ошибка', err.message || 'Ошибка при сохранении', 'error');
-        });
+        })
+        .finally(() => setTimeout(() => window.clearSkipNextMapUpdate(), 2000));
     });
 }
