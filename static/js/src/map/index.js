@@ -15,6 +15,7 @@ import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
 import { initUndoRedo } from './undoRedo.js';
 
 let mapId = null;
+let skipNextMapUpdate = false;
 
 export function initMap(id) {
     mapId = id;
@@ -135,8 +136,33 @@ export function initMap(id) {
         // Принудительно обновляем стили (для применения селекторов статусов)
         cy.style().update();
     });
+    window.socket.on('map_updated', (data) => {
+        if (skipNextMapUpdate) {
+            console.log('⏭️ Skipping map reload (self change)');
+            skipNextMapUpdate = false;
+            return;
+        }
+        if (Number(data.map_id) === mapId) {
+            console.log('🔄 Reloading map from other client');
+            if (typeof window.withViewportRestore === 'function') {
+                window.withViewportRestore(() => {
+                    window.reloadMapElements();
+                });
+            } else {
+                window.reloadMapElements();
+            }
+        }
+    });
 }
 
+window.setSkipNextMapUpdate = () => {
+    skipNextMapUpdate = true;
+    console.log('⏳ skipNextMapUpdate = true');
+};
+window.clearSkipNextMapUpdate = () => {
+    skipNextMapUpdate = false;
+    console.log('✅ skipNextMapUpdate = false');
+};
 window.zoomIn = () => {
     const cy = window.cy;
     if (cy) cy.zoom({ level: cy.zoom() * 1.2, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });

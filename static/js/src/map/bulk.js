@@ -87,15 +87,23 @@ async function applyBulkEdit() {
         }));
     });
     if (!promises.length) { alert('Нет изменений'); return; }
-    await Promise.all(promises);
 
-    // Используем общую функцию восстановления viewport
+    // Устанавливаем флаг, чтобы не перезагружать карту на этой вкладке
+    window.setSkipNextMapUpdate();
+    try {
+        await Promise.all(promises);
+    } finally {
+        // Сбрасываем флаг через 500 мс, чтобы чужие изменения обрабатывались
+        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+    }
+
+    // Восстановление viewport после перезагрузки карты (для других вкладок)
     if (typeof window.withViewportRestore === 'function') {
         window.withViewportRestore(() => {
             reloadMapElements();
         });
     } else {
-        // fallback (старый код)
+        // fallback
         let savedViewport = null;
         if (window.cy) savedViewport = { pan: window.cy.pan(), zoom: window.cy.zoom() };
         if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(true);

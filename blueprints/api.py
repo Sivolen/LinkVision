@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify, current_app, url_for
 from flask_login import login_required, current_user
 from services import device_service, map_service
 from services.map_service import invalidate_groups_cache
+from services.notifications import notify_map_updated
 from utils.logger import api_logger
 from functools import wraps
 from utils.file_validation import safe_save_upload
@@ -232,6 +233,8 @@ def create_device():
             )
             width = dtype.width
             height = dtype.height
+
+        notify_map_updated(data["map_id"])
         return (
             jsonify(
                 {"id": dev.id, "iconUrl": icon_url, "width": width, "height": height}
@@ -291,6 +294,7 @@ def update_device(id):
         # Инвалидация кэша сайдбара для владельца карты
         device = device_service.get_device_by_id(id)
         map_service.invalidate_sidebar_cache(device.map.owner_id)
+        notify_map_updated(device.map_id)
         return jsonify({"status": "ok", "id": id})
     except ValueError as e:
         api_logger.warning(f"Validation error updating device {id}: {e}")
@@ -310,7 +314,9 @@ def delete_device(id):
     if not (current_user.is_admin or device.map.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
     try:
+        map_id = device.map_id
         device_service.delete_device(id)
+        notify_map_updated(map_id)
         return jsonify({"status": "deleted", "id": id})
     except Exception as e:
         api_logger.error(f"Error deleting device: {e}")
@@ -332,6 +338,7 @@ def update_position(id):
         return jsonify({"error": "x and y are required"}), 400
     try:
         device_service.update_device_position(id, data["x"], data["y"])
+        notify_map_updated(device.map_id)
         return jsonify({"status": "ok"})
     except Exception as e:
         api_logger.error(f"Error updating position: {e}")
@@ -374,6 +381,7 @@ def create_link():
             line_style=data.get("line_style", "solid"),
             font_size=data.get("font_size", 8),
         )
+        notify_map_updated(data["map_id"])
         return jsonify({"id": link.id}), 201
     except ValueError as e:
         api_logger.warning(f"Validation error creating link: {e}")
@@ -395,7 +403,9 @@ def update_link(id):
 
     data = request.get_json()
     try:
+        link = map_service.get_link_by_id(id)
         map_service.update_link(id, **data)
+        notify_map_updated(link.map_id)
         return jsonify({"id": id, "status": "updated"})
     except Exception as e:
         api_logger.error(f"Error updating link: {e}")
@@ -412,7 +422,9 @@ def delete_link(id):
     if not (current_user.is_admin or link.map.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
     try:
+        link = map_service.get_link_by_id(id)
         map_service.delete_link(id)
+        notify_map_updated(link.map_id)
         return jsonify({"id": id, "status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting link: {e}")
@@ -461,6 +473,7 @@ def update_map(id):
             remove_background=remove_background,
         )
         map_service.invalidate_sidebar_cache(map_obj.owner_id)
+        notify_map_updated(map_obj.id)
         return jsonify(
             {
                 "id": map_obj.id,
@@ -512,6 +525,7 @@ def import_map():
         return jsonify({"error": "No data provided"}), 400
     try:
         map_obj = map_service.import_map(data, current_user)
+        notify_map_updated(map_obj.id)
         return jsonify({"id": map_obj.id, "status": "imported"})
     except ValueError as e:
         return jsonify({"error": str(e)}), 404
@@ -543,6 +557,7 @@ def create_group():
             map_id, data["name"], data.get("color", "#3498db"), font_size
         )
         invalidate_groups_cache(map_id)
+        notify_map_updated(group.map_id)
         return jsonify({"id": group.id}), 201
     except ValueError as e:
         api_logger.warning(f"Validation error creating group: {e}")
@@ -576,6 +591,7 @@ def update_group(id):
             font_size=data.get("font_size"),
         )
         invalidate_groups_cache(group.map_id)
+        notify_map_updated(group.map_id)
         return jsonify({"status": "updated"})
     except ValueError as e:
         api_logger.warning(f"Validation error updating group {id}: {e}")
@@ -599,6 +615,7 @@ def delete_group(id):
         map_service.delete_group(id)
         if group:
             invalidate_groups_cache(group.map_id)
+        notify_map_updated(group.map_id)
         return jsonify({"status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting group: {e}")
@@ -633,6 +650,9 @@ def update_devices_positions():
 
     try:
         updated = device_service.update_devices_positions(valid_updates)
+        if valid_updates:
+            first_device = device_service.get_device_by_id(valid_updates[0]["id"])
+            notify_map_updated(first_device.map_id)
         return jsonify({"status": "ok", "updated": updated})
     except Exception as e:
         api_logger.error(f"Error updating multiple positions: {e}")
@@ -666,6 +686,7 @@ def create_shape():
             opacity=data.get("opacity", 1.0),
             description=data.get("description"),
         )
+        notify_map_updated(shape.map_id)
         return jsonify({"id": shape.id}), 201
     except Exception as e:
         api_logger.error(f"Error creating shape: {e}")
@@ -685,6 +706,7 @@ def update_shape(id):
     data = request.json
     try:
         map_service.update_shape(id, **data)
+        notify_map_updated(shape.map_id)
         return jsonify({"id": id, "status": "updated"})
     except Exception as e:
         api_logger.error(f"Error updating shape: {e}")
@@ -702,6 +724,7 @@ def delete_shape(id):
         return jsonify({"error": "Доступ запрещён"}), 403
     try:
         map_service.delete_shape(id)
+        notify_map_updated(shape.map_id)
         return jsonify({"id": id, "status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting shape: {e}")

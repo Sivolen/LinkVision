@@ -36,6 +36,7 @@ export function initInteractions(cy) {
         updateEdgeLabelsForNode(node);
         clearTimeout(dragTimeouts[node.id()]);
         dragTimeouts[node.id()] = setTimeout(() => {
+            window.setSkipNextMapUpdate();
             fetch(`/api/device/${node.id()}/position`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
@@ -43,11 +44,14 @@ export function initInteractions(cy) {
             })
             .then(() => {
                 if (typeof window.saveState === 'function') window.saveState('Перемещение устройства');
-            }).catch(err => console.error(err));
+            })
+            .catch(err => console.error(err))
+            .finally(() => {
+                setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            });
             delete dragTimeouts[node.id()];
         }, 500);
     });
-
     // Групповое перетаскивание
     cy.on('dragfree', 'node:selected', function(evt) {
         if (window.isOperator || window.dragLocked) return;
@@ -80,6 +84,8 @@ export function initInteractions(cy) {
         clearTimeout(groupBatchTimeout);
         updateAllGroups();
         groupBatchTimeout = setTimeout(() => {
+            window.setSkipNextMapUpdate();  // устанавливаем флаг перед запросами
+
             const promises = deviceUpdates.map(upd =>
                 fetch(`/api/device/${upd.id}/position`, {
                     method: 'PUT',
@@ -87,11 +93,16 @@ export function initInteractions(cy) {
                     body: JSON.stringify({ x: upd.x, y: upd.y })
                 })
             );
-            Promise.all(promises).catch(console.error)
-            .then(() => {
-                if (typeof window.saveState === 'function') window.saveState('Перемещение группы устройств');
-            })
-            .catch(console.error);
+
+            Promise.all(promises)
+                .then(() => {
+                    if (typeof window.saveState === 'function') window.saveState('Перемещение группы устройств');
+                })
+                .catch(console.error)
+                .finally(() => {
+                    // Сбрасываем флаг через 500 мс, чтобы map_updated от своего же запроса был проигнорирован
+                    setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+                });
         }, 500);
         selectedNodes.forEach(n => delete n._private.scratch._dragStartPos);
     });
