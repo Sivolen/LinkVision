@@ -81,6 +81,7 @@ export function initUndoRedo(cy, getMapId) {
         const deviceUpdates = updates.filter(u => !u.id.startsWith('shape_'));
         const shapeUpdates = updates.filter(u => u.id.startsWith('shape_'));
 
+        window.setSkipNextMapUpdate();
         const promises = [];
         for (const upd of deviceUpdates) {
             promises.push(fetch(`/api/device/${upd.id}/position`, {
@@ -97,7 +98,11 @@ export function initUndoRedo(cy, getMapId) {
                 body: JSON.stringify({ x: upd.x, y: upd.y })
             }));
         }
-        Promise.all(promises).catch(err => console.error('Sync positions error:', err));
+        Promise.all(promises)
+            .catch(err => console.error('Sync positions error:', err))
+            .finally(() => {
+                setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            });
     }
     function updateButtons() {
         const undoBtn = document.getElementById('undoBtn');
