@@ -43,7 +43,6 @@ export function withViewportRestore(callback, skipAutoFit = true) {
     // Выполняем действие (обычно reloadMapElements)
     callback();
 
-    // Восстанавливаем viewport
     if (savedViewport && cy) {
         const restore = () => {
             cy.viewport({ pan: savedViewport.pan, zoom: savedViewport.zoom });
@@ -54,12 +53,17 @@ export function withViewportRestore(callback, skipAutoFit = true) {
             if (typeof window.enforcePanBounds === 'function') {
                 window.enforcePanBounds();
             }
+            // Сбрасываем skipAutoFit только после успешного восстановления
+            if (skipAutoFit && typeof window.setSkipAutoFit === 'function') {
+                window.setSkipAutoFit(false);
+            }
         };
         setTimeout(restore, 200);
-        setTimeout(restore, 500); // повтор для надёжности
-    }
-
-    if (skipAutoFit && typeof window.setSkipAutoFit === 'function') {
-        setTimeout(() => window.setSkipAutoFit(false), 600);
+        setTimeout(restore, 500);
+    } else {
+        // Если нет сохранённого viewport (например, карта только создана), сбросим флаг через 2 секунды
+        if (skipAutoFit && typeof window.setSkipAutoFit === 'function') {
+            setTimeout(() => window.setSkipAutoFit(false), 2000);
+        }
     }
 }
