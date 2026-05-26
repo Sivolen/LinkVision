@@ -168,19 +168,22 @@ export function initInteractions(cy) {
         dragTimeouts[groupNode.id()] = setTimeout(() => {
             window.setSkipNextMapUpdate();   // ставим флаг
 
-            Promise.all(updates.map(upd =>
-                fetch(`/api/device/${upd.id}/position`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                    body: JSON.stringify({ x: upd.x, y: upd.y })
-                })
-            ))
+            // Отправляем один массовый запрос вместо многих
+            fetch('/api/devices/positions', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify(updates)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to update positions');
+                return response.json();
+            })
             .then(() => {
                 if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
             })
             .catch(err => console.error('Error moving group:', err))
             .finally(() => {
-                // Сбрасываем флаг через 2 секунды – достаточно, чтобы пережить все приходящие map_updated
+                // Сбрасываем флаг через 2 секунды – достаточно, чтобы пережить одно приходящее map_updated
                 setTimeout(() => window.clearSkipNextMapUpdate(), 2000);
             });
 
