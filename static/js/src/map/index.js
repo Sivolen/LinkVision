@@ -19,6 +19,7 @@ let skipNextMapUpdate = false;
 
 export function initMap(id) {
     mapId = id;
+    window.currentMapId = id;
     if (!mapId || isNaN(parseInt(mapId))) {
         initCy(null);
         setElementsLoaded(true);
