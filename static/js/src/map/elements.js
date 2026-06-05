@@ -91,6 +91,7 @@ export function loadElements(mapId) {
             import('./groupResize.js').then(m => m.updateAllGroups());
             setElementsLoaded(true);
             cy.resize();
+            window.dispatchEvent(new CustomEvent('elements:loaded'));
 
             // Применяем стили при загрузке
             cy.nodes().forEach(node => {
