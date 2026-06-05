@@ -184,7 +184,7 @@ export function initInteractions(cy) {
             .catch(err => console.error('Error moving group:', err))
             .finally(() => {
                 // Сбрасываем флаг через 2 секунды – достаточно, чтобы пережить одно приходящее map_updated
-                setTimeout(() => window.clearSkipNextMapUpdate(), 2000);
+                setTimeout(() => window.clearSkipNextMapUpdate(), 10000);
             });
 
             delete dragTimeouts[groupNode.id()];

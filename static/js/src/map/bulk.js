@@ -94,7 +94,7 @@ async function applyBulkEdit() {
         await Promise.all(promises);
     } finally {
         // Сбрасываем флаг через 500 мс, чтобы чужие изменения обрабатывались
-        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+        setTimeout(() => window.clearSkipNextMapUpdate(), 10000);
     }
 
     // Восстановление viewport после перезагрузки карты (для других вкладок)
