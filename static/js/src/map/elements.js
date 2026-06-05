@@ -90,6 +90,7 @@ export function loadElements(mapId) {
             import('./edgeLabels.js').then(m => m.updateAllEdgeLabels());
             import('./groupResize.js').then(m => m.updateAllGroups());
             setElementsLoaded(true);
+            cy.resize();
 
             // Применяем стили при загрузке
             cy.nodes().forEach(node => {

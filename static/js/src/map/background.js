@@ -8,7 +8,7 @@ let elementsLoaded = false;
 let pendingFit = false;
 let skipAutoFit = false;
 
-export function setSkipAutoFit(value) { skipAutoFit = value; }
+export function setSkipAutoFit(value) { skipAutoFit = value; window._skipAutoFit = value;}
 export function setElementsLoaded(loaded) { elementsLoaded = loaded; checkReadyAndFit(); }
 export function setBackgroundLoaded(loaded) { backgroundLoaded = loaded; checkReadyAndFit(); }
 export function setPendingFit(value) { pendingFit = value; }
