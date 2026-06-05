@@ -3,10 +3,9 @@ let history = [];
 let currentIndex = -1;
 let maxHistory = 50;
 let isUndoRedo = false;
-let saveStateTimeout = null;
 
 export function initUndoRedo(cy, getMapId) {
-    function _doSaveState(description = '') {
+    function saveState(description = '') {
         if (isUndoRedo) return;
 
         // Сохраняем только устройства и фигуры (исключая группы)
@@ -29,15 +28,6 @@ export function initUndoRedo(cy, getMapId) {
         updateButtons();
     }
 
-    function saveState(description = '') {
-        if (isUndoRedo) return;
-        // Debounce для частых вызовов
-        clearTimeout(saveStateTimeout);
-        saveStateTimeout = setTimeout(() => {
-            _doSaveState(description);
-        }, 300);
-    }
-
     function restoreState(index) {
         if (index < 0 || index >= history.length) return;
         const state = history[index];
@@ -57,6 +47,19 @@ export function initUndoRedo(cy, getMapId) {
             cy.resize();
             syncPositionsToServer(cy);
 
+            // Не вызываем updateAllGroups – группы не участвуют
+
+    //        if (state.viewport) {
+    //            cy.viewport({
+    //                pan: state.viewport.pan,
+    //                zoom: state.viewport.zoom
+    //            });
+    //            if (typeof window.updateBackgroundTransform === 'function')
+    //                window.updateBackgroundTransform();
+    //            if (typeof window.enforcePanBounds === 'function')
+    //                window.enforcePanBounds();
+    //        }
+
             currentIndex = index;
             updateButtons();
         } catch (err) {
@@ -65,7 +68,6 @@ export function initUndoRedo(cy, getMapId) {
             isUndoRedo = false;
         }
     }
-
     // Синхронизация позиций устройств и фигур с сервером
     function syncPositionsToServer(cy) {
         const nodes = cy.nodes().filter(n => !n.data('isGroup'));
@@ -80,24 +82,14 @@ export function initUndoRedo(cy, getMapId) {
         const shapeUpdates = updates.filter(u => u.id.startsWith('shape_'));
 
         window.setSkipNextMapUpdate();
-
         const promises = [];
-
-        // ОДИН массовый запрос для устройств вместо N отдельных
-        if (deviceUpdates.length > 0) {
-            promises.push(
-                fetch('/api/devices/positions', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
-                    body: JSON.stringify(deviceUpdates)
-                })
-            );
+        for (const upd of deviceUpdates) {
+            promises.push(fetch(`/api/device/${upd.id}/position`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ x: upd.x, y: upd.y })
+            }));
         }
-
-        // Фигуры всё ещё по одной, но их обычно мало
         for (const upd of shapeUpdates) {
             const shapeId = upd.id.replace('shape_', '');
             promises.push(fetch(`/api/shape/${shapeId}`, {
@@ -106,14 +98,12 @@ export function initUndoRedo(cy, getMapId) {
                 body: JSON.stringify({ x: upd.x, y: upd.y })
             }));
         }
-
         Promise.all(promises)
             .catch(err => console.error('Sync positions error:', err))
             .finally(() => {
                 setTimeout(() => window.clearSkipNextMapUpdate(), 500);
             });
     }
-
     function updateButtons() {
         const undoBtn = document.getElementById('undoBtn');
         const redoBtn = document.getElementById('redoBtn');
