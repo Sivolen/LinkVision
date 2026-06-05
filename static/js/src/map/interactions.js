@@ -130,7 +130,7 @@ export function initInteractions(cy) {
             })
             .catch(err => console.error('Error saving shape position:', err))
             .finally(() => {
-                setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+                setTimeout(() => window.clearSkipNextMapUpdate(), 2000);
             });
             delete dragTimeouts[shapeId];
         }, 500);
