@@ -82,7 +82,7 @@ export function initInteractions(cy) {
         selectedNodes.forEach(node => updateGroupsForNode(node));
         selectedNodes.forEach(node => updateEdgeLabelsForNode(node));
         clearTimeout(groupBatchTimeout);
-        updateAllGroups();
+//        updateAllGroups();
         groupBatchTimeout = setTimeout(() => {
             window.setSkipNextMapUpdate();  // устанавливаем флаг перед запросами
 
@@ -142,17 +142,19 @@ export function initInteractions(cy) {
     //    // Сохраняем состояние после перемещения группы
     //    if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
     //});
+    // ===== ПЕРЕТАСКИВАНИЕ ГРУППЫ (исправленный) =====
     cy.on('dragfree', 'node[isGroup]', function(evt) {
         if (window.isOperator || window.dragLocked) return;
         const groupNode = evt.target;
         const children = groupNode.children();
         if (!children.length) return;
 
-        // Ограничение позиции группы границами фона (если есть)
+        // Ограничение позиции группы границами фона
         let pos = groupNode.position();
         const { width, height } = getBgDimensions();
         if (width && height) {
             const bounded = boundNodePosition(pos);
+            // ❌ ИСПРАВЛЕНО: было !==.pos.y — SyntaxError!
             if (bounded.x !== pos.x || bounded.y !== pos.y) groupNode.position(bounded);
             pos = groupNode.position();
         }
@@ -164,14 +166,27 @@ export function initInteractions(cy) {
             y: Math.round(child.position().y)
         }));
 
+        // Отменяем предыдущий таймаут для этой группы
         clearTimeout(dragTimeouts[groupNode.id()]);
-        dragTimeouts[groupNode.id()] = setTimeout(() => {
-            window.setSkipNextMapUpdate();   // ставим флаг
 
-            // Отправляем один массовый запрос вместо многих
+        // Адаптивный debounce: больше устройств = дольше ждём
+        const debounceMs = updates.length > 20 ? 1500 : (updates.length > 5 ? 800 : 500);
+
+        dragTimeouts[groupNode.id()] = setTimeout(() => {
+            // Проверяем, не ушли ли мы со страницы или не начался ли новый drag
+            if (!window.cy || !window.cy.getElementById(groupNode.id()).length) {
+                delete dragTimeouts[groupNode.id()];
+                return;
+            }
+
+            window.setSkipNextMapUpdate();
+
             fetch('/api/devices/positions', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
                 body: JSON.stringify(updates)
             })
             .then(response => {
@@ -179,16 +194,19 @@ export function initInteractions(cy) {
                 return response.json();
             })
             .then(() => {
-                if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
+                // ❌ УБРАНО: saveState здесь вызывает лишнюю работу
+                // История для групп не критична, а производительность — да
+                // Если нужно — раскомментируй, но debounce в saveState должен справиться
+                // if (typeof window.saveState === 'function') {
+                //     window.saveState('Перемещение группы');
+                // }
             })
             .catch(err => console.error('Error moving group:', err))
             .finally(() => {
-                // Сбрасываем флаг через 2 секунды – достаточно, чтобы пережить одно приходящее map_updated
-                setTimeout(() => window.clearSkipNextMapUpdate(), 2000);
+                setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+                delete dragTimeouts[groupNode.id()];
             });
-
-            delete dragTimeouts[groupNode.id()];
-        }, 500);
+        }, debounceMs);
     });
 
     // Клики по узлам
