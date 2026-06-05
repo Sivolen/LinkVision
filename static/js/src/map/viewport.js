@@ -58,8 +58,8 @@ export function withViewportRestore(callback, skipAutoFit = true) {
                 window.setSkipAutoFit(false);
             }
         };
-        setTimeout(restore, 200);
-        setTimeout(restore, 500);
+        setTimeout(restore, 800);
+        setTimeout(restore, 1500);
     } else {
         // Если нет сохранённого viewport (например, карта только создана), сбросим флаг через 2 секунды
         if (skipAutoFit && typeof window.setSkipAutoFit === 'function') {
