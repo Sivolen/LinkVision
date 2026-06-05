@@ -40,28 +40,36 @@ export function withViewportRestore(callback, skipAutoFit = true) {
         window.setSkipAutoFit(true);
     }
 
-    // Выполняем действие (обычно reloadMapElements)
-    callback();
+    callback(); // reloadMapElements
 
     if (savedViewport && cy) {
         const restore = () => {
             cy.viewport({ pan: savedViewport.pan, zoom: savedViewport.zoom });
+            cy.resize();         // принудительно пересчитать размеры
             cy.style().update();
-            if (typeof window.updateBackgroundTransform === 'function') {
-                window.updateBackgroundTransform();
-            }
-            if (typeof window.enforcePanBounds === 'function') {
-                window.enforcePanBounds();
-            }
-            // Сбрасываем skipAutoFit только после успешного восстановления
+            updateBackgroundTransform();
+            enforcePanBounds();
+            // Сбрасываем флаг ТОЛЬКО после восстановления
             if (skipAutoFit && typeof window.setSkipAutoFit === 'function') {
                 window.setSkipAutoFit(false);
             }
         };
-        setTimeout(restore, 800);
-        setTimeout(restore, 1500);
+
+        // Используем requestAnimationFrame для синхронизации с отрисовкой
+        const applyAfterRender = () => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(restore); // двойной RAF для надёжности
+            });
+        };
+
+        // Ждём событие загрузки элементов или таймаут
+        if (window.elementsLoaded === true) {
+            applyAfterRender();
+        } else {
+            window.addEventListener('elements:loaded', applyAfterRender, { once: true });
+            setTimeout(applyAfterRender, 1500);
+        }
     } else {
-        // Если нет сохранённого viewport (например, карта только создана), сбросим флаг через 2 секунды
         if (skipAutoFit && typeof window.setSkipAutoFit === 'function') {
             setTimeout(() => window.setSkipAutoFit(false), 2000);
         }
