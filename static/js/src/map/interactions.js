@@ -101,7 +101,7 @@ export function initInteractions(cy) {
                 .catch(console.error)
                 .finally(() => {
                     // Сбрасываем флаг через 500 мс, чтобы map_updated от своего же запроса был проигнорирован
-                    setTimeout(() => window.clearSkipNextMapUpdate(), 2000);
+                    setTimeout(() => window.clearSkipNextMapUpdate(), 10000);
                 });
         }, 500);
         selectedNodes.forEach(n => delete n._private.scratch._dragStartPos);
