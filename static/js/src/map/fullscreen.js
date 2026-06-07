@@ -1,4 +1,6 @@
 // fullscreen.js – полноэкранный режим
+import { fitImageToView } from './background.js';
+
 export function initFullscreen() {
     // Не навешиваем слушатель на fullscreenBtn, так как используется onclick в HTML
     const exitBtn = document.getElementById('exitFullscreenBtn');
@@ -31,6 +33,9 @@ function enterFullscreen() {
     const fullBtn = document.getElementById('fullscreenBtn');
     if (fullBtn) fullBtn.innerHTML = '<i class="fas fa-compress"></i>';
     document.querySelector('.map-container')?.classList.add('fullscreen-map');
+    
+    // Центрируем карту при входе в полноэкранный режим
+    setTimeout(() => fitImageToView(), 100);
 }
 
 function exitFullscreen() {
