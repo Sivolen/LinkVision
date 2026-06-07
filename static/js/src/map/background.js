@@ -90,14 +90,21 @@ export function enforcePanBounds() {
 
 export function fitImageToView() {
     const cy = getCy();
-    if (!cy || !bgImageWidth || !bgImageHeight) return;
-    const container = document.getElementById('cy').getBoundingClientRect();
-    const zoom = Math.min(container.width / bgImageWidth, container.height / bgImageHeight) * 0.95;
-    const panX = (container.width / zoom - bgImageWidth) / 2;
-    const panY = (container.height / zoom - bgImageHeight) / 2;
-    cy.viewport({ pan: { x: panX, y: panY }, zoom });
-    updateBackgroundTransform();
-    enforcePanBounds();
+    if (!cy) return;
+    
+    // Если есть фоновое изображение - используем его размеры
+    if (bgImageWidth && bgImageHeight) {
+        const container = document.getElementById('cy').getBoundingClientRect();
+        const zoom = Math.min(container.width / bgImageWidth, container.height / bgImageHeight) * 0.95;
+        const panX = (container.width / zoom - bgImageWidth) / 2;
+        const panY = (container.height / zoom - bgImageHeight) / 2;
+        cy.viewport({ pan: { x: panX, y: panY }, zoom });
+        updateBackgroundTransform();
+        enforcePanBounds();
+    } else {
+        // Если фона нет - просто фитим контент
+        cy.fit(null, 50);
+    }
 }
 
 function checkReadyAndFit() {
