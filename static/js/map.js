@@ -13,7 +13,6 @@ let viewportTimeout = null;
 let pendingFit = false;
 let elementsLoaded = false;
 let backgroundLoaded = false;
-let groupDragTimeout = null;
 let copyTimer = null;
 
 // ============================================================================
@@ -665,37 +664,7 @@ function initMap(mapId) {
     selectedNodes.forEach(node => delete node._private.scratch._dragStartPos);
 });
 
-    // Обработчик перетаскивания группы
-    cy.on('dragfree', 'node[isGroup]', function(evt) {
-        const groupNode = evt.target;
-        if (window.isOperator) return;
-        if (dragLocked) return;
 
-        const children = groupNode.children().filter(child => !child.data('isGroup'));
-        if (children.length === 0) return;
-
-        clearTimeout(groupDragTimeout);
-        groupDragTimeout = setTimeout(() => {
-            children.forEach(child => {
-                let pos = child.position();
-                if (bgImageWidth && bgImageHeight) {
-                    const bounded = boundNodePosition(pos);
-                    if (bounded.x !== pos.x || bounded.y !== pos.y) {
-                        child.position(bounded);
-                        pos = bounded;
-                    }
-                }
-                fetch(`/api/device/${child.id()}/position`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
-                    body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
-                }).catch(err => Logger.error('Ошибка сохранения позиции устройства:', err));
-            });
-        }, 500);
-    });
     cy.on('dragfree', 'node[isShape]', function(evt) {
         if (window.isOperator || dragLocked) return;
         const node = evt.target;
