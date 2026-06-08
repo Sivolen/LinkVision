@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "LinkVision network map",
   "scripts": {
-    "build": "esbuild static/js/common.js --minify --outfile=static/js/dist/common.min.js && esbuild static/js/base.js --minify --outfile=static/js/dist/base.min.js && esbuild static/js/modal.js --minify --outfile=static/js/dist/modal.min.js && esbuild static/js/src/map/index.js --bundle --minify --outfile=static/js/dist/map.min.js",
+    "build": "esbuild static/js/common.js --minify --outfile=static/js/dist/common.min.js && esbuild static/js/base.js --minify --outfile=static/js/dist/base.min.js && esbuild static/js/src/modal/index.js --bundle --minify --outfile=static/js/dist/modal.min.js && esbuild static/js/src/map/index.js --bundle --minify --outfile=static/js/dist/map.min.js",
+    "build:modal": "esbuild static/js/src/modal/index.js --bundle --minify --outfile=static/js/dist/modal.min.js",
+    "build:map": "esbuild static/js/src/map/index.js --bundle --minify --outfile=static/js/dist/map.min.js",
     "watch": "nodemon --watch static/js --ext js --exec 'npm run build'"
   },
   "devDependencies": {
