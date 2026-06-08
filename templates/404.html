@@ -1,75 +1,533 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="error-page">
-    <div class="error-container text-center">
-        <div class="error-code">404</div>
-        <div class="error-icon">
-            <i class="fas fa-map-marked-alt"></i>
-        </div>
-        <h1 class="error-title">Страница не найдена</h1>
-        <p class="error-message">
-            Извините, запрашиваемая страница не существует или была перемещена.
-        </p>
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary btn-lg mt-3">
-            <i class="fas fa-home me-2"></i>Вернуться на главную
-        </a>
-    </div>
-</div>
-{% endblock %}
-
 {% block extra_css %}
 <style>
+    :root {
+        --accent-color: #3498db;
+        --accent-secondary: #2ecc71;
+        --accent-warning: #f39c12;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8f9fa;
+        --text-primary: #2c3e50;
+        --text-secondary: #6c757d;
+    }
+
+    [data-theme="dark"] {
+        --bg-primary: #1a1a2e;
+        --bg-secondary: #16213e;
+        --text-primary: #eaeaea;
+        --text-secondary: #a0a0a0;
+    }
+
     .error-page {
         min-height: calc(100vh - 120px);
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(135deg,
+            var(--bg-secondary) 0%,
+            var(--bg-primary) 100%);
     }
+
+    #networkCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        opacity: 0.6;
+    }
+
     .error-container {
-        max-width: 600px;
-        padding: 2rem;
-        background: var(--bg-secondary);
-        border-radius: 1rem;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
+        position: relative;
+        z-index: 1;
+        max-width: 700px;
+        width: 100%;
+        animation: fadeInUp 0.8s ease-out;
     }
-    [data-theme="dark"] .error-container {
-        background: var(--bg-secondary-dark, #2d2d2d);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+
+    .error-content {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 2rem;
+        padding: 3rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        text-align: center;
     }
+
+    [data-theme="dark"] .error-content {
+        background: rgba(26, 26, 46, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
     .error-code {
-        font-size: 8rem;
-        font-weight: 800;
-        color: var(--accent-color, #3498db);
+        font-size: 10rem;
+        font-weight: 900;
         line-height: 1;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg,
+            var(--accent-color) 0%,
+            var(--accent-secondary) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        position: relative;
+        filter: drop-shadow(0 10px 30px rgba(52, 152, 219, 0.3));
     }
-    .error-icon {
+
+    .glitch {
+        position: relative;
+        animation: glitch 3s infinite;
+    }
+
+    .glitch::before,
+    .glitch::after {
+        content: attr(data-text);
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0.8;
+    }
+
+    .glitch::before {
+        animation: glitch-1 2s infinite;
+        clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+        transform: translate(-2px, 0);
+    }
+
+    .glitch::after {
+        animation: glitch-2 3s infinite;
+        clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+        transform: translate(2px, 0);
+    }
+
+    .error-illustration {
+        margin: 2rem 0;
+        position: relative;
+        height: 120px;
+    }
+
+    .lost-packet {
         font-size: 4rem;
-        color: #6c757d;
-        margin: 1rem 0;
+        color: var(--accent-color);
+        position: relative;
+        display: inline-block;
     }
+
+    .packet-animation {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        height: 100%;
+    }
+
+    .packet {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: var(--accent-secondary);
+        border-radius: 50%;
+        opacity: 0;
+        animation: packet-float 3s infinite;
+    }
+
+    .packet:nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .packet:nth-child(2) {
+        animation-delay: 1s;
+    }
+
+    .packet:nth-child(3) {
+        animation-delay: 2s;
+    }
+
     .error-title {
-        font-size: 1.8rem;
-        font-weight: 600;
+        font-size: 2rem;
+        font-weight: 700;
         margin-bottom: 1rem;
         color: var(--text-primary);
     }
+
     .error-message {
         color: var(--text-secondary);
-        margin-bottom: 1.5rem;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 2rem;
     }
-    .btn-primary {
-        background-color: var(--accent-color, #3498db);
+
+    .error-suggestions {
+        background: rgba(52, 152, 219, 0.1);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        text-align: left;
+    }
+
+    [data-theme="dark"] .error-suggestions {
+        background: rgba(52, 152, 219, 0.15);
+    }
+
+    .suggestion-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+        color: var(--text-primary);
+    }
+
+    .suggestion-item i {
+        color: var(--accent-secondary);
+        font-size: 1.2rem;
+    }
+
+    .error-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 0.8rem 2rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
         border: none;
-        padding: 0.6rem 1.5rem;
-        transition: transform 0.2s;
+        cursor: pointer;
+        font-size: 1rem;
     }
+
+    .btn-primary {
+        background: linear-gradient(135deg,
+            var(--accent-color) 0%,
+            #2980b9 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    }
+
     .btn-primary:hover {
         transform: translateY(-2px);
-        background-color: #2980b9;
+        box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+    }
+
+    .btn-outline {
+        background: transparent;
+        border: 2px solid var(--accent-color);
+        color: var(--accent-color);
+    }
+
+    .btn-outline:hover {
+        background: var(--accent-color);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes glitch-1 {
+        0%, 100% { transform: translate(-2px, 0); }
+        20% { transform: translate(-4px, 2px); }
+        40% { transform: translate(-2px, -2px); }
+        60% { transform: translate(2px, 2px); }
+        80% { transform: translate(-2px, 0); }
+    }
+
+    @keyframes glitch-2 {
+        0%, 100% { transform: translate(2px, 0); }
+        20% { transform: translate(4px, -2px); }
+        40% { transform: translate(2px, 2px); }
+        60% { transform: translate(-2px, -2px); }
+        80% { transform: translate(2px, 0); }
+    }
+
+    @keyframes glitch {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.95; }
+    }
+
+    @keyframes packet-float {
+        0% {
+            transform: translate(0, 0) scale(0);
+            opacity: 0;
+        }
+        20% {
+            opacity: 1;
+        }
+        80% {
+            opacity: 1;
+        }
+        100% {
+            transform: translate(var(--tx, 100px), var(--ty, -100px)) scale(1);
+            opacity: 0;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .error-content {
+            padding: 2rem 1.5rem;
+        }
+
+        .error-code {
+            font-size: 6rem;
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+        }
+
+        .error-actions {
+            flex-direction: column;
+        }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     }
 </style>
+{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <canvas id="networkCanvas"></canvas>
+
+    <div class="error-container">
+        <div class="error-content">
+            <div class="glitch-wrapper">
+                <div class="error-code glitch" data-text="404">404</div>
+            </div>
+
+            <div class="error-illustration">
+                <div class="lost-packet">
+                    <i class="fas fa-network-wired"></i>
+                    <div class="packet-animation">
+                        <div class="packet"></div>
+                        <div class="packet"></div>
+                        <div class="packet"></div>
+                    </div>
+                </div>
+            </div>
+
+            <h1 class="error-title">Упс! Узел не найден</h1>
+            <p class="error-message">
+                Похоже, этот узел сети потерялся в пространстве.
+                Возможно, он был отключён или перемещён.
+            </p>
+
+            <div class="error-suggestions">
+                <div class="suggestion-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Проверьте адрес в строке</span>
+                </div>
+                <div class="suggestion-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Вернитесь на главную карту</span>
+                </div>
+                <div class="suggestion-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Обновите страницу</span>
+                </div>
+            </div>
+
+            <div class="error-actions">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-home me-2"></i>На главную карту
+                </a>
+                <button onclick="history.back()" class="btn btn-outline btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>Назад
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Network animation canvas
+    class NetworkAnimation {
+        constructor(canvas) {
+            this.canvas = canvas;
+            this.ctx = canvas.getContext('2d');
+            this.nodes = [];
+            this.mouseX = 0;
+            this.mouseY = 0;
+            this.init();
+        }
+
+        init() {
+            this.resize();
+            this.createNodes();
+            this.addEventListeners();
+            this.animate();
+        }
+
+        resize() {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.dpr = window.devicePixelRatio || 1;
+            this.canvas.width *= this.dpr;
+            this.canvas.height *= this.dpr;
+            this.ctx.scale(this.dpr, this.dpr);
+            this.canvas.style.width = window.innerWidth + 'px';
+            this.canvas.style.height = window.innerHeight + 'px';
+        }
+
+        createNodes() {
+            const nodeCount = Math.floor((this.canvas.width / this.dpr * this.canvas.height / this.dpr) / 25000);
+            this.nodes = [];
+
+            for (let i = 0; i < nodeCount; i++) {
+                this.nodes.push({
+                    x: Math.random() * this.canvas.width / this.dpr,
+                    y: Math.random() * this.canvas.height / this.dpr,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    radius: Math.random() * 3 + 2,
+                    pulse: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        addEventListeners() {
+            window.addEventListener('resize', () => this.resize());
+            this.canvas.addEventListener('mousemove', (e) => {
+                this.mouseX = e.clientX;
+                this.mouseY = e.clientY;
+            });
+        }
+
+        updateNodes() {
+            const width = this.canvas.width / this.dpr;
+            const height = this.canvas.height / this.dpr;
+
+            this.nodes.forEach(node => {
+                node.x += node.vx;
+                node.y += node.vy;
+                node.pulse += 0.05;
+
+                // Bounce off edges
+                if (node.x < 0 || node.x > width) node.vx *= -1;
+                if (node.y < 0 || node.y > height) node.vy *= -1;
+
+                // Mouse interaction
+                const dx = this.mouseX - node.x;
+                const dy = this.mouseY - node.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 150) {
+                    const force = (150 - dist) / 150;
+                    node.vx -= (dx / dist) * force * 0.02;
+                    node.vy -= (dy / dist) * force * 0.02;
+                }
+
+                // Damping
+                node.vx *= 0.99;
+                node.vy *= 0.99;
+            });
+        }
+
+        drawNodes() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const nodeColor = isDark ? 'rgba(52, 152, 219, ' : 'rgba(41, 128, 185, ';
+
+            this.nodes.forEach(node => {
+                const pulse = Math.sin(node.pulse) * 0.3 + 1;
+
+                this.ctx.beginPath();
+                this.ctx.arc(node.x, node.y, node.radius * pulse, 0, Math.PI * 2);
+                this.ctx.fillStyle = nodeColor + (0.6 + pulse * 0.2) + ')';
+                this.ctx.fill();
+
+                // Glow effect
+                this.ctx.beginPath();
+                this.ctx.arc(node.x, node.y, node.radius * pulse * 2, 0, Math.PI * 2);
+                const gradient = this.ctx.createRadialGradient(
+                    node.x, node.y, 0,
+                    node.x, node.y, node.radius * pulse * 2
+                );
+                gradient.addColorStop(0, nodeColor + '0.3)');
+                gradient.addColorStop(1, nodeColor + '0)');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fill();
+            });
+        }
+
+        drawConnections() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const maxDist = 180;
+
+            for (let i = 0; i < this.nodes.length; i++) {
+                for (let j = i + 1; j < this.nodes.length; j++) {
+                    const dx = this.nodes[i].x - this.nodes[j].x;
+                    const dy = this.nodes[i].y - this.nodes[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < maxDist) {
+                        const opacity = (1 - dist / maxDist) * 0.4;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.nodes[i].x, this.nodes[i].y);
+                        this.ctx.lineTo(this.nodes[j].x, this.nodes[j].y);
+                        this.ctx.strokeStyle = isDark
+                            ? `rgba(52, 152, 219, ${opacity})`
+                            : `rgba(41, 128, 185, ${opacity})`;
+                        this.ctx.lineWidth = 1;
+                        this.ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        animate() {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.updateNodes();
+            this.drawNodes();
+            this.drawConnections();
+            requestAnimationFrame(() => this.animate());
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('networkCanvas');
+        if (canvas) {
+            new NetworkAnimation(canvas);
+        }
+
+        // Packet animation variables
+        const packets = document.querySelectorAll('.packet');
+        packets.forEach((packet, index) => {
+            const angles = [45, 135, 225];
+            const angle = angles[index] * Math.PI / 180;
+            const distance = 80;
+            packet.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+            packet.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+        });
+    });
+</script>
 {% endblock %}

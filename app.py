@@ -65,6 +65,9 @@ ensure_env_file()
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    # Отключаем кэширование шаблонов в debug режиме
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
     csrf = CSRFProtect(app)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -158,7 +161,7 @@ def create_app():
 
     @app.errorhandler(404)
     def page_not_found(e):
-        return render_template("404.html"), 404
+        return render_template("404.html", hide_sidebar=True), 404
 
     @socketio.on("request_status")
     def handle_request_status(data):

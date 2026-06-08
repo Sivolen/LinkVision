@@ -812,6 +812,12 @@ body {
   background: var(--bg-primary);
 }
 
+/* Когда сайдбар скрыт принудительно (например, на 404 странице) */
+.main-content.no-sidebar-forced {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
 .sidebar.collapsed + .main-content {
   margin-left: 80px;
 }
