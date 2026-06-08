@@ -1,6 +1,7 @@
 import time
 import threading
 import concurrent.futures
+import os
 from extensions import db, socketio
 from models import Device, Settings, DeviceHistory
 from utils.logger import monitor_logger
@@ -27,10 +28,14 @@ def init_monitor(app):
     global app_instance, _executor
     with _lock:
         if _executor is not None:
-            return
+            try:
+                _executor.shutdown(wait=False)
+            except Exception:
+                pass
         app_instance = app
-        _executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
-        monitor_logger.info("Monitor initialized with new executor")
+        max_workers = min(50, (os.cpu_count() or 1) * 4)
+        _executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+        monitor_logger.info(f"Monitor initialized with {max_workers} workers")
 
 
 def start_monitor():
@@ -63,15 +68,17 @@ def stop_monitor():
 
 def ping_host(ip, count=1):
     if PING3_AVAILABLE:
-        for _ in range(count):
+        successful_pings = 0
+        for i in range(count):
             try:
                 response_time = ping(ip, timeout=2)
                 if response_time is not None:
-                    return True
+                    successful_pings += 1
+                if i < count - 1:
+                    time.sleep(0.5)
             except Exception:
                 continue
-            time.sleep(0.2)
-        return False
+        return successful_pings > 0
     else:
         param = "-n" if platform.system().lower() == "windows" else "-c"
         timeout_seconds = 2
@@ -84,7 +91,7 @@ def ping_host(ip, count=1):
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                timeout=timeout_seconds * count + 2,
+                timeout=timeout_seconds * count + 5,
             )
             return output.returncode == 0
         except Exception:
@@ -144,6 +151,8 @@ def monitor_loop():
                 for ip in ips:
                     is_up = ping_host(ip, pcnt)
                     results.append(is_up)
+                    if is_up:
+                        break
                 if all(results):
                     return dev_id, "up"
                 elif any(results):
@@ -151,76 +160,115 @@ def monitor_loop():
                 else:
                     return dev_id, "down"
 
-            # ---- ЗАПУСК ПРОВЕРОК В ПОТОКАХ ----
-            futures = {}
-            for dev in devices:
-                try:
-                    future = _executor.submit(
-                        _check_device, dev.id, device_ips[dev.id], ping_count
-                    )
-                    futures[future] = dev
-                except RuntimeError as e:
-                    monitor_logger.error(
-                        f"Failed to submit check for device {dev.id}: {e}"
-                    )
-                    continue
+            # ---- РАЗБИЕНИЕ НА БАТЧИ ДЛЯ ИЗБЕЖАНИЯ ПЕРЕГРУЗКИ ----
+            batch_size = 50
+            all_device_checks = [(dev.id, device_ips[dev.id], ping_count) for dev in devices]
 
             results = []
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    dev_id, new_status = future.result()
-                    dev = futures[future]
-                    results.append((dev, new_status))
-                except Exception as e:
-                    monitor_logger.error(f"Error checking device: {e}")
+            for batch_start in range(0, len(all_device_checks), batch_size):
+                batch_checks = all_device_checks[batch_start:batch_start + batch_size]
+
+                # Проверка состояния пула перед отправкой задач
+                with _lock:
+                    if _executor is None:
+                        max_workers = min(50, (os.cpu_count() or 1) * 4)
+                        _executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+                        monitor_logger.info(f"Executor recreated with {max_workers} workers")
+
+                futures = {}
+                for dev_id, ips, pcnt in batch_checks:
+                    try:
+                        future = _executor.submit(_check_device, dev_id, ips, pcnt)
+                        futures[future] = dev_id
+                    except RuntimeError as e:
+                        monitor_logger.error(f"Failed to submit check for device {dev_id}: {e}")
+                        # Попытка переинициализировать пул
+                        with _lock:
+                            try:
+                                if _executor is not None:
+                                    _executor.shutdown(wait=False)
+                            except Exception:
+                                pass
+                            max_workers = min(50, (os.cpu_count() or 1) * 4)
+                            _executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+                            monitor_logger.info(f"Executor recreated after error with {max_workers} workers")
+                        continue
+
+                for future in concurrent.futures.as_completed(futures, timeout=ping_interval * 2):
+                    try:
+                        dev_id, new_status = future.result(timeout=10)
+                        results.append((dev_id, new_status))
+                    except concurrent.futures.TimeoutError:
+                        dev_id = futures.get(future, "unknown")
+                        monitor_logger.warning(f"Timeout checking device {dev_id}, marking as down")
+                        results.append((dev_id, "down"))
+                    except Exception as e:
+                        dev_id = futures.get(future, "unknown")
+                        monitor_logger.error(f"Error checking device {dev_id}: {e}")
+                        results.append((dev_id, "down"))
+
+                time.sleep(0.5)
 
             # ---- ОБРАБОТКА ИЗМЕНЕНИЙ ----
             devices_to_update = []
             history_entries = []
             current_time = time.time()
             with _lock:
-                for device, new_status in results:
-                    last_time = last_emit_time.get(device.id, 0)
+                for dev_id, new_status in results:
+                    last_time = last_emit_time.get(dev_id, 0)
                     if current_time - last_time < 0.5:
                         continue
-                    if device.status != new_status:
-                        devices_to_update.append((device, new_status))
-                        history_entries.append(
-                            DeviceHistory(
-                                device_id=device.id,
-                                old_status=device.status,
-                                new_status=new_status,
+
+                    with app_instance.app_context():
+                        device = Device.query.get(dev_id)
+                        if not device:
+                            continue
+
+                        if device.status != new_status:
+                            devices_to_update.append((device, new_status))
+                            history_entries.append(
+                                DeviceHistory(
+                                    device_id=device.id,
+                                    old_status=device.status,
+                                    new_status=new_status,
+                                )
                             )
-                        )
-                        last_emit_time[device.id] = current_time
-                        monitor_logger.info(
-                            f"Device {device.id} status change: {device.status} -> {new_status}"
-                        )
+                            last_emit_time[dev_id] = current_time
+                            monitor_logger.info(
+                                f"Device {dev_id} status change: {device.status} -> {new_status}"
+                            )
 
             if devices_to_update:
                 with app_instance.app_context():
+                    devices_to_save = []
                     for device, new_status in devices_to_update:
                         dev = Device.query.get(device.id)
                         if dev:
                             dev.status = new_status
                             dev.last_check = db.func.now()
+                            devices_to_save.append(dev)
+
+                    db.session.bulk_save_objects(devices_to_save)
                     db.session.add_all(history_entries)
                     db.session.commit()
 
+                    batch_emits = []
                     for device, new_status in devices_to_update:
                         room_name = f"map_{device.map_id}"
-                        socketio.emit(
-                            "device_status",
-                            {
+                        batch_emits.append({
+                            "room": room_name,
+                            "data": {
                                 "id": device.id,
                                 "status": new_status,
                                 "map_id": device.map_id,
-                            },
-                            room=room_name,
-                        )
+                            }
+                        })
                         monitor_logger.info(
                             f"[{new_status.upper()}] Sent: id={device.id}, status={new_status}, room={room_name}"
                         )
+
+                    for emit_data in batch_emits:
+                        socketio.emit("device_status", emit_data["data"], room=emit_data["room"])
             else:
                 monitor_logger.debug("No status changes this cycle")
 
