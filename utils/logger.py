@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 from logging.handlers import RotatingFileHandler
 from config import Config
@@ -13,6 +14,7 @@ def setup_logger(name):
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    formatter.converter = time.localtime  # Использовать локальное время вместо UTC
 
     if not os.path.exists(Config.LOG_FOLDER):
         os.makedirs(Config.LOG_FOLDER)
