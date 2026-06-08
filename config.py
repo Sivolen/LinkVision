@@ -42,7 +42,7 @@ class Config:
         "pool_pre_ping": True,  # проверять соединение перед использованием
     }
 
-    VERSION = "1.9.5"
+    VERSION = "1.9.7"
 
     # Логирование
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
