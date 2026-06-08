@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
@@ -10,7 +10,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     is_admin = db.Column(db.Boolean, default=False)
     is_operator = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=datetime.now)
     last_map_id = db.Column(db.Integer, db.ForeignKey("map.id"), nullable=True)
 
     # Явно указываем foreign_keys для связи maps
@@ -55,7 +55,7 @@ class Device(db.Model):
     pos_x = db.Column(db.Float, default=0)
     pos_y = db.Column(db.Float, default=0)
     status = db.Column(db.String(10), default="up")
-    last_check = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    last_check = db.Column(db.DateTime, default=datetime.now)
     group_id = db.Column(db.Integer, db.ForeignKey("group.id"), index=True)
     monitoring_enabled = db.Column(db.Boolean, default=True)
 
@@ -115,7 +115,7 @@ class Map(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=datetime.now)
     background_image = db.Column(db.String(256), nullable=True)  # новое поле
     devices = db.relationship(
         "Device", backref="map", cascade="all, delete-orphan", lazy="dynamic"
@@ -137,9 +137,7 @@ class DeviceHistory(db.Model):
     device_id = db.Column(db.Integer, db.ForeignKey("device.id"), index=True)
     old_status = db.Column(db.String(10))
     new_status = db.Column(db.String(10))
-    timestamp = db.Column(
-        db.DateTime, default=lambda: datetime.now(timezone.utc), index=True
-    )
+    timestamp = db.Column(db.DateTime, default=datetime.now, index=True)
 
     device = db.relationship("Device", backref="history")
 

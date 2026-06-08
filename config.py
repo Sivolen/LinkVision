@@ -21,6 +21,9 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Использовать локальное время вместо UTC для дат в SQLAlchemy
+    SQLALCHEMY_TIMEZONE = True
+
     # Безопасность сессий: только HTTPS, если переменная True
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "False") == "True"
     DEBUG = os.environ.get("FLASK_DEBUG", "False") == "True"
