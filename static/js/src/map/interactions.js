@@ -7,6 +7,7 @@ import { updateGroupsForNode, updateAllGroups } from './groupResize.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
+let isGroupDragPending = false;
 
 function fallbackCopy(text) {
     const textarea = document.createElement('textarea');
@@ -51,7 +52,8 @@ export function initInteractions(cy) {
             delete dragTimeouts[node.id()];
         }, 500);
     });
-    // Групповое перетаскивание
+
+    // Групповое перетаскивание (несколько выбранных устройств)
     cy.on('dragfree', 'node:selected', function(evt) {
         if (window.isOperator || window.dragLocked) return;
         const draggedNode = evt.target;
@@ -101,6 +103,7 @@ export function initInteractions(cy) {
         }, 500);
         selectedNodes.forEach(n => delete n._private.scratch._dragStartPos);
     });
+
     // Перетаскивание одиночной фигуры
     cy.on('dragfree', 'node[isShape]', function(evt) {
         if (window.isOperator || window.dragLocked) return;
@@ -131,12 +134,26 @@ export function initInteractions(cy) {
         }, 500);
         if (typeof window.saveState === 'function') window.saveState('Перемещение фигуры');
     });
+
     // Перетаскивание группы
     cy.on('dragfree', 'node[isGroup]', function(evt) {
         if (window.isOperator || window.dragLocked) return;
+        
+        // Защита от повторных вызовов
+        if (isGroupDragPending) {
+            console.log('⏳ Group drag already pending, skipping');
+            return;
+        }
+        
         const groupNode = evt.target;
         const children = groupNode.children().filter(child => !child.data('isGroup'));
         if (!children.length) return;
+
+        // Ограничение на количество устройств (защита от перегрузки)
+        const MAX_DEVICES = 100;
+        if (children.length > MAX_DEVICES) {
+            console.warn(`⚠️ Group has ${children.length} devices, limiting to ${MAX_DEVICES}`);
+        }
 
         let pos = groupNode.position();
         const { width, height } = getBgDimensions();
@@ -146,14 +163,15 @@ export function initInteractions(cy) {
             pos = groupNode.position();
         }
 
-        const updates = children.map(child => ({
+        const updates = children.slice(0, MAX_DEVICES).map(child => ({
             id: child.id(),
             x: Math.round(child.position().x),
             y: Math.round(child.position().y)
         }));
 
-        // Ставим флаг ПЕРЕД отправкой, чтобы пропустить свой map_updated
+        // Ставим флаг ПЕРЕД отправкой
         window.setSkipNextMapUpdate();
+        isGroupDragPending = true;
 
         clearTimeout(dragTimeouts[groupNode.id()]);
         dragTimeouts[groupNode.id()] = setTimeout(() => {
@@ -171,7 +189,10 @@ export function initInteractions(cy) {
             })
             .catch(err => console.error('Error moving group:', err))
             .finally(() => {
-                setTimeout(() => window.clearSkipNextMapUpdate(), 10000);
+                setTimeout(() => {
+                    window.clearSkipNextMapUpdate();
+                    isGroupDragPending = false;
+                }, 10000);
             });
             delete dragTimeouts[groupNode.id()];
         }, 500);
