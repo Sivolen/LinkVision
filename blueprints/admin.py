@@ -16,8 +16,8 @@ from flask_login import login_required, current_user
 from extensions import db
 from models import Map
 from services import user_service, device_type_service, settings_service
+from services.device_type_service import invalidate_types_cache
 from utils.logger import admin_logger
-from services.device_service import invalidate_types_cache
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 

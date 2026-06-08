@@ -1,22 +1,59 @@
+"""
+Сервис для работы с устройствами.
+
+Бизнес-логика связанная с устройствами:
+- Создание, обновление, удаление
+- Валидация данных
+- История изменений
+"""
+
+from typing import Optional, List, Dict, Any
 import ipaddress
 
-from cachetools import TTLCache
+from sqlalchemy.exc import IntegrityError
 
 from models import Device, DeviceIP, DeviceHistory, db, DeviceType, Group, Map
 from utils.logger import api_logger
-from sqlalchemy.exc import IntegrityError
+from services.validators import validate_ip_list
+from services.db.device_repository import device_repo
 
 
-def validate_device_type(type_id):
+def validate_device_type(type_id: int) -> DeviceType:
+    """
+    Проверить существование типа устройства.
+
+    Args:
+        type_id: ID типа устройства
+
+    Returns:
+        DeviceType: Объект типа
+
+    Raises:
+        ValueError: Если тип не найден
+    """
     dtype = DeviceType.query.get(type_id)
     if not dtype:
         raise ValueError(f"Device type with id {type_id} not found")
     return dtype
 
 
-def validate_group_for_map(group_id, map_id):
+def validate_group_for_map(group_id: Optional[int], map_id: int) -> Optional[Group]:
+    """
+    Проверить принадлежность группы к карте.
+
+    Args:
+        group_id: ID группы
+        map_id: ID карты
+
+    Returns:
+        Optional[Group]: Объект группы или None
+
+    Raises:
+        ValueError: Если группа не найдена или не принадлежит карте
+    """
     if group_id is None:
         return None
+
     group = Group.query.get(group_id)
     if not group:
         raise ValueError(f"Group with id {group_id} not found")
@@ -25,16 +62,29 @@ def validate_group_for_map(group_id, map_id):
     return group
 
 
-def get_device_by_id(device_id):
-    return Device.query.get(device_id)
+def get_device_by_id(device_id: int) -> Optional[Device]:
+    """Получить устройство по ID."""
+    return device_repo.get_by_id(device_id)
 
 
-def get_device_history(device_id, page=1, per_page=10):
+def get_device_history(device_id: int, page: int = 1, per_page: int = 10) -> Dict[str, Any]:
+    """
+    Получить историю изменений устройства.
+
+    Args:
+        device_id: ID устройства
+        page: Номер страницы
+        per_page: Количество записей на странице
+
+    Returns:
+        Dict с пагинированной историей
+    """
     query = DeviceHistory.query.filter_by(device_id=device_id).order_by(
         DeviceHistory.timestamp.desc()
     )
     total = query.count()
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
     items = [
         {
             "id": h.id,
@@ -44,6 +94,7 @@ def get_device_history(device_id, page=1, per_page=10):
         }
         for h in paginated.items
     ]
+
     return {
         "items": items,
         "page": page,
@@ -53,7 +104,16 @@ def get_device_history(device_id, page=1, per_page=10):
     }
 
 
-def get_device_details(device_id):
+def get_device_details(device_id: int) -> Dict[str, Any]:
+    """
+    Получить детальную информацию об устройстве.
+
+    Args:
+        device_id: ID устройства
+
+    Returns:
+        Dict с полной информацией об устройстве
+    """
     device = Device.query.get_or_404(device_id)
     history = get_device_history(device_id)
     neighbors = []
@@ -61,33 +121,30 @@ def get_device_details(device_id):
     for link in device.source_links:
         neighbor = link.target
         if neighbor:
-            neighbors.append(
-                {
-                    "device_id": neighbor.id,
-                    "device_name": neighbor.name,
-                    "interface": link.source_interface,
-                    "neighbor_interface": link.target_interface,
-                    "link_type": link.link_type,
-                    "color": link.line_color,
-                    "width": link.line_width,
-                    "style": link.line_style,
-                }
-            )
+            neighbors.append({
+                "device_id": neighbor.id,
+                "device_name": neighbor.name,
+                "interface": link.source_interface,
+                "neighbor_interface": link.target_interface,
+                "link_type": link.link_type,
+                "color": link.line_color,
+                "width": link.line_width,
+                "style": link.line_style,
+            })
+
     for link in device.target_links:
         neighbor = link.source
         if neighbor:
-            neighbors.append(
-                {
-                    "device_id": neighbor.id,
-                    "device_name": neighbor.name,
-                    "interface": link.target_interface,
-                    "neighbor_interface": link.source_interface,
-                    "link_type": link.link_type,
-                    "color": link.line_color,
-                    "width": link.line_width,
-                    "style": link.line_style,
-                }
-            )
+            neighbors.append({
+                "device_id": neighbor.id,
+                "device_name": neighbor.name,
+                "interface": link.target_interface,
+                "neighbor_interface": link.source_interface,
+                "link_type": link.link_type,
+                "color": link.line_color,
+                "width": link.line_width,
+                "style": link.line_style,
+            })
 
     return {
         "id": device.id,
@@ -108,23 +165,45 @@ def get_device_details(device_id):
 
 
 def create_device(
-    map_id,
-    type_id,
-    name,
-    ips=None,
-    x=100,
-    y=100,
-    group_id=None,
-    monitoring_enabled=True,
-    font_size=None,
-):
+    map_id: int,
+    type_id: int,
+    name: str,
+    ips: Optional[List[str]] = None,
+    x: float = 100,
+    y: float = 100,
+    group_id: Optional[int] = None,
+    monitoring_enabled: bool = True,
+    font_size: Optional[int] = None
+) -> Device:
+    """
+    Создать новое устройство.
+
+    Args:
+        map_id: ID карты
+        type_id: ID типа устройства
+        name: Название устройства
+        ips: Список IP-адресов
+        x: Позиция X
+        y: Позиция Y
+        group_id: ID группы
+        monitoring_enabled: Включить мониторинг
+        font_size: Размер шрифта
+
+    Returns:
+        Device: Созданное устройство
+
+    Raises:
+        ValueError: Если валидация не пройдена
+    """
     # Проверяем существование карты и типа
     map_obj = db.session.get(Map, map_id)
     if not map_obj:
         raise ValueError(f"Карта с id {map_id} не найдена")
+
     type_obj = db.session.get(DeviceType, type_id)
     if not type_obj:
         raise ValueError(f"Тип устройства с id {type_id} не найден")
+
     try:
         device = Device(
             map_id=map_id,
@@ -146,23 +225,19 @@ def create_device(
                 if ip and isinstance(ip, str):
                     ip_clean = ip.strip()
                     if ip_clean and ip_clean not in seen:
-                        # валидация IP уже выполнена в API
-                        db.session.add(
-                            DeviceIP(device_id=device.id, ip_address=ip_clean)
-                        )
+                        db.session.add(DeviceIP(device_id=device.id, ip_address=ip_clean))
                         seen.add(ip_clean)
             db.session.commit()
 
-        api_logger.info(
-            f"Device created: ID={device.id}, name={device.name}, ips={ips}"
-        )
+        api_logger.info(f"Device created: ID={device.id}, name={device.name}, ips={ips}")
         return device
 
     except IntegrityError as e:
         db.session.rollback()
         api_logger.error(f"Integrity error creating device: {e}")
         raise ValueError(
-            "Не удалось создать устройство: нарушение ссылочной целостности. Проверьте map_id и type_id."
+            "Не удалось создать устройство: нарушение ссылочной целостности. "
+            "Проверьте map_id и type_id."
         )
     except Exception as e:
         db.session.rollback()
@@ -170,17 +245,23 @@ def create_device(
         raise
 
 
-def update_device(device_id, **kwargs):
+def update_device(device_id: int, **kwargs: Any) -> Device:
+    """
+    Обновить устройство.
+
+    Args:
+        device_id: ID устройства
+        **kwargs: Поля для обновления
+
+    Returns:
+        Device: Обновленное устройство
+    """
     device = Device.query.get_or_404(device_id)
     allowed_fields = [
-        "name",
-        "type_id",
-        "pos_x",
-        "pos_y",
-        "group_id",
-        "monitoring_enabled",
-        "font_size",
+        "name", "type_id", "pos_x", "pos_y", "group_id",
+        "monitoring_enabled", "font_size"
     ]
+
     for key, value in kwargs.items():
         if key in allowed_fields:
             setattr(device, key, value)
@@ -193,19 +274,12 @@ def update_device(device_id, **kwargs):
     if "ips" in kwargs:
         new_ips = kwargs["ips"]
         if new_ips is not None and isinstance(new_ips, list):
-            # --- ОЧИСТКА И ДЕДУПЛИКАЦИЯ ВХОДЯЩЕГО СПИСКА ---
-            clean_new = []
-            for ip in new_ips:
-                if ip and isinstance(ip, str):
-                    ip_clean = ip.strip()
-                    if ip_clean and ip_clean not in clean_new:
-                        try:
-                            ipaddress.ip_address(ip_clean)
-                        except ValueError:
-                            raise ValueError(f"Invalid IP address: {ip_clean}")
-                        clean_new.append(ip_clean)
+            # Валидация и дедупликация
+            clean_new, error = validate_ip_list(new_ips)
+            if error:
+                raise ValueError(error)
 
-            # Существующие IP (множество строк)
+            # Существующие IP
             existing_set = {ip.ip_address for ip in device.ips}
 
             # Удаляем IP, которых нет в новом списке
@@ -213,12 +287,12 @@ def update_device(device_id, **kwargs):
                 if ip_obj.ip_address not in clean_new:
                     db.session.delete(ip_obj)
 
-            # Добавляем только те, которых ещё нет
+            # Добавляем новые IP
             for ip_str in clean_new:
                 if ip_str not in existing_set:
                     db.session.add(DeviceIP(device_id=device.id, ip_address=ip_str))
         else:
-            # Если new_ips = None или не список – удаляем все IP устройства
+            # Если new_ips = None или не список – удаляем все IP
             for ip_obj in device.ips[:]:
                 db.session.delete(ip_obj)
 
@@ -227,14 +301,16 @@ def update_device(device_id, **kwargs):
     return device
 
 
-def delete_device(device_id):
+def delete_device(device_id: int) -> None:
+    """Удалить устройство."""
     device = Device.query.get_or_404(device_id)
     db.session.delete(device)
     db.session.commit()
     api_logger.info(f"Device deleted: ID={device_id}")
 
 
-def update_device_position(device_id, x, y):
+def update_device_position(device_id: int, x: float, y: float) -> Device:
+    """Обновить позицию устройства."""
     device = Device.query.get_or_404(device_id)
     device.pos_x = x
     device.pos_y = y
@@ -244,42 +320,13 @@ def update_device_position(device_id, x, y):
 
 
 def get_all_device_types():
+    """Получить все типы устройств."""
     return DeviceType.query.all()
 
 
-def update_devices_positions(updates):
-    if not updates:
-        return 0
-    updated = 0
-    for item in updates:
-        device_id = item.get("id")
-        x = item.get("x")
-        y = item.get("y")
-        if device_id is None or x is None or y is None:
-            continue
-        device = Device.query.get(device_id)
-        if not device:
-            continue
-        device.pos_x = x
-        device.pos_y = y
-        updated += 1
-    db.session.commit()
-    return updated
+def update_devices_positions(updates: List[Dict[str, Any]]) -> int:
+    """Массовое обновление позиций."""
+    return device_repo.update_positions(updates)
 
 
-# --- Кэш для типов устройств ---
-_types_cache = TTLCache(maxsize=1, ttl=600)
-
-
-def get_cached_types():
-    if "types" not in _types_cache:
-        types = DeviceType.query.all()
-        _types_cache["types"] = [
-            {"id": t.id, "name": t.name, "width": t.width, "height": t.height}
-            for t in types
-        ]
-    return _types_cache["types"]
-
-
-def invalidate_types_cache():
-    _types_cache.pop("types", None)
+# Кэш для типов устройств вынесен в device_type_service

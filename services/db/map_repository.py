@@ -1,0 +1,157 @@
+"""
+Репозиторий для работы с картами.
+
+Инкапсулирует все SQL-запросы к таблице Map.
+"""
+
+from typing import List, Optional
+from sqlalchemy.orm import joinedload
+from extensions import db
+from models import Map, User
+
+
+class MapRepository:
+    """Репозиторий для работы с картами."""
+    
+    @staticmethod
+    def get_by_id(map_id: int) -> Optional[Map]:
+        """
+        Получить карту по ID.
+        
+        Args:
+            map_id: ID карты
+        
+        Returns:
+            Optional[Map]: Карта или None
+        """
+        return Map.query.get(map_id)
+    
+    @staticmethod
+    def get_all() -> List[Map]:
+        """
+        Получить все карты.
+        
+        Returns:
+            List[Map]: Список всех карт
+        """
+        return Map.query.all()
+    
+    @staticmethod
+    def get_by_owner(owner_id: int) -> List[Map]:
+        """
+        Получить карты владельца.
+        
+        Args:
+            owner_id: ID владельца
+
+        Returns:
+            List[Map]: Список карт владельца
+        """
+        return Map.query.filter_by(owner_id=owner_id).all()
+
+    @staticmethod
+    def get_available_for_user(user) -> List[Map]:
+        """
+        Получить карты, доступные пользователю.
+
+        Args:
+            user: Объект пользователя
+
+        Returns:
+            List[Map]: Список доступных карт
+        """
+        if user.is_admin or user.is_operator:
+            return Map.query.all()
+        return Map.query.filter_by(owner_id=user.id).all()
+
+    @staticmethod
+    def create(name: str, owner_id: int, background_image: Optional[str] = None) -> Map:
+        """
+        Создать карту.
+
+        Args:
+            name: Название карты
+            owner_id: ID владельца
+            background_image: Имя файла фона
+
+        Returns:
+            Map: Созданная карта
+        """
+        map_obj = Map(
+            name=name,
+            owner_id=owner_id,
+            background_image=background_image
+        )
+        db.session.add(map_obj)
+        db.session.commit()
+        return map_obj
+
+    @staticmethod
+    def update_details(
+        map_id: int,
+        name: Optional[str] = None,
+        background_image: Optional[str] = None,
+        remove_background: bool = False
+    ) -> Optional[Map]:
+        """
+        Обновить детали карты.
+
+        Args:
+            map_id: ID карты
+            name: Новое название
+            background_image: Имя файла фона
+            remove_background: Удалить фон
+
+        Returns:
+            Optional[Map]: Обновленная карта или None
+        """
+        map_obj = Map.query.get(map_id)
+        if not map_obj:
+            return None
+
+        if name is not None:
+            map_obj.name = name
+
+        if remove_background:
+            map_obj.background_image = None
+        elif background_image is not None:
+            map_obj.background_image = background_image
+
+        db.session.commit()
+        return map_obj
+
+    @staticmethod
+    def delete(map_id: int) -> bool:
+        """
+        Удалить карту.
+
+        Args:
+            map_id: ID карты
+
+        Returns:
+            bool: True если удалено
+        """
+        map_obj = Map.query.get(map_id)
+        if not map_obj:
+            return False
+
+        db.session.delete(map_obj)
+        db.session.commit()
+        return True
+
+    @staticmethod
+    def exists(map_id: int) -> bool:
+        """
+        Проверить существование карты.
+
+        Args:
+            map_id: ID карты
+
+        Returns:
+            bool: True если карта существует
+        """
+        return Map.query.get(map_id) is not None
+
+
+# Singleton instance
+map_repo = MapRepository()
