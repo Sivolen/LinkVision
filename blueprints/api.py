@@ -1,36 +1,33 @@
+"""
+API Blueprint для LinkVision.
+
+Оптимизированная версия с использованием:
+- Декораторов permissions
+- Валидаторов
+- Сервисов для бизнес-логики
+"""
+
 import os
-import ipaddress
 from flask import Blueprint, request, jsonify, current_app, url_for
 from flask_login import login_required, current_user
-from services import device_service, map_service
+
+from services import (
+    device_service,
+    map_service,
+    require_admin,
+    require_not_operator,
+    require_map_access,
+    require_device_access,
+    validate_ip_list,
+    validate_name,
+    get_cached_types,
+)
 from services.map_service import invalidate_groups_cache
 from services.notifications import notify_map_updated
 from utils.logger import api_logger
-from functools import wraps
 from utils.file_validation import safe_save_upload
-from services.device_service import get_cached_types
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
-
-
-def operator_forbidden(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if current_user.is_operator:
-            return jsonify({"error": "Оператор не может выполнять это действие"}), 403
-        return f(*args, **kwargs)
-
-    return decorated_function
-
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
-            return jsonify({"error": "Требуются права администратора"}), 403
-        return f(*args, **kwargs)
-
-    return decorated_function
 
 
 # ============================================================================
@@ -41,22 +38,16 @@ def admin_required(f):
 @api_bp.route("/maps")
 @login_required
 def get_maps():
+    """Получить список доступных карт."""
     maps = map_service.get_available_maps(current_user)
     return jsonify([{"id": m.id, "name": m.name} for m in maps])
 
 
 @api_bp.route("/map/<int:map_id>/elements")
 @login_required
+@require_map_access
 def get_elements(map_id):
-    map_obj = map_service.get_map_by_id(map_id)
-    if not map_obj:
-        return jsonify({"error": "Map not found"}), 404
-    if not (
-        current_user.is_admin
-        or map_obj.owner_id == current_user.id
-        or current_user.is_operator
-    ):
-        return jsonify({"error": "Доступ запрещён"}), 403
+    """Получить все элементы карты."""
     try:
         elements = map_service.get_map_elements(map_id)
         return jsonify(elements)
@@ -65,66 +56,42 @@ def get_elements(map_id):
         return jsonify({"error": "Internal server error"}), 500
 
 
-@api_bp.route("/device/<int:id>", methods=["GET"])
+@api_bp.route("/device/<int:device_id>", methods=["GET"])
 @login_required
-def get_device(id):
-    device = device_service.get_device_by_id(id)
-    if not device:
-        return jsonify({"error": "Device not found"}), 404
-    if not (
-        current_user.is_admin
-        or device.map.owner_id == current_user.id
-        or current_user.is_operator
-    ):
-        return jsonify({"error": "Доступ запрещён"}), 403
-    return jsonify(
-        {
-            "id": device.id,
-            "name": device.name,
-            "ips": [ip.ip_address for ip in device.ips],
-            "type_id": device.type_id,
-            "pos_x": device.pos_x,
-            "pos_y": device.pos_y,
-            "status": device.status,
-            "monitoring_enabled": device.monitoring_enabled,
-        }
-    )
+@require_device_access
+def get_device(device_id):
+    """Получить устройство по ID."""
+    device = device_service.get_device_by_id(device_id)
+    return jsonify({
+        "id": device.id,
+        "name": device.name,
+        "ips": [ip.ip_address for ip in device.ips],
+        "type_id": device.type_id,
+        "pos_x": device.pos_x,
+        "pos_y": device.pos_y,
+        "status": device.status,
+        "monitoring_enabled": device.monitoring_enabled,
+    })
 
 
-@api_bp.route("/device/<int:id>/history")
+@api_bp.route("/device/<int:device_id>/history")
 @login_required
-def get_device_history(id):
-    device = device_service.get_device_by_id(id)
-    if not device:
-        return jsonify({"error": "Device not found"}), 404
-    if not (
-        current_user.is_admin
-        or device.map.owner_id == current_user.id
-        or current_user.is_operator
-    ):
-        return jsonify({"error": "Доступ запрещён"}), 403
-
+@require_device_access
+def get_device_history(device_id):
+    """Получить историю изменений устройства."""
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
-
-    history = device_service.get_device_history(id, page=page, per_page=per_page)
+    history = device_service.get_device_history(device_id, page=page, per_page=per_page)
     return jsonify(history)
 
 
-@api_bp.route("/device/<int:id>/details", methods=["GET"])
+@api_bp.route("/device/<int:device_id>/details", methods=["GET"])
 @login_required
-def get_device_details(id):
-    device = device_service.get_device_by_id(id)
-    if not device:
-        return jsonify({"error": "Device not found"}), 404
-    if not (
-        current_user.is_admin
-        or device.map.owner_id == current_user.id
-        or current_user.is_operator
-    ):
-        return jsonify({"error": "Доступ запрещён"}), 403
+@require_device_access
+def get_device_details(device_id):
+    """Получить детальную информацию об устройстве."""
     try:
-        data = device_service.get_device_details(id)
+        data = device_service.get_device_details(device_id)
         return jsonify(data)
     except Exception as e:
         api_logger.error(f"Error fetching device details: {e}")
@@ -133,16 +100,9 @@ def get_device_details(id):
 
 @api_bp.route("/map/<int:map_id>/groups", methods=["GET"])
 @login_required
+@require_map_access
 def get_groups(map_id):
-    map_obj = map_service.get_map_by_id(map_id)
-    if not map_obj:
-        return jsonify({"error": "Map not found"}), 404
-    if not (
-        current_user.is_admin
-        or map_obj.owner_id == current_user.id
-        or current_user.is_operator
-    ):
-        return jsonify({"error": "Доступ запрещён"}), 403
+    """Получить группы карты."""
     try:
         groups = map_service.get_map_groups(map_id)
         return jsonify(groups)
@@ -154,23 +114,17 @@ def get_groups(map_id):
 @api_bp.route("/types")
 @login_required
 def get_types():
+    """Получить типы устройств."""
     return jsonify(get_cached_types())
 
 
-@api_bp.route("/map/<int:id>/export", methods=["GET"])
+@api_bp.route("/map/<int:map_id>/export", methods=["GET"])
 @login_required
-def export_map(id):
-    map_obj = map_service.get_map_by_id(id)
-    if not map_obj:
-        return jsonify({"error": "Map not found"}), 404
-    if not (
-        current_user.is_admin
-        or map_obj.owner_id == current_user.id
-        or current_user.is_operator
-    ):
-        return jsonify({"error": "Доступ запрещён"}), 403
+@require_map_access
+def export_map(map_id):
+    """Экспортировать карту в JSON."""
     try:
-        data = map_service.export_map_data(id)
+        data = map_service.export_map_data(map_id)
         return jsonify(data)
     except Exception as e:
         api_logger.error(f"Error exporting map: {e}")
@@ -184,33 +138,37 @@ def export_map(id):
 
 @api_bp.route("/device", methods=["POST"])
 @login_required
-@admin_required
+@require_not_operator
 def create_device():
+    """Создать новое устройство."""
     data = request.json
-    if not data.get("map_id"):
-        return jsonify({"error": "map_id is required"}), 400
-    if not data.get("type_id"):
-        return jsonify({"error": "type_id is required"}), 400
-    if not data.get("name"):
-        return jsonify({"error": "name is required"}), 400
 
-    ips = data.get("ips", [])
-    for ip in ips:
-        if ip and ip.strip():
-            try:
-                ipaddress.ip_address(ip.strip())
-            except ValueError:
-                return jsonify({"error": f"Неверный формат IP-адреса: {ip}"}), 400
+    # Валидация обязательных полей
+    if not all(k in data for k in ["map_id", "type_id", "name"]):
+        return jsonify({"error": "map_id, type_id, name required"}), 400
+
+    # Валидация названия
+    is_valid, error = validate_name(data["name"])
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
+    # Валидация IP
+    ips, error = validate_ip_list(data.get("ips", []))
+    if error:
+        return jsonify({"error": error}), 400
 
     try:
+        # Валидация через сервисы
         map_service.validate_map(data["map_id"])
         device_service.validate_device_type(data["type_id"])
+
         if data.get("group_id"):
             device_service.validate_group_for_map(data["group_id"], data["map_id"])
-        api_logger.info(f"Creating device: {data}")
+
         api_logger.info(
-            f"Creating device: map_id={data.get('map_id')}, type_id={data.get('type_id')}, name={data.get('name')}"
+            f"Creating device: map_id={data['map_id']}, type_id={data['type_id']}, name={data['name']}"
         )
+
         dev = device_service.create_device(
             map_id=data["map_id"],
             type_id=data["type_id"],
@@ -222,10 +180,12 @@ def create_device():
             group_id=data.get("group_id"),
             monitoring_enabled=data.get("monitoring_enabled", True),
         )
+
         dtype = dev.type
         icon_url = None
         width = None
         height = None
+
         if dtype and dtype.icon_filename:
             icon_url = (
                 url_for("static", filename=f"uploads/icons/{dtype.icon_filename}")
@@ -235,12 +195,9 @@ def create_device():
             height = dtype.height
 
         notify_map_updated(data["map_id"])
-        return (
-            jsonify(
-                {"id": dev.id, "iconUrl": icon_url, "width": width, "height": height}
-            ),
-            201,
-        )
+
+        return jsonify({"id": dev.id, "iconUrl": icon_url, "width": width, "height": height}), 201
+
     except ValueError as e:
         api_logger.warning(f"Validation error creating device: {e}")
         return jsonify({"error": str(e)}), 400
@@ -249,35 +206,29 @@ def create_device():
         return jsonify({"error": "Internal server error"}), 500
 
 
-@api_bp.route("/device/<int:id>", methods=["PUT"])
+@api_bp.route("/device/<int:device_id>", methods=["PUT"])
 @login_required
-@admin_required
-def update_device(id):
-    device = device_service.get_device_by_id(id)
+@require_not_operator
+def update_device(device_id):
+    """Обновить устройство."""
+    device = device_service.get_device_by_id(device_id)
     if not device:
         return jsonify({"error": "Device not found"}), 404
+
+    # Проверка прав через require_device_access уже сделана декоратором
+    # Дополнительная проверка на владельца или админа
     if not (current_user.is_admin or device.map.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json
-    allowed_fields = [
-        "name",
-        "type_id",
-        "pos_x",
-        "pos_y",
-        "group_id",
-        "monitoring_enabled",
-    ]
+    allowed_fields = ["name", "type_id", "pos_x", "pos_y", "group_id", "monitoring_enabled"]
     update_data = {k: v for k, v in data.items() if k in allowed_fields}
 
+    # Валидация IP
     if "ips" in data:
-        ips = data["ips"]
-        for ip in ips:
-            if ip and ip.strip():
-                try:
-                    ipaddress.ip_address(ip.strip())
-                except ValueError:
-                    return jsonify({"error": f"Неверный IP: {ip}"}), 400
+        ips, error = validate_ip_list(data["ips"])
+        if error:
+            return jsonify({"error": error}), 400
         update_data["ips"] = ips
 
     if "font_size" in data:
@@ -287,57 +238,65 @@ def update_device(id):
         if "type_id" in update_data:
             device_service.validate_device_type(update_data["type_id"])
         if "group_id" in update_data:
-            device_service.validate_group_for_map(
-                update_data["group_id"], device.map_id
-            )
-        device_service.update_device(id, **update_data)
-        # Инвалидация кэша сайдбара для владельца карты
-        device = device_service.get_device_by_id(id)
+            device_service.validate_group_for_map(update_data["group_id"], device.map_id)
+
+        device_service.update_device(device_id, **update_data)
+
+        # Инвалидация кэша сайдбара
+        device = device_service.get_device_by_id(device_id)
         map_service.invalidate_sidebar_cache(device.map.owner_id)
         notify_map_updated(device.map_id)
-        return jsonify({"status": "ok", "id": id})
+
+        return jsonify({"status": "ok", "id": device_id})
+
     except ValueError as e:
-        api_logger.warning(f"Validation error updating device {id}: {e}")
+        api_logger.warning(f"Validation error updating device {device_id}: {e}")
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         api_logger.error(f"Error updating device: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.route("/device/<int:id>", methods=["DELETE"])
+@api_bp.route("/device/<int:device_id>", methods=["DELETE"])
 @login_required
-@admin_required
-def delete_device(id):
-    device = device_service.get_device_by_id(id)
+@require_not_operator
+def delete_device(device_id):
+    """Удалить устройство."""
+    device = device_service.get_device_by_id(device_id)
     if not device:
         return jsonify({"error": "Device not found"}), 404
+
     if not (current_user.is_admin or device.map.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
+
     try:
         map_id = device.map_id
-        device_service.delete_device(id)
+        device_service.delete_device(device_id)
         notify_map_updated(map_id)
-        return jsonify({"status": "deleted", "id": id})
+        return jsonify({"status": "deleted", "id": device_id})
     except Exception as e:
         api_logger.error(f"Error deleting device: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.route("/device/<int:id>/position", methods=["PUT"])
+@api_bp.route("/device/<int:device_id>/position", methods=["PUT"])
 @login_required
-@admin_required
-def update_position(id):
-    device = device_service.get_device_by_id(id)
+@require_not_operator
+def update_position(device_id):
+    """Обновить позицию устройства."""
+    device = device_service.get_device_by_id(device_id)
     if not device:
         return jsonify({"error": "Device not found"}), 404
+
     if not (current_user.is_admin or device.map.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json
     if "x" not in data or "y" not in data:
         return jsonify({"error": "x and y are required"}), 400
+
     try:
-        device_service.update_device_position(id, data["x"], data["y"])
+        device_service.update_device_position(device_id, data["x"], data["y"])
         notify_map_updated(device.map_id)
         return jsonify({"status": "ok"})
     except Exception as e:
@@ -347,25 +306,27 @@ def update_position(id):
 
 @api_bp.route("/link", methods=["POST"])
 @login_required
-@admin_required
+@require_not_operator
 def create_link():
+    """Создать связь между устройствами."""
     data = request.get_json()
     required = ["map_id", "source_id", "target_id"]
+
     if not all(k in data for k in required):
-        return (
-            jsonify({"error": "Missing required fields: map_id, source_id, target_id"}),
-            400,
-        )
+        return jsonify({"error": "Missing required fields: map_id, source_id, target_id"}), 400
 
     try:
         # Валидация карты
         map_service.validate_map(data["map_id"])
+
         # Валидация устройств
         source = device_service.get_device_by_id(data["source_id"])
         target = device_service.get_device_by_id(data["target_id"])
+
         if not source or not target:
             return jsonify({"error": "Source or target device not found"}), 404
-        # Проверяем, что оба устройства принадлежат указанной карте
+
+        # Проверка принадлежности устройствам к карте
         if source.map_id != data["map_id"] or target.map_id != data["map_id"]:
             return jsonify({"error": "Both devices must belong to the same map"}), 400
 
@@ -381,8 +342,10 @@ def create_link():
             line_style=data.get("line_style", "solid"),
             font_size=data.get("font_size", 8),
         )
+
         notify_map_updated(data["map_id"])
         return jsonify({"id": link.id}), 201
+
     except ValueError as e:
         api_logger.warning(f"Validation error creating link: {e}")
         return jsonify({"error": str(e)}), 400
@@ -391,53 +354,60 @@ def create_link():
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.route("/link/<int:id>", methods=["PUT"])
+@api_bp.route("/link/<int:link_id>", methods=["PUT"])
 @login_required
-@admin_required
-def update_link(id):
-    link = map_service.get_link_by_id(id)
+@require_not_operator
+def update_link(link_id):
+    """Обновить связь."""
+    link = map_service.get_link_by_id(link_id)
     if not link:
         return jsonify({"error": "Link not found"}), 404
+
     if not (current_user.is_admin or link.map.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.get_json()
     try:
-        link = map_service.get_link_by_id(id)
-        map_service.update_link(id, **data)
+        link = map_service.get_link_by_id(link_id)
+        map_service.update_link(link_id, **data)
         notify_map_updated(link.map_id)
-        return jsonify({"id": id, "status": "updated"})
+        return jsonify({"id": link_id, "status": "updated"})
     except Exception as e:
         api_logger.error(f"Error updating link: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.route("/link/<int:id>", methods=["DELETE"])
+@api_bp.route("/link/<int:link_id>", methods=["DELETE"])
 @login_required
-@admin_required
-def delete_link(id):
-    link = map_service.get_link_by_id(id)
+@require_not_operator
+def delete_link(link_id):
+    """Удалить связь."""
+    link = map_service.get_link_by_id(link_id)
     if not link:
         return jsonify({"error": "Link not found"}), 404
+
     if not (current_user.is_admin or link.map.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
+
     try:
-        link = map_service.get_link_by_id(id)
-        map_service.delete_link(id)
+        link = map_service.get_link_by_id(link_id)
+        map_service.delete_link(link_id)
         notify_map_updated(link.map_id)
-        return jsonify({"id": id, "status": "deleted"})
+        return jsonify({"id": link_id, "status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting link: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.route("/map/<int:id>", methods=["PUT"])
+@api_bp.route("/map/<int:map_id>", methods=["PUT"])
 @login_required
-@admin_required
-def update_map(id):
-    map_obj = map_service.get_map_by_id(id)
+@require_not_operator
+def update_map(map_id):
+    """Обновить название и фон карты."""
+    map_obj = map_service.get_map_by_id(map_id)
     if not map_obj:
         return jsonify({"error": "Map not found"}), 404
+
     if not (current_user.is_admin or map_obj.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
@@ -454,10 +424,10 @@ def update_map(id):
                 current_app.root_path, "static", "uploads", "maps"
             )
             os.makedirs(upload_folder, exist_ok=True)
-            saved_name = safe_save_upload(file, upload_folder, prefix=f"map_{id}_")
+            saved_name = safe_save_upload(file, upload_folder, prefix=f"map_{map_id}_")
             if saved_name:
                 background_filename = saved_name
-                # Удаляем старый фон, если он был
+                # Удаляем старый фон
                 if map_obj.background_image:
                     old_path = os.path.join(upload_folder, map_obj.background_image)
                     if os.path.exists(old_path):
@@ -467,62 +437,54 @@ def update_map(id):
 
     try:
         map_service.update_map_details(
-            id,
+            map_id,
             name=name,
             background_filename=background_filename,
             remove_background=remove_background,
         )
         map_service.invalidate_sidebar_cache(map_obj.owner_id)
         notify_map_updated(map_obj.id)
-        return jsonify(
-            {
-                "id": map_obj.id,
-                "name": map_obj.name,
-                "background": map_obj.background_image,
-            }
-        )
+        return jsonify({
+            "id": map_obj.id,
+            "name": map_obj.name,
+            "background": map_obj.background_image,
+        })
     except Exception as e:
         api_logger.error(f"Error updating map: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.route("/map/<int:id>/viewport", methods=["PUT"])
+@api_bp.route("/map/<int:map_id>/viewport", methods=["PUT"])
 @login_required
-def update_viewport(id):
-    map_obj = map_service.get_map_by_id(id)
-    if not map_obj:
-        return jsonify({"error": "Map not found"}), 404
-    if not (
-        current_user.is_admin
-        or map_obj.owner_id == current_user.id
-        or current_user.is_operator
-    ):
-        return jsonify({"error": "Доступ запрещён"}), 403
-
-    data = request.json
+@require_map_access
+def update_viewport(map_id):
+    """Обновить настройки viewport пользователя."""
+    data = request.json or {}
     pan_x = data.get("pan_x", 0)
     pan_y = data.get("pan_y", 0)
     zoom = data.get("zoom", 1)
 
     api_logger.info(
-        f"Received viewport update: user={current_user.id}, map={id}, pan=({pan_x}, {pan_y}), zoom={zoom}"
+        f"Received viewport update: user={current_user.id}, map={map_id}, pan=({pan_x}, {pan_y}), zoom={zoom}"
     )
 
     try:
-        map_service.update_user_viewport(current_user.id, id, pan_x, pan_y, zoom)
+        map_service.update_user_viewport(current_user.id, map_id, pan_x, pan_y, zoom)
         return jsonify({"status": "ok"})
     except Exception as e:
-        api_logger.error(f"Error updating viewport: {e}")
+        api_logger.error(f"Error updating viewport: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
 @api_bp.route("/map/import", methods=["POST"])
 @login_required
-@admin_required
-def import_map():
+@require_not_operator
+def import_map_route():
+    """Импортировать карту из JSON."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "No data provided"}), 400
+
     try:
         map_obj = map_service.import_map(data, current_user)
         notify_map_updated(map_obj.id)
@@ -536,29 +498,36 @@ def import_map():
 
 @api_bp.route("/group", methods=["POST"])
 @login_required
-@admin_required
+@require_not_operator
 def create_group():
+    """Создать группу."""
     data = request.json
     map_id = data.get("map_id")
+
     if not map_id:
         return jsonify({"error": "map_id required"}), 400
+
     if not data.get("name"):
         return jsonify({"error": "name required"}), 400
 
     try:
         # Валидация карты
         map_service.validate_map(map_id)
-        # Валидация прав (уже сделано через admin_required и проверку доступа)
+
+        # Валидация прав
         map_obj = map_service.get_map_by_id(map_id)
         if not (current_user.is_admin or map_obj.owner_id == current_user.id):
             return jsonify({"error": "Доступ запрещён"}), 403
+
         font_size = data.get("font_size", 11)
         group = map_service.create_group(
             map_id, data["name"], data.get("color", "#3498db"), font_size
         )
+
         invalidate_groups_cache(map_id)
         notify_map_updated(group.map_id)
         return jsonify({"id": group.id}), 201
+
     except ValueError as e:
         api_logger.warning(f"Validation error creating group: {e}")
         return jsonify({"error": str(e)}), 400
@@ -567,52 +536,60 @@ def create_group():
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.route("/group/<int:id>", methods=["PUT"])
+@api_bp.route("/group/<int:group_id>", methods=["PUT"])
 @login_required
-@admin_required
-def update_group(id):
-    group = map_service.get_group_by_id(id)
+@require_not_operator
+def update_group(group_id):
+    """Обновить группу."""
+    group = map_service.get_group_by_id(group_id)
     if not group:
         return jsonify({"error": "Group not found"}), 404
+
     map_obj = group.map
     if not (current_user.is_admin or map_obj.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json
     try:
-        # Валидация (можно проверить, что название не пустое)
+        # Валидация названия
         name = data.get("name")
         if name is not None and (not name or len(name) < 2):
             return jsonify({"error": "Group name must be at least 2 characters"}), 400
+
         map_service.update_group(
-            id,
+            group_id,
             name=data.get("name"),
             color=data.get("color"),
             font_size=data.get("font_size"),
         )
+
         invalidate_groups_cache(group.map_id)
         notify_map_updated(group.map_id)
         return jsonify({"status": "updated"})
+
     except ValueError as e:
-        api_logger.warning(f"Validation error updating group {id}: {e}")
+        api_logger.warning(f"Validation error updating group {group_id}: {e}")
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         api_logger.error(f"Error updating group: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.route("/group/<int:id>", methods=["DELETE"])
+@api_bp.route("/group/<int:group_id>", methods=["DELETE"])
 @login_required
-@admin_required
-def delete_group(id):
-    group = map_service.get_group_by_id(id)
+@require_not_operator
+def delete_group(group_id):
+    """Удалить группу."""
+    group = map_service.get_group_by_id(group_id)
     if not group:
         return jsonify({"error": "Group not found"}), 404
+
     map_obj = group.map
     if not (current_user.is_admin or map_obj.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
+
     try:
-        map_service.delete_group(id)
+        map_service.delete_group(group_id)
         if group:
             invalidate_groups_cache(group.map_id)
         notify_map_updated(group.map_id)
@@ -624,7 +601,7 @@ def delete_group(id):
 
 @api_bp.route("/devices/positions", methods=["PUT"])
 @login_required
-@admin_required
+@require_not_operator
 def update_devices_positions():
     """Массовое обновление позиций устройств."""
     data = request.json
@@ -636,13 +613,17 @@ def update_devices_positions():
         device_id = item.get("id")
         x = item.get("x")
         y = item.get("y")
+
         if device_id is None or x is None or y is None:
             continue
+
         device = device_service.get_device_by_id(device_id)
         if not device:
             continue
+
         if not (current_user.is_admin or device.map.owner_id == current_user.id):
             continue
+
         valid_updates.append({"id": device_id, "x": x, "y": y})
 
     if not valid_updates:
@@ -661,18 +642,24 @@ def update_devices_positions():
 
 @api_bp.route("/shape", methods=["POST"])
 @login_required
-@admin_required
+@require_not_operator
 def create_shape():
+    """Создать фигуру на карте."""
     data = request.json
     map_id = data.get("map_id")
+
     if not map_id:
         return jsonify({"error": "map_id required"}), 400
+
     map_obj = map_service.get_map_by_id(map_id)
     if not map_obj:
         return jsonify({"error": "Map not found"}), 404
+
     if not (current_user.is_admin or map_obj.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
+
     font_size = data.get("font_size", 12)
+
     try:
         shape = map_service.create_shape(
             map_id=map_id,
@@ -693,39 +680,44 @@ def create_shape():
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.route("/shape/<int:id>", methods=["PUT"])
+@api_bp.route("/shape/<int:shape_id>", methods=["PUT"])
 @login_required
-@admin_required
-def update_shape(id):
-    shape = map_service.get_shape_by_id(id)
+@require_not_operator
+def update_shape(shape_id):
+    """Обновить фигуру."""
+    shape = map_service.get_shape_by_id(shape_id)
     if not shape:
         return jsonify({"error": "Shape not found"}), 404
+
     if not (current_user.is_admin or shape.map.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json
     try:
-        map_service.update_shape(id, **data)
+        map_service.update_shape(shape_id, **data)
         notify_map_updated(shape.map_id)
-        return jsonify({"id": id, "status": "updated"})
+        return jsonify({"id": shape_id, "status": "updated"})
     except Exception as e:
         api_logger.error(f"Error updating shape: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.route("/shape/<int:id>", methods=["DELETE"])
+@api_bp.route("/shape/<int:shape_id>", methods=["DELETE"])
 @login_required
-@admin_required
-def delete_shape(id):
-    shape = map_service.get_shape_by_id(id)
+@require_not_operator
+def delete_shape(shape_id):
+    """Удалить фигуру."""
+    shape = map_service.get_shape_by_id(shape_id)
     if not shape:
         return jsonify({"error": "Shape not found"}), 404
+
     if not (current_user.is_admin or shape.map.owner_id == current_user.id):
         return jsonify({"error": "Доступ запрещён"}), 403
+
     try:
-        map_service.delete_shape(id)
+        map_service.delete_shape(shape_id)
         notify_map_updated(shape.map_id)
-        return jsonify({"id": id, "status": "deleted"})
+        return jsonify({"id": shape_id, "status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting shape: {e}")
         return jsonify({"error": str(e)}), 500

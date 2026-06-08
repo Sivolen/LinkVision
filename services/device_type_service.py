@@ -1,21 +1,71 @@
+"""
+Сервис для работы с типами устройств.
+
+Бизнес-логика связанная с типами устройств:
+- CRUD операции
+- Кэширование
+- Управление иконками
+"""
+
 import os
+from typing import Optional, List, Dict, Any
+from cachetools import TTLCache
+
 from flask import current_app
+
 from models import DeviceType, db
 from utils.file_validation import safe_save_upload
 from utils.logger import admin_logger
 
 
-def get_all_device_types():
+# Кэш для типов устройств
+_types_cache: TTLCache = TTLCache(maxsize=1, ttl=600)
+
+
+def get_cached_types() -> List[Dict[str, Any]]:
+    """Получить кэшированные типы устройств."""
+    if "types" not in _types_cache:
+        types = DeviceType.query.all()
+        _types_cache["types"] = [
+            {"id": t.id, "name": t.name, "width": t.width, "height": t.height}
+            for t in types
+        ]
+    return _types_cache["types"]
+
+
+def invalidate_types_cache() -> None:
+    """Очистить кэш типов устройств."""
+    _types_cache.pop("types", None)
+
+
+def get_all_device_types() -> List[DeviceType]:
     """Получить все типы устройств."""
     return DeviceType.query.all()
 
 
-def get_device_type_by_id(type_id):
+def get_device_type_by_id(type_id: int) -> Optional[DeviceType]:
     """Получить тип устройства по ID."""
     return DeviceType.query.get(type_id)
 
 
-def create_device_type(name, width=None, height=None, icon_file=None):
+def create_device_type(
+    name: str,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+    icon_file=None
+) -> DeviceType:
+    """
+    Создать тип устройства.
+
+    Args:
+        name: Название типа
+        width: Ширина иконки
+        height: Высота иконки
+        icon_file: Файл иконки
+
+    Returns:
+        DeviceType: Созданный тип устройства
+    """
     filename = None
     if icon_file and icon_file.filename:
         upload_folder = current_app.config["UPLOAD_FOLDER"]
@@ -37,7 +87,26 @@ def create_device_type(name, width=None, height=None, icon_file=None):
     return dtype
 
 
-def update_device_type(type_id, name=None, width=None, height=None, icon_file=None):
+def update_device_type(
+    type_id: int,
+    name: Optional[str] = None,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+    icon_file=None
+) -> DeviceType:
+    """
+    Обновить тип устройства.
+
+    Args:
+        type_id: ID типа
+        name: Новое название
+        width: Новая ширина
+        height: Новая высота
+        icon_file: Новый файл иконки
+
+    Returns:
+        DeviceType: Обновленный тип
+    """
     dtype = DeviceType.query.get_or_404(type_id)
     if name is not None:
         dtype.name = name
@@ -64,8 +133,16 @@ def update_device_type(type_id, name=None, width=None, height=None, icon_file=No
     return dtype
 
 
-def delete_device_type(type_id):
-    """Удалить тип устройства и его иконку."""
+def delete_device_type(type_id: int) -> int:
+    """
+    Удалить тип устройства и его иконку.
+
+    Args:
+        type_id: ID типа
+
+    Returns:
+        int: ID удаленного типа
+    """
     dtype = DeviceType.query.get_or_404(type_id)
     if dtype.icon_filename:
         icon_path = os.path.join(
