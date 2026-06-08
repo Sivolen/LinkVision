@@ -6,6 +6,7 @@ const pulseStep = 0.025;
 const minOpacity = 0.15;
 const maxOpacity = 0.45;
 const PULSE_DURATION = 30000; // 30 секунд
+const PULSE_INTERVAL_MS = 100; // Увеличено с 50мс для производительности
 
 export function initPulse(cy) {}
 
@@ -20,20 +21,16 @@ export function addPulsingNode(cy, node, type = 'down') {
     if (existing) {
         clearTimeout(existing.timeoutId);
         pulsingNodes.delete(id);
-        // Убираем оверлей, но оставляем рамку
         node.style('overlay-opacity', null);
     }
 
-    // Устанавливаем цвет оверлея в зависимости от типа
     const overlayColor = (type === 'down') ? '#dc3545' : '#ffc107';
     node.style('overlay-color', overlayColor);
     node.style('overlay-opacity', minOpacity);
 
-    // Добавляем в пульсирующий набор
     pulsingNodes.set(id, {
         type: type,
         timeoutId: setTimeout(() => {
-            // Через 30 секунд останавливаем пульсацию для этого узла
             const nodeData = pulsingNodes.get(id);
             if (nodeData) {
                 pulsingNodes.delete(id);
@@ -42,7 +39,6 @@ export function addPulsingNode(cy, node, type = 'down') {
                     n.style('overlay-opacity', null);
                     n.style('overlay-color', null);
                 }
-                // Если больше нет пульсирующих узлов, останавливаем интервал
                 if (pulsingNodes.size === 0 && pulseInterval) {
                     clearInterval(pulseInterval);
                     pulseInterval = null;
@@ -51,7 +47,6 @@ export function addPulsingNode(cy, node, type = 'down') {
         }, PULSE_DURATION)
     });
 
-    // Запускаем глобальный интервал, если его ещё нет
     if (!pulseInterval && pulsingNodes.size > 0) {
         pulsePhase = 0;
         pulseInterval = setInterval(() => {
@@ -64,7 +59,6 @@ export function addPulsingNode(cy, node, type = 'down') {
                 if (n.length) {
                     n.style('overlay-opacity', opacity);
                 } else {
-                    // Узел удалён — чистим
                     clearTimeout(data.timeoutId);
                     pulsingNodes.delete(nodeId);
                 }
@@ -74,7 +68,7 @@ export function addPulsingNode(cy, node, type = 'down') {
                 clearInterval(pulseInterval);
                 pulseInterval = null;
             }
-        }, 50);
+        }, PULSE_INTERVAL_MS);
     }
 }
 

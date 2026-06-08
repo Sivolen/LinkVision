@@ -1,9 +1,11 @@
 // groupResize.js
 import { getCy } from './core.js';
 
+let groupUpdateTimeout = null;
+const GROUP_UPDATE_DELAY = 100;
+
 export function updateGroupSize(groupNode) {
     if (!groupNode || !groupNode.length) return;
-    // Простой способ: сбросить стиль, чтобы Cytoscape пересчитал размер
     groupNode.style('width', null);
     groupNode.style('height', null);
     groupNode.emit('style');
@@ -19,9 +21,15 @@ export function updateGroupsForNode(node) {
     }
 }
 
+// Оптимизированное массовое обновление с троттлингом
 export function updateAllGroups() {
-    const cy = getCy();
-    if (!cy) return;
-    cy.nodes('node[isGroup]').forEach(group => updateGroupSize(group));
+    if (groupUpdateTimeout) return;
+
+    groupUpdateTimeout = setTimeout(() => {
+        const cy = getCy();
+        if (!cy) return;
+        cy.nodes('node[isGroup]').forEach(group => updateGroupSize(group));
+        groupUpdateTimeout = null;
+    }, GROUP_UPDATE_DELAY);
 }
 window.updateAllGroups = updateAllGroups;

@@ -7,6 +7,7 @@ import { updateGroupsForNode, updateAllGroups } from './groupResize.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
+let hoverTimeout = null;
 
 function fallbackCopy(text) {
     const textarea = document.createElement('textarea');
@@ -16,6 +17,18 @@ function fallbackCopy(text) {
     document.execCommand('copy');
     document.body.removeChild(textarea);
     if (typeof showToast === 'function') showToast('Скопировано', `IP ${text} (резервный способ)`, 'info');
+}
+
+// Троттлинг для hover событий (оптимизация производительности)
+function throttleHover(handler, delay = 50) {
+    let timeout = null;
+    return function(...args) {
+        if (timeout) return;
+        timeout = setTimeout(() => {
+            handler.apply(this, args);
+            timeout = null;
+        }, delay);
+    };
 }
 
 export function initInteractions(cy) {
@@ -260,137 +273,62 @@ export function initInteractions(cy) {
     cy.on('tap', (event) => {
         if (event.target === cy && isLinkMode()) resetLinkMode();
     });
-// ===== Универсальный парсер цвета в RGB =====
-function parseColorToRgb(color) {
-    if (!color) return null;
-    // Если уже в формате rgb(r,g,b)
-    const rgbMatch = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(color);
-    if (rgbMatch) {
-        return {
-            r: parseInt(rgbMatch[1]),
-            g: parseInt(rgbMatch[2]),
-            b: parseInt(rgbMatch[3])
-        };
-    }
-    // Если HEX
-    const hexMatch = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
-    if (hexMatch) {
-        return {
-            r: parseInt(hexMatch[1], 16),
-            g: parseInt(hexMatch[2], 16),
-            b: parseInt(hexMatch[3], 16)
-        };
-    }
-    return null;
-}
 
-// ===== Вспомогательная функция ограничения =====
-function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-}
+    // Подсветка связей при наведении (оптимизировано с троттлингом)
+    const handleMouseOver = throttleHover(function(evt) {
+        if (window.isOperator) return;
+        const node = evt.target;
+        if (node.data('isGroup') || node.data('isShape')) return;
 
-// ===== Плавная анимация стилей ребра (с ограничением RGB) =====
-function animateEdgeStyle(edge, targetColor, targetWidth, duration = 200) {
-    const startColor = edge.style('line-color') || '#6c757d';
-    const startWidth = parseFloat(edge.style('width')) || 2;
-    const startRgb = parseColorToRgb(startColor);
-    const targetRgb = parseColorToRgb(targetColor);
-    if (!startRgb || !targetRgb) return;
-    const startTime = performance.now();
+        const edges = node.connectedEdges();
+        const neighbors = edges.connectedNodes();
 
-    function step(now) {
-        const elapsed = now - startTime;
-        const progress = Math.min(1, elapsed / duration);
-        const r = clamp(Math.round(startRgb.r + (targetRgb.r - startRgb.r) * progress), 0, 255);
-        const g = clamp(Math.round(startRgb.g + (targetRgb.g - startRgb.g) * progress), 0, 255);
-        const b = clamp(Math.round(startRgb.b + (targetRgb.b - startRgb.b) * progress), 0, 255);
-        const width = startWidth + (targetWidth - startWidth) * progress;
-        edge.style({
-            'line-color': `rgb(${r}, ${g}, ${b})`,
-            'width': width
+        edges.forEach(edge => {
+            if (!edge._private.originalStyle) {
+                edge._private.originalStyle = {
+                    'line-color': edge.style('line-color'),
+                    'width': edge.style('width')
+                };
+            }
+            edge.style({ 'line-color': '#f59e0b', 'width': 3 });
         });
-        if (progress < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-}
 
-// ===== Плавная анимация стилей узла (с ограничением RGB) =====
-function animateNodeStyle(node, targetColor, targetWidth, duration = 200) {
-    const startColor = node.style('border-color') || '#28a745';
-    const startWidth = parseFloat(node.style('border-width')) || 3;
-    const startRgb = parseColorToRgb(startColor);
-    const targetRgb = parseColorToRgb(targetColor);
-    if (!startRgb || !targetRgb) return;
-    const startTime = performance.now();
-
-    function step(now) {
-        const elapsed = now - startTime;
-        const progress = Math.min(1, elapsed / duration);
-        const r = clamp(Math.round(startRgb.r + (targetRgb.r - startRgb.r) * progress), 0, 255);
-        const g = clamp(Math.round(startRgb.g + (targetRgb.g - startRgb.g) * progress), 0, 255);
-        const b = clamp(Math.round(startRgb.b + (targetRgb.b - startRgb.b) * progress), 0, 255);
-        const width = startWidth + (targetWidth - startWidth) * progress;
-        node.style({
-            'border-color': `rgb(${r}, ${g}, ${b})`,
-            'border-width': width
+        neighbors.union(node).forEach(n => {
+            if (!n._private.originalBorderStyle) {
+                n._private.originalBorderStyle = {
+                    'border-color': n.style('border-color'),
+                    'border-width': n.style('border-width')
+                };
+            }
+            n.style({ 'border-color': '#f59e0b', 'border-width': 3 });
         });
-        if (progress < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-}
-    // Подсветка связей при наведении на устройство
-// Вместо animateEdgeStyle / animateNodeStyle используем прямые стили:
-cy.on('mouseover', 'node', function(evt) {
-    if (window.isOperator) return;
-    const node = evt.target;
-    if (node.data('isGroup') || node.data('isShape')) return;
+    }, 50);
 
-    const edges = node.connectedEdges();
-    const neighbors = edges.connectedNodes();
+    const handleMouseOut = throttleHover(function(evt) {
+        if (window.isOperator) return;
+        const node = evt.target;
+        if (node.data('isGroup') || node.data('isShape')) return;
 
-    edges.forEach(edge => {
-        if (!edge._private.originalStyle) {
-            edge._private.originalStyle = {
-                'line-color': edge.style('line-color'),
-                'width': edge.style('width')
-            };
-        }
-        edge.style({ 'line-color': '#f59e0b', 'width': 3 });
-    });
+        const edges = node.connectedEdges();
+        const neighbors = edges.connectedNodes();
 
-    neighbors.union(node).forEach(n => {
-        if (!n._private.originalBorderStyle) {
-            n._private.originalBorderStyle = {
-                'border-color': n.style('border-color'),
-                'border-width': n.style('border-width')
-            };
-        }
-        n.style({ 'border-color': '#f59e0b', 'border-width': 3 });
-    });
-});
+        edges.forEach(edge => {
+            if (edge._private.originalStyle) {
+                const orig = edge._private.originalStyle;
+                edge.style({ 'line-color': orig['line-color'], 'width': orig['width'] });
+            }
+        });
 
-cy.on('mouseout', 'node', function(evt) {
-    if (window.isOperator) return;
-    const node = evt.target;
-    if (node.data('isGroup') || node.data('isShape')) return;
+        neighbors.union(node).forEach(n => {
+            if (n._private.originalBorderStyle) {
+                const orig = n._private.originalBorderStyle;
+                n.style({ 'border-color': orig['border-color'], 'border-width': orig['border-width'] });
+            }
+        });
+    }, 50);
 
-    const edges = node.connectedEdges();
-    const neighbors = edges.connectedNodes();
-
-    edges.forEach(edge => {
-        if (edge._private.originalStyle) {
-            const orig = edge._private.originalStyle;
-            edge.style({ 'line-color': orig['line-color'], 'width': orig['width'] });
-        }
-    });
-
-    neighbors.union(node).forEach(n => {
-        if (n._private.originalBorderStyle) {
-            const orig = n._private.originalBorderStyle;
-            n.style({ 'border-color': orig['border-color'], 'border-width': orig['border-width'] });
-        }
-    });
-});
+    cy.on('mouseover', 'node', handleMouseOver);
+    cy.on('mouseout', 'node', handleMouseOut);
         // ==================== КОНТЕКСТНОЕ МЕНЮ ====================
     let contextMenu = null;
 

@@ -55,19 +55,20 @@ export function initMap(id) {
     window.saveState = saveState;
 
     loadElements(mapId);
-    // Сохраняем начальное состояние после того, как элементы загружены
     if (typeof window.saveState === 'function') {
-        // Небольшая задержка, чтобы убедиться, что все элементы отрисованы
         setTimeout(() => window.saveState('initial'), 500);
     }
-        let statusBatch = [];
-        let statusBatchTimeout = null;
+
+    // Оптимизированный batch для обновлений статусов
+    let statusBatch = [];
+    let statusBatchTimeout = null;
+    const STATUS_BATCH_DELAY = 100; // Увеличено с 50мс для производительности
 
     window.socket.on('device_status', (data) => {
         if (Number(data.map_id) !== Number(mapId)) return;
         const node = cy.getElementById(String(data.id));
         if (!node.length) return;
-        const newStatus = data.status; // 'up', 'down', 'partial'
+        const newStatus = data.status;
 
         const monitoringRaw = node.data('monitoring_enabled');
         const monitoringEnabled = (monitoringRaw === true || monitoringRaw === 'true');
@@ -81,11 +82,11 @@ export function initMap(id) {
 
         if (node.data('status') === newStatus) return;
 
-        statusBatch.push({ node, newStatus });
+        statusBatch.push({ node, newStatus, mapId: data.map_id });
         if (statusBatchTimeout) clearTimeout(statusBatchTimeout);
         statusBatchTimeout = setTimeout(() => {
             cy.batch(() => {
-                statusBatch.forEach(({ node, newStatus }) => {
+                statusBatch.forEach(({ node, newStatus, mapId }) => {
                     node.data('status', newStatus);
                     removePulsingNode(cy, node);
                     if (newStatus === 'down') {
@@ -93,13 +94,13 @@ export function initMap(id) {
                     } else if (newStatus === 'partial') {
                         addPulsingNode(cy, node, 'partial');
                     }
-                    updateSidebarCounter(data.map_id, (newStatus === 'down' || newStatus === 'partial'));
+                    updateSidebarCounter(mapId, (newStatus === 'down' || newStatus === 'partial'));
                 });
             });
             cy.style().update();
             statusBatch = [];
             statusBatchTimeout = null;
-        }, 50);
+        }, STATUS_BATCH_DELAY);
     });
     window.socket.on('device_status_batch', (statuses) => {
         if (!cy) return;

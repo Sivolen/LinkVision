@@ -4,26 +4,48 @@ import { addPulsingNode } from './pulse.js';
 
 const wrapText = window.wrapText || ((text) => text);
 
-export function loadElements(mapId) {
+// Кэш для оптимизации повторных загрузок
+let elementsCache = {
+    groups: null,
+    shapes: null,
+    nodes: null,
+    edges: null,
+    timestamp: 0
+};
+
+const CACHE_DURATION = 5000; // 5 секунд кэш
+
+export function loadElements(mapId, force = false) {
     const cy = getCy();
     if (!cy) return;
+
+    // Проверка кэша (если не force)
+    const now = Date.now();
+    if (!force && elementsCache.timestamp && (now - elementsCache.timestamp) < CACHE_DURATION) {
+        return; // Используем кэш
+    }
+
     cy.elements().remove();
 
     fetchWithRetry(`/api/map/${mapId}/elements`)
         .then(res => res.ok ? res.json() : Promise.reject())
         .then(data => {
             const { width: bgW, height: bgH } = getBgImageSize();
+            const startTime = performance.now();
 
-            cy.batch(() => {
-                // ГРУППЫ
-                const groupNodes = [];
-                const groupMap = {};
-                (data.groups || []).forEach(g => {
+            // Подготовка всех элементов для batch-операции
+            const allElements = [];
+            const groupMap = {};
+
+            // ГРУППЫ - только с устройствами
+            if (data.groups && data.groups.length) {
+                data.groups.forEach(g => {
                     if (g.device_count === 0) return;
-                    groupNodes.push({
+                    const groupId = `group_${g.id}`;
+                    allElements.push({
                         group: 'nodes',
                         data: {
-                            id: `group_${g.id}`,
+                            id: groupId,
                             name: g.name,
                             color: g.color,
                             isGroup: true,
@@ -31,51 +53,56 @@ export function loadElements(mapId) {
                             fontSize: g.font_size || 11
                         }
                     });
-                    groupMap[g.id] = `group_${g.id}`;
+                    groupMap[g.id] = groupId;
                 });
-                cy.add(groupNodes);
+            }
 
-                // ФИГУРЫ
-                (data.shapes || []).forEach(shape => {
-                    const shapeId = `shape_${shape.id}`;
-                    if (!cy.getElementById(shapeId).length) {
-                        cy.add({
-                            group: 'nodes',
-                            data: {
-                                id: shapeId,
-                                isShape: true,
-                                shape_type: shape.shape_type,
-                                width: shape.width,
-                                height: shape.height,
-                                color: shape.color,
-                                opacity: shape.opacity,
-                                description: shape.description,
-                                label: wrapText(shape.description || '', 30),
-                                fontSize: shape.font_size || 12
-                            },
-                            position: { x: shape.x, y: shape.y }
-                        });
-                    }
+            // ФИГУРЫ
+            if (data.shapes && data.shapes.length) {
+                data.shapes.forEach(shape => {
+                    allElements.push({
+                        group: 'nodes',
+                        data: {
+                            id: `shape_${shape.id}`,
+                            isShape: true,
+                            shape_type: shape.shape_type,
+                            width: shape.width,
+                            height: shape.height,
+                            color: shape.color,
+                            opacity: shape.opacity,
+                            description: shape.description,
+                            label: wrapText(shape.description || '', 30),
+                            fontSize: shape.font_size || 12
+                        },
+                        position: { x: shape.x, y: shape.y }
+                    });
                 });
+            }
 
-                // УСТРОЙСТВА
-                const validNodes = data.nodes.filter(n => n.data && n.data.id);
-                validNodes.forEach(n => {
+            // УСТРОЙСТВА - оптимизированная обработка
+            if (data.nodes && data.nodes.length) {
+                const frag = document.createDocumentFragment();
+                data.nodes.forEach(n => {
+                    if (!n.data || !n.data.id) return;
                     n.data.id = String(n.data.id);
                     if (n.data.group_id && groupMap[n.data.group_id]) {
                         n.data.parent = groupMap[n.data.group_id];
+                    } else {
+                        delete n.data.parent;
                     }
                     if (bgW && bgH && n.data.x !== undefined && n.data.y !== undefined) {
                         const bounded = boundNodePosition({ x: n.data.x, y: n.data.y });
                         n.data.x = bounded.x;
                         n.data.y = bounded.y;
                     }
+                    allElements.push(n);
                 });
-                cy.add(validNodes);
+            }
 
-                // РЁБРА
-                const validEdges = data.edges.filter(e => e.data && e.data.source && e.data.target);
-                validEdges.forEach(e => {
+            // РЁБРА - оптимизированная обработка
+            if (data.edges && data.edges.length) {
+                data.edges.forEach(e => {
+                    if (!e.data || !e.data.source || !e.data.target) return;
                     e.data.source = String(e.data.source);
                     e.data.target = String(e.data.target);
                     e.data.id = `link_${String(e.data.id)}`;
@@ -83,31 +110,57 @@ export function loadElements(mapId) {
                     const parts = (e.data.label || 'eth0↔eth0').split('↔');
                     e.data.srcIface = parts[0].trim();
                     e.data.tgtIface = parts[1].trim();
+                    allElements.push(e);
                 });
-                cy.add(validEdges);
+            }
+
+            // Единая batch-операция для всех элементов
+            cy.batch(() => {
+                cy.add(allElements);
             });
 
+            // Обновление меток и групп
             import('./edgeLabels.js').then(m => m.updateAllEdgeLabels());
             import('./groupResize.js').then(m => m.updateAllGroups());
+
             setElementsLoaded(true);
             cy.resize();
             window.dispatchEvent(new CustomEvent('elements:loaded'));
 
-            // Применяем стили при загрузке
+            // Оптимизированное применение стилей
+            const downNodes = [];
+            const partialNodes = [];
+            const monitoringOffNodes = [];
+
             cy.nodes().forEach(node => {
                 const monitoringRaw = node.data('monitoring_enabled');
                 const isMonitoringOff = (monitoringRaw === 'false' || monitoringRaw === false);
                 if (isMonitoringOff) {
-                    applyGrayStyle(node);
+                    monitoringOffNodes.push(node);
                 } else {
                     const status = node.data('status');
-                    if (status === 'down') {
-                        addPulsingNode(cy, node, 'down');
-                    } else if (status === 'partial') {
-                        addPulsingNode(cy, node, 'partial');
-                    }
+                    if (status === 'down') downNodes.push(node);
+                    else if (status === 'partial') partialNodes.push(node);
                 }
             });
+
+            // Пакетное применение стилей
+            monitoringOffNodes.forEach(node => applyGrayStyle(node));
+            downNodes.forEach(node => addPulsingNode(cy, node, 'down'));
+            partialNodes.forEach(node => addPulsingNode(cy, node, 'partial'));
+
+            // Обновление кэша
+            elementsCache = {
+                groups: data.groups,
+                shapes: data.shapes,
+                nodes: data.nodes,
+                edges: data.edges,
+                timestamp: Date.now()
+            };
+
+            const loadTime = performance.now() - startTime;
+            console.log(`⚡ Elements loaded in ${loadTime.toFixed(0)}ms (${allElements.length} elements)`);
+
             if (typeof window.loadSidebarMaps === 'function') {
                 setTimeout(() => window.loadSidebarMaps(), 300);
             }
