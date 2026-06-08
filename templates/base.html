@@ -14,12 +14,14 @@
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='images/site.webmanifest') }}">
+
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- ====================================================================
-         САЙДБАР (только для авторизованных)
+         САЙДБАР (только для авторизованных И если не скрыт)
          ==================================================================== -->
-    {% if current_user.is_authenticated %}
+    {% if current_user.is_authenticated and not hide_sidebar %}
     <nav class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h4 class="sidebar-logo">
@@ -94,12 +96,14 @@
     </nav>
     {% endif %}
 
+    {% block sidebar_content %}{% endblock %}
+
     <!-- ====================================================================
          ОСНОВНОЙ КОНТЕНТ
          ==================================================================== -->
-    <div class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %}">
-        <!-- Кнопка вызова мобильного меню (только для авторизованных) -->
-        {% if current_user.is_authenticated %}
+    <div class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %} {% if hide_sidebar %}no-sidebar-forced{% endif %}">
+        <!-- Кнопка вызова мобильного меню (только для авторизованных и если не скрыта) -->
+        {% if current_user.is_authenticated and not hide_sidebar %}
         <button class="mobile-menu-toggle" id="mobileMenuToggle" onclick="toggleMobileSidebar()">
             <i class="fas fa-bars"></i>
         </button>
@@ -222,5 +226,7 @@
 <!--    <script src="{{ url_for('static', filename='js/base.js') }}"></script>-->
         <script src="{{ url_for('static', filename='js/dist/base.min.js') }}"></script>
     {% block scripts %}{% endblock %}
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
