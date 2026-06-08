@@ -1,6 +1,9 @@
 // edgeLabels.js – обновление подписей рёбер в зависимости от позиций узлов
 import { getCy } from './core.js';
 
+let updateTimeout = null;
+const UPDATE_DELAY = 100; // задержка для пакетного обновления
+
 export function updateEdgeLabel(edge) {
     if (!edge || edge.length === 0) return;
     const sourceNode = edge.source();
@@ -19,7 +22,6 @@ export function updateEdgeLabel(edge) {
         label = `${tgtIface} ↔ ${srcIface}`;
     }
     edge.data('label', label);
-    // принудительно обновляем стиль (чтобы текст перерисовался)
     edge.emit('style');
 }
 
@@ -31,8 +33,19 @@ export function updateEdgeLabelsForNode(node) {
     connectedEdges.forEach(edge => updateEdgeLabel(edge));
 }
 
+// Оптимизированное массовое обновление с троттлингом
 export function updateAllEdgeLabels() {
-    const cy = getCy();
-    if (!cy) return;
-    cy.edges().forEach(edge => updateEdgeLabel(edge));
+    if (updateTimeout) return; // Защита от частых вызовов
+
+    updateTimeout = setTimeout(() => {
+        const cy = getCy();
+        if (!cy) return;
+
+        // Используем batch для оптимизации
+        cy.batch(() => {
+            cy.edges().forEach(edge => updateEdgeLabel(edge));
+        });
+
+        updateTimeout = null;
+    }, UPDATE_DELAY);
 }
