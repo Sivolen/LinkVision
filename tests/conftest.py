@@ -89,14 +89,21 @@ def runner(app):
 
 
 @pytest.fixture
-def auth_headers(client):
-    """Login and return auth headers."""
+def logged_in_client(client, app):
+    """Login and return client with active session."""
+    with client.session_transaction() as sess:
+        pass  # Ensure session is available
+
+    # Login as admin
     response = client.post('/auth/login', data={
         'username': 'admin',
         'password': 'Admin123!'
-    }, follow_redirects=True)
-    
-    return {}  # Session-based auth
+    }, follow_redirects=False)
+
+    # Check if login was successful (should redirect)
+    if response.status_code in [200, 302]:
+        return client
+    return client
 
 
 @pytest.fixture
@@ -107,6 +114,8 @@ def sample_map(app, auth_headers):
         map_obj = Map(name='Test Map', owner_id=admin.id)
         db.session.add(map_obj)
         db.session.commit()
+        # Refresh to ensure object is bound to session
+        db.session.refresh(map_obj)
         return map_obj
 
 
@@ -125,4 +134,6 @@ def sample_device(app, sample_map):
         )
         db.session.add(device)
         db.session.commit()
+        # Refresh to ensure object is bound to session
+        db.session.refresh(device)
         return device

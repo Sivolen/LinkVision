@@ -349,6 +349,15 @@ export async function deleteGroup(id, name) {
                 throw new Error(errorMsg);
             }
             showToast('Группа удалена', `Группа "${name}" удалена`, 'success');
+
+            // Удаляем узел группы из графа немедленно
+            if (window.cy) {
+                const groupNode = window.cy.getElementById(`group_${id}`);
+                if (groupNode.length) {
+                    groupNode.remove();
+                }
+            }
+
             loadGroupsList();
             if (currentGroupId === id) resetGroupForm();
             await reloadMapWithViewportRestore();
