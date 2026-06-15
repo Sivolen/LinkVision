@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- CSRF токен для AJAX запросов -->
+    <meta name="csrf-token" content="">
     <title>Link Vision</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css') }}">
@@ -213,6 +214,11 @@
         </div>
     </div>
 </div>
+<!-- Скрытая форма для CSRF токена -->
+<form id="csrf-form" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
     <!-- Скрипты -->
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
@@ -222,6 +228,17 @@
         window.currentUserId = {{ current_user.id if current_user.is_authenticated else 'null' }};
         window.isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
         window.isOperator = {{ 'true' if current_user.is_operator else 'false' }};
+
+        // Получаем CSRF токен из скрытой формы
+        document.addEventListener('DOMContentLoaded', function() {
+            const csrfForm = document.getElementById('csrf-form');
+            if (csrfForm) {
+                const token = csrfForm.querySelector('[name="csrf_token"]')?.value;
+                if (token) {
+                    document.querySelector('meta[name="csrf-token"]').setAttribute('content', token);
+                }
+            }
+        });
     </script>
 <!--    <script src="{{ url_for('static', filename='js/base.js') }}"></script>-->
         <script src="{{ url_for('static', filename='js/dist/base.min.js') }}"></script>

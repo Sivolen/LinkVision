@@ -17,11 +17,19 @@ from services import (
     require_admin,
     require_not_operator,
     require_map_access,
+    require_map_edit,
     require_device_access,
+    require_device_edit,
+    can_edit_map,
     validate_ip_list,
     validate_name,
     get_cached_types,
+    log_map_action,
+    log_permission_action,
+    log_device_action,
 )
+from models import Map, MapPermission, User
+from extensions import db
 from services.map_service import invalidate_groups_cache
 from services.notifications import notify_map_updated
 from utils.logger import api_logger
@@ -62,16 +70,18 @@ def get_elements(map_id):
 def get_device(device_id):
     """Получить устройство по ID."""
     device = device_service.get_device_by_id(device_id)
-    return jsonify({
-        "id": device.id,
-        "name": device.name,
-        "ips": [ip.ip_address for ip in device.ips],
-        "type_id": device.type_id,
-        "pos_x": device.pos_x,
-        "pos_y": device.pos_y,
-        "status": device.status,
-        "monitoring_enabled": device.monitoring_enabled,
-    })
+    return jsonify(
+        {
+            "id": device.id,
+            "name": device.name,
+            "ips": [ip.ip_address for ip in device.ips],
+            "type_id": device.type_id,
+            "pos_x": device.pos_x,
+            "pos_y": device.pos_y,
+            "status": device.status,
+            "monitoring_enabled": device.monitoring_enabled,
+        }
+    )
 
 
 @api_bp.route("/device/<int:device_id>/history")
@@ -196,7 +206,12 @@ def create_device():
 
         notify_map_updated(data["map_id"])
 
-        return jsonify({"id": dev.id, "iconUrl": icon_url, "width": width, "height": height}), 201
+        return (
+            jsonify(
+                {"id": dev.id, "iconUrl": icon_url, "width": width, "height": height}
+            ),
+            201,
+        )
 
     except ValueError as e:
         api_logger.warning(f"Validation error creating device: {e}")
@@ -221,7 +236,14 @@ def update_device(device_id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json
-    allowed_fields = ["name", "type_id", "pos_x", "pos_y", "group_id", "monitoring_enabled"]
+    allowed_fields = [
+        "name",
+        "type_id",
+        "pos_x",
+        "pos_y",
+        "group_id",
+        "monitoring_enabled",
+    ]
     update_data = {k: v for k, v in data.items() if k in allowed_fields}
 
     # Валидация IP
@@ -238,7 +260,9 @@ def update_device(device_id):
         if "type_id" in update_data:
             device_service.validate_device_type(update_data["type_id"])
         if "group_id" in update_data:
-            device_service.validate_group_for_map(update_data["group_id"], device.map_id)
+            device_service.validate_group_for_map(
+                update_data["group_id"], device.map_id
+            )
 
         device_service.update_device(device_id, **update_data)
 
@@ -313,7 +337,10 @@ def create_link():
     required = ["map_id", "source_id", "target_id"]
 
     if not all(k in data for k in required):
-        return jsonify({"error": "Missing required fields: map_id, source_id, target_id"}), 400
+        return (
+            jsonify({"error": "Missing required fields: map_id, source_id, target_id"}),
+            400,
+        )
 
     try:
         # Валидация карты
@@ -444,11 +471,13 @@ def update_map(map_id):
         )
         map_service.invalidate_sidebar_cache(map_obj.owner_id)
         notify_map_updated(map_obj.id)
-        return jsonify({
-            "id": map_obj.id,
-            "name": map_obj.name,
-            "background": map_obj.background_image,
-        })
+        return jsonify(
+            {
+                "id": map_obj.id,
+                "name": map_obj.name,
+                "background": map_obj.background_image,
+            }
+        )
     except Exception as e:
         api_logger.error(f"Error updating map: {e}")
         return jsonify({"error": str(e)}), 500
@@ -721,3 +750,398 @@ def delete_shape(shape_id):
     except Exception as e:
         api_logger.error(f"Error deleting shape: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# Блокировка карт (v2.0)
+# ============================================================================
+
+
+@api_bp.route("/map/<int:map_id>/lock", methods=["PUT"])
+@login_required
+@require_map_edit
+def toggle_map_lock(map_id):
+    """
+    Заблокировать/разблокировать карту.
+
+    Требует права редактирования карты.
+    """
+    map_obj = Map.query.get_or_404(map_id)
+    data = request.json or {}
+
+    old_locked = map_obj.is_locked
+
+    # Если не передано значение — переключаем
+    if "locked" not in data:
+        map_obj.is_locked = not map_obj.is_locked
+    else:
+        map_obj.is_locked = bool(data["locked"])
+
+    db.session.commit()
+    notify_map_updated(map_id)
+
+    # Аудит
+    log_map_action(
+        action="lock_map" if map_obj.is_locked else "unlock_map",
+        map_id=map_id,
+        map_name=map_obj.name,
+        old_values={"is_locked": old_locked},
+        new_values={"is_locked": map_obj.is_locked},
+    )
+
+    api_logger.info(
+        f"Map lock toggled: map_id={map_id}, locked={map_obj.is_locked}, user={current_user.id}"
+    )
+
+    return jsonify(
+        {"id": map_id, "is_locked": map_obj.is_locked, "can_edit": can_edit_map(map_id)}
+    )
+
+
+@api_bp.route("/map/<int:map_id>/lock", methods=["GET"])
+@login_required
+@require_map_access
+def get_map_lock_status(map_id):
+    """Получить статус блокировки карты."""
+    map_obj = Map.query.get_or_404(map_id)
+    return jsonify(
+        {"id": map_id, "is_locked": map_obj.is_locked, "can_edit": can_edit_map(map_id)}
+    )
+
+
+# ============================================================================
+# Управление правами доступа к картам (v2.0)
+# ============================================================================
+
+
+@api_bp.route("/map/<int:map_id>/permissions", methods=["GET"])
+@login_required
+@require_map_access
+def get_map_permissions(map_id):
+    """
+    Получить список разрешений для карты.
+
+    Доступно: администраторам, владельцу карты.
+    """
+    map_obj = Map.query.get_or_404(map_id)
+
+    # Проверка: админ или владелец
+    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
+        return jsonify({"error": "Доступ запрещён"}), 403
+
+    permissions = MapPermission.query.filter_by(map_id=map_id).all()
+
+    result = []
+    for perm in permissions:
+        perm_data = {
+            "id": perm.id,
+            "map_id": perm.map_id,
+            "type": "user" if perm.user_id else "role",
+            "role": perm.role,
+        }
+        if perm.user_id:
+            user = User.query.get(perm.user_id)
+            perm_data["user_id"] = user.id
+            perm_data["username"] = user.username if user else "Unknown"
+        result.append(perm_data)
+
+    return jsonify(result)
+
+
+@api_bp.route("/map/<int:map_id>/permissions", methods=["POST"])
+@login_required
+def add_map_permission(map_id):
+    """
+    Добавить разрешение на карту.
+
+    Доступно: администраторам, владельцу карты.
+
+    Body:
+    - user_id: ID пользователя (опционально)
+    - role: 'viewer', 'editor', 'admin' (обязательно)
+    """
+    map_obj = Map.query.get_or_404(map_id)
+
+    # Проверка: админ или владелец
+    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
+        return jsonify({"error": "Доступ запрещён"}), 403
+
+    data = request.json or {}
+    user_id = data.get("user_id")
+    role = data.get("role")
+
+    if not role or role not in ["viewer", "editor", "admin"]:
+        return (
+            jsonify({"error": "Invalid role. Must be 'viewer', 'editor', or 'admin'"}),
+            400,
+        )
+
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
+
+    # Проверка существования пользователя
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Проверка на дубликат
+    existing = MapPermission.query.filter_by(map_id=map_id, user_id=user_id).first()
+    if existing:
+        return jsonify({"error": "Permission already exists for this user"}), 409
+
+    # Создаём разрешение
+    perm = MapPermission(map_id=map_id, user_id=user_id, role=role)
+    db.session.add(perm)
+    db.session.commit()
+
+    # Аудит
+    log_permission_action(
+        action="add_permission",
+        map_id=map_id,
+        map_name=map_obj.name,
+        user_id=user_id,
+        role=role,
+        new_values={"user_id": user_id, "role": role},
+    )
+
+    api_logger.info(
+        f"Permission added: map_id={map_id}, user_id={user_id}, role={role}, by={current_user.id}"
+    )
+
+    return (
+        jsonify(
+            {
+                "id": perm.id,
+                "map_id": map_id,
+                "user_id": user_id,
+                "username": user.username,
+                "role": role,
+            }
+        ),
+        201,
+    )
+
+
+@api_bp.route("/map/<int:map_id>/permissions/<int:perm_id>", methods=["PUT"])
+@login_required
+def update_map_permission(map_id, perm_id):
+    """
+    Обновить разрешение на карту.
+
+    Доступно: администраторам, владельцу карты.
+
+    Body:
+    - role: 'viewer', 'editor', 'admin'
+    """
+    map_obj = Map.query.get_or_404(map_id)
+
+    # Проверка: админ или владелец
+    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
+        return jsonify({"error": "Доступ запрещён"}), 403
+
+    perm = MapPermission.query.get_or_404(perm_id)
+    if perm.map_id != map_id:
+        return jsonify({"error": "Permission not found for this map"}), 404
+
+    data = request.json or {}
+    role = data.get("role")
+
+    old_role = perm.role
+
+    if role and role not in ["viewer", "editor", "admin"]:
+        return jsonify({"error": "Invalid role"}), 400
+
+    if role:
+        perm.role = role
+        db.session.commit()
+
+        # Аудит
+        log_permission_action(
+            action="update_permission",
+            map_id=map_id,
+            map_name=map_obj.name,
+            user_id=perm.user_id,
+            old_values={"role": old_role},
+            new_values={"role": role},
+        )
+
+    api_logger.info(
+        f"Permission updated: perm_id={perm_id}, role={role}, by={current_user.id}"
+    )
+
+    return jsonify(
+        {"id": perm.id, "map_id": map_id, "user_id": perm.user_id, "role": perm.role}
+    )
+
+
+@api_bp.route("/map/<int:map_id>/permissions/<int:perm_id>", methods=["DELETE"])
+@login_required
+def delete_map_permission(map_id, perm_id):
+    """
+    Удалить разрешение на карту.
+
+    Доступно: администраторам, владельцу карты.
+    """
+    map_obj = Map.query.get_or_404(map_id)
+
+    # Проверка: админ или владелец
+    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
+        return jsonify({"error": "Доступ запрещён"}), 403
+
+    perm = MapPermission.query.get_or_404(perm_id)
+    if perm.map_id != map_id:
+        return jsonify({"error": "Permission not found for this map"}), 404
+
+    # Данные для аудита
+    perm_user_id = perm.user_id
+    perm_role = perm.role
+
+    db.session.delete(perm)
+    db.session.commit()
+
+    # Аудит
+    log_permission_action(
+        action="delete_permission",
+        map_id=map_id,
+        map_name=map_obj.name,
+        user_id=perm_user_id,
+        role=perm_role,
+        old_values={"user_id": perm_user_id, "role": perm_role},
+    )
+
+    api_logger.info(f"Permission deleted: perm_id={perm_id}, by={current_user.id}")
+
+    return jsonify({"status": "deleted", "id": perm_id})
+
+
+@api_bp.route("/map/<int:map_id>/permissions/role", methods=["POST"])
+@login_required
+def add_map_role_permission(map_id):
+    """
+    Добавить разрешение для роли (все операторы).
+
+    Доступно: администраторам, владельцу карты.
+
+    Body:
+    - role: 'viewer' или 'editor'
+    """
+    map_obj = Map.query.get_or_404(map_id)
+
+    # Проверка: админ или владелец
+    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
+        return jsonify({"error": "Доступ запрещён"}), 403
+
+    data = request.json or {}
+    role = data.get("role")
+
+    if not role or role not in ["viewer", "editor"]:
+        return jsonify({"error": "Invalid role. Must be 'viewer' or 'editor'"}), 400
+
+    # Проверка на дубликат
+    existing = MapPermission.query.filter_by(map_id=map_id, role=role).first()
+    if existing:
+        return jsonify({"error": "Role permission already exists"}), 409
+
+    # Создаём разрешение
+    perm = MapPermission(map_id=map_id, role=role)
+    db.session.add(perm)
+    db.session.commit()
+
+    api_logger.info(
+        f"Role permission added: map_id={map_id}, role={role}, by={current_user.id}"
+    )
+
+    return jsonify({"id": perm.id, "map_id": map_id, "role": role}), 201
+
+
+# ============================================================================
+# Аудит логирование (v2.0)
+# ============================================================================
+
+
+@api_bp.route("/audit/logs", methods=["GET"])
+@login_required
+@require_admin
+def get_audit_logs_route():
+    """
+    Получить журнал аудита.
+
+    Доступно: только администраторам.
+
+    Query params:
+    - user_id: фильтр по пользователю
+    - target_type: фильтр по типу объекта (map, device, permission)
+    - target_id: фильтр по ID объекта
+    - action: фильтр по действию
+    - date_from: начальная дата (ISO format)
+    - date_to: конечная дата (ISO format)
+    - page: номер страницы (default: 1)
+    - per_page: записей на страницу (default: 50)
+    """
+    from datetime import datetime
+
+    # Параметры фильтрации
+    user_id = request.args.get("user_id", type=int)
+    target_type = request.args.get("target_type")
+    target_id = request.args.get("target_id", type=int)
+    action = request.args.get("action")
+
+    # Даты
+    date_from = None
+    date_to = None
+
+    if request.args.get("date_from"):
+        try:
+            date_from = datetime.fromisoformat(request.args.get("date_from"))
+        except ValueError:
+            return jsonify({"error": "Invalid date_from format"}), 400
+
+    if request.args.get("date_to"):
+        try:
+            date_to = datetime.fromisoformat(request.args.get("date_to"))
+        except ValueError:
+            return jsonify({"error": "Invalid date_to format"}), 400
+
+    # Пагинация
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 50, type=int)
+    per_page = min(per_page, 200)  # Максимум 200 записей
+
+    try:
+        result = get_audit_logs(
+            user_id=user_id,
+            target_type=target_type,
+            target_id=target_id,
+            action=action,
+            date_from=date_from,
+            date_to=date_to,
+            page=page,
+            per_page=per_page,
+        )
+        return jsonify(result)
+    except Exception as e:
+        api_logger.error(f"Error fetching audit logs: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@api_bp.route("/audit/user/<int:user_id>/activity", methods=["GET"])
+@login_required
+@require_admin
+def get_user_activity(user_id):
+    """
+    Получить сводку активности пользователя.
+
+    Доступно: только администраторам.
+
+    Query params:
+    - days: количество дней (default: 7)
+    """
+    days = request.args.get("days", 7, type=int)
+    days = min(days, 90)  # Максимум 90 дней
+
+    try:
+        result = get_user_activity_summary(user_id, days)
+        return jsonify(result)
+    except Exception as e:
+        api_logger.error(f"Error fetching user activity: {e}")
+        return jsonify({"error": "Internal server error"}), 500

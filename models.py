@@ -116,7 +116,8 @@ class Map(db.Model):
     name = db.Column(db.String(128))
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     created_at = db.Column(db.DateTime, default=datetime.now)
-    background_image = db.Column(db.String(256), nullable=True)  # новое поле
+    background_image = db.Column(db.String(256), nullable=True)
+    is_locked = db.Column(db.Boolean, default=False, nullable=False)  # Блокировка карты
     devices = db.relationship(
         "Device", backref="map", cascade="all, delete-orphan", lazy="dynamic"
     )
@@ -126,6 +127,36 @@ class Map(db.Model):
     # pan_x = db.Column(db.Float, default=0)
     # pan_y = db.Column(db.Float, default=0)
     # zoom = db.Column(db.Float, default=1)
+
+
+class MapPermission(db.Model):
+    """
+    Разрешения на карту для пользователей и ролей.
+
+    Позволяет гибко управлять доступом:
+    - Владелец карты всегда имеет полный доступ
+    - Можно дать доступ конкретному пользователю (user_id)
+    - Можно дать доступ всем операторам (role='viewer' или 'editor')
+    """
+
+    __tablename__ = "map_permission"
+    id = db.Column(db.Integer, primary_key=True)
+    map_id = db.Column(db.Integer, db.ForeignKey("map.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    role = db.Column(db.String(20), nullable=True)  # 'viewer', 'editor', 'admin'
+
+    # Отношения (lazy='select' для many-to-one)
+    map = db.relationship("Map", backref="permissions", lazy="select")
+    user = db.relationship("User", backref="map_permissions", lazy="select")
+
+    # Один из user_id или role должен быть заполнен
+    __table_args__ = (
+        db.CheckConstraint(
+            "(user_id IS NOT NULL) OR (role IS NOT NULL)", name="check_user_or_role"
+        ),
+        db.UniqueConstraint("map_id", "user_id", name="uq_map_user"),
+        db.UniqueConstraint("map_id", "role", name="uq_map_role"),
+    )
 
 
 class DeviceHistory(db.Model):
@@ -187,3 +218,41 @@ class MapShape(db.Model):
     description = db.Column(db.String(255), nullable=True)
 
     map = db.relationship("Map", backref="shapes")
+
+
+class AuditLog(db.Model):
+    """
+    Журнал аудита всех значимых действий в системе.
+
+    Логирует:
+    - Действия с картами (создание, редактирование, удаление, блокировка)
+    - Действия с устройствами (CRUD)
+    - Изменения прав доступа
+    - Действия с пользователями (вход, выход, смена пароля)
+    - Изменения настроек
+    """
+
+    __tablename__ = "audit_log"
+    __table_args__ = (
+        db.Index("idx_audit_user_timestamp", "user_id", "timestamp"),
+        db.Index("idx_audit_target", "target_type", "target_id"),
+        db.Index("idx_audit_action", "action"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
+    username = db.Column(db.String(64))  # Денормализация для быстрого поиска
+    action = db.Column(
+        db.String(50), nullable=False, index=True
+    )  # create_device, delete_map
+    target_type = db.Column(db.String(30), index=True)  # device, map, user, permission
+    target_id = db.Column(db.Integer, index=True)
+    target_name = db.Column(db.String(128))  # Название объекта (имя карты, устройства)
+    old_values = db.Column(db.JSON)  # Предыдущие значения (для обновлений)
+    new_values = db.Column(db.JSON)  # Новые значения
+    ip_address = db.Column(db.String(45))  # IP адрес клиента
+    user_agent = db.Column(db.String(256))  # User-Agent браузера
+    timestamp = db.Column(db.DateTime, default=datetime.now, index=True)
+
+    # Отношения
+    user = db.relationship("User", backref="audit_logs")

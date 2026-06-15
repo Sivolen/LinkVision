@@ -4,6 +4,7 @@ import { boundNodePosition, getBgDimensions } from './background.js';
 import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes.js';
 import { updateEdgeLabelsForNode } from './edgeLabels.js';
 import { updateGroupsForNode, updateAllGroups } from './groupResize.js';
+import { isDragLocked } from './lock.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
@@ -37,7 +38,7 @@ export function initInteractions(cy) {
     console.log('dragfree, saving state');
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
-        if (window.isOperator || window.dragLocked) return;
+        if (window.isOperator || isDragLocked()) return;
 
         let pos = node.position();
         const { width, height } = getBgDimensions();
@@ -67,7 +68,7 @@ export function initInteractions(cy) {
     });
     // Групповое перетаскивание
     cy.on('dragfree', 'node:selected', function(evt) {
-        if (window.isOperator || window.dragLocked) return;
+        if (window.isOperator || isDragLocked()) return;
         const draggedNode = evt.target;
         // Пропускаем группы – они не будут сохраняться в историю
         if (draggedNode.data('isGroup')) return;
@@ -121,7 +122,7 @@ export function initInteractions(cy) {
     });
     // Перетаскивание одиночной фигуры
     cy.on('dragfree', 'node[isShape]', function(evt) {
-        if (window.isOperator || window.dragLocked) return;
+        if (window.isOperator || isDragLocked()) return;
         const node = evt.target;
         let pos = node.position();
         const { width, height } = getBgDimensions();
@@ -151,12 +152,12 @@ export function initInteractions(cy) {
     });
     // Перетаскивание группы
     //cy.on('dragfree', 'node[isGroup]', function(evt) {
-    //    if (window.isOperator || window.dragLocked) return;
+    //    if (window.isOperator || isDragLocked()) return;
     //    // Сохраняем состояние после перемещения группы
     //    if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
     //});
     cy.on('dragfree', 'node[isGroup]', function(evt) {
-        if (window.isOperator || window.dragLocked) return;
+        if (window.isOperator || isDragLocked()) return;
         const groupNode = evt.target;
         // Фильтруем: только устройства, не вложенные группы
         const children = groupNode.children().filter(child => !child.data('isGroup'));

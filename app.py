@@ -66,8 +66,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     # Отключаем кэширование шаблонов в debug режиме
-    app.config['TEMPLATES_AUTO_RELOAD'] = True
-    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
     csrf = CSRFProtect(app)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -79,6 +79,9 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
+
+    # Отключаем CSRF для API endpoints (используем сессионную аутентификацию)
+    csrf.exempt(api_bp)
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -156,8 +159,13 @@ def create_app():
     @app.context_processor
     def inject_globals():
         from config import Config
+        from flask_wtf.csrf import generate_csrf
 
-        return {"app_version": Config.VERSION, "debug_mode": app.debug}
+        return {
+            "app_version": Config.VERSION,
+            "debug_mode": app.debug,
+            "csrf_token": lambda: generate_csrf(),
+        }
 
     @app.errorhandler(404)
     def page_not_found(e):
