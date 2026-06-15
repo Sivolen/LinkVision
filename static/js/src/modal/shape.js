@@ -10,9 +10,11 @@ import { reloadMapWithViewportRestore } from './mapIntegration.js';
 // Переменные модуля
 let shapeModal = null;
 let currentShapeId = null;
+let shapeEditX = null;
+let shapeEditY = null;
 
 /**
- * Открыть модальное окно фигуры
+ * Открыть модальное окна фигуры
  */
 export function openShapeModal(shapeNode = null) {
     if (!shapeModal) {
@@ -33,6 +35,11 @@ export function openShapeModal(shapeNode = null) {
 
     if (shapeNode) {
         currentShapeId = shapeNode.id().replace('shape_', '');
+        idField.value = currentShapeId; // Устанавливаем ID в скрытое поле!
+
+        // Сохраняем текущую позицию фигуры из графа
+        updateShapePositionFromNode(shapeNode);
+
         typeSelect.value = shapeNode.data('shape_type');
         widthInput.value = shapeNode.data('width');
         heightInput.value = shapeNode.data('height');
@@ -42,8 +49,29 @@ export function openShapeModal(shapeNode = null) {
         deleteBtn.style.display = 'inline-block';
         deleteBtn.onclick = () => deleteShape(currentShapeId);
         fontSizeInput.value = shapeNode.data('fontSize') || 12;
+
+        // Обновляем превью цвета
+        const colorPreview = document.getElementById('shapeColorPreview');
+        const colorCode = document.getElementById('shapeColorCode');
+        if (colorPreview && colorCode) {
+            colorPreview.style.backgroundColor = shapeNode.data('color');
+            colorCode.textContent = (shapeNode.data('color') || '#3498db').toUpperCase();
+        }
+
+        // Добавляем слушатель для обновления позиции при перетаскивании
+        if (window.cy) {
+            const shapeNodeEl = window.cy.getElementById(`shape_${currentShapeId}`);
+            if (shapeNodeEl.length) {
+                shapeNodeEl.on('dragfree', function() {
+                    updateShapePositionFromNode(shapeNodeEl);
+                });
+            }
+        }
     } else {
         currentShapeId = null;
+        idField.value = '';
+        shapeEditX = null;
+        shapeEditY = null;
         typeSelect.value = 'square';
         widthInput.value = 80;
         heightInput.value = 80;
@@ -52,6 +80,14 @@ export function openShapeModal(shapeNode = null) {
         descriptionInput.value = '';
         deleteBtn.style.display = 'none';
         fontSizeInput.value = 12;
+
+        // Сброс превью цвета для новой фигуры
+        const colorPreview = document.getElementById('shapeColorPreview');
+        const colorCode = document.getElementById('shapeColorCode');
+        if (colorPreview && colorCode) {
+            colorPreview.style.backgroundColor = '#3498db';
+            colorCode.textContent = '#3498DB';
+        }
     }
 
     const opacitySpan = document.getElementById('opacity_value');
@@ -64,9 +100,20 @@ export function openShapeModal(shapeNode = null) {
 }
 
 /**
+ * Обновить координаты фигуры из узла графа
+ */
+function updateShapePositionFromNode(shapeNode) {
+    const pos = shapeNode.position();
+    shapeEditX = pos.x;
+    shapeEditY = pos.y;
+}
+
+/**
  * Сохранить фигуру
  */
 export async function saveShape() {
+    Logger.info('🚀 saveShape called');
+
     const id = document.getElementById('shape_id').value;
     const shapeType = document.getElementById('shape_type').value;
     const width = parseFloat(document.getElementById('shape_width').value);
@@ -76,6 +123,8 @@ export async function saveShape() {
     const description = document.getElementById('shape_description').value.trim();
     const fontSize = parseInt(document.getElementById('shape_font_size').value, 10) || 12;
 
+    Logger.info('📋 Form data:', { id, shapeType, width, height, color, opacity, description, fontSize });
+
     if (!shapeType || !width || !height) {
         showToast('Ошибка', 'Тип, ширина и высота обязательны', 'error');
         return;
@@ -84,8 +133,8 @@ export async function saveShape() {
     const data = {
         map_id: window.currentMapId,
         shape_type: shapeType,
-        x: 100,
-        y: 100,
+        x: id && shapeEditX !== null ? shapeEditX : 100,
+        y: id && shapeEditY !== null ? shapeEditY : 100,
         width: width,
         height: height,
         color: color,
@@ -94,8 +143,12 @@ export async function saveShape() {
         font_size: fontSize
     };
 
+    Logger.info('📦 Sending data:', data);
+
     const url = id ? `/api/shape/${id}` : '/api/shape';
     const method = id ? 'PUT' : 'POST';
+
+    Logger.info('📡 Request:', { method, url });
 
     const saveBtn = document.getElementById('saveShapeBtn');
     const btnText = saveBtn?.querySelector('.btn-text');
@@ -104,9 +157,9 @@ export async function saveShape() {
     if (btnLoader) btnLoader.classList.remove('d-none');
     if (saveBtn) saveBtn.disabled = true;
 
+    window.setSkipNextMapUpdate();
+
     try {
-        window.setSkipNextMapUpdate();
-        
         const res = await fetch(url, {
             method: method,
             headers: {
@@ -116,14 +169,65 @@ export async function saveShape() {
             body: JSON.stringify(data)
         });
 
-        if (!res.ok) throw new Error(await getErrorMessage(res));
-        
-        showToast(id ? 'Фигура обновлена' : 'Фигура создана', '', 'success');
+        Logger.info('📥 Response status:', res.status);
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            Logger.error('❌ Error response:', errorText);
+            throw new Error(errorText || 'Ошибка ' + res.status);
+        }
+
+        const result = await res.json();
+        Logger.info('✅ Shape saved successfully');
+        Logger.info('📝 Shape ID:', id);
+
+        if (!id) {
+            // Для новой фигуры добавляем её в граф сразу
+            const newShape = {
+                id: result.id,
+                shape_type: data.shape_type,
+                x: data.x,
+                y: data.y,
+                width: data.width,
+                height: data.height,
+                color: data.color,
+                opacity: data.opacity,
+                description: data.description,
+                font_size: data.font_size
+            };
+            if (typeof window.addShapeToGraph === 'function') {
+                await window.addShapeToGraph(newShape);
+            }
+            Logger.info('📢 Showing toast: Фигура создана');
+            showToast('Успешно', 'Фигура создана', 'success');
+        } else {
+            // Для обновления - удаляем старую фигуру и добавляем новую
+            Logger.info('📢 Showing toast: Фигура обновлена');
+            if (typeof window.removeShapeFromGraph === 'function') {
+                window.removeShapeFromGraph(id);
+            }
+
+            const updatedShape = {
+                id: result.id,
+                shape_type: data.shape_type,
+                x: data.x,
+                y: data.y,
+                width: data.width,
+                height: data.height,
+                color: data.color,
+                opacity: data.opacity,
+                description: data.description,
+                font_size: data.font_size
+            };
+            if (typeof window.addShapeToGraph === 'function') {
+                await window.addShapeToGraph(updatedShape);
+            }
+            showToast('Успешно', 'Фигура обновлена', 'success');
+        }
+
         shapeModal.hide();
-        
-        await reloadMapWithViewportRestore();
     } catch (err) {
-        Logger.error('Ошибка сохранения фигуры:', err);
+        Logger.error('❌ Ошибка сохранения фигуры:', err);
         showToast('Ошибка', err.message || 'Не удалось сохранить фигуру', 'error');
     } finally {
         if (btnText) btnText.classList.remove('d-none');
@@ -138,6 +242,8 @@ export async function saveShape() {
  */
 export async function deleteShape(shapeId) {
     window.confirmAction('Удаление фигуры', 'Вы уверены?', async () => {
+        window.setSkipNextMapUpdate();
+
         try {
             const res = await fetch(`/api/shape/${shapeId}`, {
                 method: 'DELETE',
@@ -149,13 +255,21 @@ export async function deleteShape(shapeId) {
                 throw new Error(errorMsg);
             }
 
+            // Удаляем фигуру из графа сразу
+            if (typeof window.removeShapeFromGraph === 'function') {
+                window.removeShapeFromGraph(shapeId);
+            }
+
             showToast('Успешно', 'Фигура удалена', 'success');
+
             shapeModal.hide();
             
             await reloadMapWithViewportRestore();
         } catch (err) {
             Logger.error('Ошибка удаления фигуры:', err);
             showToast('Ошибка', err.message || 'Не удалось удалить фигуру', 'error');
+        } finally {
+            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
         }
     });
 }
@@ -164,18 +278,101 @@ export async function deleteShape(shapeId) {
  * Инициализация модального окна фигур
  */
 export function initShapeModal() {
-    // Обновление значения opacity
+    // Обновление значения прозрачности
     const opacityInput = document.getElementById('shape_opacity');
     const opacitySpan = document.getElementById('opacity_value');
     
-    opacityInput?.addEventListener('input', function() {
-        if (opacitySpan) {
-            const percent = Math.round(this.value * 100);
+    if (opacityInput && opacitySpan) {
+        // Установить начальное значение
+        const initialPercent = Math.round(parseFloat(opacityInput.value) * 100);
+        opacitySpan.textContent = `${initialPercent}%`;
+
+        opacityInput.addEventListener('input', function() {
+            const percent = Math.round(parseFloat(this.value) * 100);
             opacitySpan.textContent = `${percent}%`;
-        }
-    });
+        });
+    }
+
+    // Инициализация цветоселектора
+    initShapeColorPicker();
 
     Logger.info('✅ Shape modal инициализирован');
+}
+
+/**
+ * Инициализация цветоселектора для фигур
+ */
+function initShapeColorPicker() {
+    const btn = document.getElementById('shapeColorPickerBtn');
+    const panel = document.getElementById('shapeColorPanel');
+    const colorInput = document.getElementById('shape_color'); // input type="color" внутри panel
+    const preview = document.getElementById('shapeColorPreview');
+    const code = document.getElementById('shapeColorCode');
+
+    if (!btn || !panel || !colorInput || !preview || !code) {
+        Logger.error('❌ Shape color picker: элементы не найдены');
+        return;
+    }
+
+    function setColor(color) {
+        preview.style.backgroundColor = color;
+        code.textContent = color.toUpperCase();
+        colorInput.value = color;
+
+        // Обновляем активный класс для свотчей
+        document.querySelectorAll('.color-swatch').forEach(sw => {
+            sw.classList.toggle('active', sw.dataset.color?.toLowerCase() === color.toLowerCase());
+        });
+    }
+
+    // Открытие/закрытие панели
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const isVisible = panel.style.display !== 'none';
+        panel.style.display = isVisible ? 'none' : 'block';
+        btn.classList.toggle('active', !isVisible);
+        panel.style.zIndex = '99999';
+    });
+
+    // Выбор цвета из сетки
+    document.querySelectorAll('.color-swatch').forEach(swatch => {
+        swatch.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const color = this.dataset.color;
+            if (color) {
+                setColor(color);
+                panel.style.display = 'none';
+                btn.classList.remove('active');
+            }
+        });
+    });
+
+    // Выбор произвольного цвета через input type="color"
+    colorInput.addEventListener('input', function(e) {
+        setColor(e.target.value);
+    });
+
+    // Закрытие при клике вне панели
+    const closeHandler = function(e) {
+        if (!e.target.closest('#shapeColorPickerBtn') && !e.target.closest('#shapeColorPanel')) {
+            panel.style.display = 'none';
+            btn.classList.remove('active');
+        }
+    };
+    document.addEventListener('click', closeHandler);
+
+    // Блокировка закрытия при клике внутри панели
+    panel.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
+    // Установить начальный цвет
+    const defaultColor = colorInput.value || '#3498db';
+    setColor(defaultColor);
+
+    // Экспорт для глобального доступа
+    window.setShapeColor = setColor;
 }
 
 // Экспорт для глобального доступа

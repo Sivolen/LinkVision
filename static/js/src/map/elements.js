@@ -263,14 +263,48 @@ export function updateDevice(device) {
     }
 }
 
+export function addShapeToGraph(shape) {
+    const cy = getCy();
+    if (!cy) return;
+    if (cy.getElementById(`shape_${shape.id}`).length) return;
+
+    cy.batch(() => {
+        cy.add({
+            group: 'nodes',
+            data: {
+                id: `shape_${shape.id}`,
+                isShape: true,
+                shape_type: shape.shape_type,
+                width: shape.width,
+                height: shape.height,
+                color: shape.color,
+                opacity: shape.opacity,
+                description: shape.description,
+                label: wrapText(shape.description || '', 30),
+                fontSize: shape.font_size || 12
+            },
+            position: { x: shape.x || 100, y: shape.y || 100 }
+        });
+    });
+}
+
+export function removeShapeFromGraph(shapeId) {
+    const cy = getCy();
+    if (!cy) return;
+    const node = cy.getElementById(`shape_${shapeId}`);
+    if (node.length) {
+        node.remove();
+    }
+}
+
 export function removeLinkFromGraph(linkId) {
     const cy = getCy();
     if (cy) cy.getElementById(String(linkId)).remove();
 }
 
-export function reloadMapElements() {
+export function reloadMapElements(force = false) {
     const mapId = window.currentMapId;
-    if (mapId) loadElements(mapId);
+    if (mapId) loadElements(mapId, force);
 }
 
 // Принудительное применение серого стиля для выключенного мониторинга
@@ -286,4 +320,8 @@ export function applyGrayStyle(node) {
         window.removePulsingNode(window.cy, node);
     }
 }
+
+// Экспорт для глобального доступа
 window.applyGrayStyle = applyGrayStyle;
+window.addShapeToGraph = addShapeToGraph;
+window.removeShapeFromGraph = removeShapeFromGraph;

@@ -20,6 +20,7 @@ from services import (
     require_map_edit,
     require_device_access,
     require_device_edit,
+    require_map_owner_or_admin,
     can_edit_map,
     validate_ip_list,
     validate_name,
@@ -28,6 +29,7 @@ from services import (
     log_permission_action,
     log_device_action,
 )
+from services.audit_service import get_audit_logs, get_user_activity_summary
 from models import Map, MapPermission, User
 from extensions import db
 from services.map_service import invalidate_groups_cache
@@ -114,10 +116,12 @@ def get_device_details(device_id):
 def get_groups(map_id):
     """Получить группы карты."""
     try:
+        api_logger.info(f"get_groups called for map_id={map_id}, user={current_user.id}")
         groups = map_service.get_map_groups(map_id)
+        api_logger.info(f"Returning {len(groups)} groups: {groups}")
         return jsonify(groups)
     except Exception as e:
-        api_logger.error(f"Error fetching groups: {e}")
+        api_logger.error(f"Error fetching groups: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -223,17 +227,12 @@ def create_device():
 
 @api_bp.route("/device/<int:device_id>", methods=["PUT"])
 @login_required
-@require_not_operator
+@require_device_edit
 def update_device(device_id):
     """Обновить устройство."""
     device = device_service.get_device_by_id(device_id)
     if not device:
         return jsonify({"error": "Device not found"}), 404
-
-    # Проверка прав через require_device_access уже сделана декоратором
-    # Дополнительная проверка на владельца или админа
-    if not (current_user.is_admin or device.map.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json
     allowed_fields = [
@@ -264,12 +263,42 @@ def update_device(device_id):
                 update_data["group_id"], device.map_id
             )
 
+        # Сохраняем старые значения для аудита
+        old_values = {
+            "name": device.name,
+            "type_id": device.type_id,
+            "pos_x": device.pos_x,
+            "pos_y": device.pos_y,
+            "group_id": device.group_id,
+            "monitoring_enabled": device.monitoring_enabled,
+            "ips": [ip.ip_address for ip in device.ips],
+        }
+
         device_service.update_device(device_id, **update_data)
 
         # Инвалидация кэша сайдбара
         device = device_service.get_device_by_id(device_id)
         map_service.invalidate_sidebar_cache(device.map.owner_id)
         notify_map_updated(device.map_id)
+
+        # Аудит
+        new_values = {
+            "name": device.name,
+            "type_id": device.type_id,
+            "pos_x": device.pos_x,
+            "pos_y": device.pos_y,
+            "group_id": device.group_id,
+            "monitoring_enabled": device.monitoring_enabled,
+            "ips": [ip.ip_address for ip in device.ips],
+        }
+        log_device_action(
+            action="update_device",
+            device_id=device_id,
+            device_name=device.name,
+            map_id=device.map_id,
+            old_values=old_values,
+            new_values=new_values,
+        )
 
         return jsonify({"status": "ok", "id": device_id})
 
@@ -283,18 +312,26 @@ def update_device(device_id):
 
 @api_bp.route("/device/<int:device_id>", methods=["DELETE"])
 @login_required
-@require_not_operator
+@require_device_edit
 def delete_device(device_id):
     """Удалить устройство."""
     device = device_service.get_device_by_id(device_id)
     if not device:
         return jsonify({"error": "Device not found"}), 404
 
-    if not (current_user.is_admin or device.map.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
-
     try:
         map_id = device.map_id
+        device_name = device.name
+
+        # Аудит перед удалением
+        log_device_action(
+            action="delete_device",
+            device_id=device_id,
+            device_name=device_name,
+            map_id=map_id,
+            old_values={"name": device_name, "map_id": map_id},
+        )
+
         device_service.delete_device(device_id)
         notify_map_updated(map_id)
         return jsonify({"status": "deleted", "id": device_id})
@@ -305,15 +342,12 @@ def delete_device(device_id):
 
 @api_bp.route("/device/<int:device_id>/position", methods=["PUT"])
 @login_required
-@require_not_operator
+@require_device_edit
 def update_position(device_id):
     """Обновить позицию устройства."""
     device = device_service.get_device_by_id(device_id)
     if not device:
         return jsonify({"error": "Device not found"}), 404
-
-    if not (current_user.is_admin or device.map.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json
     if "x" not in data or "y" not in data:
@@ -383,21 +417,51 @@ def create_link():
 
 @api_bp.route("/link/<int:link_id>", methods=["PUT"])
 @login_required
-@require_not_operator
 def update_link(link_id):
     """Обновить связь."""
     link = map_service.get_link_by_id(link_id)
     if not link:
         return jsonify({"error": "Link not found"}), 404
 
-    if not (current_user.is_admin or link.map.owner_id == current_user.id):
+    # Проверка права редактирования карты
+    if not can_edit_map(link.map_id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.get_json()
     try:
-        link = map_service.get_link_by_id(link_id)
-        map_service.update_link(link_id, **data)
-        notify_map_updated(link.map_id)
+        # Сохраняем старые значения для аудита
+        old_values = {
+            "source_interface": link.source_interface,
+            "target_interface": link.target_interface,
+            "link_type": link.link_type,
+            "line_color": link.line_color,
+            "line_width": link.line_width,
+            "line_style": link.line_style,
+        }
+
+        # Сохраняем map_id до обновления
+        map_id = link.map_id
+
+        link = map_service.update_link(link_id, **data)
+        notify_map_updated(map_id)
+
+        # Аудит
+        new_values = {
+            "source_interface": link.source_interface,
+            "target_interface": link.target_interface,
+            "link_type": link.link_type,
+            "line_color": link.line_color,
+            "line_width": link.line_width,
+            "line_style": link.line_style,
+        }
+        log_map_action(
+            action="update_link",
+            map_id=map_id,
+            map_name=f"Map {map_id}",
+            old_values=old_values,
+            new_values=new_values,
+        )
+
         return jsonify({"id": link_id, "status": "updated"})
     except Exception as e:
         api_logger.error(f"Error updating link: {e}")
@@ -406,20 +470,30 @@ def update_link(link_id):
 
 @api_bp.route("/link/<int:link_id>", methods=["DELETE"])
 @login_required
-@require_not_operator
 def delete_link(link_id):
     """Удалить связь."""
     link = map_service.get_link_by_id(link_id)
     if not link:
         return jsonify({"error": "Link not found"}), 404
 
-    if not (current_user.is_admin or link.map.owner_id == current_user.id):
+    # Проверка права редактирования карты
+    if not can_edit_map(link.map_id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
     try:
-        link = map_service.get_link_by_id(link_id)
+        map_id = link.map_id
+        map_name = f"Map {map_id}"
+
+        # Аудит перед удалением
+        log_map_action(
+            action="delete_link",
+            map_id=map_id,
+            map_name=map_name,
+            old_values={"link_id": link_id, "source": link.source_device_id, "target": link.target_device_id},
+        )
+
         map_service.delete_link(link_id)
-        notify_map_updated(link.map_id)
+        notify_map_updated(map_id)
         return jsonify({"id": link_id, "status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting link: {e}")
@@ -428,15 +502,12 @@ def delete_link(link_id):
 
 @api_bp.route("/map/<int:map_id>", methods=["PUT"])
 @login_required
-@require_not_operator
+@require_map_edit
 def update_map(map_id):
     """Обновить название и фон карты."""
     map_obj = map_service.get_map_by_id(map_id)
     if not map_obj:
         return jsonify({"error": "Map not found"}), 404
-
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.form
     name = data.get("name")
@@ -527,7 +598,6 @@ def import_map_route():
 
 @api_bp.route("/group", methods=["POST"])
 @login_required
-@require_not_operator
 def create_group():
     """Создать группу."""
     data = request.json
@@ -539,14 +609,13 @@ def create_group():
     if not data.get("name"):
         return jsonify({"error": "name required"}), 400
 
+    # Проверка права редактирования карты
+    if not can_edit_map(map_id):
+        return jsonify({"error": "Доступ запрещён"}), 403
+
     try:
         # Валидация карты
         map_service.validate_map(map_id)
-
-        # Валидация прав
-        map_obj = map_service.get_map_by_id(map_id)
-        if not (current_user.is_admin or map_obj.owner_id == current_user.id):
-            return jsonify({"error": "Доступ запрещён"}), 403
 
         font_size = data.get("font_size", 11)
         group = map_service.create_group(
@@ -554,7 +623,7 @@ def create_group():
         )
 
         invalidate_groups_cache(map_id)
-        notify_map_updated(group.map_id)
+        notify_map_updated(map_id)
         return jsonify({"id": group.id}), 201
 
     except ValueError as e:
@@ -567,15 +636,14 @@ def create_group():
 
 @api_bp.route("/group/<int:group_id>", methods=["PUT"])
 @login_required
-@require_not_operator
 def update_group(group_id):
     """Обновить группу."""
     group = map_service.get_group_by_id(group_id)
     if not group:
         return jsonify({"error": "Group not found"}), 404
 
-    map_obj = group.map
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
+    # Проверка права редактирования карты
+    if not can_edit_map(group.map_id):
         return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json
@@ -585,6 +653,9 @@ def update_group(group_id):
         if name is not None and (not name or len(name) < 2):
             return jsonify({"error": "Group name must be at least 2 characters"}), 400
 
+        # Сохраняем map_id до обновления
+        map_id = group.map_id
+
         map_service.update_group(
             group_id,
             name=data.get("name"),
@@ -592,8 +663,8 @@ def update_group(group_id):
             font_size=data.get("font_size"),
         )
 
-        invalidate_groups_cache(group.map_id)
-        notify_map_updated(group.map_id)
+        invalidate_groups_cache(map_id)
+        notify_map_updated(map_id)
         return jsonify({"status": "updated"})
 
     except ValueError as e:
@@ -606,22 +677,23 @@ def update_group(group_id):
 
 @api_bp.route("/group/<int:group_id>", methods=["DELETE"])
 @login_required
-@require_not_operator
 def delete_group(group_id):
     """Удалить группу."""
     group = map_service.get_group_by_id(group_id)
     if not group:
         return jsonify({"error": "Group not found"}), 404
 
-    map_obj = group.map
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
+    # Проверка права редактирования карты
+    if not can_edit_map(group.map_id):
         return jsonify({"error": "Доступ запрещён"}), 403
+
+    # Сохраняем map_id до удаления
+    map_id = group.map_id
 
     try:
         map_service.delete_group(group_id)
-        if group:
-            invalidate_groups_cache(group.map_id)
-        notify_map_updated(group.map_id)
+        invalidate_groups_cache(map_id)
+        notify_map_updated(map_id)
         return jsonify({"status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting group: {e}")
@@ -633,6 +705,8 @@ def delete_group(group_id):
 @require_not_operator
 def update_devices_positions():
     """Массовое обновление позиций устройств."""
+    from services.permissions import can_edit_device
+
     data = request.json
     if not data or not isinstance(data, list):
         return jsonify({"error": "Invalid request, expected list of {id, x, y}"}), 400
@@ -650,7 +724,8 @@ def update_devices_positions():
         if not device:
             continue
 
-        if not (current_user.is_admin or device.map.owner_id == current_user.id):
+        # Используем функцию проверки прав
+        if not can_edit_device(device_id):
             continue
 
         valid_updates.append({"id": device_id, "x": x, "y": y})
@@ -671,21 +746,19 @@ def update_devices_positions():
 
 @api_bp.route("/shape", methods=["POST"])
 @login_required
-@require_not_operator
 def create_shape():
     """Создать фигуру на карте."""
+    from services.permissions import can_edit_map
+
     data = request.json
     map_id = data.get("map_id")
 
     if not map_id:
         return jsonify({"error": "map_id required"}), 400
 
-    map_obj = map_service.get_map_by_id(map_id)
-    if not map_obj:
-        return jsonify({"error": "Map not found"}), 404
-
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
+    # Проверка прав вручную
+    if not can_edit_map(map_id):
+        return jsonify({"error": "Access denied"}), 403
 
     font_size = data.get("font_size", 12)
 
@@ -705,21 +778,23 @@ def create_shape():
         notify_map_updated(shape.map_id)
         return jsonify({"id": shape.id}), 201
     except Exception as e:
-        api_logger.error(f"Error creating shape: {e}")
+        api_logger.error(f"Error creating shape: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
 @api_bp.route("/shape/<int:shape_id>", methods=["PUT"])
 @login_required
-@require_not_operator
 def update_shape(shape_id):
     """Обновить фигуру."""
+    from services.permissions import can_edit_map
+
     shape = map_service.get_shape_by_id(shape_id)
     if not shape:
         return jsonify({"error": "Shape not found"}), 404
 
-    if not (current_user.is_admin or shape.map.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
+    # Проверка прав вручную
+    if not can_edit_map(shape.map_id):
+        return jsonify({"error": "Access denied"}), 403
 
     data = request.json
     try:
@@ -727,28 +802,30 @@ def update_shape(shape_id):
         notify_map_updated(shape.map_id)
         return jsonify({"id": shape_id, "status": "updated"})
     except Exception as e:
-        api_logger.error(f"Error updating shape: {e}")
+        api_logger.error(f"Error updating shape: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
 @api_bp.route("/shape/<int:shape_id>", methods=["DELETE"])
 @login_required
-@require_not_operator
 def delete_shape(shape_id):
     """Удалить фигуру."""
+    from services.permissions import can_edit_map
+
     shape = map_service.get_shape_by_id(shape_id)
     if not shape:
         return jsonify({"error": "Shape not found"}), 404
 
-    if not (current_user.is_admin or shape.map.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
+    # Проверка прав вручную
+    if not can_edit_map(shape.map_id):
+        return jsonify({"error": "Access denied"}), 403
 
     try:
         map_service.delete_shape(shape_id)
         notify_map_updated(shape.map_id)
         return jsonify({"id": shape_id, "status": "deleted"})
     except Exception as e:
-        api_logger.error(f"Error deleting shape: {e}")
+        api_logger.error(f"Error deleting shape: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -817,18 +894,13 @@ def get_map_lock_status(map_id):
 @api_bp.route("/map/<int:map_id>/permissions", methods=["GET"])
 @login_required
 @require_map_access
+@require_map_owner_or_admin
 def get_map_permissions(map_id):
     """
     Получить список разрешений для карты.
 
     Доступно: администраторам, владельцу карты.
     """
-    map_obj = Map.query.get_or_404(map_id)
-
-    # Проверка: админ или владелец
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
-
     permissions = MapPermission.query.filter_by(map_id=map_id).all()
 
     result = []
@@ -850,6 +922,7 @@ def get_map_permissions(map_id):
 
 @api_bp.route("/map/<int:map_id>/permissions", methods=["POST"])
 @login_required
+@require_map_owner_or_admin
 def add_map_permission(map_id):
     """
     Добавить разрешение на карту.
@@ -861,10 +934,6 @@ def add_map_permission(map_id):
     - role: 'viewer', 'editor', 'admin' (обязательно)
     """
     map_obj = Map.query.get_or_404(map_id)
-
-    # Проверка: админ или владелец
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json or {}
     user_id = data.get("user_id")
@@ -924,6 +993,7 @@ def add_map_permission(map_id):
 
 @api_bp.route("/map/<int:map_id>/permissions/<int:perm_id>", methods=["PUT"])
 @login_required
+@require_map_owner_or_admin
 def update_map_permission(map_id, perm_id):
     """
     Обновить разрешение на карту.
@@ -934,10 +1004,6 @@ def update_map_permission(map_id, perm_id):
     - role: 'viewer', 'editor', 'admin'
     """
     map_obj = Map.query.get_or_404(map_id)
-
-    # Проверка: админ или владелец
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
 
     perm = MapPermission.query.get_or_404(perm_id)
     if perm.map_id != map_id:
@@ -976,6 +1042,7 @@ def update_map_permission(map_id, perm_id):
 
 @api_bp.route("/map/<int:map_id>/permissions/<int:perm_id>", methods=["DELETE"])
 @login_required
+@require_map_owner_or_admin
 def delete_map_permission(map_id, perm_id):
     """
     Удалить разрешение на карту.
@@ -983,10 +1050,6 @@ def delete_map_permission(map_id, perm_id):
     Доступно: администраторам, владельцу карты.
     """
     map_obj = Map.query.get_or_404(map_id)
-
-    # Проверка: админ или владелец
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
 
     perm = MapPermission.query.get_or_404(perm_id)
     if perm.map_id != map_id:
@@ -1016,6 +1079,7 @@ def delete_map_permission(map_id, perm_id):
 
 @api_bp.route("/map/<int:map_id>/permissions/role", methods=["POST"])
 @login_required
+@require_map_owner_or_admin
 def add_map_role_permission(map_id):
     """
     Добавить разрешение для роли (все операторы).
@@ -1026,10 +1090,6 @@ def add_map_role_permission(map_id):
     - role: 'viewer' или 'editor'
     """
     map_obj = Map.query.get_or_404(map_id)
-
-    # Проверка: админ или владелец
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
 
     data = request.json or {}
     role = data.get("role")
@@ -1076,7 +1136,7 @@ def get_audit_logs_route():
     - date_from: начальная дата (ISO format)
     - date_to: конечная дата (ISO format)
     - page: номер страницы (default: 1)
-    - per_page: записей на страницу (default: 50)
+    - per_page: записей на страницу (default: 50, max: 200)
     """
     from datetime import datetime
 
@@ -1105,7 +1165,7 @@ def get_audit_logs_route():
     # Пагинация
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
-    per_page = min(per_page, 200)  # Максимум 200 записей
+    per_page = min(per_page, 200)  # Максимум 200 записей на страницу
 
     try:
         result = get_audit_logs(

@@ -36,6 +36,7 @@ from .permissions import (
     require_device_edit,
     require_admin,
     require_not_operator,
+    require_map_owner_or_admin,
     get_user_map_ids,
     get_user_editable_map_ids,
 )
@@ -93,6 +94,7 @@ __all__ = [
     "require_device_edit",
     "require_admin",
     "require_not_operator",
+    "require_map_owner_or_admin",
     "get_user_map_ids",
     "get_user_editable_map_ids",
     # Аудит

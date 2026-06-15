@@ -187,10 +187,12 @@ window.fitImageToView = () => {
 window.initMap = initMap;
 window.setMode = setMode;
 window.saveViewportToServer = saveViewportToServer;
-window.reloadMapElements = () => import('./elements.js').then(m => m.reloadMapElements());
+window.reloadMapElements = (force = false) => import('./elements.js').then(m => m.reloadMapElements(force));
 window.addDeviceToGraph = (d) => import('./elements.js').then(m => m.addDeviceToGraph(d));
 window.removeDeviceFromGraph = (id) => import('./elements.js').then(m => m.removeDeviceFromGraph(id));
 window.updateDevice = (d) => import('./elements.js').then(m => m.updateDevice(d));
+window.addShapeToGraph = (s) => import('./elements.js').then(m => m.addShapeToGraph(s));
+window.removeShapeFromGraph = (id) => import('./elements.js').then(m => m.removeShapeFromGraph(id));
 window.updateMapBackground = updateMapBackground;
 window.updateAllEdgeLabels = () => import('./edgeLabels.js').then(m => m.updateAllEdgeLabels());
 window.addPulsingNode = addPulsingNode;
