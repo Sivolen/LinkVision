@@ -27,9 +27,9 @@ window.saveShape = saveShape;
 window.deleteShape = deleteShape;
 window.loadHistoryPage = loadHistoryPage;
 
-// Глобальные переменные
+// Глобальные переменные (используем window для доступа из других модулей)
 let deviceModal = null;
-let groupModal = null;
+window.groupModal = null;
 let shapeModal = null;
 let currentHistoryPage = 1;
 let totalHistoryPages = 1;
@@ -45,6 +45,8 @@ let savedViewport = null;
  */
 export function initModals() {
     try {
+        Logger.info('🚀 initModals called');
+
         // Инициализация утилит
         initUtils();
         
@@ -55,10 +57,19 @@ export function initModals() {
         initIpManagement();
         
         // Инициализация модальных окон
+        Logger.info('📦 Initializing device modal...');
         initDeviceModal();
+
+        Logger.info('📦 Initializing group modal...');
         initGroupModal();
+
+        Logger.info('📦 Initializing shape modal...');
         initShapeModal();
+
+        Logger.info('📦 Initializing history modal...');
         initHistoryModal();
+
+        Logger.info('📦 Initializing link modal...');
         initLinkModal();
 
         // Инициализация UI компонентов
@@ -101,6 +112,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('add-ip-btn')?.addEventListener('click', () => {
         addIpRow('');
     });
+
+    // Инициализация всех модальных окон при загрузке страницы
+    Logger.info('📄 DOMContentLoaded - initializing modals');
+    initModals();
 });
 
 // Экспорты для глобального доступа

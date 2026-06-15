@@ -17,7 +17,7 @@ from models import Map, Device, MapPermission
 
 def _get_user_map_permission(map_id: int) -> Optional[MapPermission]:
     """
-    Получить явное разрешение пользователя на карту.
+    Получить явное разрешение пользователя на карту (1 запрос).
 
     Args:
         map_id: ID карты
@@ -25,11 +25,22 @@ def _get_user_map_permission(map_id: int) -> Optional[MapPermission]:
     Returns:
         MapPermission или None
     """
-    # Сначала ищем персональное разрешение
-    perm = MapPermission.query.filter_by(map_id=map_id, user_id=current_user.id).first()
+    # Один запрос с OR условием: персональное ИЛИ ролевое для операторов
+    if current_user.is_operator:
+        perm = MapPermission.query.filter(
+            MapPermission.map_id == map_id,
+            (
+                (MapPermission.user_id == current_user.id) |
+                (MapPermission.role.in_(["viewer", "editor"]))
+            )
+        ).first()
+    else:
+        perm = MapPermission.query.filter_by(
+            map_id=map_id,
+            user_id=current_user.id
+        ).first()
 
-    if perm:
-        return perm
+    return perm
 
     # Если пользователь оператор — ищем разрешение для роли
     if current_user.is_operator:
@@ -330,6 +341,34 @@ def require_not_operator(f: Callable) -> Callable:
         if current_user.is_operator:
             return jsonify({"error": "Оператор не может выполнять это действие"}), 403
         return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def require_map_owner_or_admin(f: Callable) -> Callable:
+    """
+    Декоратор для проверки: администратор ИЛИ владелец карты.
+
+    Usage:
+        @api_bp.route("/map/<int:map_id>/permissions")
+        @require_map_owner_or_admin
+        def manage_permissions(map_id):
+            ...
+    """
+
+    @wraps(f)
+    def decorated_function(map_id: int, *args: Any, **kwargs: Any) -> Any:
+        if not current_user.is_authenticated:
+            return jsonify({"error": "Требуется аутентификация"}), 401
+
+        if current_user.is_admin:
+            return f(map_id, *args, **kwargs)
+
+        map_obj = Map.query.get(map_id)
+        if not map_obj or map_obj.owner_id != current_user.id:
+            return jsonify({"error": "Только владелец карты или администратор"}), 403
+
+        return f(map_id, *args, **kwargs)
 
     return decorated_function
 

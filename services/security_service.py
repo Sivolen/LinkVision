@@ -4,13 +4,15 @@
 - Rate limiting (ограничение частоты запросов)
 - Валидация сложности паролей
 - Защита от brute-force атак
+
+Для production с несколькими workers рекомендуется использовать Redis.
 """
 
 import time
 from typing import Dict, Optional, Tuple
 from collections import defaultdict
 from functools import wraps
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, has_app_context
 from flask_login import current_user
 import re
 
@@ -21,15 +23,33 @@ import re
 
 class RateLimiter:
     """
-    Простой rate limiter на основе памяти.
+    Rate limiter с поддержкой Redis для production.
 
-    Для production рекомендуется использовать Redis или Memcached.
+    Для single-worker: использует память
+    Для multi-worker: использует Redis (если настроен)
     """
 
-    def __init__(self):
+    def __init__(self, redis_client=None):
         # Хранилище: {key: [(timestamp, count)]}
         self._storage: Dict[str, list] = defaultdict(list)
         self._lock_counts: Dict[str, int] = defaultdict(int)
+        self._redis = redis_client
+
+    def _get_redis(self):
+        """Получить Redis клиент из Flask app config."""
+        if self._redis:
+            return self._redis
+
+        if has_app_context():
+            redis_url = current_app.config.get('REDIS_URL')
+            if redis_url:
+                try:
+                    import redis
+                    self._redis = redis.from_url(redis_url)
+                    return self._redis
+                except ImportError:
+                    pass
+        return None
 
     def is_rate_limited(
         self, key: str, max_requests: int = 10, window_seconds: int = 60
@@ -45,34 +65,71 @@ class RateLimiter:
         Returns:
             bool: True если лимит превышен
         """
-        now = time.time()
-        window_start = now - window_seconds
+        redis = self._get_redis()
 
-        # Очистить старые записи
-        self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
+        if redis:
+            # Redis implementation (atomic)
+            now = int(time.time())
+            window_key = f"ratelimit:{key}:{now // window_seconds}"
+            next_window_key = f"ratelimit:{key}:{(now // window_seconds) + 1}"
 
-        # Проверить лимит
-        if len(self._storage[key]) >= max_requests:
-            return True
+            # Проверяем текущее и следующее окно
+            current_count = int(redis.get(window_key) or 0)
+            next_count = int(redis.get(next_window_key) or 0)
 
-        # Добавить текущий запрос
-        self._storage[key].append(now)
-        return False
+            if current_count >= max_requests and next_count >= max_requests:
+                return True
+
+            # Увеличиваем счётчик
+            pipe = redis.pipeline()
+            pipe.incr(window_key)
+            pipe.expire(window_key, window_seconds * 2)
+            pipe.execute()
+            return False
+        else:
+            # In-memory implementation (single worker)
+            now = time.time()
+            window_start = now - window_seconds
+
+            # Очистить старые записи
+            self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
+
+            # Проверить лимит
+            if len(self._storage[key]) >= max_requests:
+                return True
+
+            # Добавить текущий запрос
+            self._storage[key].append(now)
+            return False
 
     def get_remaining_requests(
         self, key: str, max_requests: int = 10, window_seconds: int = 60
     ) -> int:
         """Получить количество оставшихся запросов."""
-        now = time.time()
-        window_start = now - window_seconds
+        redis = self._get_redis()
 
-        self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
-
-        return max(0, max_requests - len(self._storage[key]))
+        if redis:
+            now = int(time.time())
+            window_key = f"ratelimit:{key}:{now // window_seconds}"
+            current_count = int(redis.get(window_key) or 0)
+            return max(0, max_requests - current_count)
+        else:
+            now = time.time()
+            window_start = now - window_seconds
+            self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
+            return max(0, max_requests - len(self._storage[key]))
 
     def reset(self, key: str) -> None:
         """Сбросить лимит для ключа."""
-        self._storage[key] = []
+        redis = self._get_redis()
+        if redis:
+            # Удалить все ключи rate limit для этого key
+            pattern = f"ratelimit:{key}:*"
+            keys = redis.keys(pattern)
+            if keys:
+                redis.delete(*keys)
+        else:
+            self._storage[key] = []
 
     def lock_account(self, key: str, max_attempts: int = 5) -> None:
         """Заблокировать аккаунт после неудачных попыток."""

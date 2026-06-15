@@ -11,10 +11,45 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from extensions import db
+from models import User, Map, Device
 from services import map_service
 from utils.logger import main_logger
 
 main_bp = Blueprint("main", __name__)
+
+
+@main_bp.route("/health")
+def health_check():
+    """
+    Health check endpoint для мониторинга.
+
+    Returns:
+        JSON статус приложения и БД
+    """
+    try:
+        # Проверка подключения к БД
+        db.session.execute(db.text("SELECT 1"))
+        db_status = "ok"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+
+    # Статистика
+    try:
+        user_count = User.query.count()
+        map_count = Map.query.count()
+        device_count = Device.query.count()
+    except Exception:
+        user_count = map_count = device_count = 0
+
+    return jsonify({
+        "status": "healthy" if db_status == "ok" else "unhealthy",
+        "database": db_status,
+        "stats": {
+            "users": user_count,
+            "maps": map_count,
+            "devices": device_count,
+        }
+    }), 200 if db_status == "ok" else 503
 
 
 @main_bp.route("/")
@@ -119,8 +154,8 @@ def delete_map(map_id):
     if not map_obj:
         return jsonify({"error": "Map not found"}), 404
 
-    if not (current_user.is_admin or map_obj.owner_id == current_user.id):
-        return jsonify({"error": "Доступ запрещён"}), 403
+    # Проверка админа уже сделана выше, владельцу удаление запрещено
+    # Только администраторы могут удалять карты
 
     try:
         owner_id = map_obj.owner_id

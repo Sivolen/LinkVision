@@ -45,3 +45,11 @@ wsproto==1.3.2
 WTForms==3.2.1
 zope.event==6.1
 zope.interface==8.2
+
+# Test dependencies
+pytest>=7.0.0
+pytest-cov>=3.0.0
+pytest-flask>=1.2.0
+pytest-mock>=3.10.0
+coverage>=6.0.0
+

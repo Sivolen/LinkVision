@@ -14,7 +14,7 @@ export function showToast(title, message, type = 'info') {
     
     const titleEl = toastEl.querySelector('.toast-title');
     const bodyEl = toastEl.querySelector('.toast-body');
-    const iconEl = toastEl.querySelector('.toast-icon i');
+    const iconEl = document.getElementById('toastIcon');
 
     if (titleEl) titleEl.textContent = title;
     if (bodyEl) bodyEl.textContent = message;
@@ -31,11 +31,9 @@ export function showToast(title, message, type = 'info') {
         iconEl.className = `fas ${icons[type] || icons.info}`;
     }
 
-    // Цвет по типу
-    toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info');
-    if (type !== 'info') {
-        toastEl.classList.add(`bg-${type}`);
-    }
+    // Цвет иконки по типу
+    iconEl.classList.remove('text-success', 'text-danger', 'text-warning', 'text-info');
+    iconEl.classList.add(`text-${type}`);
 
     toast.show();
 }

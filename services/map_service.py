@@ -35,6 +35,7 @@ from services.validators import validate_name
 # Кэши
 groups_cache: TTLCache = TTLCache(maxsize=100, ttl=60)
 sidebar_cache: TTLCache = TTLCache(maxsize=100, ttl=10)
+map_elements_cache: TTLCache = TTLCache(maxsize=50, ttl=30)  # Кэш элементов карты
 
 
 def create_new_map(
@@ -111,6 +112,14 @@ def invalidate_groups_cache(map_id: int) -> None:
     if cache_key in groups_cache:
         del groups_cache[cache_key]
         main_logger.debug(f"Groups cache invalidated for map {map_id}")
+
+
+def invalidate_map_elements_cache(map_id: int) -> None:
+    """Удалить кэш элементов карты при изменениях."""
+    cache_key = f"map_elements_{map_id}"
+    if cache_key in map_elements_cache:
+        del map_elements_cache[cache_key]
+        main_logger.debug(f"Map elements cache invalidated for map {map_id}")
 
 
 def get_map_by_id(map_id: int) -> Optional[Map]:
@@ -289,7 +298,7 @@ def update_user_viewport(
 
 def get_map_elements(map_id: int) -> Dict[str, Any]:
     """
-    Получить все элементы карты для Cytoscape.
+    Получить все элементы карты для Cytoscape с кэшированием.
 
     Args:
         map_id: ID карты
@@ -297,12 +306,22 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
     Returns:
         Dict с узлами, рёбрами, группами и фигурами
     """
+    # Проверка кэша
+    cache_key = f"map_elements_{map_id}"
+    if cache_key in map_elements_cache:
+        api_logger.debug(f"Map elements cache hit for map {map_id}")
+        return map_elements_cache[cache_key]
+
     # Проверка существования карты
     map_obj = Map.query.get_or_404(map_id)
 
     # Устройства с подгрузкой типов и IP (один запрос)
+    # Используем joinedload для эффективной загрузки связанных данных
     devices = (
-        Device.query.options(joinedload(Device.type), joinedload(Device.ips))
+        Device.query.options(
+            joinedload(Device.type),
+            joinedload(Device.ips)
+        )
         .filter_by(map_id=map_id)
         .all()
     )
@@ -421,7 +440,13 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
         if g.id in group_ids_with_devices
     ]
 
-    return {"nodes": nodes, "edges": edges, "groups": groups_out, "shapes": shapes_out}
+    result = {"nodes": nodes, "edges": edges, "groups": groups_out, "shapes": shapes_out}
+
+    # Сохранение в кэш
+    map_elements_cache[cache_key] = result
+    api_logger.debug(f"Map elements cached for map {map_id}")
+
+    return result
 
 
 def get_map_groups(map_id: int) -> List[Dict[str, Any]]:

@@ -9,7 +9,7 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-# @rate_limit(max_requests=5, window_seconds=300)  # Отключено для разработки
+@rate_limit(max_requests=5, window_seconds=300)  # 5 попыток за 5 минут
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
@@ -51,7 +51,7 @@ def logout():
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
-# @rate_limit(max_requests=3, window_seconds=3600)  # Отключено для разработки
+@rate_limit(max_requests=3, window_seconds=3600)  # 3 регистрации за час
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
