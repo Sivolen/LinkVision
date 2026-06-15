@@ -162,18 +162,24 @@ def monitor_loop():
 
             # ---- РАЗБИЕНИЕ НА БАТЧИ ДЛЯ ИЗБЕЖАНИЯ ПЕРЕГРУЗКИ ----
             batch_size = 50
-            all_device_checks = [(dev.id, device_ips[dev.id], ping_count) for dev in devices]
+            all_device_checks = [
+                (dev.id, device_ips[dev.id], ping_count) for dev in devices
+            ]
 
             results = []
             for batch_start in range(0, len(all_device_checks), batch_size):
-                batch_checks = all_device_checks[batch_start:batch_start + batch_size]
+                batch_checks = all_device_checks[batch_start : batch_start + batch_size]
 
                 # Проверка состояния пула перед отправкой задач
                 with _lock:
                     if _executor is None:
                         max_workers = min(50, (os.cpu_count() or 1) * 4)
-                        _executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
-                        monitor_logger.info(f"Executor recreated with {max_workers} workers")
+                        _executor = concurrent.futures.ThreadPoolExecutor(
+                            max_workers=max_workers
+                        )
+                        monitor_logger.info(
+                            f"Executor recreated with {max_workers} workers"
+                        )
 
                 futures = {}
                 for dev_id, ips, pcnt in batch_checks:
@@ -181,7 +187,9 @@ def monitor_loop():
                         future = _executor.submit(_check_device, dev_id, ips, pcnt)
                         futures[future] = dev_id
                     except RuntimeError as e:
-                        monitor_logger.error(f"Failed to submit check for device {dev_id}: {e}")
+                        monitor_logger.error(
+                            f"Failed to submit check for device {dev_id}: {e}"
+                        )
                         # Попытка переинициализировать пул
                         with _lock:
                             try:
@@ -190,17 +198,25 @@ def monitor_loop():
                             except Exception:
                                 pass
                             max_workers = min(50, (os.cpu_count() or 1) * 4)
-                            _executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
-                            monitor_logger.info(f"Executor recreated after error with {max_workers} workers")
+                            _executor = concurrent.futures.ThreadPoolExecutor(
+                                max_workers=max_workers
+                            )
+                            monitor_logger.info(
+                                f"Executor recreated after error with {max_workers} workers"
+                            )
                         continue
 
-                for future in concurrent.futures.as_completed(futures, timeout=ping_interval * 2):
+                for future in concurrent.futures.as_completed(
+                    futures, timeout=ping_interval * 2
+                ):
                     try:
                         dev_id, new_status = future.result(timeout=10)
                         results.append((dev_id, new_status))
                     except concurrent.futures.TimeoutError:
                         dev_id = futures.get(future, "unknown")
-                        monitor_logger.warning(f"Timeout checking device {dev_id}, marking as down")
+                        monitor_logger.warning(
+                            f"Timeout checking device {dev_id}, marking as down"
+                        )
                         results.append((dev_id, "down"))
                     except Exception as e:
                         dev_id = futures.get(future, "unknown")
@@ -255,20 +271,24 @@ def monitor_loop():
                     batch_emits = []
                     for device, new_status in devices_to_update:
                         room_name = f"map_{device.map_id}"
-                        batch_emits.append({
-                            "room": room_name,
-                            "data": {
-                                "id": device.id,
-                                "status": new_status,
-                                "map_id": device.map_id,
+                        batch_emits.append(
+                            {
+                                "room": room_name,
+                                "data": {
+                                    "id": device.id,
+                                    "status": new_status,
+                                    "map_id": device.map_id,
+                                },
                             }
-                        })
+                        )
                         monitor_logger.info(
                             f"[{new_status.upper()}] Sent: id={device.id}, status={new_status}, room={room_name}"
                         )
 
                     for emit_data in batch_emits:
-                        socketio.emit("device_status", emit_data["data"], room=emit_data["room"])
+                        socketio.emit(
+                            "device_status", emit_data["data"], room=emit_data["room"]
+                        )
             else:
                 monitor_logger.debug("No status changes this cycle")
 

@@ -20,16 +20,14 @@ main_bp = Blueprint("main", __name__)
 @main_bp.route("/")
 @login_required
 def dashboard():
+    from services.permissions import can_view_map
+
     available_maps = map_service.get_available_maps(current_user)
 
     # Если есть last_map_id и карта существует и доступна, идём на неё
     if current_user.last_map_id:
         last_map = map_service.get_map_by_id(current_user.last_map_id)
-        if last_map and (
-            current_user.is_admin
-            or current_user.is_operator
-            or last_map.owner_id == current_user.id
-        ):
+        if last_map and can_view_map(current_user.last_map_id):
             return redirect(url_for("main.map_view", map_id=last_map.id))
 
     # Иначе на первую доступную карту
@@ -72,15 +70,14 @@ def create_map():
 @main_bp.route("/map/<int:map_id>")
 @login_required
 def map_view(map_id):
+    from services.permissions import can_view_map, can_edit_map
+
     map_obj = map_service.get_map_by_id(map_id)
     if not map_obj:
         abort(404)
 
-    if not (
-        current_user.is_admin
-        or map_obj.owner_id == current_user.id
-        or current_user.is_operator
-    ):
+    # Проверяем права через новую систему
+    if not can_view_map(map_id):
         abort(403)
 
     # Сохраняем последнюю карту пользователя
@@ -98,6 +95,7 @@ def map_view(map_id):
         "map_view.html",
         map=map_obj,
         is_operator=current_user.is_operator,
+        can_edit=can_edit_map(map_id),
         user_pan_x=settings.pan_x,
         user_pan_y=settings.pan_y,
         user_zoom=settings.zoom,

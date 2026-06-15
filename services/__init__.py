@@ -18,19 +18,44 @@ from . import user_service
 from . import device_type_service
 from . import settings_service
 from . import monitor
+from . import audit_service
+from . import security_service
 
 # Экспорт для удобного использования
 from .device_type_service import get_cached_types, invalidate_types_cache
 from .permissions import (
     has_map_access,
     has_device_access,
+    can_view_map,
+    can_edit_map,
+    can_edit_device,
+    can_delete_map,
     require_map_access,
+    require_map_edit,
     require_device_access,
+    require_device_edit,
     require_admin,
     require_not_operator,
     get_user_map_ids,
-    can_edit_map,
-    can_delete_map,
+    get_user_editable_map_ids,
+)
+from .audit_service import (
+    log_action,
+    log_map_action,
+    log_device_action,
+    log_permission_action,
+    log_auth_action,
+    get_audit_logs,
+    get_user_activity_summary,
+)
+from .security_service import (
+    rate_limit,
+    rate_limiter,
+    validate_password_strength,
+    validate_password_full,
+    check_password_common,
+    get_client_ip,
+    sanitize_input,
 )
 from .validators import (
     validate_ip_address,
@@ -45,36 +70,54 @@ from .validators import (
 
 __all__ = [
     # Сервисы
-    'device_service',
-    'map_service',
-    'user_service',
-    'device_type_service',
-    'settings_service',
-    'monitor',
-
+    "device_service",
+    "map_service",
+    "user_service",
+    "device_type_service",
+    "settings_service",
+    "monitor",
+    "audit_service",
     # Типы устройств
-    'get_cached_types',
-    'invalidate_types_cache',
-
+    "get_cached_types",
+    "invalidate_types_cache",
     # Права доступа
-    'has_map_access',
-    'has_device_access',
-    'require_map_access',
-    'require_device_access',
-    'require_admin',
-    'require_not_operator',
-    'get_user_map_ids',
-    'can_edit_map',
-    'can_delete_map',
-
+    "has_map_access",
+    "has_device_access",
+    "can_view_map",
+    "can_edit_map",
+    "can_edit_device",
+    "can_delete_map",
+    "require_map_access",
+    "require_map_edit",
+    "require_device_access",
+    "require_device_edit",
+    "require_admin",
+    "require_not_operator",
+    "get_user_map_ids",
+    "get_user_editable_map_ids",
+    # Аудит
+    "log_action",
+    "log_map_action",
+    "log_device_action",
+    "log_permission_action",
+    "log_auth_action",
+    "get_audit_logs",
+    "get_user_activity_summary",
+    # Безопасность
+    "rate_limit",
+    "rate_limiter",
+    "validate_password_strength",
+    "validate_password_full",
+    "check_password_common",
+    "get_client_ip",
+    "sanitize_input",
     # Валидаторы
-    'validate_ip_address',
-    'validate_ip_list',
-    'validate_name',
-    'validate_positive_int',
-    'validate_float_range',
-    'validate_color_hex',
-    'validate_line_style',
-    'validate_link_type',
+    "validate_ip_address",
+    "validate_ip_list",
+    "validate_name",
+    "validate_positive_int",
+    "validate_float_range",
+    "validate_color_hex",
+    "validate_line_style",
+    "validate_link_type",
 ]
-

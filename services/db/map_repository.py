@@ -6,41 +6,42 @@
 
 from typing import List, Optional
 from sqlalchemy.orm import joinedload
+from sqlalchemy import or_
 from extensions import db
-from models import Map, User
+from models import Map, User, MapPermission
 
 
 class MapRepository:
     """Репозиторий для работы с картами."""
-    
+
     @staticmethod
     def get_by_id(map_id: int) -> Optional[Map]:
         """
         Получить карту по ID.
-        
+
         Args:
             map_id: ID карты
-        
+
         Returns:
             Optional[Map]: Карта или None
         """
         return Map.query.get(map_id)
-    
+
     @staticmethod
     def get_all() -> List[Map]:
         """
         Получить все карты.
-        
+
         Returns:
             List[Map]: Список всех карт
         """
         return Map.query.all()
-    
+
     @staticmethod
     def get_by_owner(owner_id: int) -> List[Map]:
         """
         Получить карты владельца.
-        
+
         Args:
             owner_id: ID владельца
 
@@ -52,7 +53,12 @@ class MapRepository:
     @staticmethod
     def get_available_for_user(user) -> List[Map]:
         """
-        Получить карты, доступные пользователю.
+        Получить карты, доступные пользователю для просмотра.
+
+        Логика:
+        - Администратор видит все карты
+        - Оператор видит ВСЕ карты (но редактировать может только с разрешением)
+        - Обычный пользователь видит свои карты + карты с персональными разрешениями
 
         Args:
             user: Объект пользователя
@@ -60,9 +66,28 @@ class MapRepository:
         Returns:
             List[Map]: Список доступных карт
         """
-        if user.is_admin or user.is_operator:
+        if user.is_admin:
             return Map.query.all()
-        return Map.query.filter_by(owner_id=user.id).all()
+
+        # Оператор видит ВСЕ карты
+        if user.is_operator:
+            return Map.query.all()
+
+        # Карты пользователя
+        user_maps = Map.query.filter_by(owner_id=user.id).all()
+        user_map_ids = {m.id for m in user_maps}
+
+        # Карты с персональными разрешениями
+        perms = MapPermission.query.filter_by(user_id=user.id).all()
+        perm_map_ids = {p.map_id for p in perms}
+
+        # Собираем все уникальные ID
+        all_map_ids = user_map_ids.union(perm_map_ids)
+
+        if not all_map_ids:
+            return []
+
+        return Map.query.filter(Map.id.in_(list(all_map_ids))).all()
 
     @staticmethod
     def create(name: str, owner_id: int, background_image: Optional[str] = None) -> Map:
@@ -77,11 +102,7 @@ class MapRepository:
         Returns:
             Map: Созданная карта
         """
-        map_obj = Map(
-            name=name,
-            owner_id=owner_id,
-            background_image=background_image
-        )
+        map_obj = Map(name=name, owner_id=owner_id, background_image=background_image)
         db.session.add(map_obj)
         db.session.commit()
         return map_obj
@@ -91,7 +112,7 @@ class MapRepository:
         map_id: int,
         name: Optional[str] = None,
         background_image: Optional[str] = None,
-        remove_background: bool = False
+        remove_background: bool = False,
     ) -> Optional[Map]:
         """
         Обновить детали карты.

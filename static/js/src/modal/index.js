@@ -13,6 +13,7 @@ import { initToast, showToast } from './ui.js';
 import { initUtils, escapeHtml, getErrorMessage, formatDateTime, getStatusBadgeClass } from './utils.js';
 import { initMapIntegration, withViewportRestore, reloadMapWithViewportRestore } from './mapIntegration.js';
 import { initLinkModal, openLinkModal, openLinkModalForEdit, confirmCreateLink, deleteLink } from './link.js';
+import { openPermissionsModal, addPermission, addRolePermission } from './permissions.js';
 
 // Экспорт для глобального доступа
 window.openDeviceModal = openDeviceModal;
@@ -107,4 +108,5 @@ window.openLinkModal = openLinkModal;
 window.openLinkModalForEdit = openLinkModalForEdit;
 window.confirmCreateLink = confirmCreateLink;
 window.deleteLink = deleteLink;
+window.openPermissionsModal = openPermissionsModal;
 

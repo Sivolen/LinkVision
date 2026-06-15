@@ -67,7 +67,9 @@ def get_device_by_id(device_id: int) -> Optional[Device]:
     return device_repo.get_by_id(device_id)
 
 
-def get_device_history(device_id: int, page: int = 1, per_page: int = 10) -> Dict[str, Any]:
+def get_device_history(
+    device_id: int, page: int = 1, per_page: int = 10
+) -> Dict[str, Any]:
     """
     Получить историю изменений устройства.
 
@@ -121,30 +123,34 @@ def get_device_details(device_id: int) -> Dict[str, Any]:
     for link in device.source_links:
         neighbor = link.target
         if neighbor:
-            neighbors.append({
-                "device_id": neighbor.id,
-                "device_name": neighbor.name,
-                "interface": link.source_interface,
-                "neighbor_interface": link.target_interface,
-                "link_type": link.link_type,
-                "color": link.line_color,
-                "width": link.line_width,
-                "style": link.line_style,
-            })
+            neighbors.append(
+                {
+                    "device_id": neighbor.id,
+                    "device_name": neighbor.name,
+                    "interface": link.source_interface,
+                    "neighbor_interface": link.target_interface,
+                    "link_type": link.link_type,
+                    "color": link.line_color,
+                    "width": link.line_width,
+                    "style": link.line_style,
+                }
+            )
 
     for link in device.target_links:
         neighbor = link.source
         if neighbor:
-            neighbors.append({
-                "device_id": neighbor.id,
-                "device_name": neighbor.name,
-                "interface": link.target_interface,
-                "neighbor_interface": link.source_interface,
-                "link_type": link.link_type,
-                "color": link.line_color,
-                "width": link.line_width,
-                "style": link.line_style,
-            })
+            neighbors.append(
+                {
+                    "device_id": neighbor.id,
+                    "device_name": neighbor.name,
+                    "interface": link.target_interface,
+                    "neighbor_interface": link.source_interface,
+                    "link_type": link.link_type,
+                    "color": link.line_color,
+                    "width": link.line_width,
+                    "style": link.line_style,
+                }
+            )
 
     return {
         "id": device.id,
@@ -173,7 +179,7 @@ def create_device(
     y: float = 100,
     group_id: Optional[int] = None,
     monitoring_enabled: bool = True,
-    font_size: Optional[int] = None
+    font_size: Optional[int] = None,
 ) -> Device:
     """
     Создать новое устройство.
@@ -225,11 +231,15 @@ def create_device(
                 if ip and isinstance(ip, str):
                     ip_clean = ip.strip()
                     if ip_clean and ip_clean not in seen:
-                        db.session.add(DeviceIP(device_id=device.id, ip_address=ip_clean))
+                        db.session.add(
+                            DeviceIP(device_id=device.id, ip_address=ip_clean)
+                        )
                         seen.add(ip_clean)
             db.session.commit()
 
-        api_logger.info(f"Device created: ID={device.id}, name={device.name}, ips={ips}")
+        api_logger.info(
+            f"Device created: ID={device.id}, name={device.name}, ips={ips}"
+        )
         return device
 
     except IntegrityError as e:
@@ -258,8 +268,13 @@ def update_device(device_id: int, **kwargs: Any) -> Device:
     """
     device = Device.query.get_or_404(device_id)
     allowed_fields = [
-        "name", "type_id", "pos_x", "pos_y", "group_id",
-        "monitoring_enabled", "font_size"
+        "name",
+        "type_id",
+        "pos_x",
+        "pos_y",
+        "group_id",
+        "monitoring_enabled",
+        "font_size",
     ]
 
     for key, value in kwargs.items():

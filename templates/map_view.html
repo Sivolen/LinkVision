@@ -2,12 +2,13 @@
 
 {% block content %}
 {% set is_operator = is_operator|default(false) %}
+
 <script>
     window.isOperator = {{ 'true' if is_operator else 'false' }};
 </script>
 
 <div class="toolbar">
-    {% if current_user.is_admin %}
+    {% if can_edit %}
     <div class="toolbar-group">
         <button class="toolbar-btn" onclick="openDeviceModal()">
             <i class="fas fa-plus"></i> Устройство
@@ -27,7 +28,7 @@
         </button>
     </div>
 
-    {% if current_user.is_admin %}
+    {% if can_edit %}
     <div class="toolbar-group" id="bulkEditGroup" style="display:none;">
         <button class="toolbar-btn" onclick="openBulkEditModal()">
             <i class="fas fa-edit"></i> Редактировать выбранные
@@ -47,7 +48,7 @@
         </button>
     </div>
 
-    {% if current_user.is_admin %}
+    {% if can_edit %}
     <div class="toolbar-group">
         <button class="toolbar-btn" onclick="openGroupManager()">
             <i class="fas fa-layer-group"></i> Группы
@@ -56,11 +57,6 @@
             <i class="fas fa-shapes"></i> Фигура
         </button>
     </div>
-<!--    <div class="toolbar-group">-->
-<!--        <button class="toolbar-btn" onclick="openShapeModal()">-->
-<!--            <i class="fas fa-shapes"></i> Фигура-->
-<!--        </button>-->
-<!--    </div>-->
     <div class="toolbar-group">
         <div class="dropdown">
             <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -94,7 +90,7 @@
             </ul>
         </div>
     </div>
-    {% if current_user.is_admin %}
+    {% if can_edit %}
     <div class="toolbar-group">
         <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="Отменить (Ctrl+Z)" disabled>
             <i class="fas fa-undo-alt"></i>
@@ -104,11 +100,20 @@
         </button>
     </div>
     {% endif %}
+    {% if can_edit %}
     <div class="toolbar-group">
-    <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="Заблокировать/разблокировать перемещение устройств">
-        <i class="fas fa-lock-open"></i>
-    </button>
+        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="Заблокировать/разблокировать перемещение устройств">
+            <i class="fas fa-lock-open"></i>
+        </button>
     </div>
+    {% endif %}
+    {% if current_user.is_admin %}
+    <div class="toolbar-group">
+        <button class="toolbar-btn" onclick="openPermissionsModal({{ map.id }}, '{{ map.name }}')" title="Управление правами доступа">
+            <i class="fas fa-users-cog"></i> Права
+        </button>
+    </div>
+    {% endif %}
     <div class="toolbar-group">
         <button class="toolbar-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="Полноэкранный режим">
             <i class="fas fa-expand"></i>
@@ -245,7 +250,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                {% if current_user.is_admin %}
+                {% if can_edit %}
                 <button type="button" class="btn btn-primary" onclick="saveDevice()" id="saveDeviceBtn">
                     <span class="btn-text">Сохранить</span>
                     <span class="btn-loader d-none">
@@ -337,7 +342,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
-                {% if current_user.is_admin %}
+                {% if can_edit %}
                 <button type="button" class="btn btn-danger btn-sm" id="linkDeleteBtn" style="display:none;" onclick="deleteLink()">Удалить</button>
                 <button type="button" class="btn btn-primary btn-sm" onclick="confirmCreateLink()" id="saveLinkBtn">
                     <span class="btn-text">Сохранить</span>
@@ -533,7 +538,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                {% if current_user.is_admin %}
+                {% if can_edit %}
                 <button type="button" class="btn btn-primary" onclick="applyBulkEdit()">Применить</button>
                 {% endif %}
             </div>
@@ -614,8 +619,80 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                {% if can_edit %}
                 <button type="button" class="btn btn-danger" id="deleteShapeBtn" style="display:none;">Удалить</button>
                 <button type="button" class="btn btn-primary" onclick="saveShape()">Сохранить</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно управления правами доступа (v2.0) -->
+<div class="modal fade" id="permissionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Права доступа: <span id="permissionsMapName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Текущие права -->
+                <div class="mb-4">
+                    <h6 class="fw-bold mb-3">Текущие права доступа</h6>
+                    <div id="permissionsList">
+                        <div class="text-center"><div class="spinner-border spinner-border-sm"></div> Загрузка...</div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Добавить право пользователю -->
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3">Добавить право пользователю</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Пользователь</label>
+                            <select id="permissionUserSelect" class="form-select">
+                                <option value="">Загрузка...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Роль</label>
+                            <select id="permissionRoleSelect" class="form-select">
+                                <option value="">Выберите роль</option>
+                                <option value="viewer">Просмотр (viewer)</option>
+                                <option value="editor">Редактор (editor)</option>
+                                <option value="admin">Админ (admin)</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="window.addPermission()">
+                            <i class="fas fa-plus"></i> Добавить право
+                        </button>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3">Добавить право для операторов</h6>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            Эти права будут действовать для всех пользователей с ролью <strong>Operator</strong>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Роль для операторов</label>
+                            <select id="operatorRoleSelect" class="form-select">
+                                <option value="">Выберите роль</option>
+                                <option value="viewer">Просмотр (viewer)</option>
+                                <option value="editor">Редактор (editor)</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-success" onclick="window.addRolePermission()">
+                            <i class="fas fa-user-shield"></i> Добавить для операторов
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
             </div>
         </div>
     </div>

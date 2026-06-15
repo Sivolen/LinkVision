@@ -37,7 +37,9 @@ groups_cache: TTLCache = TTLCache(maxsize=100, ttl=60)
 sidebar_cache: TTLCache = TTLCache(maxsize=100, ttl=10)
 
 
-def create_new_map(name: str, owner_id: int, background_image: Optional[str] = None) -> Map:
+def create_new_map(
+    name: str, owner_id: int, background_image: Optional[str] = None
+) -> Map:
     """
     Создать новую карту.
 
@@ -116,6 +118,30 @@ def get_map_by_id(map_id: int) -> Optional[Map]:
     return map_repo.get_by_id(map_id)
 
 
+def get_map_info(map_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Получить информацию о карте с статусом блокировки.
+
+    Args:
+        map_id: ID карты
+
+    Returns:
+        Dict с информацией о карте или None
+    """
+    map_obj = Map.query.get(map_id)
+    if not map_obj:
+        return None
+
+    return {
+        "id": map_obj.id,
+        "name": map_obj.name,
+        "owner_id": map_obj.owner_id,
+        "is_locked": map_obj.is_locked,
+        "background_image": map_obj.background_image,
+        "created_at": map_obj.created_at.isoformat() if map_obj.created_at else None,
+    }
+
+
 def get_available_maps(user) -> List[Map]:
     """Получить карты, доступные пользователю."""
     return map_repo.get_available_for_user(user)
@@ -158,12 +184,14 @@ def get_sidebar_maps_data(user) -> List[Dict[str, Any]]:
     result = []
     for m in maps:
         down_count = stat_dict.get(m.id, 0)
-        result.append({
-            "id": m.id,
-            "name": m.name,
-            "owner_id": m.owner_id,
-            "down_count": down_count,
-        })
+        result.append(
+            {
+                "id": m.id,
+                "name": m.name,
+                "owner_id": m.owner_id,
+                "down_count": down_count,
+            }
+        )
 
     sidebar_cache[cache_key] = result
     return result
@@ -223,11 +251,7 @@ def get_user_settings(user_id: int, map_id: int) -> UserMapSettings:
 
 
 def update_user_viewport(
-    user_id: int,
-    map_id: int,
-    pan_x: float,
-    pan_y: float,
-    zoom: float
+    user_id: int, map_id: int, pan_x: float, pan_y: float, zoom: float
 ) -> UserMapSettings:
     """
     Обновить настройки viewport пользователя.
@@ -274,7 +298,7 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
         Dict с узлами, рёбрами, группами и фигурами
     """
     # Проверка существования карты
-    Map.query.get_or_404(map_id)
+    map_obj = Map.query.get_or_404(map_id)
 
     # Устройства с подгрузкой типов и IP (один запрос)
     devices = (
@@ -309,7 +333,9 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
         if dev.type:
             if dev.type.icon_filename:
                 icon_url = (
-                    url_for("static", filename=f"uploads/icons/{dev.type.icon_filename}")
+                    url_for(
+                        "static", filename=f"uploads/icons/{dev.type.icon_filename}"
+                    )
                     + f"?v={dev.type.id}"
                 )
             width = dev.type.width
@@ -317,24 +343,26 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
 
         ip_label = ", ".join([ip.ip_address for ip in dev.ips]) if dev.ips else ""
 
-        nodes.append({
-            "group": "nodes",
-            "data": {
-                "id": str(dev.id),
-                "label": f"{dev.name}\n{ip_label}",
-                "status": dev.status,
-                "monitoring_enabled": "true" if dev.monitoring_enabled else "false",
-                "iconUrl": icon_url or "",
-                "name": dev.name,
-                "ip": ip_label,
-                "fontSize": dev.font_size,
-                "type": dev.type.name if dev.type else "Unknown",
-                "width": width,
-                "height": height,
-                "group_id": dev.group_id,
-            },
-            "position": {"x": dev.pos_x or 100, "y": dev.pos_y or 100},
-        })
+        nodes.append(
+            {
+                "group": "nodes",
+                "data": {
+                    "id": str(dev.id),
+                    "label": f"{dev.name}\n{ip_label}",
+                    "status": dev.status,
+                    "monitoring_enabled": "true" if dev.monitoring_enabled else "false",
+                    "iconUrl": icon_url or "",
+                    "name": dev.name,
+                    "ip": ip_label,
+                    "fontSize": dev.font_size,
+                    "type": dev.type.name if dev.type else "Unknown",
+                    "width": width,
+                    "height": height,
+                    "group_id": dev.group_id,
+                },
+                "position": {"x": dev.pos_x or 100, "y": dev.pos_y or 100},
+            }
+        )
 
     # Формирование рёбер
     edges = []
@@ -352,42 +380,46 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
             api_logger.warning(f"Skipping link {link.id}: node missing")
             continue
 
-        edges.append({
-            "group": "edges",
-            "data": {
-                "id": str(link.id),
-                "source": src_id,
-                "target": tgt_id,
-                "label": f"{link.source_interface or 'eth0'}↔{link.target_interface or 'eth0'}",
-                "link_type": link.link_type,
-                "color": link.line_color,
-                "width": link.line_width,
-                "style": link.line_style,
-                "font_size": link.font_size,
-            },
-        })
+        edges.append(
+            {
+                "group": "edges",
+                "data": {
+                    "id": str(link.id),
+                    "source": src_id,
+                    "target": tgt_id,
+                    "label": f"{link.source_interface or 'eth0'}↔{link.target_interface or 'eth0'}",
+                    "link_type": link.link_type,
+                    "color": link.line_color,
+                    "width": link.line_width,
+                    "style": link.line_style,
+                    "font_size": link.font_size,
+                },
+            }
+        )
 
     # Формирование фигур
-    shapes_out = [{
-        "id": sh.id,
-        "shape_type": sh.shape_type,
-        "x": sh.x,
-        "y": sh.y,
-        "width": sh.width,
-        "height": sh.height,
-        "color": sh.color,
-        "opacity": sh.opacity,
-        "description": sh.description,
-        "font_size": sh.font_size,
-    } for sh in shapes]
+    shapes_out = [
+        {
+            "id": sh.id,
+            "shape_type": sh.shape_type,
+            "x": sh.x,
+            "y": sh.y,
+            "width": sh.width,
+            "height": sh.height,
+            "color": sh.color,
+            "opacity": sh.opacity,
+            "description": sh.description,
+            "font_size": sh.font_size,
+        }
+        for sh in shapes
+    ]
 
     # Формирование групп (только с устройствами)
-    groups_out = [{
-        "id": g.id,
-        "name": g.name,
-        "color": g.color,
-        "font_size": g.font_size
-    } for g in groups if g.id in group_ids_with_devices]
+    groups_out = [
+        {"id": g.id, "name": g.name, "color": g.color, "font_size": g.font_size}
+        for g in groups
+        if g.id in group_ids_with_devices
+    ]
 
     return {"nodes": nodes, "edges": edges, "groups": groups_out, "shapes": shapes_out}
 
@@ -399,13 +431,16 @@ def get_map_groups(map_id: int) -> List[Dict[str, Any]]:
         return groups_cache[cache_key]
 
     groups = Group.query.filter_by(map_id=map_id).all()
-    result = [{
-        "id": g.id,
-        "name": g.name,
-        "color": g.color,
-        "font_size": g.font_size,
-        "device_count": g.devices.count(),
-    } for g in groups]
+    result = [
+        {
+            "id": g.id,
+            "name": g.name,
+            "color": g.color,
+            "font_size": g.font_size,
+            "device_count": g.devices.count(),
+        }
+        for g in groups
+    ]
 
     groups_cache[cache_key] = result
     return result
@@ -423,38 +458,40 @@ def export_map_data(map_id: int) -> Dict[str, Any]:
     """
     map_obj = Map.query.get_or_404(map_id)
 
-    devices = [{
-        "id": dev.id,
-        "name": dev.name,
-        "ips": [ip.ip_address for ip in dev.ips],
-        "type_id": dev.type_id,
-        "type_name": dev.type.name if dev.type else None,
-        "pos_x": dev.pos_x,
-        "pos_y": dev.pos_y,
-        "status": dev.status,
-        "icon_filename": dev.type.icon_filename if dev.type else None,
-        "width": dev.type.width if dev.type else None,
-        "height": dev.type.height if dev.type else None,
-        "group_id": dev.group_id,
-    } for dev in map_obj.devices]
+    devices = [
+        {
+            "id": dev.id,
+            "name": dev.name,
+            "ips": [ip.ip_address for ip in dev.ips],
+            "type_id": dev.type_id,
+            "type_name": dev.type.name if dev.type else None,
+            "pos_x": dev.pos_x,
+            "pos_y": dev.pos_y,
+            "status": dev.status,
+            "icon_filename": dev.type.icon_filename if dev.type else None,
+            "width": dev.type.width if dev.type else None,
+            "height": dev.type.height if dev.type else None,
+            "group_id": dev.group_id,
+        }
+        for dev in map_obj.devices
+    ]
 
-    links = [{
-        "id": link.id,
-        "source_device_id": link.source_device_id,
-        "target_device_id": link.target_device_id,
-        "source_interface": link.source_interface,
-        "target_interface": link.target_interface,
-        "link_type": link.link_type,
-        "line_color": link.line_color,
-        "line_width": link.line_width,
-        "line_style": link.line_style,
-    } for link in map_obj.links]
+    links = [
+        {
+            "id": link.id,
+            "source_device_id": link.source_device_id,
+            "target_device_id": link.target_device_id,
+            "source_interface": link.source_interface,
+            "target_interface": link.target_interface,
+            "link_type": link.link_type,
+            "line_color": link.line_color,
+            "line_width": link.line_width,
+            "line_style": link.line_style,
+        }
+        for link in map_obj.links
+    ]
 
-    groups = [{
-        "id": g.id,
-        "name": g.name,
-        "color": g.color
-    } for g in map_obj.groups]
+    groups = [{"id": g.id, "name": g.name, "color": g.color} for g in map_obj.groups]
 
     return {
         "id": map_obj.id,
@@ -471,7 +508,7 @@ def update_map_details(
     map_id: int,
     name: Optional[str] = None,
     background_filename: Optional[str] = None,
-    remove_background: bool = False
+    remove_background: bool = False,
 ) -> Map:
     """
     Обновить название и фон карты.
@@ -498,7 +535,7 @@ def create_link(
     line_color: str = "#6c757d",
     line_width: int = 2,
     line_style: str = "solid",
-    font_size: int = 8
+    font_size: int = 8,
 ) -> Link:
     """
     Создать связь между устройствами.
@@ -553,8 +590,12 @@ def update_link(link_id: int, **kwargs: Any) -> Link:
         link.font_size = kwargs["font_size"]
 
     for field in [
-        "source_interface", "target_interface", "link_type",
-        "line_color", "line_width", "line_style"
+        "source_interface",
+        "target_interface",
+        "link_type",
+        "line_color",
+        "line_width",
+        "line_style",
     ]:
         if field in kwargs:
             setattr(link, field, kwargs[field])
@@ -582,10 +623,7 @@ def delete_link(link_id: int) -> int:
 
 
 def create_group(
-    map_id: int,
-    name: str,
-    color: str = "#3498db",
-    font_size: int = 11
+    map_id: int, name: str, color: str = "#3498db", font_size: int = 11
 ) -> Group:
     """
     Создать группу.
@@ -610,7 +648,7 @@ def update_group(
     group_id: int,
     name: Optional[str] = None,
     color: Optional[str] = None,
-    font_size: Optional[int] = None
+    font_size: Optional[int] = None,
 ) -> Group:
     """
     Обновить группу.
@@ -699,9 +737,7 @@ def import_map(data: Dict[str, Any], current_user) -> Map:
     group_id_map = {}
     for g_data in data.get("groups", []):
         group = Group(
-            name=g_data["name"],
-            color=g_data.get("color", "#3498db"),
-            map_id=map_obj.id
+            name=g_data["name"], color=g_data.get("color", "#3498db"), map_id=map_obj.id
         )
         db.session.add(group)
         db.session.flush()
@@ -793,7 +829,7 @@ def create_shape(
     color: str,
     opacity: float,
     description: Optional[str] = None,
-    font_size: int = 12
+    font_size: int = 12,
 ) -> MapShape:
     """
     Создать фигуру на карте.

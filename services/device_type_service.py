@@ -17,7 +17,6 @@ from models import DeviceType, db
 from utils.file_validation import safe_save_upload
 from utils.logger import admin_logger
 
-
 # Кэш для типов устройств
 _types_cache: TTLCache = TTLCache(maxsize=1, ttl=600)
 
@@ -49,10 +48,7 @@ def get_device_type_by_id(type_id: int) -> Optional[DeviceType]:
 
 
 def create_device_type(
-    name: str,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
-    icon_file=None
+    name: str, width: Optional[int] = None, height: Optional[int] = None, icon_file=None
 ) -> DeviceType:
     """
     Создать тип устройства.
@@ -92,7 +88,7 @@ def update_device_type(
     name: Optional[str] = None,
     width: Optional[int] = None,
     height: Optional[int] = None,
-    icon_file=None
+    icon_file=None,
 ) -> DeviceType:
     """
     Обновить тип устройства.

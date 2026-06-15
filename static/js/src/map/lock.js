@@ -1,41 +1,162 @@
-// lock.js – блокировка перемещения устройств
+// lock.js – блокировка перемещения устройств (per-map, v2.0)
 let cy = null;
-let dragLocked = localStorage.getItem('dragLocked') === 'true';
+let currentMapId = null;
 
-// Синхронизируем глобальную переменную
-window.dragLocked = dragLocked;
+// Состояние блокировки хранится для каждой карты отдельно
+const mapLockStates = new Map();
 
+/**
+ * Инициализация модуля блокировки
+ */
 export function initLock(instance) {
     cy = instance;
+    currentMapId = window.currentMapId || null;
+
+    console.log('🔒 initLock called, mapId:', currentMapId);
+
+    // Инициализируем window.dragLocked для совместимости
+    window.dragLocked = false;
+
+    // Сразу устанавливаем кнопку в "разблокировано" (будет обновлено после загрузки)
     updateLockButton();
-    window.toggleLock = () => {
-        if (window.isOperator) return;
-        dragLocked = !dragLocked;
-        localStorage.setItem('dragLocked', dragLocked);
-        window.dragLocked = dragLocked;   // ← синхронизация
-        updateLockButton();
+
+    // Загружаем состояние блокировки для текущей карты
+    if (currentMapId) {
+        console.log('🔒 Loading lock state for map', currentMapId);
+        loadMapLockState(currentMapId);
+    } else {
+        console.warn('🔒 No mapId, skipping lock state load');
+    }
+
+    // Глобальная функция для переключения (вызывается из UI)
+    window.toggleLock = async () => {
+        if (!currentMapId) return;
+
+        const currentState = mapLockStates.get(currentMapId) || false;
+        const newState = !currentState;
+
+        try {
+            const response = await fetch(`/api/map/${currentMapId}/lock`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ locked: newState }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                mapLockStates.set(currentMapId, data.is_locked);
+                window.dragLocked = data.is_locked;
+                updateLockButton();
+
+                // Уведомляем другие клиенты через WebSocket
+                if (window.socket) {
+                    window.socket.emit('map_lock_updated', {
+                        map_id: currentMapId,
+                        is_locked: data.is_locked,
+                        user_id: window.currentUserId,
+                        username: window.currentUsername,
+                    });
+                }
+
+                console.log(`🔒 Map ${currentMapId} lock: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
+            } else {
+                const error = await response.json();
+                alert('Ошибка: ' + (error.error || 'Не удалось изменить блокировку'));
+            }
+        } catch (err) {
+            console.error('Error toggling lock:', err);
+            alert('Ошибка соединения с сервером');
+        }
     };
+
+    // Подписка на обновления блокировки от других клиентов
+    if (window.socket) {
+        window.socket.on('map_lock_updated', (data) => {
+            if (Number(data.map_id) === Number(currentMapId)) {
+                mapLockStates.set(currentMapId, data.is_locked);
+                window.dragLocked = data.is_locked;
+                updateLockButton();
+
+                const action = data.is_locked ? 'заблокировал' : 'разблокировал';
+                console.log(`🔔 Карта ${action} пользователем ${data.username || 'Unknown'}`);
+            }
+        });
+    }
 }
 
-export function isDragLocked() { return dragLocked; }
+/**
+ * Загрузить состояние блокировки карты с сервера
+ */
+async function loadMapLockState(mapId) {
+    try {
+        const response = await fetch(`/api/map/${mapId}/lock`);
+        if (response.ok) {
+            const data = await response.json();
+            mapLockStates.set(mapId, data.is_locked);
+            window.dragLocked = data.is_locked;
 
+            // Обновляем кнопку ПОСЛЕ загрузки состояния
+            updateLockButton();
+
+            // Обновляем UI с учётом прав
+            const canEdit = data.can_edit;
+            const lockBtn = document.getElementById('lockMode');
+            if (lockBtn) {
+                lockBtn.disabled = !canEdit;
+                if (!canEdit) {
+                    lockBtn.title = 'Нет прав для изменения блокировки';
+                }
+            }
+
+            console.log(`🔒 Map ${mapId} initial state: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
+        }
+    } catch (err) {
+        console.error('Error loading map lock state:', err);
+    }
+}
+
+/**
+ * Проверить, заблокирована ли текущая карта
+ */
+export function isDragLocked() {
+    return mapLockStates.get(currentMapId) || false;
+}
+
+/**
+ * Обновить визуальное состояние кнопки блокировки
+ */
 function updateLockButton() {
     const lockBtn = document.getElementById('lockMode');
-    if (!lockBtn) return;
-    if (window.isOperator) {
-        lockBtn.disabled = true;
-        lockBtn.classList.add('active');
-        lockBtn.innerHTML = '<i class="fas fa-lock"></i>';
-        lockBtn.title = 'Оператор не может разблокировать';
+    if (!lockBtn) {
+        console.warn('🔒 Lock button not found!');
         return;
     }
-    if (dragLocked) {
+
+    const isLocked = mapLockStates.get(currentMapId) || false;
+    const canEdit = !lockBtn.disabled;
+
+    console.log('🔒 updateLockButton:', { isLocked, canEdit, mapId: currentMapId });
+
+    if (isLocked) {
         lockBtn.classList.add('active');
         lockBtn.innerHTML = '<i class="fas fa-lock"></i>';
-        lockBtn.title = 'Разблокировать перемещение';
+        lockBtn.title = canEdit ? 'Разблокировать перемещение' : 'Карта заблокирована';
     } else {
         lockBtn.classList.remove('active');
         lockBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
-        lockBtn.title = 'Заблокировать перемещение';
+        lockBtn.title = canEdit ? 'Заблокировать перемещение' : 'Нет прав для блокировки';
+    }
+}
+
+/**
+ * Обновить состояние кнопки при изменении прав
+ */
+export function updateLockPermissions(canEdit) {
+    const lockBtn = document.getElementById('lockMode');
+    if (lockBtn) {
+        lockBtn.disabled = !canEdit;
+        updateLockButton();
     }
 }
