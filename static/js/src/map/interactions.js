@@ -140,11 +140,12 @@ export function initInteractions(cy) {
             fetch(`/api/shape/${shapeId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                body: JSON.stringify({ x: pos.x, y: pos.y })
+                body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
             })
             .catch(err => console.error('Error saving shape position:', err))
             .finally(() => {
-                setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+                // Увеличено до 2 секунд чтобы гарантированно пропустить map_updated событие
+                setTimeout(() => window.clearSkipNextMapUpdate(), 2000);
             });
             delete dragTimeouts[shapeId];
         }, 500);

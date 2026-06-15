@@ -904,14 +904,21 @@ def update_shape(shape_id: int, **kwargs: Any) -> MapShape:
     """
     shape = MapShape.query.get_or_404(shape_id)
 
+    api_logger.info(f"🔷 update_shape called: shape_id={shape_id}, kwargs={kwargs}")
+
     if "font_size" in kwargs:
         shape.font_size = kwargs["font_size"]
 
     for key, value in kwargs.items():
         if hasattr(shape, key) and value is not None:
+            old_value = getattr(shape, key)
             setattr(shape, key, value)
+            if key in ['x', 'y']:
+                api_logger.info(f"  🔶 Updating {key}: {old_value} -> {value}")
 
     db.session.commit()
+
+    api_logger.info(f"  ✅ Shape saved: x={shape.x}, y={shape.y}")
     return shape
 
 

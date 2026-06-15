@@ -797,10 +797,12 @@ def update_shape(shape_id):
         return jsonify({"error": "Access denied"}), 403
 
     data = request.json
+    api_logger.info(f"🔷 API update_shape: shape_id={shape_id}, map_id={shape.map_id}, data={data}")
     try:
         map_service.update_shape(shape_id, **data)
         notify_map_updated(shape.map_id)
-        return jsonify({"id": shape_id, "status": "updated"})
+        api_logger.info(f"  ✅ map_updated notified for map {shape.map_id}")
+        return jsonify({"id": shape_id, "status": "updated", "x": shape.x, "y": shape.y})
     except Exception as e:
         api_logger.error(f"Error updating shape: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
