@@ -22,8 +22,11 @@ export function loadElements(mapId, force = false) {
     // Проверка кэша (если не force)
     const now = Date.now();
     if (!force && elementsCache.timestamp && (now - elementsCache.timestamp) < CACHE_DURATION) {
+        console.log('📦 Using cache for elements');
         return; // Используем кэш
     }
+
+    console.log(`🔄 Loading elements for map ${mapId}, force=${force}`);
 
     cy.elements().remove();
 
@@ -59,7 +62,9 @@ export function loadElements(mapId, force = false) {
 
             // ФИГУРЫ
             if (data.shapes && data.shapes.length) {
+                console.log(`🔷 Loading ${data.shapes.length} shapes from API`);
                 data.shapes.forEach(shape => {
+                    console.log(`  Shape ${shape.id}: x=${shape.x}, y=${shape.y}`);
                     allElements.push({
                         group: 'nodes',
                         data: {
@@ -77,6 +82,8 @@ export function loadElements(mapId, force = false) {
                         position: { x: shape.x, y: shape.y }
                     });
                 });
+            } else {
+                console.log('🔷 No shapes in API response');
             }
 
             // УСТРОЙСТВА - оптимизированная обработка
@@ -118,6 +125,16 @@ export function loadElements(mapId, force = false) {
             cy.batch(() => {
                 cy.add(allElements);
             });
+
+            // Проверка загруженных фигур
+            if (cy) {
+                const shapeNodes = cy.nodes('[isShape]');
+                console.log(`✅ Loaded ${shapeNodes.length} shapes into graph`);
+                shapeNodes.forEach(n => {
+                    const pos = n.position();
+                    console.log(`  Shape ${n.id()}: x=${pos.x}, y=${pos.y}`);
+                });
+            }
 
             // Обновление меток и групп
             import('./edgeLabels.js').then(m => m.updateAllEdgeLabels());

@@ -144,9 +144,10 @@ window.socket.on('map_updated', (data) => {
         return;   // не сбрасываем флаг здесь
     }
     if (Number(data.map_id) === mapId) {
-        console.log('🔄 Reloading map from other client');
+        console.log('🔄 Reloading map from other client:', data);
         window.withViewportRestore(() => {
-            window.reloadMapElements();
+            console.log('🔄 Calling reloadMapElements(force=true)');
+            window.reloadMapElements(true); // force=true чтобы обойти кэш
         });
     }
 });
