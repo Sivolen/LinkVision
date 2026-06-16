@@ -104,18 +104,22 @@ def run_migration():
         create_sql = cursor.fetchone()[0]
         if "BOOLEAN" in create_sql.upper() or "INTEGER" in create_sql.upper():
             print("Преобразуем статус из булева в строку...")
-            # Добавляем временную колонку
-            cursor.execute(
-                "ALTER TABLE device ADD COLUMN status_new VARCHAR(10) DEFAULT 'up'"
-            )
-            # Переносим данные
-            cursor.execute(
-                "UPDATE device SET status_new = CASE WHEN status = 1 THEN 'up' ELSE 'down' END"
-            )
-            # Удаляем старую
-            cursor.execute("ALTER TABLE device DROP COLUMN status")
-            # Переименовываем новую
-            cursor.execute("ALTER TABLE device RENAME COLUMN status_new TO status")
+            # Проверяем, не создана ли уже временная колонка
+            if "status_new" not in columns:
+                # Добавляем временную колонку
+                cursor.execute(
+                    "ALTER TABLE device ADD COLUMN status_new VARCHAR(10) DEFAULT 'up'"
+                )
+                # Переносим данные
+                cursor.execute(
+                    "UPDATE device SET status_new = CASE WHEN status = 1 THEN 'up' ELSE 'down' END"
+                )
+                # Удаляем старую
+                cursor.execute("ALTER TABLE device DROP COLUMN status")
+                # Переименовываем новую
+                cursor.execute("ALTER TABLE device RENAME COLUMN status_new TO status")
+            else:
+                print("Временная колонка status_new уже существует - пропускаем преобразование статуса")
             conn.commit()
             print("Статус преобразован.")
         else:
@@ -134,27 +138,31 @@ def run_migration():
         create_hist_sql = cursor.fetchone()[0]
         if "BOOLEAN" in create_hist_sql.upper() or "INTEGER" in create_hist_sql.upper():
             print("Преобразуем old_status и new_status в device_history...")
-            cursor.execute(
-                "ALTER TABLE device_history ADD COLUMN old_status_new VARCHAR(10)"
-            )
-            cursor.execute(
-                "ALTER TABLE device_history ADD COLUMN new_status_new VARCHAR(10)"
-            )
-            cursor.execute("""
-                UPDATE device_history 
-                SET old_status_new = CASE WHEN old_status = 1 THEN 'up' ELSE 'down' END,
-                    new_status_new = CASE WHEN new_status = 1 THEN 'up' ELSE 'down' END
-            """)
-            cursor.execute("ALTER TABLE device_history DROP COLUMN old_status")
-            cursor.execute("ALTER TABLE device_history DROP COLUMN new_status")
-            cursor.execute(
-                "ALTER TABLE device_history RENAME COLUMN old_status_new TO old_status"
-            )
-            cursor.execute(
-                "ALTER TABLE device_history RENAME COLUMN new_status_new TO new_status"
-            )
-            conn.commit()
-            print("История преобразована.")
+            # Проверяем, не созданы ли уже временные колонки
+            if "old_status_new" not in hist_columns:
+                cursor.execute(
+                    "ALTER TABLE device_history ADD COLUMN old_status_new VARCHAR(10)"
+                )
+                cursor.execute(
+                    "ALTER TABLE device_history ADD COLUMN new_status_new VARCHAR(10)"
+                )
+                cursor.execute("""
+                    UPDATE device_history 
+                    SET old_status_new = CASE WHEN old_status = 1 THEN 'up' ELSE 'down' END,
+                        new_status_new = CASE WHEN new_status = 1 THEN 'up' ELSE 'down' END
+                """)
+                cursor.execute("ALTER TABLE device_history DROP COLUMN old_status")
+                cursor.execute("ALTER TABLE device_history DROP COLUMN new_status")
+                cursor.execute(
+                    "ALTER TABLE device_history RENAME COLUMN old_status_new TO old_status"
+                )
+                cursor.execute(
+                    "ALTER TABLE device_history RENAME COLUMN new_status_new TO new_status"
+                )
+                conn.commit()
+                print("История преобразована.")
+            else:
+                print("Временные колонки уже существуют - пропускаем преобразование истории")
         else:
             print("История уже в строковом формате.")
 
