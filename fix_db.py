@@ -96,6 +96,75 @@ def run_migration():
     else:
         print("Колонка ip_address уже удалена.")
 
+    # 3.5. Добавляем is_locked к map, если нет
+    cursor.execute("PRAGMA table_info(map)")
+    map_columns = [col[1] for col in cursor.fetchall()]
+    if "is_locked" not in map_columns:
+        print("Добавляем колонку is_locked к map...")
+        cursor.execute("ALTER TABLE map ADD COLUMN is_locked BOOLEAN DEFAULT 0")
+        conn.commit()
+        print("Колонка is_locked добавлена.")
+    else:
+        print("Колонка is_locked уже существует.")
+
+    # 3.6. Создаём audit_log, если нет
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'")
+    if not cursor.fetchone():
+        print("Создаём таблицу audit_log...")
+        cursor.execute("""
+            CREATE TABLE audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                username VARCHAR(64),
+                action VARCHAR(50) NOT NULL,
+                target_type VARCHAR(30),
+                target_id INTEGER,
+                target_name VARCHAR(128),
+                old_values JSON,
+                new_values JSON,
+                ip_address VARCHAR(45),
+                user_agent VARCHAR(256),
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES user(id)
+            )
+        """)
+        cursor.execute("CREATE INDEX ix_audit_log_action ON audit_log(action)")
+        cursor.execute("CREATE INDEX ix_audit_log_target_id ON audit_log(target_id)")
+        cursor.execute("CREATE INDEX ix_audit_log_target_type ON audit_log(target_type)")
+        cursor.execute("CREATE INDEX ix_audit_log_timestamp ON audit_log(timestamp)")
+        cursor.execute("CREATE INDEX ix_audit_log_user_id ON audit_log(user_id)")
+        cursor.execute("CREATE INDEX idx_audit_action ON audit_log(action)")
+        cursor.execute("CREATE INDEX idx_audit_target ON audit_log(target_type, target_id)")
+        cursor.execute("CREATE INDEX idx_audit_user_timestamp ON audit_log(user_id, timestamp)")
+        conn.commit()
+        print("Таблица audit_log создана.")
+    else:
+        print("Таблица audit_log уже существует.")
+
+    # 3.7. Создаём map_permission, если нет
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='map_permission'")
+    if not cursor.fetchone():
+        print("Создаём таблицу map_permission...")
+        cursor.execute("""
+            CREATE TABLE map_permission (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                map_id INTEGER NOT NULL,
+                user_id INTEGER,
+                role VARCHAR(20),
+                FOREIGN KEY (map_id) REFERENCES map(id),
+                FOREIGN KEY (user_id) REFERENCES user(id),
+                CHECK ((user_id IS NOT NULL) OR (role IS NOT NULL)),
+                UNIQUE(map_id, user_id),
+                UNIQUE(map_id, role)
+            )
+        """)
+        cursor.execute("CREATE INDEX ix_map_permission_map_id ON map_permission(map_id)")
+        cursor.execute("CREATE INDEX ix_map_permission_user_id ON map_permission(user_id)")
+        conn.commit()
+        print("Таблица map_permission создана.")
+    else:
+        print("Таблица map_permission уже существует.")
+
     # 4. Преобразуем статус в строку
     cursor.execute("PRAGMA table_info(device)")
     columns = [col[1] for col in cursor.fetchall()]
