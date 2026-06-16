@@ -88,8 +88,11 @@ def run_migration():
 
         # Удаляем старую колонку
         print("Удаляем старую колонку ip_address...")
-        cursor.execute("ALTER TABLE device DROP COLUMN ip_address")
-        conn.commit()
+        try:
+            cursor.execute("ALTER TABLE device DROP COLUMN ip_address")
+            conn.commit()
+        except sqlite3.OperationalError:
+            print("Колонка ip_address уже удалена.")
     else:
         print("Колонка ip_address уже удалена.")
 
