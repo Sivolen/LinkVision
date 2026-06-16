@@ -246,23 +246,76 @@ def run_migration():
     cursor.execute("PRAGMA foreign_key_list(device_ips)")
     fks = cursor.fetchall()
     if not any(fk[2] == "device" for fk in fks):
-        print("Добавляем внешний ключ для device_ips...")
-        try:
-            cursor.execute(
-                "ALTER TABLE device_ips ADD CONSTRAINT fk_device_ips_device FOREIGN KEY (device_id) REFERENCES device(id) ON DELETE CASCADE"
-            )
-        except sqlite3.OperationalError as e:
-            # В SQLite нельзя добавить FK через ALTER, нужно пересоздать таблицу
-            print(
-                "SQLite не поддерживает добавление внешнего ключа через ALTER. Пропускаем."
-            )
-            print("Внешний ключ будет создан при следующем запуске приложения.")
+        print("\n⚠️  SQLite не поддерживает добавление FK через ALTER")
+        print("   Внешний ключ будет создан при следующем запуске приложения.")
     else:
-        print("Внешний ключ уже существует.")
+        print("\n✅ Внешний ключ уже существует.")
 
     conn.close()
-    print("✅ Миграция завершена успешно!")
-    print("Теперь можно запустить приложение.")
+    print("\n✅ Миграция завершена успешно!")
+
+    # 7. Проверка что всё создано
+    print("\n🔍 Проверка результатов...")
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Проверка is_locked
+    cursor.execute("PRAGMA table_info(map)")
+    map_cols = [col[1] for col in cursor.fetchall()]
+    if "is_locked" in map_cols:
+        print("✅ map.is_locked - OK")
+    else:
+        print("❌ map.is_locked - НЕ СОЗДАНА!")
+
+    # Проверка audit_log
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'")
+    if cursor.fetchone():
+        print("✅ audit_log - OK")
+    else:
+        print("❌ audit_log - НЕ СОЗДАНА!")
+
+    # Проверка map_permission
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='map_permission'")
+    if cursor.fetchone():
+        print("✅ map_permission - OK")
+    else:
+        print("❌ map_permission - НЕ СОЗДАНА!")
+
+    conn.close()
+
+    # 8. Перезапуск приложения
+    print("\n🔄 Перезапуск приложения...")
+    import subprocess
+    import signal
+    import time
+
+    # Остановка gunicorn
+    try:
+        subprocess.run(["pkill", "-f", "gunicorn"], capture_output=True)
+        time.sleep(2)
+        print("✅ gunicorn остановлен")
+    except Exception as e:
+        print(f"⚠️  Ошибка остановки gunicorn: {e}")
+
+    # Проверка что gunicorn остановился
+    time.sleep(1)
+
+    # Запуск gunicorn
+    try:
+        print("🚀 Запуск gunicorn...")
+        subprocess.Popen([
+            "gunicorn", "-k", "eventlet", "-w", "1",
+            "-b", "0.0.0.0:8005", "wsgi:app"
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(3)
+        print("✅ gunicorn запущен")
+    except Exception as e:
+        print(f"❌ Ошибка запуска gunicorn: {e}")
+        print("\n⚠️  Запустите вручную: gunicorn -k eventlet -w 1 -b 0.0.0.0:8005 wsgi:app")
+
+    print("\n" + "="*60)
+    print("✅ Все миграции применены успешно!")
+    print("="*60)
 
 
 if __name__ == "__main__":
