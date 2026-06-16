@@ -199,6 +199,7 @@ linkvision/
 ├── forms.py                    # формы WTForms для валидации данных
 ├── requirements.txt            # зависимости проекта
 ├── README.md                   # документация
+├── fix_db.py                   # скрипт исправления миграций БД (v2.0)
 ├── install.sh                  # скрипт автоматической установки
 ├── linkvision.service          # systemd-сервис для фоновой работы
 ├── vite.config.js              # конфигурация Vite для сборки frontend-ресурсов
@@ -310,6 +311,52 @@ sudo systemctl start linkvision.service
 
 # 5. Проверьте логи на ошибки
 sudo journalctl -u linkvision.service -n 20
+```
+
+### Исправление миграций БД
+
+При обновлении до версии v2.0 могут возникнуть проблемы с миграциями Alembic из-за особенностей SQLite.
+Используйте скрипт `fix_db.py` для автоматического исправления:
+
+```bash
+cd /opt/linkvision
+
+# 1. Обновите код
+git pull
+
+# 2. Запустите скрипт исправления
+./fix_db.py
+
+# Скрипт выполнит:
+# - Бэкап существующей БД
+# - Добавление колонки is_locked к таблице map
+# - Создание таблиц audit_log и map_permission
+# - Преобразование типов данных (BOOLEAN → VARCHAR)
+# - Перезапуск приложения (gunicorn)
+```
+
+Если скрипт не помог, выполните ручное исправление:
+
+```bash
+# Проверьте структуру БД
+sqlite3 webnetmap.db ".tables"
+sqlite3 webnetmap.db "PRAGMA table_info(map);"
+
+# Сбросьте alembic_version (если есть конфликты)
+python3 -c "
+import sqlite3
+conn = sqlite3.connect('webnetmap.db')
+cursor = conn.cursor()
+cursor.execute('DELETE FROM alembic_version')
+conn.commit()
+conn.close()
+print('✅ alembic_version сброшен')
+"
+
+# Перезапустите приложение
+pkill -f gunicorn
+sleep 2
+gunicorn -k eventlet -w 1 -b 0.0.0.0:8005 wsgi:app
 ```
 
 ### Проверка логов
