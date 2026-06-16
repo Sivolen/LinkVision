@@ -97,20 +97,23 @@ def run_migration():
         print("Колонка ip_address уже удалена.")
 
     # 3.5. Добавляем is_locked к map, если нет
+    print("\n🔍 Проверка колонки is_locked...")
     cursor.execute("PRAGMA table_info(map)")
     map_columns = [col[1] for col in cursor.fetchall()]
+    print(f"   Колонки в map: {map_columns}")
     if "is_locked" not in map_columns:
-        print("Добавляем колонку is_locked к map...")
+        print("   ➕ Добавляем колонку is_locked к map...")
         cursor.execute("ALTER TABLE map ADD COLUMN is_locked BOOLEAN DEFAULT 0")
         conn.commit()
-        print("Колонка is_locked добавлена.")
+        print("   ✅ Колонка is_locked добавлена.")
     else:
-        print("Колонка is_locked уже существует.")
+        print("   ⏭️  Колонка is_locked уже существует.")
 
     # 3.6. Создаём audit_log, если нет
+    print("\n🔍 Проверка таблицы audit_log...")
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'")
     if not cursor.fetchone():
-        print("Создаём таблицу audit_log...")
+        print("   ➕ Создаём таблицу audit_log...")
         cursor.execute("""
             CREATE TABLE audit_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -137,14 +140,15 @@ def run_migration():
         cursor.execute("CREATE INDEX idx_audit_target ON audit_log(target_type, target_id)")
         cursor.execute("CREATE INDEX idx_audit_user_timestamp ON audit_log(user_id, timestamp)")
         conn.commit()
-        print("Таблица audit_log создана.")
+        print("   ✅ Таблица audit_log создана.")
     else:
-        print("Таблица audit_log уже существует.")
+        print("   ⏭️  Таблица audit_log уже существует.")
 
     # 3.7. Создаём map_permission, если нет
+    print("\n🔍 Проверка таблицы map_permission...")
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='map_permission'")
     if not cursor.fetchone():
-        print("Создаём таблицу map_permission...")
+        print("   ➕ Создаём таблицу map_permission...")
         cursor.execute("""
             CREATE TABLE map_permission (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -161,9 +165,9 @@ def run_migration():
         cursor.execute("CREATE INDEX ix_map_permission_map_id ON map_permission(map_id)")
         cursor.execute("CREATE INDEX ix_map_permission_user_id ON map_permission(user_id)")
         conn.commit()
-        print("Таблица map_permission создана.")
+        print("   ✅ Таблица map_permission создана.")
     else:
-        print("Таблица map_permission уже существует.")
+        print("   ⏭️  Таблица map_permission уже существует.")
 
     # 4. Преобразуем статус в строку
     cursor.execute("PRAGMA table_info(device)")
