@@ -115,7 +115,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///webnetmap.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static/uploads')
-    VERSION = '1.0.0'
+    VERSION = '2.0.0'
 EOF
     echo -e "${GREEN}config.py created with random secret key.${NC}"
 else
@@ -130,6 +130,14 @@ if [ -d "migrations" ]; then
     flask db upgrade || echo -e "${YELLOW}Flask-Migrate not configured, skipping.${NC}"
 else
     echo -e "${YELLOW}No migrations folder found. Database will be created on first run.${NC}"
+fi
+
+# Fix database migrations for v2.0
+echo -e "\n${GREEN}Applying v2.0 database migrations...${NC}"
+if [ -f "fix_db.py" ]; then
+    python fix_db.py || echo -e "${YELLOW}Migration script failed, trying manual migration...${NC}"
+else
+    echo -e "${YELLOW}fix_db.py not found. Database migration may fail.${NC}"
 fi
 
 # Create upload directories
@@ -164,7 +172,7 @@ User=root
 Group=root
 WorkingDirectory=$SCRIPT_DIR
 Environment="PATH=$SCRIPT_DIR/venv/bin"
-ExecStart=$SCRIPT_DIR/venv/bin/python app.py
+ExecStart=$SCRIPT_DIR/venv/bin/gunicorn -k eventlet -w 1 -b 0.0.0.0:8005 wsgi:app
 Restart=always
 RestartSec=10
 
@@ -205,5 +213,24 @@ echo -e "Access the web interface at: http://localhost:5000"
 echo -e ""
 echo -e "Default admin credentials:"
 echo -e "  Username: admin"
-echo -e "  Password: admin"
+echo -e "  Password: Admin"
 echo -e "${YELLOW}Please change the admin password after first login!${NC}"
+# Create default admin user if not exists
+echo -e "\n${GREEN}Creating default admin user...${NC}"
+python3 -c "
+import sys; sys.path.insert(0, '.')
+from app import create_app
+from extensions import db
+from models import User
+app = create_app()
+with app.app_context():
+    admin = User.query.filter_by(username='admin').first()
+    if not admin:
+        admin = User(username='admin', is_admin=True)
+        admin.set_password('Admin')
+        db.session.add(admin)
+        db.session.commit()
+        print('✅ Admin user created: admin / Admin')
+    else:
+        print('⏭️  Admin user already exists')
+" || echo -e "${YELLOW}Failed to create admin user.${NC}"
