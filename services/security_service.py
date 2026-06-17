@@ -41,10 +41,11 @@ class RateLimiter:
             return self._redis
 
         if has_app_context():
-            redis_url = current_app.config.get('REDIS_URL')
+            redis_url = current_app.config.get("REDIS_URL")
             if redis_url:
                 try:
                     import redis
+
                     self._redis = redis.from_url(redis_url)
                     return self._redis
                 except ImportError:

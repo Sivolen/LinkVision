@@ -30,14 +30,13 @@ def _get_user_map_permission(map_id: int) -> Optional[MapPermission]:
         perm = MapPermission.query.filter(
             MapPermission.map_id == map_id,
             (
-                (MapPermission.user_id == current_user.id) |
-                (MapPermission.role.in_(["viewer", "editor"]))
-            )
+                (MapPermission.user_id == current_user.id)
+                | (MapPermission.role.in_(["viewer", "editor"]))
+            ),
         ).first()
     else:
         perm = MapPermission.query.filter_by(
-            map_id=map_id,
-            user_id=current_user.id
+            map_id=map_id, user_id=current_user.id
         ).first()
 
     return perm

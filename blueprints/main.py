@@ -41,15 +41,17 @@ def health_check():
     except Exception:
         user_count = map_count = device_count = 0
 
-    return jsonify({
-        "status": "healthy" if db_status == "ok" else "unhealthy",
-        "database": db_status,
-        "stats": {
-            "users": user_count,
-            "maps": map_count,
-            "devices": device_count,
+    return jsonify(
+        {
+            "status": "healthy" if db_status == "ok" else "unhealthy",
+            "database": db_status,
+            "stats": {
+                "users": user_count,
+                "maps": map_count,
+                "devices": device_count,
+            },
         }
-    }), 200 if db_status == "ok" else 503
+    ), (200 if db_status == "ok" else 503)
 
 
 @main_bp.route("/")

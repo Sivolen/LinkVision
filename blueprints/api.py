@@ -116,7 +116,9 @@ def get_device_details(device_id):
 def get_groups(map_id):
     """Получить группы карты."""
     try:
-        api_logger.info(f"get_groups called for map_id={map_id}, user={current_user.id}")
+        api_logger.info(
+            f"get_groups called for map_id={map_id}, user={current_user.id}"
+        )
         groups = map_service.get_map_groups(map_id)
         api_logger.info(f"Returning {len(groups)} groups: {groups}")
         return jsonify(groups)
@@ -489,7 +491,11 @@ def delete_link(link_id):
             action="delete_link",
             map_id=map_id,
             map_name=map_name,
-            old_values={"link_id": link_id, "source": link.source_device_id, "target": link.target_device_id},
+            old_values={
+                "link_id": link_id,
+                "source": link.source_device_id,
+                "target": link.target_device_id,
+            },
         )
 
         map_service.delete_link(link_id)
@@ -797,12 +803,16 @@ def update_shape(shape_id):
         return jsonify({"error": "Access denied"}), 403
 
     data = request.json
-    api_logger.info(f"🔷 API update_shape: shape_id={shape_id}, map_id={shape.map_id}, data={data}")
+    api_logger.info(
+        f"🔷 API update_shape: shape_id={shape_id}, map_id={shape.map_id}, data={data}"
+    )
     try:
         map_service.update_shape(shape_id, **data)
         notify_map_updated(shape.map_id)
         api_logger.info(f"  ✅ map_updated notified for map {shape.map_id}")
-        return jsonify({"id": shape_id, "status": "updated", "x": shape.x, "y": shape.y})
+        return jsonify(
+            {"id": shape_id, "status": "updated", "x": shape.x, "y": shape.y}
+        )
     except Exception as e:
         api_logger.error(f"Error updating shape: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
