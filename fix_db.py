@@ -111,7 +111,9 @@ def run_migration():
 
     # 3.6. Создаём audit_log, если нет
     print("\n🔍 Проверка таблицы audit_log...")
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'"
+    )
     if not cursor.fetchone():
         print("   ➕ Создаём таблицу audit_log...")
         cursor.execute("""
@@ -133,12 +135,18 @@ def run_migration():
         """)
         cursor.execute("CREATE INDEX ix_audit_log_action ON audit_log(action)")
         cursor.execute("CREATE INDEX ix_audit_log_target_id ON audit_log(target_id)")
-        cursor.execute("CREATE INDEX ix_audit_log_target_type ON audit_log(target_type)")
+        cursor.execute(
+            "CREATE INDEX ix_audit_log_target_type ON audit_log(target_type)"
+        )
         cursor.execute("CREATE INDEX ix_audit_log_timestamp ON audit_log(timestamp)")
         cursor.execute("CREATE INDEX ix_audit_log_user_id ON audit_log(user_id)")
         cursor.execute("CREATE INDEX idx_audit_action ON audit_log(action)")
-        cursor.execute("CREATE INDEX idx_audit_target ON audit_log(target_type, target_id)")
-        cursor.execute("CREATE INDEX idx_audit_user_timestamp ON audit_log(user_id, timestamp)")
+        cursor.execute(
+            "CREATE INDEX idx_audit_target ON audit_log(target_type, target_id)"
+        )
+        cursor.execute(
+            "CREATE INDEX idx_audit_user_timestamp ON audit_log(user_id, timestamp)"
+        )
         conn.commit()
         print("   ✅ Таблица audit_log создана.")
     else:
@@ -146,7 +154,9 @@ def run_migration():
 
     # 3.7. Создаём map_permission, если нет
     print("\n🔍 Проверка таблицы map_permission...")
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='map_permission'")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='map_permission'"
+    )
     if not cursor.fetchone():
         print("   ➕ Создаём таблицу map_permission...")
         cursor.execute("""
@@ -162,8 +172,12 @@ def run_migration():
                 UNIQUE(map_id, role)
             )
         """)
-        cursor.execute("CREATE INDEX ix_map_permission_map_id ON map_permission(map_id)")
-        cursor.execute("CREATE INDEX ix_map_permission_user_id ON map_permission(user_id)")
+        cursor.execute(
+            "CREATE INDEX ix_map_permission_map_id ON map_permission(map_id)"
+        )
+        cursor.execute(
+            "CREATE INDEX ix_map_permission_user_id ON map_permission(user_id)"
+        )
         conn.commit()
         print("   ✅ Таблица map_permission создана.")
     else:
@@ -195,7 +209,9 @@ def run_migration():
                 # Переименовываем новую
                 cursor.execute("ALTER TABLE device RENAME COLUMN status_new TO status")
             else:
-                print("Временная колонка status_new уже существует - пропускаем преобразование статуса")
+                print(
+                    "Временная колонка status_new уже существует - пропускаем преобразование статуса"
+                )
             conn.commit()
             print("Статус преобразован.")
         else:
@@ -238,7 +254,9 @@ def run_migration():
                 conn.commit()
                 print("История преобразована.")
             else:
-                print("Временные колонки уже существуют - пропускаем преобразование истории")
+                print(
+                    "Временные колонки уже существуют - пропускаем преобразование истории"
+                )
         else:
             print("История уже в строковом формате.")
 
@@ -268,14 +286,18 @@ def run_migration():
         print("❌ map.is_locked - НЕ СОЗДАНА!")
 
     # Проверка audit_log
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'"
+    )
     if cursor.fetchone():
         print("✅ audit_log - OK")
     else:
         print("❌ audit_log - НЕ СОЗДАНА!")
 
     # Проверка map_permission
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='map_permission'")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='map_permission'"
+    )
     if cursor.fetchone():
         print("✅ map_permission - OK")
     else:
@@ -303,19 +325,22 @@ def run_migration():
     # Запуск gunicorn
     try:
         print("🚀 Запуск gunicorn...")
-        subprocess.Popen([
-            "gunicorn", "-k", "eventlet", "-w", "1",
-            "-b", "0.0.0.0:8005", "wsgi:app"
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(
+            ["gunicorn", "-k", "eventlet", "-w", "1", "-b", "0.0.0.0:8005", "wsgi:app"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         time.sleep(3)
         print("✅ gunicorn запущен")
     except Exception as e:
         print(f"❌ Ошибка запуска gunicorn: {e}")
-        print("\n⚠️  Запустите вручную: gunicorn -k eventlet -w 1 -b 0.0.0.0:8005 wsgi:app")
+        print(
+            "\n⚠️  Запустите вручную: gunicorn -k eventlet -w 1 -b 0.0.0.0:8005 wsgi:app"
+        )
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("✅ Все миграции применены успешно!")
-    print("="*60)
+    print("=" * 60)
 
 
 if __name__ == "__main__":

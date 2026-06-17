@@ -14,11 +14,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class TestConfig:
     """Test configuration - полностью независимая."""
+
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
-    SECRET_KEY = 'test-secret-key'
-    LOG_LEVEL = 'WARNING'
+    SECRET_KEY = "test-secret-key"
+    LOG_LEVEL = "WARNING"
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
     }
@@ -49,10 +50,10 @@ def app():
 
     app = Flask(__name__)
     app.config.from_object(TestConfig)
-    
+
     # Initialize extensions
     init_extensions(app)
-    
+
     # Register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
@@ -61,6 +62,7 @@ def app():
 
     # Отключаем CSRF для API endpoints
     from flask_wtf.csrf import CSRFProtect
+
     csrf = CSRFProtect(app)
     csrf.exempt(api_bp)
 
@@ -72,30 +74,30 @@ def app():
     with app.app_context():
         # Create all tables
         db.create_all()
-        
+
         # Create test admin user
-        admin = User(username='admin', is_admin=True)
-        admin.set_password('Admin123!')
+        admin = User(username="admin", is_admin=True)
+        admin.set_password("Admin123!")
         db.session.add(admin)
-        
+
         # Create test regular user
-        user = User(username='testuser', is_admin=False)
-        user.set_password('User123!')
+        user = User(username="testuser", is_admin=False)
+        user.set_password("User123!")
         db.session.add(user)
-        
+
         # Create test operator
-        operator = User(username='operator', is_admin=False, is_operator=True)
-        operator.set_password('Operator123!')
+        operator = User(username="operator", is_admin=False, is_operator=True)
+        operator.set_password("Operator123!")
         db.session.add(operator)
-        
+
         # Create device type
-        dtype = DeviceType(name='Router', icon_filename='')
+        dtype = DeviceType(name="Router", icon_filename="")
         db.session.add(dtype)
-        
+
         db.session.commit()
-        
+
         yield app
-        
+
         # Cleanup
         db.session.remove()
         db.drop_all()
@@ -105,4 +107,3 @@ def app():
 def client(app):
     """Create test client."""
     return app.test_client()
-

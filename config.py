@@ -9,9 +9,16 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-me"
 
     # Проверка SECRET_KEY в production
-    if os.environ.get("FLASK_ENV") == "production" and SECRET_KEY == "dev-secret-key-change-me":
-        print("⚠️  WARNING: Using default SECRET_KEY in production! Set SECRET_KEY environment variable.")
-        print("   Generate a new key: python -c 'import secrets; print(secrets.token_hex(32))'")
+    if (
+        os.environ.get("FLASK_ENV") == "production"
+        and SECRET_KEY == "dev-secret-key-change-me"
+    ):
+        print(
+            "⚠️  WARNING: Using default SECRET_KEY in production! Set SECRET_KEY environment variable."
+        )
+        print(
+            "   Generate a new key: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
 
     SESSION_REFRESH_EACH_REQUEST = True
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
@@ -58,4 +65,3 @@ class Config:
             self.SQLALCHEMY_ENGINE_OPTIONS = {
                 "pool_pre_ping": True,
             }
-

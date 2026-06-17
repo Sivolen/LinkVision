@@ -318,10 +318,7 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
     # Устройства с подгрузкой типов и IP (один запрос)
     # Используем joinedload для эффективной загрузки связанных данных
     devices = (
-        Device.query.options(
-            joinedload(Device.type),
-            joinedload(Device.ips)
-        )
+        Device.query.options(joinedload(Device.type), joinedload(Device.ips))
         .filter_by(map_id=map_id)
         .all()
     )
@@ -440,7 +437,12 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
         if g.id in group_ids_with_devices
     ]
 
-    result = {"nodes": nodes, "edges": edges, "groups": groups_out, "shapes": shapes_out}
+    result = {
+        "nodes": nodes,
+        "edges": edges,
+        "groups": groups_out,
+        "shapes": shapes_out,
+    }
 
     # Сохранение в кэш
     map_elements_cache[cache_key] = result
@@ -913,7 +915,7 @@ def update_shape(shape_id: int, **kwargs: Any) -> MapShape:
         if hasattr(shape, key) and value is not None:
             old_value = getattr(shape, key)
             setattr(shape, key, value)
-            if key in ['x', 'y']:
+            if key in ["x", "y"]:
                 api_logger.info(f"  🔶 Updating {key}: {old_value} -> {value}")
 
     db.session.commit()

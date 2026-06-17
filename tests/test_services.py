@@ -161,6 +161,3 @@ class TestPasswordValidation:
 
 
 # Тесты для модели - удалены из-за зависимости от Blueprint'ов
-
-
-
