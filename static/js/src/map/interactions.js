@@ -9,6 +9,9 @@ import { isDragLocked } from './lock.js';
 let dragTimeouts = {};
 let groupBatchTimeout = null;
 let hoverTimeout = null;
+let pendingHighlight = null;
+let highlightedNodes = new Set();
+let highlightedEdges = new Set();
 
 function fallbackCopy(text) {
     const textarea = document.createElement('textarea');
@@ -20,16 +23,71 @@ function fallbackCopy(text) {
     if (typeof showToast === 'function') showToast('Скопировано', `IP ${text} (резервный способ)`, 'info');
 }
 
-// Троттлинг для hover событий (оптимизация производительности)
-function throttleHover(handler, delay = 50) {
-    let timeout = null;
-    return function(...args) {
-        if (timeout) return;
-        timeout = setTimeout(() => {
-            handler.apply(this, args);
-            timeout = null;
-        }, delay);
-    };
+// Оптимизация highlight через requestAnimationFrame
+function scheduleHighlight(node) {
+    if (pendingHighlight) return; // Уже запланировано
+
+    pendingHighlight = true;
+    requestAnimationFrame(() => {
+        applyHighlight(node);
+        pendingHighlight = false;
+    });
+}
+
+function applyHighlight(node) {
+    if (window.isOperator) return;
+    if (!node || node.data('isGroup') || node.data('isShape')) return;
+
+    const edges = node.connectedEdges();
+    const neighbors = edges.connectedNodes();
+
+    // Подсвечиваем edges
+    edges.forEach(edge => {
+        if (!highlightedEdges.has(edge)) {
+            if (!edge._private.originalStyle) {
+                edge._private.originalStyle = {
+                    'line-color': edge.style('line-color'),
+                    'width': edge.style('width')
+                };
+            }
+            edge.style({ 'line-color': '#f59e0b', 'width': 3 });
+            highlightedEdges.add(edge);
+        }
+    });
+
+    // Подсвечиваем neighbors
+    neighbors.union(node).forEach(n => {
+        if (!highlightedNodes.has(n)) {
+            if (!n._private.originalBorderStyle) {
+                n._private.originalBorderStyle = {
+                    'border-color': n.style('border-color'),
+                    'border-width': n.style('border-width')
+                };
+            }
+            n.style({ 'border-color': '#f59e0b', 'border-width': 3 });
+            highlightedNodes.add(n);
+        }
+    });
+}
+
+function clearHighlight() {
+    // Очищаем edges
+    highlightedEdges.forEach(edge => {
+        if (edge._private.originalStyle) {
+            edge.style(edge._private.originalStyle);
+            delete edge._private.originalStyle;
+        }
+    });
+    highlightedEdges.clear();
+
+    // Очищаем nodes
+    highlightedNodes.forEach(n => {
+        if (n._private.originalBorderStyle) {
+            n.style(n._private.originalBorderStyle);
+            delete n._private.originalBorderStyle;
+        }
+    });
+    highlightedNodes.clear();
 }
 
 export function initInteractions(cy) {
@@ -276,58 +334,31 @@ export function initInteractions(cy) {
         if (event.target === cy && isLinkMode()) resetLinkMode();
     });
 
-    // Подсветка связей при наведении (оптимизировано с троттлингом)
-    const handleMouseOver = throttleHover(function(evt) {
-        if (window.isOperator) return;
+    // Подсветка связей при наведении (без throttle!)
+    const handleMouseOver = function(evt) {
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
+        scheduleHighlight(node);
+    };
 
-        const edges = node.connectedEdges();
-        const neighbors = edges.connectedNodes();
+    const handleMouseOut = function(evt) {
+        // Если кнопка мыши зажата (началось перетаскивание) — не очищать подсветку
+        if (evt.originalEvent.buttons) return;
 
-        edges.forEach(edge => {
-            if (!edge._private.originalStyle) {
-                edge._private.originalStyle = {
-                    'line-color': edge.style('line-color'),
-                    'width': edge.style('width')
-                };
-            }
-            edge.style({ 'line-color': '#f59e0b', 'width': 3 });
-        });
-
-        neighbors.union(node).forEach(n => {
-            if (!n._private.originalBorderStyle) {
-                n._private.originalBorderStyle = {
-                    'border-color': n.style('border-color'),
-                    'border-width': n.style('border-width')
-                };
-            }
-            n.style({ 'border-color': '#f59e0b', 'border-width': 3 });
-        });
-    }, 50);
-
-    const handleMouseOut = throttleHover(function(evt) {
-        if (window.isOperator) return;
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
+        clearHighlight();
+    };
 
-        const edges = node.connectedEdges();
-        const neighbors = edges.connectedNodes();
-
-        edges.forEach(edge => {
-            if (edge._private.originalStyle) {
-                const orig = edge._private.originalStyle;
-                edge.style({ 'line-color': orig['line-color'], 'width': orig['width'] });
-            }
-        });
-
-        neighbors.union(node).forEach(n => {
-            if (n._private.originalBorderStyle) {
-                const orig = n._private.originalBorderStyle;
-                n.style({ 'border-color': orig['border-color'], 'border-width': orig['border-width'] });
-            }
-        });
-    }, 50);
+    // Fallback: полная очистка при движении мыши по canvas
+    cy.on('mousemove', function(evt) {
+        if (window.isOperator) return;
+        if (evt.originalEvent.buttons) return; // Не очищать при drag
+        const node = evt.target;
+        if (!node || node === cy) {
+            clearHighlight();
+        }
+    });
 
     cy.on('mouseover', 'node', handleMouseOver);
     cy.on('mouseout', 'node', handleMouseOut);
