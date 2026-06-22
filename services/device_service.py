@@ -8,6 +8,7 @@
 """
 
 from typing import Optional, List, Dict, Any
+import datetime
 import ipaddress
 
 from sqlalchemy.exc import IntegrityError
@@ -284,7 +285,7 @@ def update_device(device_id: int, **kwargs: Any) -> Device:
     # Если мониторинг был выключен, а теперь включён – сбрасываем статус на 'up'
     if "monitoring_enabled" in kwargs and kwargs["monitoring_enabled"] is True:
         device.status = "up"
-        device.last_check = db.func.now()
+        device.last_check = datetime.datetime.now()
 
     if "ips" in kwargs:
         new_ips = kwargs["ips"]

@@ -1,4 +1,5 @@
 import time
+import datetime
 import threading
 import concurrent.futures
 import os
@@ -261,7 +262,7 @@ def monitor_loop():
                         dev = Device.query.get(device.id)
                         if dev:
                             dev.status = new_status
-                            dev.last_check = db.func.now()
+                            dev.last_check = datetime.datetime.now()
                             devices_to_save.append(dev)
 
                     db.session.bulk_save_objects(devices_to_save)

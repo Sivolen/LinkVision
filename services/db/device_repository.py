@@ -5,6 +5,7 @@
 """
 
 from typing import List, Optional, Dict, Any
+import datetime
 from sqlalchemy.orm import joinedload
 from extensions import db
 from models import Device, DeviceIP, DeviceHistory
@@ -207,7 +208,7 @@ class DeviceRepository:
             return None
 
         device.status = status
-        device.last_check = db.func.now()
+        device.last_check = datetime.datetime.now()
         db.session.commit()
         return device
 
