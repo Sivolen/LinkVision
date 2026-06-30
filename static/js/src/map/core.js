@@ -2,8 +2,10 @@
 import { CY_STYLE } from './styles.js';
 import { updateBackgroundTransform, enforcePanBounds } from './background.js';
 import { saveViewportToServer } from './viewport.js';
+import { updateBulkEditButton } from './bulk.js';
 
 let cy = null;
+let bulkBtnUpdateScheduled = false;
 
 export function getCy() {
     return cy;
@@ -37,8 +39,16 @@ export function initCy(mapId, onReady) {
         saveViewportToServer();
     });
 
+    // Нативное выделение рамкой шлёт событие select на КАЖДЫЙ узел.
+    // Схлопываем пачку в один вызов через rAF — иначе 50+ узлов дают
+    // 50 динамических import() + 50 полных сканов cy.nodes(':selected') = O(n²).
     cy.on('select unselect', () => {
-        import('./bulk.js').then(module => module.updateBulkEditButton());
+        if (bulkBtnUpdateScheduled) return;
+        bulkBtnUpdateScheduled = true;
+        requestAnimationFrame(() => {
+            bulkBtnUpdateScheduled = false;
+            updateBulkEditButton();
+        });
     });
 
     if (typeof onReady === 'function') onReady(cy);
