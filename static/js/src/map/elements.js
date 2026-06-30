@@ -1,6 +1,8 @@
 import { getCy } from './core.js';
 import { boundNodePosition, setElementsLoaded, getBgImageSize } from './background.js';
 import { addPulsingNode } from './pulse.js';
+import { updateAllEdgeLabels } from './edgeLabels.js';
+import { updateAllGroups } from './groupResize.js';
 
 const wrapText = window.wrapText || ((text) => text);
 
@@ -88,7 +90,6 @@ export function loadElements(mapId, force = false) {
 
             // УСТРОЙСТВА - оптимизированная обработка
             if (data.nodes && data.nodes.length) {
-                const frag = document.createDocumentFragment();
                 data.nodes.forEach(n => {
                     if (!n.data || !n.data.id) return;
                     n.data.id = String(n.data.id);
@@ -137,8 +138,8 @@ export function loadElements(mapId, force = false) {
             }
 
             // Обновление меток и групп
-            import('./edgeLabels.js').then(m => m.updateAllEdgeLabels());
-            import('./groupResize.js').then(m => m.updateAllGroups());
+            updateAllEdgeLabels();
+            updateAllGroups();
 
             setElementsLoaded(true);
             cy.resize();
@@ -161,10 +162,12 @@ export function loadElements(mapId, force = false) {
                 }
             });
 
-            // Пакетное применение стилей
-            monitoringOffNodes.forEach(node => applyGrayStyle(node));
-            downNodes.forEach(node => addPulsingNode(cy, node, 'down'));
-            partialNodes.forEach(node => addPulsingNode(cy, node, 'partial'));
+            // Пакетное применение стилей — один проход рендера
+            cy.batch(() => {
+                monitoringOffNodes.forEach(node => applyGrayStyle(node));
+                downNodes.forEach(node => addPulsingNode(cy, node, 'down'));
+                partialNodes.forEach(node => addPulsingNode(cy, node, 'partial'));
+            });
 
             // Обновление кэша
             elementsCache = {
@@ -327,12 +330,14 @@ export function reloadMapElements(force = false) {
 // Принудительное применение серого стиля для выключенного мониторинга
 export function applyGrayStyle(node) {
     if (!node || !node.length) return;
-    node.style('border-color', '#6c757d');
-    node.style('border-style', 'dotted');
-    node.style('border-width', '3px');
-    node.style('opacity', '0.7');
-    node.style('overlay-opacity', '0');
-    node.style('overlay-color', 'transparent');
+    node.style({
+        'border-color': '#6c757d',
+        'border-style': 'dotted',
+        'border-width': '3px',
+        'opacity': '0.7',
+        'overlay-opacity': '0',
+        'overlay-color': 'transparent'
+    });
     if (typeof window.removePulsingNode === 'function') {
         window.removePulsingNode(window.cy, node);
     }

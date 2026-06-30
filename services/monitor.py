@@ -7,6 +7,7 @@ from extensions import db, socketio
 from models import Device, Settings, DeviceHistory
 from utils.logger import monitor_logger
 from cachetools import TTLCache
+from sqlalchemy.orm import joinedload
 
 try:
     from ping3 import ping
@@ -129,7 +130,11 @@ def monitor_loop():
 
             # ---- ПОДГОТОВКА ДАННЫХ ДО ПОТОКОВ (ОДИН РАЗ ЗА ЦИКЛ) ----
             with app_instance.app_context():
-                devices = Device.query.filter_by(monitoring_enabled=True).all()
+                devices = (
+                    Device.query.options(joinedload(Device.ips))
+                    .filter_by(monitoring_enabled=True)
+                    .all()
+                )
                 monitor_logger.info(
                     f"Found {len(devices)} devices with monitoring enabled"
                 )
@@ -227,70 +232,58 @@ def monitor_loop():
                 time.sleep(0.5)
 
             # ---- ОБРАБОТКА ИЗМЕНЕНИЙ ----
-            devices_to_update = []
-            history_entries = []
             current_time = time.time()
-            with _lock:
-                for dev_id, new_status in results:
-                    last_time = last_emit_time.get(dev_id, 0)
-                    if current_time - last_time < 0.5:
-                        continue
+            # Сгруппируем emit по комнатам карт: room -> список статусов
+            emits_by_room = {}
 
-                    with app_instance.app_context():
-                        device = Device.query.get(dev_id)
-                        if not device:
+            with _lock, app_instance.app_context():
+                # Одним запросом тянем все затронутые устройства
+                changed_ids = [
+                    dev_id for dev_id, _ in results
+                    if current_time - last_emit_time.get(dev_id, 0) >= 0.5
+                ]
+                if changed_ids:
+                    devices_by_id = {
+                        d.id: d
+                        for d in Device.query.filter(Device.id.in_(changed_ids)).all()
+                    }
+
+                    history_entries = []
+                    for dev_id, new_status in results:
+                        if current_time - last_emit_time.get(dev_id, 0) < 0.5:
+                            continue
+                        device = devices_by_id.get(dev_id)
+                        if not device or device.status == new_status:
                             continue
 
-                        if device.status != new_status:
-                            devices_to_update.append((device, new_status))
-                            history_entries.append(
-                                DeviceHistory(
-                                    device_id=device.id,
-                                    old_status=device.status,
-                                    new_status=new_status,
-                                )
+                        history_entries.append(
+                            DeviceHistory(
+                                device_id=device.id,
+                                old_status=device.status,
+                                new_status=new_status,
                             )
-                            last_emit_time[dev_id] = current_time
-                            monitor_logger.info(
-                                f"Device {dev_id} status change: {device.status} -> {new_status}"
-                            )
+                        )
+                        device.status = new_status
+                        device.last_check = datetime.datetime.now()
+                        last_emit_time[dev_id] = current_time
 
-            if devices_to_update:
-                with app_instance.app_context():
-                    devices_to_save = []
-                    for device, new_status in devices_to_update:
-                        dev = Device.query.get(device.id)
-                        if dev:
-                            dev.status = new_status
-                            dev.last_check = datetime.datetime.now()
-                            devices_to_save.append(dev)
-
-                    db.session.bulk_save_objects(devices_to_save)
-                    db.session.add_all(history_entries)
-                    db.session.commit()
-
-                    batch_emits = []
-                    for device, new_status in devices_to_update:
-                        room_name = f"map_{device.map_id}"
-                        batch_emits.append(
-                            {
-                                "room": room_name,
-                                "data": {
-                                    "id": device.id,
-                                    "status": new_status,
-                                    "map_id": device.map_id,
-                                },
-                            }
+                        room = f"map_{device.map_id}"
+                        emits_by_room.setdefault(room, []).append(
+                            {"id": device.id, "status": new_status, "map_id": device.map_id}
                         )
                         monitor_logger.info(
-                            f"[{new_status.upper()}] Sent: id={device.id}, status={new_status}, room={room_name}"
+                            f"Device {dev_id} status change -> {new_status}"
                         )
 
-                    for emit_data in batch_emits:
-                        socketio.emit(
-                            "device_status", emit_data["data"], room=emit_data["room"]
-                        )
-            else:
+                    if history_entries:
+                        db.session.add_all(history_entries)
+                        db.session.commit()
+
+            # Emit ОДНИМ сообщением на комнату
+            for room, statuses in emits_by_room.items():
+                socketio.emit("device_status_batch", statuses, room=room)
+
+            if not emits_by_room:
                 monitor_logger.debug("No status changes this cycle")
 
         except Exception as e:

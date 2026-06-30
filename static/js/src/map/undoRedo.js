@@ -83,26 +83,41 @@ export function initUndoRedo(cy, getMapId) {
 
         window.setSkipNextMapUpdate();
         const promises = [];
-        for (const upd of deviceUpdates) {
-            promises.push(fetch(`/api/device/${upd.id}/position`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                body: JSON.stringify({ x: upd.x, y: upd.y })
-            }));
+
+        // Все устройства — одним bulk-запросом
+        if (deviceUpdates.length) {
+            promises.push(
+                fetch('/api/devices/positions', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: JSON.stringify(
+                        deviceUpdates.map((u) => ({ id: u.id, x: u.x, y: u.y }))
+                    ),
+                })
+            );
         }
+
+        // Фигуры (нет bulk-эндпоинта) — по одной
         for (const upd of shapeUpdates) {
             const shapeId = upd.id.replace('shape_', '');
-            promises.push(fetch(`/api/shape/${shapeId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                body: JSON.stringify({ x: upd.x, y: upd.y })
-            }));
+            promises.push(
+                fetch(`/api/shape/${shapeId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: JSON.stringify({ x: upd.x, y: upd.y }),
+                })
+            );
         }
-        Promise.all(promises)
-            .catch(err => console.error('Sync positions error:', err))
-            .finally(() => {
-                setTimeout(() => window.clearSkipNextMapUpdate(), 500);
-            });
+
+        Promise.allSettled(promises).finally(() => {
+            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+        });
     }
     function updateButtons() {
         const undoBtn = document.getElementById('undoBtn');

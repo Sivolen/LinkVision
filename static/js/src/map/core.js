@@ -1,7 +1,5 @@
 // core.js – создание экземпляра Cytoscape, стили, базовая настройка
 import { CY_STYLE } from './styles.js';
-import { updateBackgroundTransform, enforcePanBounds } from './background.js';
-import { saveViewportToServer } from './viewport.js';
 import { updateBulkEditButton } from './bulk.js';
 
 let cy = null;
@@ -30,13 +28,6 @@ export function initCy(mapId, onReady) {
         maxZoom: 5,
         wheelSensitivity: 2,
         fit: false
-    });
-
-    // События
-    cy.on('pan zoom', () => {
-        updateBackgroundTransform();
-        enforcePanBounds();
-        saveViewportToServer();
     });
 
     // Нативное выделение рамкой шлёт событие select на КАЖДЫЙ узел.
