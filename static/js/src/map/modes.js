@@ -40,8 +40,7 @@ export function startLinkMode(clickedNode = null) {
     linkModeActive = true;
     if (clickedNode) {
         sourceNode = clickedNode;
-        sourceNode.style('border-color', '#007bff');
-        sourceNode.style('border-width', 5);
+        sourceNode.addClass('cy-link-source');
         const info = createInfoDiv('✅ Источник: ' + sourceNode.data('name') + '\n Выберите второе устройство');
         document.body.appendChild(info);
     } else {
@@ -54,10 +53,8 @@ export function startLinkMode(clickedNode = null) {
 export function resetLinkMode() {
     linkModeActive = false;
     if (sourceNode && cy) {
-        sourceNode.style('border-color', null);
-        sourceNode.style('border-width', null);
+        sourceNode.removeClass('cy-link-source');
         sourceNode.selected(false);
-        sourceNode.removeClass('cy-node-highlight');
     }
     sourceNode = null;
     document.body.style.cursor = 'default';
@@ -69,7 +66,6 @@ export function resetLinkMode() {
             node.style('border-color', null);
             node.style('border-width', null);
         });
-        cy.style().update();
     }
 }
 
