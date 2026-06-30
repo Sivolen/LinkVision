@@ -55,17 +55,49 @@ export function exportMap() {
         if (!res.ok) throw new Error(await getErrorMessage(res));
         return res.json();
     })
-    .then(data => {
+    .then(async data => {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `map_${mapId}_export.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast('Успешно', 'Карта экспортирована', 'success');
+        const fileName = `map_${mapId}_export.json`;
+        let saved = false;
+
+        // Пробуем современный File System Access API (требует HTTPS)
+        if (window.showSaveFilePicker && location.protocol === 'https:') {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: fileName,
+                    types: [{
+                        description: 'JSON File',
+                        accept: { 'application/json': ['.json'] }
+                    }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                saved = true;
+                showToast('Успешно', 'Карта экспортирована', 'success');
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Error saving file:', err);
+                    showToast('Ошибка', 'Не удалось сохранить файл', 'error');
+                }
+            }
+        }
+
+        // Fallback для HTTP или браузеров без showSaveFilePicker
+        if (!saved) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            // Задержка чтобы тост появился после закрытия диалога сохранения
+            setTimeout(() => {
+                showToast('Успешно', 'Карта экспортирована', 'success');
+            }, 1500);
+        }
     })
     .catch(err => {
         console.error('Error exporting map:', err);
