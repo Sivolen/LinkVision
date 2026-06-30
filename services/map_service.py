@@ -458,13 +458,20 @@ def get_map_groups(map_id: int) -> List[Dict[str, Any]]:
         return groups_cache[cache_key]
 
     groups = Group.query.filter_by(map_id=map_id).all()
+
+    counts = dict(
+        db.session.query(Device.group_id, func.count(Device.id))
+        .filter(Device.map_id == map_id, Device.group_id.isnot(None))
+        .group_by(Device.group_id)
+        .all()
+    )
     result = [
         {
             "id": g.id,
             "name": g.name,
             "color": g.color,
             "font_size": g.font_size,
-            "device_count": g.devices.count(),
+            "device_count": counts.get(g.id, 0),
         }
         for g in groups
     ]
@@ -483,7 +490,13 @@ def export_map_data(map_id: int) -> Dict[str, Any]:
     Returns:
         Dict с данными карты
     """
-    map_obj = Map.query.get_or_404(map_id)
+    map_obj = (
+        Map.query.options(
+            joinedload(Map.devices).joinedload(Device.ips),
+            joinedload(Map.devices).joinedload(Device.type),
+            joinedload(Map.links),
+        ).get_or_404(map_id)
+    )
 
     devices = [
         {
@@ -770,17 +783,21 @@ def import_map(data: Dict[str, Any], current_user) -> Map:
         db.session.flush()
         group_id_map[g_data["id"]] = group.id
 
+    # Кэш типов: name -> DeviceType (один запрос вместо N)
+    type_cache = {dt.name: dt for dt in DeviceType.query.all()}
+
     # Импорт устройств
     device_id_map = {}
     for dev_data in data.get("devices", []):
         type_name = dev_data.get("type_name")
 
         if type_name:
-            dtype = DeviceType.query.filter_by(name=type_name).first()
+            dtype = type_cache.get(type_name)
             if not dtype:
                 dtype = DeviceType(name=type_name, icon_filename="")
                 db.session.add(dtype)
                 db.session.flush()
+                type_cache[type_name] = dtype
             type_id = dtype.id
         else:
             type_id = dev_data.get("type_id")

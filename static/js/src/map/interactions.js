@@ -336,6 +336,7 @@ export function initInteractions(cy) {
 
     // Подсветка связей при наведении (без throttle!)
     const handleMouseOver = function(evt) {
+        if (window._isBulkSelecting) return;   // ← подавляем во время рамки
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
         scheduleHighlight(node);
@@ -362,6 +363,10 @@ export function initInteractions(cy) {
 
     cy.on('mouseover', 'node', handleMouseOver);
     cy.on('mouseout', 'node', handleMouseOut);
+
+    // Гасим hover-подсветку во время боксового выделения
+    cy.on('boxstart', () => { window._isBulkSelecting = true; clearHighlight(); });
+    cy.on('boxend',   () => { window._isBulkSelecting = false; });
         // ==================== КОНТЕКСТНОЕ МЕНЮ ====================
     let contextMenu = null;
 

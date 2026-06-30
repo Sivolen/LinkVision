@@ -54,14 +54,16 @@ export function addPulsingNode(cy, node, type = 'down') {
             if (pulsePhase > 1) pulsePhase -= 2;
             const opacity = minOpacity + (maxOpacity - minOpacity) * (0.5 + 0.5 * Math.sin(pulsePhase * Math.PI));
 
-            pulsingNodes.forEach((data, nodeId) => {
-                const n = cy.getElementById(nodeId);
-                if (n.length) {
-                    n.style('overlay-opacity', opacity);
-                } else {
-                    clearTimeout(data.timeoutId);
-                    pulsingNodes.delete(nodeId);
-                }
+            cy.batch(() => {
+                pulsingNodes.forEach((data, nodeId) => {
+                    const n = cy.getElementById(nodeId);
+                    if (n.length) {
+                        n.style('overlay-opacity', opacity);
+                    } else {
+                        clearTimeout(data.timeoutId);
+                        pulsingNodes.delete(nodeId);
+                    }
+                });
             });
 
             if (pulsingNodes.size === 0 && pulseInterval) {
