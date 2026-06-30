@@ -40,6 +40,42 @@ let currentShapeId = null;
 let _formHandlerAttached = false;
 let savedViewport = null;
 
+// ==================== ЭКСПОРТ КАРТЫ ====================
+export function exportMap() {
+    const mapId = document.getElementById('edit_map_id').value;
+    if (!mapId) {
+        showToast('Ошибка', 'Не удалось определить карту', 'error');
+        return;
+    }
+    fetch(`/api/map/${mapId}/export`, {
+        method: 'GET',
+        headers: { 'X-CSRFToken': getCsrfToken() }
+    })
+    .then(async res => {
+        if (!res.ok) throw new Error(await getErrorMessage(res));
+        return res.json();
+    })
+    .then(data => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `map_${mapId}_export.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Успешно', 'Карта экспортирована', 'success');
+    })
+    .catch(err => {
+        console.error('Error exporting map:', err);
+        showToast('Ошибка', err.message || 'Не удалось экспортировать карту', 'error');
+    });
+}
+
+// Экспорт для глобального доступа
+window.exportMap = exportMap;
+
 /**
  * Инициализация всех модальных окон
  */
