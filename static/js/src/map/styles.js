@@ -170,15 +170,15 @@ export const CY_STYLE = [
             'overlay-padding': '4px'
         }
     },
-    // Выделенный узел
+    // Выделенный узел — overlay вместо border-width, чтобы не менять bounding box
     {
         selector: 'node:selected, node[selected]',
         style: {
+            'overlay-color': '#007bff',
+            'overlay-opacity': 0.25,
+            'overlay-padding': '4px',
             'border-color': '#007bff',
-            'border-width': '5px',
             'background-color': 'rgba(0,123,255,0.1)',
-            'transition-property': 'border-width, background-color',
-            'transition-duration': '0.2s',
             'z-index': 20
         }
     },
@@ -192,6 +192,16 @@ export const CY_STYLE = [
             'overlay-opacity': 0.4,
             'overlay-padding': '6px',
             'z-index': 10
+        }
+    },
+    {
+        selector: '.cy-link-source',
+        style: {
+            'overlay-color': '#007bff',
+            'overlay-opacity': 0.25,
+            'overlay-padding': '4px',
+            'border-color': '#007bff',
+            'z-index': 15
         }
     },
     {
@@ -220,8 +230,9 @@ export const CY_STYLE = [
     {
         selector: 'node[isGroup]:selected',
         style: {
-            'border-color': '#007bff',
-            'border-width': 4
+            'overlay-color': '#007bff',
+            'overlay-opacity': 0.25,
+            'overlay-padding': '4px'
         }
     },
     {
@@ -295,11 +306,10 @@ export const CY_STYLE = [
     {
         selector: 'node[isShape]:selected',
         style: {
-            'border-color': '#007bff',
-            'border-width': 5,
-            'background-color': 'rgba(0,123,255,0.1)',
-            'transition-property': 'border-width, background-color',
-            'transition-duration': '0.2s'
+            'overlay-color': '#007bff',
+            'overlay-opacity': 0.25,
+            'overlay-padding': '4px',
+            'background-color': 'rgba(0,123,255,0.1)'
         }
     }
 ];
