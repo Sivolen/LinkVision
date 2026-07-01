@@ -42,17 +42,34 @@ export function loadBackground(bgUrl) {
     img.src = `/static/uploads/maps/${bgUrl}`;
 }
 
+// Базовый шаг сетки в координатах карты (см. .cy-canvas в style.css)
+const GRID_STEP = 25;
+
 export function updateBackgroundTransform() {
     const cy = getCy();
     if (!cy) return;
+
+    const pan = cy.pan();
+    const zoom = cy.zoom();
+
+    // Сетка нарисована CSS-фоном на контейнере #cy. Привязываем её к мировым
+    // координатам карты: шаг ячейки масштабируется зумом, а начало отсчёта
+    // следует за pan. Иначе сетка статична на экране (всегда 25px) и не
+    // совпадает с устройствами при панораме/зуме.
+    const cyEl = cy.container();
+    if (cyEl) {
+        const cell = GRID_STEP * zoom;
+        cyEl.style.backgroundSize = `${cell}px ${cell}px`;
+        cyEl.style.backgroundPosition = `${pan.x}px ${pan.y}px`;
+    }
+
+    // Фото-подложка (если задана) едет тем же трансформом
     const bgEl = document.getElementById('cy-background');
     if (!bgEl) return;
     if (!bgImageWidth || !bgImageHeight) {
         bgEl.style.transform = 'none';
         return;
     }
-    const pan = cy.pan();
-    const zoom = cy.zoom();
     bgEl.style.transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
     bgEl.style.transformOrigin = '0 0';
 }

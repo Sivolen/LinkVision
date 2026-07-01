@@ -13,6 +13,7 @@ import { initPulse, addPulsingNode, removePulsingNode } from './pulse.js';
 import { initBulk } from './bulk.js';
 import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
 import { initUndoRedo } from './undoRedo.js';
+import { beginSelfUpdate, endSelfUpdate, isSelfUpdating } from '../utils/state.js';
 
 // Импорт функций для инкрементальных обновлений
 import {
@@ -31,7 +32,6 @@ import {
 } from './elements.js';
 
 let mapId = null;
-let skipNextMapUpdate = false;
 
 export function initMap(id) {
     mapId = id;
@@ -266,8 +266,8 @@ export function initMap(id) {
 
     // Полная перезагрузка карты (крупные изменения: импорт, массовое редактирование)
     window.socket.on('map_updated', (data) => {
-        if (skipNextMapUpdate) {
-            console.log('⏭️ Skipping map reload (self change)');
+        if (isSelfUpdating()) {
+            console.log('⏭️ Skipping map reload (self change, pending:', getPendingCount(), ')');
             return;
         }
         if (Number(data.map_id) === mapId) {
@@ -281,12 +281,10 @@ export function initMap(id) {
 }
 
 window.setSkipNextMapUpdate = () => {
-    skipNextMapUpdate = true;
-    console.log('⏳ skipNextMapUpdate = true');
+    beginSelfUpdate();
 };
 window.clearSkipNextMapUpdate = () => {
-    skipNextMapUpdate = false;
-    console.log('✅ skipNextMapUpdate = false');
+    endSelfUpdate();
 };
 window.zoomIn = () => {
     const cy = window.cy;
