@@ -13,7 +13,7 @@ import { initPulse, addPulsingNode, removePulsingNode } from './pulse.js';
 import { initBulk } from './bulk.js';
 import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
 import { initUndoRedo } from './undoRedo.js';
-import { beginSelfUpdate, endSelfUpdate, isSelfUpdating } from '../utils/state.js';
+import { beginSelfUpdate, endSelfUpdate, isSelfUpdating, getPendingCount } from '../utils/state.js';
 
 // Импорт функций для инкрементальных обновлений
 import {
@@ -29,7 +29,12 @@ import {
     addGroupToGraph,
     updateGroupInGraph,
     removeGroupFromGraph,
+    reloadMapElements as _reloadMapElements,
 } from './elements.js';
+
+// Импорт для обновления меток и групп
+import { updateAllEdgeLabels } from './edgeLabels.js';
+import { updateAllGroups } from './groupResize.js';
 
 let mapId = null;
 
@@ -313,14 +318,14 @@ window.fitImageToView = () => {
 window.initMap = initMap;
 window.setMode = setMode;
 window.saveViewportToServer = saveViewportToServer;
-window.reloadMapElements = (force = false) => import('./elements.js').then(m => m.reloadMapElements(force));
-window.addDeviceToGraph = (d) => import('./elements.js').then(m => m.addDeviceToGraph(d));
-window.removeDeviceFromGraph = (id) => import('./elements.js').then(m => m.removeDeviceFromGraph(id));
-window.updateDevice = (d) => import('./elements.js').then(m => m.updateDevice(d));
-window.addShapeToGraph = (s) => import('./elements.js').then(m => m.addShapeToGraph(s));
-window.removeShapeFromGraph = (id) => import('./elements.js').then(m => m.removeShapeFromGraph(id));
+window.reloadMapElements = _reloadMapElements;
+window.addDeviceToGraph = _addDeviceToGraph;
+window.removeDeviceFromGraph = _removeDeviceFromGraph;
+window.updateDevice = _updateDevice;
+window.addShapeToGraph = _addShapeToGraph;
+window.removeShapeFromGraph = _removeShapeFromGraph;
 window.updateMapBackground = updateMapBackground;
-window.updateAllEdgeLabels = () => import('./edgeLabels.js').then(m => m.updateAllEdgeLabels());
+window.updateAllEdgeLabels = updateAllEdgeLabels;
 window.addPulsingNode = addPulsingNode;
 window.removePulsingNode = removePulsingNode;
 window.withViewportRestore = withViewportRestore;
