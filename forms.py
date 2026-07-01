@@ -79,3 +79,23 @@ class DeviceTypeForm(FlaskForm):
 class SettingsForm(FlaskForm):
     ping_count = IntegerField("Количество пакетов", validators=[DataRequired()])
     ping_interval = IntegerField("Интервал опроса (сек)", validators=[DataRequired()])
+
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField("Текущий пароль", validators=[DataRequired()])
+    new_password = PasswordField(
+        "Новый пароль",
+        validators=[
+            DataRequired(),
+            Length(min=8),
+            Regexp(
+                r"^(?=.*[A-Za-z])(?=.*\d)",
+                message="Пароль должен содержать хотя бы одну букву и одну цифру",
+            ),
+        ],
+    )
+    confirm = PasswordField(
+        "Подтверждение пароля",
+        validators=[DataRequired(), EqualTo("new_password", message="Пароли не совпадают")],
+    )
+

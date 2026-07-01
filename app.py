@@ -3,6 +3,7 @@ import secrets
 from pathlib import Path
 
 from flask import Flask, request, render_template
+from flask_login import current_user
 from flask_migrate import Migrate
 from flask_socketio import join_room
 from flask_wtf.csrf import CSRFProtect
@@ -17,6 +18,7 @@ from blueprints.admin import admin_bp
 from blueprints.main import main_bp
 from blueprints.api import api_bp
 from services.monitor import init_monitor, start_monitor, stop_monitor
+from services.permissions import can_view_map
 from utils.logger import app_logger
 from dotenv import load_dotenv
 import os
@@ -99,15 +101,15 @@ def create_app():
 
         # --- Создание администратора, если ни одного нет ---
         if not User.query.filter_by(is_admin=True).first():
-            import secrets
-
             admin = User(username="admin", is_admin=True)
-            # default_password = secrets.token_urlsafe(8)  # случайный пароль
-            default_password = "Admin"
+            default_password = secrets.token_urlsafe(16)
             admin.set_password(default_password)
+            admin.must_change_password = True
             db.session.add(admin)
             db.session.commit()
-            app_logger.info(f"✅ Создан администратор: admin / {default_password}")
+            app_logger.warning(
+                f"✅ Создан администратор admin. Временный пароль: {default_password}"
+            )
 
         # --- Настройки мониторинга, если ещё не заданы ---
         if not db.session.get(Settings, "ping_count"):
@@ -128,6 +130,22 @@ def create_app():
 
     @socketio.on("join_room")
     def handle_join_room(room):
+        if not current_user.is_authenticated:
+            return
+
+        # комнаты вида "map_<id>"
+        try:
+            map_id = int(str(room).split("_", 1)[1])
+        except (IndexError, ValueError):
+            app_logger.warning(f"Отклонён вход в комнату с некорректным именем: {room}")
+            return
+
+        if not can_view_map(map_id):
+            app_logger.warning(
+                f"Пользователь {current_user.id} отклонён при входе в {room}"
+            )
+            return
+
         join_room(room)
         app_logger.info(f"✅ Клиент присоединился к комнате {room}")
 
@@ -174,8 +192,9 @@ def create_app():
     @socketio.on("request_status")
     def handle_request_status(data):
         map_id = data.get("map_id")
-        if not map_id:
+        if not map_id or not current_user.is_authenticated or not can_view_map(map_id):
             return
+
         from models import Device
 
         with app.app_context():

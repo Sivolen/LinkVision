@@ -22,6 +22,10 @@ from . import audit_service
 from . import security_service
 
 # Экспорт для удобного использования
+from .map_service import (
+    invalidate_sidebar_cache,
+    invalidate_groups_cache,
+)
 from .device_type_service import get_cached_types, invalidate_types_cache
 from .permissions import (
     has_map_access,
@@ -78,6 +82,8 @@ __all__ = [
     "settings_service",
     "monitor",
     "audit_service",
+    "invalidate_sidebar_cache",
+    "invalidate_groups_cache",
     # Типы устройств
     "get_cached_types",
     "invalidate_types_cache",

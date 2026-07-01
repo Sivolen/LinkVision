@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 """
-Финальная миграция БД для поддержки множественных IP-адресов и строковых статусов.
+Миграция БД для поддержки новых функций.
 Выполняет:
 - Бэкап существующей БД
 - Создание таблицы device_ips (если отсутствует)
 - Перенос IP из старой колонки devices.ip_address в device_ips
 - Преобразование статусов из булевых в строки ('up'/'down')
 - Удаление старой колонки ip_address
+- Добавление is_locked к map
+- Создание таблиц audit_log и map_permission
+- Добавление must_change_password к user
 """
 
 import os
@@ -152,7 +155,7 @@ def run_migration():
     else:
         print("   ⏭️  Таблица audit_log уже существует.")
 
-    # 3.7. Создаём map_permission, если нет
+    # 3.8. Создаём map_permission, если нет
     print("\n🔍 Проверка таблицы map_permission...")
     cursor.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='map_permission'"
@@ -182,6 +185,25 @@ def run_migration():
         print("   ✅ Таблица map_permission создана.")
     else:
         print("   ⏭️  Таблица map_permission уже существует.")
+
+    # 3.9. Добавляем must_change_password к user, если нет
+    print("\n🔍 Проверка колонки must_change_password...")
+    cursor.execute("PRAGMA table_info(user)")
+    user_columns = [col[1] for col in cursor.fetchall()]
+    if "must_change_password" not in user_columns:
+        print("   ➕ Добавляем колонку must_change_password к user...")
+        cursor.execute(
+            "ALTER TABLE user ADD COLUMN must_change_password BOOLEAN DEFAULT 0 NOT NULL"
+        )
+        conn.commit()
+        print("   ✅ Колонка must_change_password добавлена.")
+
+        # Сбрасываем флаг для всех существующих пользователей
+        cursor.execute("UPDATE user SET must_change_password = 0")
+        conn.commit()
+        print("   ⏭️  Флаг must_change_password сброшен для всех пользователей.")
+    else:
+        print("   ⏭️  Колонка must_change_password уже существует.")
 
     # 4. Преобразуем статус в строку
     cursor.execute("PRAGMA table_info(device)")
@@ -302,6 +324,14 @@ def run_migration():
         print("✅ map_permission - OK")
     else:
         print("❌ map_permission - НЕ СОЗДАНА!")
+
+    # Проверка must_change_password
+    cursor.execute("PRAGMA table_info(user)")
+    user_cols = [col[1] for col in cursor.fetchall()]
+    if "must_change_password" in user_cols:
+        print("✅ user.must_change_password - OK")
+    else:
+        print("❌ user.must_change_password - НЕ ДОБАВЛЕНА!")
 
     conn.close()
 
