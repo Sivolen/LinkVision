@@ -9,6 +9,7 @@ import { showToast } from '../utils/toast.js';
 import { getErrorMessage } from './utils.js';
 import { withViewportRestore, reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
+import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 
 // Глобальные переменные модуля
 let deviceModal = null;
@@ -67,28 +68,14 @@ function loadGroups(selectEl, selectedGroupId) {
 }
 
 /**
- * Загрузить типы устройств
+ * Открыть модальное окно устройства
  */
-function loadDeviceTypes(selectEl, callback) {
-    if (!selectEl) return;
-
-    http.get('/api/types')
-        .then(types => {
-            window.deviceTypes = types;
-            selectEl.innerHTML = '<option value="">-- Выберите тип --</option>';
-            types.forEach(t => {
-                const option = document.createElement('option');
-                option.value = t.id;
-                option.textContent = t.name;
-                selectEl.appendChild(option);
-            });
-            if (callback) callback();
-        })
-        .catch(err => {
-            Logger.error('Ошибка загрузки типов:', err);
-            if (callback) callback();
-        });
-}
+export function openDeviceModal(node) {
+    if (!deviceModal) {
+        const el = document.getElementById('deviceModal');
+        if (el) deviceModal = new bootstrap.Modal(el);
+        else return;
+    }
 
     const devId = document.getElementById('dev_id');
     const devName = document.getElementById('dev_name');
@@ -250,7 +237,7 @@ export async function saveDevice() {
     if (btnLoader) btnLoader.classList.remove('d-none');
     if (saveBtn) saveBtn.disabled = true;
 
-    window.setSkipNextMapUpdate();
+    beginSelfUpdate();
 
     try {
         const result = await http.put(url, data);
@@ -314,7 +301,7 @@ export async function saveDevice() {
         if (btnText) btnText.classList.remove('d-none');
         if (btnLoader) btnLoader.classList.add('d-none');
         if (saveBtn) saveBtn.disabled = false;
-        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+        endSelfUpdate();
     }
 }
 
@@ -323,8 +310,8 @@ export async function saveDevice() {
  */
 export function deleteDevice(deviceId) {
     window.confirmAction('Удаление устройства', 'Вы уверены, что хотите удалить это устройство?', async () => {
-        window.setSkipNextMapUpdate();
-        
+        beginSelfUpdate();
+
         try {
             const result = await http.del(`/api/device/${deviceId}`);
 
@@ -341,7 +328,7 @@ export function deleteDevice(deviceId) {
             Logger.error('Ошибка удаления устройства:', err);
             showToast('Ошибка', err.message || 'Не удалось удалить устройство', 'error');
         } finally {
-            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            endSelfUpdate();
         }
     });
 }

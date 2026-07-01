@@ -42,6 +42,7 @@ export function initLock(instance) {
             const data = await http.put(`/api/map/${currentMapId}/lock`, { locked: newState });
             mapLockStates.set(currentMapId, data.is_locked);
             window.dragLocked = data.is_locked;
+            applyDragLockToCanvas(data.is_locked);
             updateLockButton();
 
             // Уведомляем другие клиенты через WebSocket
@@ -68,6 +69,7 @@ export function initLock(instance) {
             if (Number(data.map_id) === Number(currentMapId)) {
                 mapLockStates.set(currentMapId, data.is_locked);
                 window.dragLocked = data.is_locked;
+                applyDragLockToCanvas(data.is_locked);
                 updateLockButton();
 
                 const action = data.is_locked ? 'заблокировал' : 'разблокировал';
@@ -96,6 +98,7 @@ async function loadMapLockState(mapId) {
         const data = await http.get(`/api/map/${mapId}/lock`);
         mapLockStates.set(mapId, data.is_locked);
         window.dragLocked = data.is_locked;
+        applyDragLockToCanvas(data.is_locked);
 
         // Обновляем кнопку ПОСЛЕ загрузки состояния
         updateLockButton();
@@ -121,6 +124,15 @@ async function loadMapLockState(mapId) {
  */
 export function isDragLocked() {
     return mapLockStates.get(currentMapId) || false;
+}
+
+/**
+ * Применить блокировку к полотну: физически запрещаем/разрешаем захват узлов
+ * мышью. autoungrabify действует и на существующие, и на будущие узлы, при этом
+ * выделение, клики и панорама остаются доступны.
+ */
+function applyDragLockToCanvas(isLocked) {
+    if (cy) cy.autoungrabify(!!isLocked);
 }
 
 /**
