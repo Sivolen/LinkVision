@@ -59,9 +59,9 @@ def create_shape():
         }
         notify_shape_created(shape.map_id, shape_data)
         return jsonify({"id": shape.id}), 201
-    except Exception as e:
-        api_logger.error(f"Error creating shape: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error creating shape")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @shapes_bp.route("/shape/<int:shape_id>", methods=["PUT"])
@@ -98,9 +98,9 @@ def update_shape(shape_id):
         return jsonify(
             {"id": shape_id, "status": "updated", "x": shape.x, "y": shape.y}
         )
-    except Exception as e:
-        api_logger.error(f"Error updating shape: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error updating shape")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @shapes_bp.route("/shape/<int:shape_id>", methods=["DELETE"])
@@ -119,6 +119,6 @@ def delete_shape(shape_id):
         map_service.delete_shape(shape_id)
         notify_shape_deleted(shape.map_id, shape_id)
         return jsonify({"id": shape_id, "status": "deleted"})
-    except Exception as e:
-        api_logger.error(f"Error deleting shape: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error deleting shape")
+        return jsonify({"error": "Internal server error"}), 500

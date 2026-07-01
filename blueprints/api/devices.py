@@ -165,8 +165,8 @@ def create_device():
     except ValueError as e:
         api_logger.warning(f"Validation error creating device: {e}")
         return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        api_logger.error(f"Error creating device: {e}")
+    except Exception:
+        api_logger.exception("Error creating device")
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -261,8 +261,8 @@ def update_device(device_id):
     except ValueError as e:
         api_logger.warning(f"Validation error updating device {device_id}: {e}")
         return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        api_logger.error(f"Error updating device: {e}")
+    except Exception:
+        api_logger.exception(f"Error updating device {device_id}")
         return jsonify({"error": "Internal server error"}), 500
 
 
@@ -291,9 +291,9 @@ def delete_device(device_id):
         device_service.delete_device(device_id)
         notify_device_deleted(map_id, device_id)
         return jsonify({"status": "deleted", "id": device_id})
-    except Exception as e:
-        api_logger.error(f"Error deleting device: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error deleting device")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @devices_bp.route("/device/<int:device_id>/position", methods=["PUT"])
@@ -313,9 +313,9 @@ def update_position(device_id):
         device_service.update_device_position(device_id, data["x"], data["y"])
         notify_device_position_updated(device.map_id, device_id, data["x"], data["y"])
         return jsonify({"status": "ok"})
-    except Exception as e:
-        api_logger.error(f"Error updating position: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error updating position")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @devices_bp.route("/devices/positions", methods=["PUT"])
@@ -356,6 +356,6 @@ def update_devices_positions():
             device_ids = [u["id"] for u in valid_updates]
             notify_bulk_position_updated(first_device.map_id, device_ids)
         return jsonify({"status": "ok", "updated": updated})
-    except Exception as e:
-        api_logger.error(f"Error updating multiple positions: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error updating multiple positions")
+        return jsonify({"error": "Internal server error"}), 500

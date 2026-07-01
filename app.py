@@ -2,7 +2,7 @@ import atexit
 import secrets
 from pathlib import Path
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 from flask_login import current_user
 from flask_migrate import Migrate
 from flask_socketio import join_room
@@ -188,6 +188,14 @@ def create_app():
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template("404.html", hide_sidebar=True), 404
+
+    @app.errorhandler(Exception)
+    def handle_unexpected(e):
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            return e
+        app_logger.exception("Unhandled exception")
+        return jsonify({"error": "Внутренняя ошибка сервера"}), 500
 
     @socketio.on("request_status")
     def handle_request_status(data):

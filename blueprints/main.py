@@ -163,6 +163,6 @@ def delete_map(map_id):
         map_service.delete_map_and_cleanup(map_id, current_app)
         map_service.invalidate_sidebar_cache(owner_id)
         return jsonify({"status": "deleted"})
-    except Exception as e:
-        main_logger.error(f"Error deleting map {map_id}: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        main_logger.exception(f"Error deleting map {map_id}")
+        return jsonify({"error": "Internal server error"}), 500

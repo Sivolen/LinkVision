@@ -81,9 +81,9 @@ def create_link():
     except ValueError as e:
         api_logger.warning(f"Validation error creating link: {e}")
         return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        api_logger.error(f"Error creating link: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error creating link")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @links_bp.route("/link/<int:link_id>", methods=["PUT"])
@@ -145,9 +145,9 @@ def update_link(link_id):
         )
 
         return jsonify({"id": link_id, "status": "updated"})
-    except Exception as e:
-        api_logger.error(f"Error updating link: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error updating link")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @links_bp.route("/link/<int:link_id>", methods=["DELETE"])
@@ -181,6 +181,6 @@ def delete_link(link_id):
         map_service.delete_link(link_id)
         notify_link_deleted(map_id, link_id)
         return jsonify({"id": link_id, "status": "deleted"})
-    except Exception as e:
-        api_logger.error(f"Error deleting link: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error deleting link")
+        return jsonify({"error": "Internal server error"}), 500
