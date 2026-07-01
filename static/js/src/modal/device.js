@@ -5,9 +5,11 @@
 
 // Импорты
 import { addIpRow, getIpsFromForm, setIpsInForm } from './ipManager.js';
-import { showToast } from './ui.js';
-import { escapeHtml, getErrorMessage } from './utils.js';
+import { showToast } from '../utils/toast.js';
+import { getErrorMessage } from './utils.js';
 import { withViewportRestore, reloadMapWithViewportRestore } from './mapIntegration.js';
+import { http } from '../utils/http.js';
+import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 
 // Глобальные переменные модуля
 let deviceModal = null;
@@ -22,8 +24,7 @@ let historyPerPage = 10;
 function loadDeviceTypes(selectEl, callback) {
     if (!selectEl) return;
     
-    fetch('/api/types')
-        .then(res => res.ok ? res.json() : [])
+    http.get('/api/types')
         .then(types => {
             window.deviceTypes = types;
             selectEl.innerHTML = '<option value="">-- Выберите тип --</option>';
@@ -236,20 +237,10 @@ export async function saveDevice() {
     if (btnLoader) btnLoader.classList.remove('d-none');
     if (saveBtn) saveBtn.disabled = true;
 
-    window.setSkipNextMapUpdate();
+    beginSelfUpdate();
 
     try {
-        const res = await fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
-            },
-            body: JSON.stringify(data)
-        });
-
-        if (!res.ok) throw new Error(await getErrorMessage(res));
-        const result = await res.json();
+        const result = await http.put(url, data);
 
         if (!devId) {
             const newDevice = {
@@ -310,7 +301,7 @@ export async function saveDevice() {
         if (btnText) btnText.classList.remove('d-none');
         if (btnLoader) btnLoader.classList.add('d-none');
         if (saveBtn) saveBtn.disabled = false;
-        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+        endSelfUpdate();
     }
 }
 
@@ -319,30 +310,10 @@ export async function saveDevice() {
  */
 export function deleteDevice(deviceId) {
     window.confirmAction('Удаление устройства', 'Вы уверены, что хотите удалить это устройство?', async () => {
-        window.setSkipNextMapUpdate();
-        
+        beginSelfUpdate();
+
         try {
-            const res = await fetch(`/api/device/${deviceId}`, {
-                method: 'DELETE',
-                headers: { 'X-CSRFToken': getCsrfToken() }
-            });
-
-            if (res.status === 404) {
-                if (typeof window.removeDeviceFromGraph === 'function') {
-                    window.removeDeviceFromGraph(deviceId);
-                }
-
-                await reloadMapWithViewportRestore();
-
-                deviceModal.hide();
-                showToast('Успешно', 'Устройство удалено', 'success');
-                return;
-            }
-
-            if (!res.ok) {
-                const errorMsg = await getErrorMessage(res);
-                throw new Error(errorMsg);
-            }
+            const result = await http.del(`/api/device/${deviceId}`);
 
             if (typeof window.removeDeviceFromGraph === 'function') {
                 window.removeDeviceFromGraph(deviceId);
@@ -357,7 +328,7 @@ export function deleteDevice(deviceId) {
             Logger.error('Ошибка удаления устройства:', err);
             showToast('Ошибка', err.message || 'Не удалось удалить устройство', 'error');
         } finally {
-            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            endSelfUpdate();
         }
     });
 }

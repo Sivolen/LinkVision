@@ -1,4 +1,7 @@
 // lock.js – блокировка перемещения устройств (per-map, v2.0)
+import { http } from '../utils/http.js';
+import { showToast } from '../utils/toast.js';
+
 let cy = null;
 let currentMapId = null;
 
@@ -36,38 +39,25 @@ export function initLock(instance) {
         const newState = !currentState;
 
         try {
-            const response = await fetch(`/api/map/${currentMapId}/lock`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ locked: newState }),
-            });
+            const data = await http.put(`/api/map/${currentMapId}/lock`, { locked: newState });
+            mapLockStates.set(currentMapId, data.is_locked);
+            window.dragLocked = data.is_locked;
+            updateLockButton();
 
-            if (response.ok) {
-                const data = await response.json();
-                mapLockStates.set(currentMapId, data.is_locked);
-                window.dragLocked = data.is_locked;
-                updateLockButton();
-
-                // Уведомляем другие клиенты через WebSocket
-                if (window.socket) {
-                    window.socket.emit('map_lock_updated', {
-                        map_id: currentMapId,
-                        is_locked: data.is_locked,
-                        user_id: window.currentUserId,
-                        username: window.currentUsername,
-                    });
-                }
-
-                console.log(`🔒 Map ${currentMapId} lock: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
-            } else {
-                const error = await response.json();
-                alert('Ошибка: ' + (error.error || 'Не удалось изменить блокировку'));
+            // Уведомляем другие клиенты через WebSocket
+            if (window.socket) {
+                window.socket.emit('map_lock_updated', {
+                    map_id: currentMapId,
+                    is_locked: data.is_locked,
+                    user_id: window.currentUserId,
+                    username: window.currentUsername,
+                });
             }
+
+            console.log(`🔒 Map ${currentMapId} lock: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
         } catch (err) {
             console.error('Error toggling lock:', err);
-            alert('Ошибка соединения с сервером');
+            showToast('Ошибка', 'Не удалось изменить блокировку', 'error');
         }
     };
 
@@ -103,27 +93,24 @@ export function cleanup() {
  */
 async function loadMapLockState(mapId) {
     try {
-        const response = await fetch(`/api/map/${mapId}/lock`);
-        if (response.ok) {
-            const data = await response.json();
-            mapLockStates.set(mapId, data.is_locked);
-            window.dragLocked = data.is_locked;
+        const data = await http.get(`/api/map/${mapId}/lock`);
+        mapLockStates.set(mapId, data.is_locked);
+        window.dragLocked = data.is_locked;
 
-            // Обновляем кнопку ПОСЛЕ загрузки состояния
-            updateLockButton();
+        // Обновляем кнопку ПОСЛЕ загрузки состояния
+        updateLockButton();
 
-            // Обновляем UI с учётом прав
-            const canEdit = data.can_edit;
-            const lockBtn = document.getElementById('lockMode');
-            if (lockBtn) {
-                lockBtn.disabled = !canEdit;
-                if (!canEdit) {
-                    lockBtn.title = 'Нет прав для изменения блокировки';
-                }
+        // Обновляем UI с учётом прав
+        const canEdit = data.can_edit;
+        const lockBtn = document.getElementById('lockMode');
+        if (lockBtn) {
+            lockBtn.disabled = !canEdit;
+            if (!canEdit) {
+                lockBtn.title = 'Нет прав для изменения блокировки';
             }
-
-            console.log(`🔒 Map ${mapId} initial state: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
         }
+
+        console.log(`🔒 Map ${mapId} initial state: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
     } catch (err) {
         console.error('Error loading map lock state:', err);
     }

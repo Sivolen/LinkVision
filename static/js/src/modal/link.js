@@ -3,8 +3,9 @@
  * Управление связями между устройствами
  */
 
-import { showToast } from './ui.js';
-import { getErrorMessage } from './utils.js';
+import { showToast } from '../utils/toast.js';
+import { http } from '../utils/http.js';
+import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 
 // Переменные модуля
 let linkModal = null;
@@ -118,52 +119,41 @@ export function confirmCreateLink() {
         return;
     }
 
+    const sourceId = typeof src === 'number' ? src : parseInt(src);
+    const targetId = typeof tgt === 'number' ? tgt : parseInt(tgt);
+
+    if (isNaN(sourceId) || isNaN(targetId)) {
+        showToast('Ошибка', 'Неверные ID устройств', 'error');
+        return;
+    }
+
     window.setLinkSaving(true);
     if (linkModal) linkModal.hide();
 
     if (linkId) {
         updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize);
     } else {
-        createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize);
+        createLinkWithInterfaces(sourceId, targetId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize);
     }
 }
 
 /**
  * Создать связь с интерфейсами
  */
-export function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
-    const sourceId = typeof src === 'number' ? src : parseInt(src);
-    const targetId = typeof tgt === 'number' ? tgt : parseInt(tgt);
-    
-    if (isNaN(sourceId) || isNaN(targetId)) {
-        showToast('Ошибка', 'Неверные ID устройств', 'error');
-        return;
-    }
-    
-    window.setSkipNextMapUpdate();
-    
-    fetch('/api/link', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-            map_id: window.currentMapId,
-            source_id: sourceId,
-            target_id: targetId,
-            src_iface: srcIface,
-            tgt_iface: tgtIface,
-            link_type: linkType || null,
-            line_color: lineColor,
-            line_width: lineWidth,
-            line_style: lineStyle,
-            font_size: fontSize
-        })
-    })
-    .then(async res => {
-        if (!res.ok) throw new Error(await getErrorMessage(res));
-        return res.json();
+function createLinkWithInterfaces(sourceId, targetId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
+    beginSelfUpdate();
+
+    http.post('/api/link', {
+        map_id: window.currentMapId,
+        source_id: sourceId,
+        target_id: targetId,
+        src_iface: srcIface,
+        tgt_iface: tgtIface,
+        link_type: linkType || null,
+        line_color: lineColor,
+        line_width: lineWidth,
+        line_style: lineStyle,
+        font_size: fontSize
     })
     .then(data => {
         if (data.id && window.cy) {
@@ -171,14 +161,14 @@ export function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType,
             const targetNode = window.cy.getElementById(String(targetId));
             const srcX = sourceNode.position().x;
             const tgtX = targetNode.position().x;
-            
+
             let label;
             if (srcX <= tgtX) {
                 label = `${srcIface} ↔ ${tgtIface}`;
             } else {
                 label = `${tgtIface} ↔ ${srcIface}`;
             }
-            
+
             window.cy.batch(() => {
                 window.cy.add({
                     group: 'edges',
@@ -197,7 +187,7 @@ export function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType,
                     }
                 });
             });
-            
+
             if (typeof window.resetLinkMode === 'function') window.resetLinkMode();
             showToast('Успешно', 'Связь создана', 'success');
         }
@@ -208,7 +198,7 @@ export function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType,
         showToast('Ошибка', err.message || 'Не удалось создать связь', 'error');
     })
     .finally(() => {
-        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+        endSelfUpdate();
         window.setLinkSaving(false);
     });
 }
@@ -218,30 +208,18 @@ export function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType,
  */
 export function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
     const numericId = linkId.replace('link_', '');
-    window.setSkipNextMapUpdate();
-    
-    fetch(`/api/link/${numericId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-            source_interface: srcIface,
-            target_interface: tgtIface,
-            link_type: linkType || null,
-            line_color: lineColor,
-            line_width: lineWidth,
-            line_style: lineStyle,
-            font_size: fontSize
-        })
+    beginSelfUpdate();
+
+    http.put(`/api/link/${numericId}`, {
+        source_interface: srcIface,
+        target_interface: tgtIface,
+        link_type: linkType || null,
+        line_color: lineColor,
+        line_width: lineWidth,
+        line_style: lineStyle,
+        font_size: fontSize
     })
-    .then(async res => {
-        if (!res.ok) {
-            const errorMsg = await getErrorMessage(res);
-            throw new Error(errorMsg);
-        }
-        
+    .then(data => {
         const edge = window.cy.getElementById(linkId);
         if (edge.length) {
             const sourceNode = edge.source();
@@ -284,7 +262,7 @@ export function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, line
         showToast('Ошибка', err.message || 'Не удалось обновить связь', 'error');
     })
     .finally(() => {
-        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+        endSelfUpdate();
         window.setLinkSaving(false);
     });
 }
@@ -295,15 +273,10 @@ export function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, line
 export function deleteLink(linkId) {
     window.confirmAction('Удаление связи', 'Удалить эту связь?', () => {
         const numericId = String(linkId).replace('link_', '');
-        window.setSkipNextMapUpdate();
-        
-        fetch(`/api/link/${numericId}`, {
-            method: 'DELETE',
-            headers: { 'X-CSRFToken': getCsrfToken() }
-        })
-        .then(async res => {
-            if (!res.ok) throw new Error(await getErrorMessage(res));
-            
+        beginSelfUpdate();
+
+        http.del(`/api/link/${numericId}`)
+        .then(() => {
             if (window.cy) {
                 window.cy.getElementById(String(linkId)).remove();
             }
@@ -316,7 +289,7 @@ export function deleteLink(linkId) {
             showToast('Ошибка', err.message || 'Не удалось удалить связь', 'error');
         })
         .finally(() => {
-            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            endSelfUpdate();
         });
     });
 }
