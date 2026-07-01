@@ -14,6 +14,22 @@ import { initBulk } from './bulk.js';
 import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
 import { initUndoRedo } from './undoRedo.js';
 
+// Импорт функций для инкрементальных обновлений
+import {
+    addDeviceToGraph as _addDeviceToGraph,
+    removeDeviceFromGraph as _removeDeviceFromGraph,
+    updateDevice as _updateDevice,
+    addLinkToGraph,
+    updateLinkInGraph,
+    removeLinkFromGraph as _removeLinkFromGraph,
+    addShapeToGraph as _addShapeToGraph,
+    removeShapeFromGraph as _removeShapeFromGraph,
+    updateDevicePositionInGraph,
+    addGroupToGraph,
+    updateGroupInGraph,
+    removeGroupFromGraph,
+} from './elements.js';
+
 let mapId = null;
 let skipNextMapUpdate = false;
 
@@ -138,19 +154,130 @@ export function initMap(id) {
         // Принудительно обновляем стили (для применения селекторов статусов)
         cy.style().update();
     });
-window.socket.on('map_updated', (data) => {
-    if (skipNextMapUpdate) {
-        console.log('⏭️ Skipping map reload (self change)');
-        return;   // не сбрасываем флаг здесь
-    }
-    if (Number(data.map_id) === mapId) {
-        console.log('🔄 Reloading map from other client:', data);
-        window.withViewportRestore(() => {
-            console.log('🔄 Calling reloadMapElements(force=true)');
-            window.reloadMapElements(true); // force=true чтобы обойти кэш
+
+    // ─── Точечные события ─────────────────────────────────────────────────────────
+
+    // Создание устройства
+    window.socket.on('device_created', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        cy.batch(() => {
+            _addDeviceToGraph(data.device);
         });
-    }
-});
+    });
+
+    // Обновление устройства
+    window.socket.on('device_updated', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        _updateDevice(data.device);
+    });
+
+    // Удаление устройства
+    window.socket.on('device_deleted', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        _removeDeviceFromGraph(data.device_id);
+    });
+
+    // Изменение позиции устройства
+    window.socket.on('device_position_updated', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        updateDevicePositionInGraph(data.device_id, data.x, data.y);
+    });
+
+    // Массовое изменение позиций
+    window.socket.on('bulk_position_updated', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        // Позиции уже обновлены на клиенте через dragfree — просто обновим метки
+        if (typeof window.updateAllEdgeLabels === 'function') window.updateAllEdgeLabels();
+        if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
+    });
+
+    // Создание связи
+    window.socket.on('link_created', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        cy.batch(() => {
+            addLinkToGraph(data.link);
+        });
+    });
+
+    // Обновление связи
+    window.socket.on('link_updated', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        updateLinkInGraph(data.link);
+    });
+
+    // Удаление связи
+    window.socket.on('link_deleted', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        _removeLinkFromGraph(`link_${data.link_id}`);
+    });
+
+    // Создание группы
+    window.socket.on('group_created', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        cy.batch(() => {
+            addGroupToGraph(data.group);
+        });
+    });
+
+    // Обновление группы
+    window.socket.on('group_updated', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        updateGroupInGraph(data.group);
+    });
+
+    // Удаление группы
+    window.socket.on('group_deleted', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        removeGroupFromGraph(data.group_id);
+    });
+
+    // Создание фигуры
+    window.socket.on('shape_created', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        cy.batch(() => {
+            _addShapeToGraph(data.shape);
+        });
+    });
+
+    // Обновление фигуры
+    window.socket.on('shape_updated', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        const shape = data.shape;
+        const node = cy.getElementById(`shape_${shape.id}`);
+        if (node.length) {
+            node.position({ x: shape.x, y: shape.y });
+            node.data({
+                shape_type: shape.shape_type,
+                width: shape.width,
+                height: shape.height,
+                color: shape.color,
+                opacity: shape.opacity,
+                description: shape.description,
+            });
+            cy.style().update();
+        }
+    });
+
+    // Удаление фигуры
+    window.socket.on('shape_deleted', (data) => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        _removeShapeFromGraph(data.shape_id);
+    });
+
+    // Полная перезагрузка карты (крупные изменения: импорт, массовое редактирование)
+    window.socket.on('map_updated', (data) => {
+        if (skipNextMapUpdate) {
+            console.log('⏭️ Skipping map reload (self change)');
+            return;
+        }
+        if (Number(data.map_id) === mapId) {
+            console.log('🔄 Reloading map from other client:', data);
+            window.withViewportRestore(() => {
+                console.log('🔄 Calling reloadMapElements(force=true)');
+                window.reloadMapElements(true); // force=true чтобы обойти кэш
+            });
+        }
+    });
 }
 
 window.setSkipNextMapUpdate = () => {

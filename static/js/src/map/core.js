@@ -1,6 +1,9 @@
 // core.js – создание экземпляра Cytoscape, стили, базовая настройка
 import { CY_STYLE } from './styles.js';
 import { updateBulkEditButton } from './bulk.js';
+import { cleanup as cleanupLock } from './lock.js';
+import { cleanup as cleanupEdgeLabels } from './edgeLabels.js';
+import { cleanup as cleanupGroups } from './groupResize.js';
 
 let cy = null;
 let bulkBtnUpdateScheduled = false;
@@ -15,6 +18,12 @@ export function initCy(mapId, onReady) {
         if (typeof window.stopAllPulsing === 'function') {
             window.stopAllPulsing();
         }
+
+        // Очищаем слушатели и таймеры перед уничтожением
+        cleanupLock();
+        cleanupEdgeLabels();
+        cleanupGroups();
+
         cy.destroy();
     }
     cy = cytoscape({

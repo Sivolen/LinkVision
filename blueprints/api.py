@@ -33,7 +33,23 @@ from services.audit_service import get_audit_logs, get_user_activity_summary
 from models import Map, MapPermission, User
 from extensions import db
 from services.map_service import invalidate_groups_cache
-from services.notifications import notify_map_updated
+from services.notifications import (
+    notify_map_updated,
+    notify_device_created,
+    notify_device_updated,
+    notify_device_deleted,
+    notify_device_position_updated,
+    notify_bulk_position_updated,
+    notify_link_created,
+    notify_link_updated,
+    notify_link_deleted,
+    notify_group_created,
+    notify_group_updated,
+    notify_group_deleted,
+    notify_shape_created,
+    notify_shape_updated,
+    notify_shape_deleted,
+)
 from utils.logger import api_logger
 from utils.file_validation import safe_save_upload
 
@@ -210,7 +226,20 @@ def create_device():
             width = dtype.width
             height = dtype.height
 
-        notify_map_updated(data["map_id"])
+        device_data = {
+            "id": dev.id,
+            "name": dev.name,
+            "type_id": dev.type_id,
+            "pos_x": dev.pos_x,
+            "pos_y": dev.pos_y,
+            "status": dev.status,
+            "monitoring_enabled": dev.monitoring_enabled,
+            "group_id": dev.group_id,
+            "iconUrl": icon_url,
+            "width": width,
+            "height": height,
+        }
+        notify_device_created(data["map_id"], device_data)
 
         return (
             jsonify(
@@ -281,7 +310,18 @@ def update_device(device_id):
         # Инвалидация кэша сайдбара
         device = device_service.get_device_by_id(device_id)
         map_service.invalidate_sidebar_cache(device.map.owner_id)
-        notify_map_updated(device.map_id)
+
+        device_data = {
+            "id": device.id,
+            "name": device.name,
+            "type_id": device.type_id,
+            "pos_x": device.pos_x,
+            "pos_y": device.pos_y,
+            "status": device.status,
+            "monitoring_enabled": device.monitoring_enabled,
+            "group_id": device.group_id,
+        }
+        notify_device_updated(device.map_id, device_data)
 
         # Аудит
         new_values = {
@@ -335,7 +375,7 @@ def delete_device(device_id):
         )
 
         device_service.delete_device(device_id)
-        notify_map_updated(map_id)
+        notify_device_deleted(map_id, device_id)
         return jsonify({"status": "deleted", "id": device_id})
     except Exception as e:
         api_logger.error(f"Error deleting device: {e}")
@@ -357,7 +397,7 @@ def update_position(device_id):
 
     try:
         device_service.update_device_position(device_id, data["x"], data["y"])
-        notify_map_updated(device.map_id)
+        notify_device_position_updated(device.map_id, device_id, data["x"], data["y"])
         return jsonify({"status": "ok"})
     except Exception as e:
         api_logger.error(f"Error updating position: {e}")
@@ -406,7 +446,18 @@ def create_link():
             font_size=data.get("font_size", 8),
         )
 
-        notify_map_updated(data["map_id"])
+        link_data = {
+            "id": link.id,
+            "source_device_id": link.source_device_id,
+            "target_device_id": link.target_device_id,
+            "source_interface": link.source_interface,
+            "target_interface": link.target_interface,
+            "link_type": link.link_type,
+            "line_color": link.line_color,
+            "line_width": link.line_width,
+            "line_style": link.line_style,
+        }
+        notify_link_created(data["map_id"], link_data)
         return jsonify({"id": link.id}), 201
 
     except ValueError as e:
@@ -445,7 +496,18 @@ def update_link(link_id):
         map_id = link.map_id
 
         link = map_service.update_link(link_id, **data)
-        notify_map_updated(map_id)
+        link_data = {
+            "id": link.id,
+            "source_device_id": link.source_device_id,
+            "target_device_id": link.target_device_id,
+            "source_interface": link.source_interface,
+            "target_interface": link.target_interface,
+            "link_type": link.link_type,
+            "line_color": link.line_color,
+            "line_width": link.line_width,
+            "line_style": link.line_style,
+        }
+        notify_link_updated(map_id, link_data)
 
         # Аудит
         new_values = {
@@ -499,7 +561,7 @@ def delete_link(link_id):
         )
 
         map_service.delete_link(link_id)
-        notify_map_updated(map_id)
+        notify_link_deleted(map_id, link_id)
         return jsonify({"id": link_id, "status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting link: {e}")
@@ -629,7 +691,13 @@ def create_group():
         )
 
         invalidate_groups_cache(map_id)
-        notify_map_updated(map_id)
+        group_data = {
+            "id": group.id,
+            "name": group.name,
+            "color": group.color,
+            "font_size": group.font_size,
+        }
+        notify_group_created(map_id, group_data)
         return jsonify({"id": group.id}), 201
 
     except ValueError as e:
@@ -670,7 +738,13 @@ def update_group(group_id):
         )
 
         invalidate_groups_cache(map_id)
-        notify_map_updated(map_id)
+        group_data = {
+            "id": group_id,
+            "name": data.get("name"),
+            "color": data.get("color"),
+            "font_size": data.get("font_size"),
+        }
+        notify_group_updated(map_id, group_data)
         return jsonify({"status": "updated"})
 
     except ValueError as e:
@@ -699,7 +773,7 @@ def delete_group(group_id):
     try:
         map_service.delete_group(group_id)
         invalidate_groups_cache(map_id)
-        notify_map_updated(map_id)
+        notify_group_deleted(map_id, group_id)
         return jsonify({"status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting group: {e}")
@@ -743,7 +817,8 @@ def update_devices_positions():
         updated = device_service.update_devices_positions(valid_updates)
         if valid_updates:
             first_device = device_service.get_device_by_id(valid_updates[0]["id"])
-            notify_map_updated(first_device.map_id)
+            device_ids = [u["id"] for u in valid_updates]
+            notify_bulk_position_updated(first_device.map_id, device_ids)
         return jsonify({"status": "ok", "updated": updated})
     except Exception as e:
         api_logger.error(f"Error updating multiple positions: {e}")
@@ -781,7 +856,18 @@ def create_shape():
             opacity=data.get("opacity", 1.0),
             description=data.get("description"),
         )
-        notify_map_updated(shape.map_id)
+        shape_data = {
+            "id": shape.id,
+            "shape_type": shape.shape_type,
+            "x": shape.x,
+            "y": shape.y,
+            "width": shape.width,
+            "height": shape.height,
+            "color": shape.color,
+            "opacity": shape.opacity,
+            "description": shape.description,
+        }
+        notify_shape_created(shape.map_id, shape_data)
         return jsonify({"id": shape.id}), 201
     except Exception as e:
         api_logger.error(f"Error creating shape: {e}", exc_info=True)
@@ -808,8 +894,19 @@ def update_shape(shape_id):
     )
     try:
         map_service.update_shape(shape_id, **data)
-        notify_map_updated(shape.map_id)
-        api_logger.info(f"  ✅ map_updated notified for map {shape.map_id}")
+        shape_data = {
+            "id": shape_id,
+            "shape_type": shape.shape_type,
+            "x": shape.x,
+            "y": shape.y,
+            "width": shape.width,
+            "height": shape.height,
+            "color": shape.color,
+            "opacity": shape.opacity,
+            "description": data.get("description", shape.description),
+        }
+        notify_shape_updated(shape.map_id, shape_data)
+        api_logger.info(f"  ✅ shape_updated notified for map {shape.map_id}")
         return jsonify(
             {"id": shape_id, "status": "updated", "x": shape.x, "y": shape.y}
         )
@@ -834,7 +931,7 @@ def delete_shape(shape_id):
 
     try:
         map_service.delete_shape(shape_id)
-        notify_map_updated(shape.map_id)
+        notify_shape_deleted(shape.map_id, shape_id)
         return jsonify({"id": shape_id, "status": "deleted"})
     except Exception as e:
         api_logger.error(f"Error deleting shape: {e}", exc_info=True)
