@@ -6,6 +6,7 @@
 import { showToast } from '../utils/toast.js';
 import { reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
+import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 
 // Переменные модуля
 let shapeModal = null;
@@ -157,7 +158,7 @@ export async function saveShape() {
     if (btnLoader) btnLoader.classList.remove('d-none');
     if (saveBtn) saveBtn.disabled = true;
 
-    window.setSkipNextMapUpdate();
+    beginSelfUpdate();
 
     try {
         const result = await http.put(url, data);
@@ -216,7 +217,7 @@ export async function saveShape() {
         if (btnText) btnText.classList.remove('d-none');
         if (btnLoader) btnLoader.classList.add('d-none');
         if (saveBtn) saveBtn.disabled = false;
-        setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+        endSelfUpdate();
     }
 }
 
@@ -225,7 +226,7 @@ export async function saveShape() {
  */
 export async function deleteShape(shapeId) {
     window.confirmAction('Удаление фигуры', 'Вы уверены?', async () => {
-        window.setSkipNextMapUpdate();
+        beginSelfUpdate();
 
         try {
             await http.del(`/api/shape/${shapeId}`);
@@ -244,7 +245,7 @@ export async function deleteShape(shapeId) {
             Logger.error('Ошибка удаления фигуры:', err);
             showToast('Ошибка', err.message || 'Не удалось удалить фигуру', 'error');
         } finally {
-            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            endSelfUpdate();
         }
     });
 }
