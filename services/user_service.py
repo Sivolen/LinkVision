@@ -64,3 +64,37 @@ def authenticate_user(username, password):
         return user
     auth_logger.warning(f"Failed login attempt for username: {username}")
     return None
+
+
+def update_last_map_id(user_id: int, map_id: int) -> None:
+    """
+    Обновить последнюю посещённую карту пользователя.
+
+    Args:
+        user_id: ID пользователя
+        map_id: ID карты
+    """
+    user = User.query.get(user_id)
+    if user and user.last_map_id != map_id:
+        user.last_map_id = map_id
+        db.session.commit()
+
+
+def change_user_password(user_id: int, new_password: str) -> User:
+    """
+    Сменить пароль пользователя и сбросить флаг must_change_password.
+
+    Args:
+        user_id: ID пользователя
+        new_password: Новый пароль
+
+    Returns:
+        User: Обновлённый пользователь
+    """
+    user = User.query.get_or_404(user_id)
+    user.set_password(new_password)
+    user.must_change_password = False
+    db.session.commit()
+    auth_logger.info(f"Password changed for user: {user.username}")
+    return user
+

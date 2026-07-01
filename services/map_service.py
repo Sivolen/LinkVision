@@ -525,3 +525,28 @@ def update_map_details(
     """
     return map_repo.update_details(map_id, name, background_filename, remove_background)
 
+
+def toggle_map_lock(map_id: int, locked: Optional[bool] = None) -> Map:
+    """
+    Заблокировать или разблокировать карту.
+
+    Args:
+        map_id: ID карты
+        locked: True для блокировки, False для разблокировки.
+                Если None — переключить текущее состояние.
+
+    Returns:
+        Map: Обновлённая карта
+    """
+    map_obj = Map.query.get_or_404(map_id)
+
+    if locked is None:
+        map_obj.is_locked = not map_obj.is_locked
+    else:
+        map_obj.is_locked = bool(locked)
+
+    db.session.commit()
+    api_logger.info(f"Map lock toggled: map_id={map_id}, locked={map_obj.is_locked}")
+    return map_obj
+
+

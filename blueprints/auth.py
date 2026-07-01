@@ -59,6 +59,8 @@ def logout():
 @login_required
 def change_password():
     """Смена пароля при первом входе или по требованию."""
+    from services import change_user_password
+
     form = ChangePasswordForm()
     if form.validate_on_submit():
         if not current_user.check_password(form.current_password.data):
@@ -70,9 +72,8 @@ def change_password():
             flash(f"Слабый пароль: {error}", "error")
             return redirect(url_for("auth.change_password"))
 
-        current_user.set_password(form.new_password.data)
-        current_user.must_change_password = False
-        db.session.commit()
+        # Используем сервис для смены пароля
+        change_user_password(current_user.id, form.new_password.data)
 
         log_auth_action("password_changed", current_user.id, current_user.username)
         auth_logger.info(f"Пароль изменён: {current_user.username}")

@@ -246,10 +246,10 @@ def maps_list():
 
 @admin_bp.route("/maps/delete/<int:id>", methods=["POST"])
 def delete_map(id):
-    map_obj = Map.query.get_or_404(id)
     try:
-        db.session.delete(map_obj)
-        db.session.commit()
+        # Используем сервис для удаления карты с очисткой
+        from services import map_service
+        map_service.delete_map_and_cleanup(id, current_app)
         admin_logger.info(f"Map deleted: ID={id}")
         flash("Карта удалена")
     except Exception as e:
