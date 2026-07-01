@@ -214,10 +214,10 @@ export async function saveDevice() {
             return;
         }
         data.map_id = window.currentMapId;
-        if (cy && typeof cy.pan === 'function') {
+        if (window.cy && typeof window.cy.pan === 'function') {
             const container = document.getElementById('cy');
-            const pan = cy.pan();
-            const zoom = cy.zoom();
+            const pan = window.cy.pan();
+            const zoom = window.cy.zoom();
             data.x = Math.round((-pan.x + container.clientWidth / 2) / zoom);
             data.y = Math.round((-pan.y + container.clientHeight / 2) / zoom);
         } else {
@@ -267,7 +267,17 @@ export async function saveDevice() {
                 height: result.height
             };
             if (typeof window.addDeviceToGraph === 'function') {
-                await window.addDeviceToGraph(newDevice);
+                try {
+                    await window.addDeviceToGraph(newDevice);
+                    console.log('✅ Device added to graph:', newDevice.id);
+                    // Обновить группы и метки рёбер
+                    if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
+                    if (typeof window.updateAllEdgeLabels === 'function') window.updateAllEdgeLabels();
+                } catch (e) {
+                    console.error('❌ addDeviceToGraph failed:', e);
+                    showToast('Ошибка', 'Не удалось отобразить устройство на карте', 'error');
+                    // Не прерываем выполнение – устройство уже создано на сервере
+                }
             }
             showToast('Успешно', 'Устройство создано', 'success');
         } else {
