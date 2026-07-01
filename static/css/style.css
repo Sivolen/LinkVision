@@ -16,6 +16,7 @@ LinkVision - Современный дизайн (финальная верси�
   --cy-background: #ffffff;
   --cy-grid: #cbd5e1;
   --sidebar-blur: blur(12px);
+  --sidebar-width: 280px;
 }
 
 /* ============================================================================
@@ -234,7 +235,7 @@ body {
   position: fixed;
   top: 0;
   left: 0;
-  width: 280px;
+  width: var(--sidebar-width, 280px);
   height: 100vh;
   background: var(--bg-sidebar);
   backdrop-filter: var(--sidebar-blur);
@@ -246,6 +247,37 @@ body {
   flex-direction: column;
   box-shadow: 2px 0 20px rgba(0, 0, 0, 0.08);
   border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Ручка-сплиттер для изменения ширины сайдбара */
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 1002;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.sidebar-resizer:hover,
+.sidebar-resizer.dragging {
+  background: var(--accent-color);
+  opacity: 0.6;
+}
+/* В свёрнутом состоянии менять ширину нельзя */
+.sidebar.collapsed .sidebar-resizer {
+  display: none;
+}
+/* Во время перетаскивания отключаем анимацию и выделение текста */
+body.resizing-sidebar {
+  cursor: col-resize;
+  user-select: none;
+}
+body.resizing-sidebar .sidebar,
+body.resizing-sidebar .main-content {
+  transition: none;
 }
 
 /* Свёрнутый сайдбар */
@@ -805,7 +837,7 @@ body {
 ОСНОВНОЙ КОНТЕНТ
 ============================================================================ */
 .main-content {
-  margin-left: 280px;
+  margin-left: var(--sidebar-width, 280px);
   padding: 24px;
   transition: margin-left 0.25s ease;
   min-height: 100vh;
@@ -1298,6 +1330,10 @@ modal-header,
 
   .main-content {
     margin-left: 0 !important;
+  }
+
+  .sidebar-resizer {
+    display: none;
   }
 
   .mobile-menu-toggle {

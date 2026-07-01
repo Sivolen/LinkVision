@@ -298,6 +298,53 @@ let wasDisconnected = false;
 
     // Инициализация при загрузке DOM
     document.addEventListener('DOMContentLoaded', function() {
+        // Ширина сайдбара из localStorage + перетаскиваемый сплиттер
+        (function setupSidebarResizer() {
+            const MIN = 200, MAX = 480, KEY = 'sidebarWidth';
+            const root = document.documentElement;
+
+            const saved = parseInt(localStorage.getItem(KEY), 10);
+            if (saved && saved >= MIN && saved <= MAX) {
+                root.style.setProperty('--sidebar-width', saved + 'px');
+            }
+
+            const sidebar = document.getElementById('sidebar');
+            const resizer = document.getElementById('sidebarResizer');
+            if (!sidebar || !resizer) return;
+
+            let dragging = false;
+
+            const onMove = (e) => {
+                if (!dragging) return;
+                const w = Math.min(MAX, Math.max(MIN, e.clientX));
+                root.style.setProperty('--sidebar-width', w + 'px');
+            };
+            const onUp = () => {
+                if (!dragging) return;
+                dragging = false;
+                resizer.classList.remove('dragging');
+                document.body.classList.remove('resizing-sidebar');
+                const px = parseInt(getComputedStyle(root).getPropertyValue('--sidebar-width'), 10);
+                if (px) localStorage.setItem(KEY, px);
+            };
+
+            resizer.addEventListener('mousedown', (e) => {
+                if (sidebar.classList.contains('collapsed')) return; // свёрнутый не тянем
+                dragging = true;
+                resizer.classList.add('dragging');
+                document.body.classList.add('resizing-sidebar');
+                e.preventDefault();
+            });
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+
+            // Двойной клик по ручке — сброс к ширине по умолчанию
+            resizer.addEventListener('dblclick', () => {
+                root.style.removeProperty('--sidebar-width');
+                localStorage.removeItem(KEY);
+            });
+        })();
+
         const savedSidebar = localStorage.getItem('sidebarCollapsed');
         if (savedSidebar === 'true') {
             const sidebar = document.getElementById('sidebar');
