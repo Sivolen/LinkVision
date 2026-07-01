@@ -15,8 +15,10 @@ def notify_map_updated(map_id, skip_sid=None):
 
 def _notify(map_id, event, payload, skip_sid=None):
     """Отправить точечное событие в комнату карты."""
+    # map_id обязателен в payload: клиентские обработчики отфильтровывают
+    # события по data.map_id (см. static/js/src/map/index.js)
     socketio.emit(
-        event, payload, room=f"map_{map_id}", skip_sid=skip_sid
+        event, {**payload, "map_id": map_id}, room=f"map_{map_id}", skip_sid=skip_sid
     )
 
 
