@@ -1,4 +1,6 @@
 // bulk.js – массовое редактирование выбранных устройств
+import { http } from '../utils/http.js';
+
 let cy = null;
 
 export function initBulk(instance) {
@@ -80,11 +82,7 @@ async function applyBulkEdit() {
         if (center) { update.pos_x = Math.round(centerX); update.pos_y = Math.round(centerY); }
         if (monitoring !== '') update.monitoring_enabled = monitoring === 'true';
         if (Object.keys(update).length === 0) return;
-        promises.push(fetch(`/api/device/${node.id()}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify(update)
-        }));
+        promises.push(http.put(`/api/device/${node.id()}`, update));
     });
     if (!promises.length) { alert('Нет изменений'); return; }
 

@@ -3,8 +3,8 @@
  * Управление связями между устройствами
  */
 
-import { showToast } from './ui.js';
-import { getErrorMessage } from './utils.js';
+import { showToast } from '../utils/toast.js';
+import { http } from '../utils/http.js';
 
 // Переменные модуля
 let linkModal = null;
@@ -142,28 +142,17 @@ export function createLinkWithInterfaces(src, tgt, srcIface, tgtIface, linkType,
     
     window.setSkipNextMapUpdate();
     
-    fetch('/api/link', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-            map_id: window.currentMapId,
-            source_id: sourceId,
-            target_id: targetId,
-            src_iface: srcIface,
-            tgt_iface: tgtIface,
-            link_type: linkType || null,
-            line_color: lineColor,
-            line_width: lineWidth,
-            line_style: lineStyle,
-            font_size: fontSize
-        })
-    })
-    .then(async res => {
-        if (!res.ok) throw new Error(await getErrorMessage(res));
-        return res.json();
+    http.post('/api/link', {
+        map_id: window.currentMapId,
+        source_id: sourceId,
+        target_id: targetId,
+        src_iface: srcIface,
+        tgt_iface: tgtIface,
+        link_type: linkType || null,
+        line_color: lineColor,
+        line_width: lineWidth,
+        line_style: lineStyle,
+        font_size: fontSize
     })
     .then(data => {
         if (data.id && window.cy) {
@@ -220,28 +209,16 @@ export function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, line
     const numericId = linkId.replace('link_', '');
     window.setSkipNextMapUpdate();
     
-    fetch(`/api/link/${numericId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-            source_interface: srcIface,
-            target_interface: tgtIface,
-            link_type: linkType || null,
-            line_color: lineColor,
-            line_width: lineWidth,
-            line_style: lineStyle,
-            font_size: fontSize
-        })
+    http.put(`/api/link/${numericId}`, {
+        source_interface: srcIface,
+        target_interface: tgtIface,
+        link_type: linkType || null,
+        line_color: lineColor,
+        line_width: lineWidth,
+        line_style: lineStyle,
+        font_size: fontSize
     })
-    .then(async res => {
-        if (!res.ok) {
-            const errorMsg = await getErrorMessage(res);
-            throw new Error(errorMsg);
-        }
-        
+    .then(data => {
         const edge = window.cy.getElementById(linkId);
         if (edge.length) {
             const sourceNode = edge.source();
@@ -297,13 +274,8 @@ export function deleteLink(linkId) {
         const numericId = String(linkId).replace('link_', '');
         window.setSkipNextMapUpdate();
         
-        fetch(`/api/link/${numericId}`, {
-            method: 'DELETE',
-            headers: { 'X-CSRFToken': getCsrfToken() }
-        })
-        .then(async res => {
-            if (!res.ok) throw new Error(await getErrorMessage(res));
-            
+        http.del(`/api/link/${numericId}`)
+        .then(() => {
             if (window.cy) {
                 window.cy.getElementById(String(linkId)).remove();
             }

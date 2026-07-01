@@ -1,6 +1,7 @@
 // viewport.js – сохранение/восстановление панорамирования и зума
 import { getCy } from './core.js';
 import { updateBackgroundTransform, enforcePanBounds } from './background.js';
+import { http } from '../utils/http.js';
 
 let viewportTimeout = null;
 
@@ -19,14 +20,8 @@ export function saveViewportToServer() {
     const zoom = cy.zoom();
     clearTimeout(viewportTimeout);
     viewportTimeout = setTimeout(() => {
-        fetch(`/api/map/${window.currentMapId}/viewport`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
-            },
-            body: JSON.stringify({ pan_x: pan.x, pan_y: pan.y, zoom })
-        }).catch(err => console.debug('Viewport save failed:', err.message));
+        http.put(`/api/map/${window.currentMapId}/viewport`, { pan_x: pan.x, pan_y: pan.y, zoom })
+        .catch(err => console.debug('Viewport save failed:', err.message));
     }, 500);
 }
 

@@ -2,6 +2,9 @@
  * permissions.js - Управление правами доступа к картам (v2.0)
  */
 
+import { showToast } from '../utils/toast.js';
+import { http } from '../utils/http.js';
+
 let currentMapId = null;
 
 /**
@@ -194,28 +197,19 @@ export async function addPermission() {
     }
     
     try {
-        const csrfToken = typeof getCsrfToken === 'function' ? getCsrfToken() : getCsrfTokenLocal();
-
-        const response = await fetch(`/api/map/${currentMapId}/permissions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken,
-            },
-            body: JSON.stringify({ user_id: parseInt(userId), role }),
+        const result = await http.post(`/api/map/${currentMapId}/permissions`, {
+            user_id: parseInt(userId),
+            role
         });
         
-        if (response.ok) {
+        if (result) {
             showToast('Успешно', 'Право доступа добавлено', 'success');
             await loadPermissions(currentMapId);
             await loadUsersForPermission(currentMapId);
-        } else {
-            const data = await response.json();
-            showToast('Ошибка', data.error || 'Не удалось добавить право', 'danger');
         }
     } catch (err) {
         console.error('Error adding permission:', err);
-        showToast('Ошибка', 'Ошибка соединения', 'danger');
+        showToast('Ошибка', err.message || 'Не удалось добавить право', 'error');
     }
 }
 
@@ -233,27 +227,15 @@ export async function addRolePermission() {
     }
     
     try {
-        const csrfToken = typeof getCsrfToken === 'function' ? getCsrfToken() : getCsrfTokenLocal();
+        const result = await http.post(`/api/map/${currentMapId}/permissions/role`, { role });
 
-        const response = await fetch(`/api/map/${currentMapId}/permissions/role`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken,
-            },
-            body: JSON.stringify({ role }),
-        });
-        
-        if (response.ok) {
+        if (result) {
             showToast('Успешно', `Роль ${role} добавлена для всех операторов`, 'success');
             await loadPermissions(currentMapId);
-        } else {
-            const data = await response.json();
-            showToast('Ошибка', data.error || 'Не удалось добавить роль', 'danger');
         }
     } catch (err) {
         console.error('Error adding role permission:', err);
-        showToast('Ошибка', 'Ошибка соединения', 'danger');
+        showToast('Ошибка', err.message || 'Не удалось добавить роль', 'error');
     }
 }
 
@@ -270,27 +252,15 @@ window.editPermission = async function(permId, currentRole) {
     if (newRole === currentRole) return;
     
     try {
-        const csrfToken = typeof getCsrfToken === 'function' ? getCsrfToken() : getCsrfTokenLocal();
+        const result = await http.put(`/api/map/${currentMapId}/permissions/${permId}`, { role: newRole });
 
-        const response = await fetch(`/api/map/${currentMapId}/permissions/${permId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken,
-            },
-            body: JSON.stringify({ role: newRole }),
-        });
-        
-        if (response.ok) {
+        if (result) {
             showToast('Успешно', 'Роль обновлена', 'success');
             await loadPermissions(currentMapId);
-        } else {
-            const data = await response.json();
-            showToast('Ошибка', data.error || 'Не удалось обновить роль', 'danger');
         }
     } catch (err) {
         console.error('Error updating permission:', err);
-        showToast('Ошибка', 'Ошибка соединения', 'danger');
+        showToast('Ошибка', err.message || 'Не удалось обновить роль', 'error');
     }
 };
 
@@ -301,25 +271,15 @@ window.deletePermission = async function(permId) {
     if (!confirm('Вы уверены, что хотите удалить это право доступа?')) return;
     
     try {
-        const csrfToken = typeof getCsrfToken === 'function' ? getCsrfToken() : getCsrfTokenLocal();
+        const result = await http.del(`/api/map/${currentMapId}/permissions/${permId}`);
 
-        const response = await fetch(`/api/map/${currentMapId}/permissions/${permId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': csrfToken,
-            },
-        });
-        
-        if (response.ok) {
+        if (result) {
             showToast('Успешно', 'Право доступа удалено', 'success');
             await loadPermissions(currentMapId);
-        } else {
-            const data = await response.json();
-            showToast('Ошибка', data.error || 'Не удалось удалить право', 'danger');
         }
     } catch (err) {
         console.error('Error deleting permission:', err);
-        showToast('Ошибка', 'Ошибка соединения', 'danger');
+        showToast('Ошибка', err.message || 'Не удалось удалить право', 'error');
     }
 };
 
@@ -333,21 +293,6 @@ function getRoleBadge(role) {
         'admin': '<span class="badge bg-danger">Админ</span>',
     };
     return badges[role] || `<span class="badge bg-secondary">${role}</span>`;
-}
-
-/**
- * Получить CSRF токен (fallback если не доступен глобально)
- */
-function getCsrfTokenLocal() {
-    // Пробуем несколько источников
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    if (meta) return meta.getAttribute('content');
-
-    if (window.csrfToken) return window.csrfToken;
-
-    if (typeof getCsrfToken === 'function') return getCsrfToken();
-
-    return '';
 }
 
 /**
