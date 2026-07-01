@@ -5,6 +5,7 @@ API роуты для карт (Maps).
 import os
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
+from models import Map
 
 from services import (
     map_service,
@@ -106,9 +107,9 @@ def import_map_route():
         return jsonify({"id": map_obj.id, "status": "imported"})
     except ValueError as e:
         return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        api_logger.error(f"Error importing map: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error importing map")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @maps_bp.route("/map/<int:map_id>", methods=["PUT"])
@@ -160,9 +161,9 @@ def update_map(map_id):
                 "background": map_obj.background_image,
             }
         )
-    except Exception as e:
-        api_logger.error(f"Error updating map: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error updating map")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @maps_bp.route("/map/<int:map_id>/viewport", methods=["PUT"])
@@ -182,9 +183,9 @@ def update_viewport(map_id):
     try:
         map_service.update_user_viewport(current_user.id, map_id, pan_x, pan_y, zoom)
         return jsonify({"status": "ok"})
-    except Exception as e:
-        api_logger.error(f"Error updating viewport: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error updating viewport")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 # ============================================================================

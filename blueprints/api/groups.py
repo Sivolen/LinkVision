@@ -59,9 +59,9 @@ def create_group():
     except ValueError as e:
         api_logger.warning(f"Validation error creating group: {e}")
         return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        api_logger.error(f"Error creating group: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error creating group")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @groups_bp.route("/group/<int:group_id>", methods=["PUT"])
@@ -106,9 +106,9 @@ def update_group(group_id):
     except ValueError as e:
         api_logger.warning(f"Validation error updating group {group_id}: {e}")
         return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        api_logger.error(f"Error updating group: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error updating group")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @groups_bp.route("/group/<int:group_id>", methods=["DELETE"])
@@ -131,6 +131,6 @@ def delete_group(group_id):
         invalidate_groups_cache(map_id)
         notify_group_deleted(map_id, group_id)
         return jsonify({"status": "deleted"})
-    except Exception as e:
-        api_logger.error(f"Error deleting group: {e}")
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        api_logger.exception("Error deleting group")
+        return jsonify({"error": "Internal server error"}), 500
