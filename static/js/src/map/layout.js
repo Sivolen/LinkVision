@@ -1,6 +1,9 @@
 // layout.js – авто‑раскладка (grid, circle, cose и т.д.)
 import { getCy } from './core.js';
-import { boundNodePosition, getBgDimensions } from './background.js';
+import { boundNodePosition } from './background.js';
+import { showToast } from '../utils/toast.js';
+import { http } from '../utils/http.js';
+import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 
 let layoutRunning = false;
 
@@ -74,21 +77,16 @@ async function saveAllPositions() {
     });
     if (!updates.length) return;
     const toast = showToast('Сохранение', 'Сохранение позиций...', 'info', { autoHide: false });
+    beginSelfUpdate();
     try {
-        window.setSkipNextMapUpdate();
-        const res = await fetch('/api/devices/positions', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify(updates)
-        });
-        if (!res.ok) throw new Error(await getErrorMessage(res));
-        const data = await res.json();
+        const data = await http.put('/api/devices/positions', updates);
         showToast('Успешно', `Сохранены позиции ${data.updated} устройств`, 'success');
         if (typeof window.saveState === 'function') window.saveState('Авто-раскладка');
     } catch (err) {
         console.error(err);
         showToast('Ошибка', err.message, 'error');
     } finally {
+        endSelfUpdate();
         if (toast && toast.hide) toast.hide();
     }
 }

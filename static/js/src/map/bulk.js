@@ -1,4 +1,7 @@
 // bulk.js – массовое редактирование выбранных устройств
+import { http } from '../utils/http.js';
+import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
+
 let cy = null;
 
 export function initBulk(instance) {
@@ -80,21 +83,15 @@ async function applyBulkEdit() {
         if (center) { update.pos_x = Math.round(centerX); update.pos_y = Math.round(centerY); }
         if (monitoring !== '') update.monitoring_enabled = monitoring === 'true';
         if (Object.keys(update).length === 0) return;
-        promises.push(fetch(`/api/device/${node.id()}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-            body: JSON.stringify(update)
-        }));
+        promises.push(http.put(`/api/device/${node.id()}`, update));
     });
     if (!promises.length) { alert('Нет изменений'); return; }
 
-    // Устанавливаем флаг, чтобы не перезагружать карту на этой вкладке
-    window.setSkipNextMapUpdate();
+    beginSelfUpdate();
     try {
         await Promise.all(promises);
     } finally {
-        // Сбрасываем флаг через 500 мс, чтобы чужие изменения обрабатывались
-        setTimeout(() => window.clearSkipNextMapUpdate(), 10000);
+        endSelfUpdate();
     }
 
     // Восстановление viewport после перезагрузки карты (для других вкладок)

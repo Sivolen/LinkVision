@@ -3,6 +3,7 @@ import { boundNodePosition, setElementsLoaded, getBgImageSize } from './backgrou
 import { addPulsingNode } from './pulse.js';
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateAllGroups } from './groupResize.js';
+import { http } from '../utils/http.js';
 
 const wrapText = window.wrapText || ((text) => text);
 
@@ -198,23 +199,20 @@ export async function addDeviceToGraph(device) {
         let groupNode = cy.getElementById(`group_${device.group_id}`);
         if (!groupNode.length) {
             try {
-                const res = await fetch(`/api/map/${window.currentMapId}/groups`);
-                if (res.ok) {
-                    const groups = await res.json();
-                    const groupData = groups.find(g => g.id === device.group_id);
-                    if (groupData) {
-                        groupNode = cy.add({
-                            group: 'nodes',
-                            data: {
-                                id: `group_${groupData.id}`,
-                                name: groupData.name,
-                                color: groupData.color,
-                                isGroup: true,
-                                group_id: groupData.id,
-                                fontSize: groupData.font_size || 11
-                            }
-                        });
-                    }
+                const groupData = await http.get(`/api/map/${window.currentMapId}/groups`);
+                const group = groupData.find(g => g.id === device.group_id);
+                if (group) {
+                    groupNode = cy.add({
+                        group: 'nodes',
+                        data: {
+                            id: `group_${group.id}`,
+                            name: group.name,
+                            color: group.color,
+                            isGroup: true,
+                            group_id: group.id,
+                            fontSize: group.font_size || 11
+                        }
+                    });
                 }
             } catch (err) { console.error(err); }
         }

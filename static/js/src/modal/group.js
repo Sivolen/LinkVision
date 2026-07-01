@@ -3,9 +3,11 @@
  * Управление группами устройств
  */
 
-import { showToast } from './ui.js';
-import { escapeHtml, getErrorMessage } from './utils.js';
+import { showToast } from '../utils/toast.js';
+import { escapeHtml } from './utils.js';
 import { reloadMapWithViewportRestore } from './mapIntegration.js';
+import { http } from '../utils/http.js';
+import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 
 // Переменные модуля
 let currentGroupId = null;
@@ -139,20 +141,8 @@ function initFormHandler() {
                 ? { name, color, font_size: fontSize }
                 : { map_id: window.currentMapId, name, color, font_size: fontSize };
             
-            window.setSkipNextMapUpdate();
-            const res = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
-                },
-                body: JSON.stringify(body)
-            });
-
-            if (!res.ok) {
-                const errorMsg = await getErrorMessage(res);
-                throw new Error(errorMsg);
-            }
+            beginSelfUpdate();
+            const result = await http.post(url, body);
 
             showToast(isEdit ? 'Группа обновлена' : 'Группа создана', `Группа "${name}"`, 'success');
             resetGroupForm();
@@ -166,7 +156,7 @@ function initFormHandler() {
             if (btnText) btnText.classList.remove('d-none');
             if (btnLoader) btnLoader.classList.add('d-none');
             if (submitBtn) submitBtn.disabled = false;
-            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            endSelfUpdate();
         }
     });
 
@@ -228,12 +218,7 @@ async function loadGroupsList() {
     try {
         // Добавляем timestamp чтобы обойти кэш браузера
         const timestamp = Date.now();
-        const res = await fetch(`/api/map/${window.currentMapId}/groups?t=${timestamp}`);
-        Logger.info('Groups API response status:', res.status);
-
-        if (!res.ok) throw new Error('Ошибка: ' + res.status);
-
-        const groups = await res.json();
+        const groups = await http.get(`/api/map/${window.currentMapId}/groups?t=${timestamp}`);
         Logger.info('📦 Groups loaded:', groups);
 
         if (countBadge) countBadge.textContent = groups.length;
@@ -338,16 +323,9 @@ export function editGroup(id, name, color, fontSize) {
  */
 export async function deleteGroup(id, name) {
     window.confirmAction('Удаление группы', `Удалить группу "${name}"?`, async () => {
-        window.setSkipNextMapUpdate();
+        beginSelfUpdate();
         try {
-            const res = await fetch(`/api/group/${id}`, {
-                method: 'DELETE',
-                headers: { 'X-CSRFToken': getCsrfToken() }
-            });
-            if (!res.ok) {
-                const errorMsg = await getErrorMessage(res);
-                throw new Error(errorMsg);
-            }
+            await http.del(`/api/group/${id}`);
             showToast('Группа удалена', `Группа "${name}" удалена`, 'success');
 
             // Удаляем узел группы из графа немедленно
@@ -365,7 +343,7 @@ export async function deleteGroup(id, name) {
             Logger.error('Delete error:', err);
             showToast('Ошибка', err.message || 'Не удалось удалить группу', 'error');
         } finally {
-            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            endSelfUpdate();
         }
     });
 }
