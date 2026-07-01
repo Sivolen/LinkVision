@@ -1,6 +1,7 @@
 // undoRedo.js – управление историей позиций всех узлов (устройства, фигуры, группы)
 import { http } from '../utils/http.js';
 import { showToast } from '../utils/toast.js';
+import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 
 let history = [];
 let currentIndex = -1;
@@ -84,7 +85,7 @@ export function initUndoRedo(cy, getMapId) {
         const deviceUpdates = updates.filter(u => !u.id.startsWith('shape_'));
         const shapeUpdates = updates.filter(u => u.id.startsWith('shape_'));
 
-        window.setSkipNextMapUpdate();
+        beginSelfUpdate();
         const promises = [];
 
         // Все устройства — одним bulk-запросом
@@ -103,7 +104,7 @@ export function initUndoRedo(cy, getMapId) {
         }
 
         Promise.allSettled(promises).finally(() => {
-            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            endSelfUpdate();
         });
     }
     function updateButtons() {

@@ -7,6 +7,7 @@ import { showToast } from '../utils/toast.js';
 import { escapeHtml } from './utils.js';
 import { reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
+import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 
 // Переменные модуля
 let currentGroupId = null;
@@ -140,7 +141,7 @@ function initFormHandler() {
                 ? { name, color, font_size: fontSize }
                 : { map_id: window.currentMapId, name, color, font_size: fontSize };
             
-            window.setSkipNextMapUpdate();
+            beginSelfUpdate();
             const result = await http.post(url, body);
 
             showToast(isEdit ? 'Группа обновлена' : 'Группа создана', `Группа "${name}"`, 'success');
@@ -155,7 +156,7 @@ function initFormHandler() {
             if (btnText) btnText.classList.remove('d-none');
             if (btnLoader) btnLoader.classList.add('d-none');
             if (submitBtn) submitBtn.disabled = false;
-            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            endSelfUpdate();
         }
     });
 
@@ -322,7 +323,7 @@ export function editGroup(id, name, color, fontSize) {
  */
 export async function deleteGroup(id, name) {
     window.confirmAction('Удаление группы', `Удалить группу "${name}"?`, async () => {
-        window.setSkipNextMapUpdate();
+        beginSelfUpdate();
         try {
             await http.del(`/api/group/${id}`);
             showToast('Группа удалена', `Группа "${name}" удалена`, 'success');
@@ -342,7 +343,7 @@ export async function deleteGroup(id, name) {
             Logger.error('Delete error:', err);
             showToast('Ошибка', err.message || 'Не удалось удалить группу', 'error');
         } finally {
-            setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+            endSelfUpdate();
         }
     });
 }
