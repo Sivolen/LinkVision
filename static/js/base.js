@@ -231,7 +231,7 @@ let wasDisconnected = false;
                 Logger.error('Error deleting map:', err);
                 showToast('Ошибка', 'Не удалось удалить карту', 'error');
             })
-            .finally(() => setTimeout(() => window.clearSkipNextMapUpdate(), 2000));
+            .finally(() => window.clearSkipNextMapUpdate());
         });
     };
 
@@ -286,7 +286,7 @@ let wasDisconnected = false;
                         Logger.error(err);
                         alert(err.message || 'Ошибка при импорте');
                     })
-                    .finally(() => setTimeout(() => window.clearSkipNextMapUpdate(), 2000));
+                    .finally(() => window.clearSkipNextMapUpdate());
                 } catch (ex) {
                     alert('Некорректный JSON-файл');
                 }
@@ -491,6 +491,6 @@ if (editMapForm) {
             Logger.error(err);
             showToast('Ошибка', err.message || 'Ошибка при сохранении', 'error');
         })
-        .finally(() => setTimeout(() => window.clearSkipNextMapUpdate(), 2000));
+        .finally(() => window.clearSkipNextMapUpdate());
     });
 }
