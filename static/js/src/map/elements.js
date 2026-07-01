@@ -246,6 +246,8 @@ export async function addDeviceToGraph(device) {
         });
     });
     cy.style().update();
+    cy.resize(); // принудительный пересчёт размеров
+    console.log('✅ Device added to graph:', device.id);
 }
 
 export function removeDeviceFromGraph(deviceId) {
