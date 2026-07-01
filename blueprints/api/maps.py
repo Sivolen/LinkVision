@@ -201,8 +201,8 @@ def toggle_map_lock(map_id):
 
     Требует права редактирования карты.
     """
-    from models import Map, db
     from services.permissions import can_edit_map
+    from services import toggle_map_lock as toggle_map_lock_service
 
     map_obj = Map.query.get_or_404(map_id)
     data = request.json or {}
@@ -210,12 +210,11 @@ def toggle_map_lock(map_id):
     old_locked = map_obj.is_locked
 
     # Если не передано значение — переключаем
-    if "locked" not in data:
-        map_obj.is_locked = not map_obj.is_locked
-    else:
-        map_obj.is_locked = bool(data["locked"])
+    locked_value = data.get("locked") if "locked" in data else None
 
-    db.session.commit()
+    # Используем сервис для обновления
+    map_obj = toggle_map_lock_service(map_id, locked_value)
+
     notify_map_updated(map_id)
 
     # Аудит

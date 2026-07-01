@@ -108,6 +108,7 @@ def create_map():
 @login_required
 def map_view(map_id):
     from services.permissions import can_view_map, can_edit_map
+    from services import update_last_map_id
 
     map_obj = map_service.get_map_by_id(map_id)
     if not map_obj:
@@ -117,10 +118,8 @@ def map_view(map_id):
     if not can_view_map(map_id):
         abort(403)
 
-    # Сохраняем последнюю карту пользователя
-    if current_user.last_map_id != map_id:
-        current_user.last_map_id = map_id
-        db.session.commit()
+    # Сохраняем последнюю карту пользователя через сервис
+    update_last_map_id(current_user.id, map_id)
 
     # Получаем или создаём настройки для этого пользователя и карты
     settings = map_service.get_user_settings(current_user.id, map_id)

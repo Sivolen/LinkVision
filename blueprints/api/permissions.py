@@ -5,11 +5,15 @@ API роуты для управления правами доступа (Permis
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
-from models import Map, MapPermission, User, db
+from models import Map, MapPermission, User
 from services import (
     require_map_access,
     require_map_owner_or_admin,
     log_permission_action,
+    grant_map_permission,
+    grant_map_role_permission,
+    update_map_permission_role,
+    revoke_map_permission,
 )
 from utils.logger import api_logger
 
@@ -78,42 +82,38 @@ def add_map_permission(map_id):
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # Проверка на дубликат
-    existing = MapPermission.query.filter_by(map_id=map_id, user_id=user_id).first()
-    if existing:
-        return jsonify({"error": "Permission already exists for this user"}), 409
+    try:
+        # Создаём разрешение через сервис
+        perm = grant_map_permission(map_id, user_id, role)
 
-    # Создаём разрешение
-    perm = MapPermission(map_id=map_id, user_id=user_id, role=role)
-    db.session.add(perm)
-    db.session.commit()
+        # Аудит
+        log_permission_action(
+            action="add_permission",
+            map_id=map_id,
+            map_name=map_obj.name,
+            user_id=user_id,
+            role=role,
+            new_values={"user_id": user_id, "role": role},
+        )
 
-    # Аудит
-    log_permission_action(
-        action="add_permission",
-        map_id=map_id,
-        map_name=map_obj.name,
-        user_id=user_id,
-        role=role,
-        new_values={"user_id": user_id, "role": role},
-    )
+        api_logger.info(
+            f"Permission added: map_id={map_id}, user_id={user_id}, role={role}, by={current_user.id}"
+        )
 
-    api_logger.info(
-        f"Permission added: map_id={map_id}, user_id={user_id}, role={role}, by={current_user.id}"
-    )
-
-    return (
-        jsonify(
-            {
-                "id": perm.id,
-                "map_id": map_id,
-                "user_id": user_id,
-                "username": user.username,
-                "role": role,
-            }
-        ),
-        201,
-    )
+        return (
+            jsonify(
+                {
+                    "id": perm.id,
+                    "map_id": map_id,
+                    "user_id": user_id,
+                    "username": user.username,
+                    "role": role,
+                }
+            ),
+            201,
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
 
 
 @permissions_bp.route("/map/<int:map_id>/permissions/<int:perm_id>", methods=["PUT"])
@@ -143,8 +143,8 @@ def update_map_permission(map_id, perm_id):
         return jsonify({"error": "Invalid role"}), 400
 
     if role:
-        perm.role = role
-        db.session.commit()
+        # Обновляем через сервис
+        perm = update_map_permission_role(perm_id, role)
 
         # Аудит
         log_permission_action(
@@ -186,8 +186,8 @@ def delete_map_permission(map_id, perm_id):
     perm_user_id = perm.user_id
     perm_role = perm.role
 
-    db.session.delete(perm)
-    db.session.commit()
+    # Удаляем через сервис
+    revoke_map_permission(perm_id)
 
     # Аудит
     log_permission_action(
@@ -224,18 +224,14 @@ def add_map_role_permission(map_id):
     if not role or role not in ["viewer", "editor"]:
         return jsonify({"error": "Invalid role. Must be 'viewer' or 'editor'"}), 400
 
-    # Проверка на дубликат
-    existing = MapPermission.query.filter_by(map_id=map_id, role=role).first()
-    if existing:
-        return jsonify({"error": "Role permission already exists"}), 409
+    try:
+        # Создаём разрешение через сервис
+        perm = grant_map_role_permission(map_id, role)
 
-    # Создаём разрешение
-    perm = MapPermission(map_id=map_id, role=role)
-    db.session.add(perm)
-    db.session.commit()
+        api_logger.info(
+            f"Role permission added: map_id={map_id}, role={role}, by={current_user.id}"
+        )
 
-    api_logger.info(
-        f"Role permission added: map_id={map_id}, role={role}, by={current_user.id}"
-    )
-
-    return jsonify({"id": perm.id, "map_id": map_id, "role": role}), 201
+        return jsonify({"id": perm.id, "map_id": map_id, "role": role}), 201
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409

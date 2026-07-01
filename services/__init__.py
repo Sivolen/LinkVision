@@ -21,10 +21,23 @@ from . import monitor
 from . import audit_service
 from . import security_service
 
+from . import permission_service
+
 # Экспорт для удобного использования
+from .permission_service import (
+    grant_map_permission,
+    grant_map_role_permission,
+    update_map_permission_role,
+    revoke_map_permission,
+)
 from .map_service import (
     invalidate_sidebar_cache,
     invalidate_groups_cache,
+    toggle_map_lock,
+)
+from .user_service import (
+    update_last_map_id,
+    change_user_password,
 )
 from .device_type_service import get_cached_types, invalidate_types_cache
 from .permissions import (
@@ -82,8 +95,12 @@ __all__ = [
     "settings_service",
     "monitor",
     "audit_service",
+    "permission_service",
     "invalidate_sidebar_cache",
     "invalidate_groups_cache",
+    "toggle_map_lock",
+    "update_last_map_id",
+    "change_user_password",
     # Типы устройств
     "get_cached_types",
     "invalidate_types_cache",
