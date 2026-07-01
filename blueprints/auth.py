@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
+from extensions import db
 
-from forms import LoginForm, RegisterForm
+from forms import LoginForm, RegisterForm, ChangePasswordForm
 from services import user_service, rate_limit, log_auth_action, validate_password_full
 from utils.logger import auth_logger
 
@@ -27,6 +28,10 @@ def login():
             log_auth_action("login", user.id, user.username)
             auth_logger.info(f"User logged in: {user.username}")
 
+            # Если требуется смена пароля — перенаправляем на страницу смены
+            if user.must_change_password:
+                return redirect(url_for("auth.change_password"))
+
             next_page = request.args.get("next")
             return (
                 redirect(next_page)
@@ -48,6 +53,33 @@ def logout():
     auth_logger.info(f"User logged out: {current_user.username}")
     logout_user()
     return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    """Смена пароля при первом входе или по требованию."""
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if not current_user.check_password(form.current_password.data):
+            flash("Неверный текущий пароль", "error")
+            return redirect(url_for("auth.change_password"))
+
+        is_valid, error = validate_password_full(form.new_password.data, current_user.username)
+        if not is_valid:
+            flash(f"Слабый пароль: {error}", "error")
+            return redirect(url_for("auth.change_password"))
+
+        current_user.set_password(form.new_password.data)
+        current_user.must_change_password = False
+        db.session.commit()
+
+        log_auth_action("password_changed", current_user.id, current_user.username)
+        auth_logger.info(f"Пароль изменён: {current_user.username}")
+        flash("Пароль успешно изменён. Теперь используйте новый пароль.", "success")
+        return redirect(url_for("main.dashboard"))
+
+    return render_template("auth/change_password.html", form=form)
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
