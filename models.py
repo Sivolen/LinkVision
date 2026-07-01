@@ -46,7 +46,7 @@ class Device(db.Model):
     )
     id = db.Column(db.Integer, primary_key=True)
     map_id = db.Column(db.Integer, db.ForeignKey("map.id"), index=True)
-    type_id = db.Column(db.Integer, db.ForeignKey("device_type.id"))
+    type_id = db.Column(db.Integer, db.ForeignKey("device_type.id"), index=True)
     name = db.Column(db.String(64))
     ips = db.relationship(
         "DeviceIP", back_populates="device", cascade="all, delete-orphan"
@@ -178,7 +178,7 @@ class Group(db.Model):
     name = db.Column(db.String(64), nullable=False)
     color = db.Column(db.String(7), default="#3498db")  # hex-код цвета
     font_size = db.Column(db.Integer, default=11)
-    map_id = db.Column(db.Integer, db.ForeignKey("map.id"))
+    map_id = db.Column(db.Integer, db.ForeignKey("map.id"), index=True)
     map = db.relationship("Map", backref="groups")
     devices = db.relationship("Device", backref="group", lazy="dynamic")
 

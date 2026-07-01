@@ -322,6 +322,126 @@ export function removeLinkFromGraph(linkId) {
     if (cy) cy.getElementById(String(linkId)).remove();
 }
 
+export function addLinkToGraph(linkData) {
+    const cy = getCy();
+    if (!cy) return;
+
+    const srcId = String(linkData.source_device_id);
+    const tgtId = String(linkData.target_device_id);
+    const linkId = `link_${String(linkData.id)}`;
+
+    // Проверим, не существует ли уже
+    if (cy.getElementById(linkId).length) return;
+
+    const parts = (linkData.label || `${linkData.source_interface || 'eth0'}↔${linkData.target_interface || 'eth0'}`).split('↔');
+
+    cy.batch(() => {
+        cy.add({
+            group: 'edges',
+            data: {
+                id: linkId,
+                source: srcId,
+                target: tgtId,
+                label: linkData.label || `${linkData.source_interface || 'eth0'}↔${linkData.target_interface || 'eth0'}`,
+                link_type: linkData.link_type,
+                color: linkData.line_color || '#6c757d',
+                width: linkData.line_width || 2,
+                style: linkData.line_style || 'solid',
+                font_size: linkData.font_size || 8,
+                srcIface: parts[0].trim(),
+                tgtIface: parts[1].trim(),
+            }
+        });
+    });
+    cy.style().update();
+}
+
+export function updateLinkInGraph(linkData) {
+    const cy = getCy();
+    if (!cy) return;
+
+    const linkId = `link_${String(linkData.id)}`;
+    const edge = cy.getElementById(linkId);
+    if (!edge.length) return;
+
+    edge.data({
+        label: linkData.label || edge.data('label'),
+        link_type: linkData.link_type,
+        color: linkData.line_color || edge.data('color'),
+        width: linkData.line_width || edge.data('width'),
+        style: linkData.line_style || edge.data('style'),
+        font_size: linkData.font_size || edge.data('font_size'),
+    });
+    cy.style().update();
+}
+
+export function updateDevicePositionInGraph(deviceId, x, y) {
+    const cy = getCy();
+    if (!cy) return;
+
+    const node = cy.getElementById(String(deviceId));
+    if (!node.length) return;
+
+    node.position({ x, y });
+    // Обновим метки рёбер и размеры групп
+    if (typeof window.updateAllEdgeLabels === 'function') window.updateAllEdgeLabels();
+    if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
+}
+
+export function updateGroupInGraph(groupData) {
+    const cy = getCy();
+    if (!cy) return;
+
+    const groupId = `group_${groupData.id}`;
+    const groupNode = cy.getElementById(groupId);
+    if (!groupNode.length) return;
+
+    groupNode.data({
+        name: groupData.name,
+        color: groupData.color,
+        fontSize: groupData.font_size || groupNode.data('fontSize'),
+    });
+    if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
+    cy.style().update();
+}
+
+export function addGroupToGraph(groupData) {
+    const cy = getCy();
+    if (!cy) return;
+
+    const groupId = `group_${groupData.id}`;
+    if (cy.getElementById(groupId).length) return;
+
+    cy.batch(() => {
+        cy.add({
+            group: 'nodes',
+            data: {
+                id: groupId,
+                name: groupData.name,
+                color: groupData.color,
+                isGroup: true,
+                group_id: groupData.id,
+                fontSize: groupData.font_size || 11,
+            }
+        });
+    });
+    cy.style().update();
+}
+
+export function removeGroupFromGraph(groupId) {
+    const cy = getCy();
+    if (!cy) return;
+
+    const groupIdStr = `group_${groupId}`;
+    const groupNode = cy.getElementById(groupIdStr);
+    if (groupNode.length) {
+        // Удалим группу, но не детей — они останутся без родителя
+        groupNode.unwrap();
+        groupNode.remove();
+        if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
+    }
+}
+
 export function reloadMapElements(force = false) {
     const mapId = window.currentMapId;
     if (mapId) loadElements(mapId, force);

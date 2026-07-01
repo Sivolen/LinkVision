@@ -32,4 +32,15 @@ export function updateAllGroups() {
         groupUpdateTimeout = null;
     }, GROUP_UPDATE_DELAY);
 }
+
+/**
+ * Очистка таймеров при перезагрузке карты
+ */
+export function cleanup() {
+    if (groupUpdateTimeout) {
+        clearTimeout(groupUpdateTimeout);
+        groupUpdateTimeout = null;
+    }
+}
+
 window.updateAllGroups = updateAllGroups;

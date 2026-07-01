@@ -73,6 +73,7 @@ export function initLock(instance) {
 
     // Подписка на обновления блокировки от других клиентов
     if (window.socket) {
+        window.socket.off('map_lock_updated'); // Очищаем старый слушатель перед новым
         window.socket.on('map_lock_updated', (data) => {
             if (Number(data.map_id) === Number(currentMapId)) {
                 mapLockStates.set(currentMapId, data.is_locked);
@@ -84,6 +85,17 @@ export function initLock(instance) {
             }
         });
     }
+}
+
+/**
+ * Очистка слушателей и состояния при смене карты
+ */
+export function cleanup() {
+    if (window.socket) {
+        window.socket.off('map_lock_updated');
+    }
+    mapLockStates.clear();
+    window.dragLocked = false;
 }
 
 /**

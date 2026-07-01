@@ -49,3 +49,13 @@ export function updateAllEdgeLabels() {
         updateTimeout = null;
     }, UPDATE_DELAY);
 }
+
+/**
+ * Очистка таймеров при перезагрузке карты
+ */
+export function cleanup() {
+    if (updateTimeout) {
+        clearTimeout(updateTimeout);
+        updateTimeout = null;
+    }
+}

@@ -33,12 +33,12 @@ def run_migration():
             print("Table device_ips already exists.")
 
         # 2. Перенос IP из старой колонки, если она есть
-        columns = [c["name"] for c in inspector.get_columns("devices")]
+        columns = [c["name"] for c in inspector.get_columns("device")]
         if "ip_address" in columns:
             print("Migrating IP addresses...")
             rows = conn.execute(
                 text(
-                    "SELECT id, ip_address FROM devices WHERE ip_address IS NOT NULL AND ip_address != ''"
+                    "SELECT id, ip_address FROM device WHERE ip_address IS NOT NULL AND ip_address != ''"
                 )
             ).fetchall()
             for dev_id, ip in rows:
@@ -56,25 +56,25 @@ def run_migration():
                         {"dev_id": dev_id, "ip": ip},
                     )
             conn.commit()
-            conn.execute(text("ALTER TABLE devices DROP COLUMN ip_address"))
+            conn.execute(text("ALTER TABLE device DROP COLUMN ip_address"))
             conn.commit()
         else:
             print("Column ip_address already removed.")
 
         # 3. Преобразование status в строку
         status_col = next(
-            (c for c in inspector.get_columns("devices") if c["name"] == "status"), None
+            (c for c in inspector.get_columns("device") if c["name"] == "status"), None
         )
         if status_col and str(status_col["type"]) == "BOOLEAN":
             print("Converting status column...")
-            conn.execute(text("ALTER TABLE devices ADD COLUMN status_new VARCHAR(10)"))
+            conn.execute(text("ALTER TABLE device ADD COLUMN status_new VARCHAR(10)"))
             conn.execute(
                 text(
-                    "UPDATE devices SET status_new = CASE WHEN status = 1 THEN 'up' ELSE 'down' END"
+                    "UPDATE device SET status_new = CASE WHEN status = 1 THEN 'up' ELSE 'down' END"
                 )
             )
-            conn.execute(text("ALTER TABLE devices DROP COLUMN status"))
-            conn.execute(text("ALTER TABLE devices RENAME COLUMN status_new TO status"))
+            conn.execute(text("ALTER TABLE device DROP COLUMN status"))
+            conn.execute(text("ALTER TABLE device RENAME COLUMN status_new TO status"))
             conn.commit()
         else:
             print("Status column already converted.")
@@ -130,5 +130,51 @@ def run_migration():
         print("Migration completed successfully!")
 
 
+def add_indexes():
+    """Добавление недостающих индексов для оптимизации запросов (пункт 3.4)."""
+    engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+    inspector = inspect(engine)
+
+    with engine.connect() as conn:
+        # 1. Индекс на Device.type_id
+        if not inspector.has_table("device"):
+            print("Table device not found, skipping index creation.")
+            return
+
+        # Проверяем наличие индекса для type_id
+        indexes = [idx["name"] for idx in inspector.get_indexes("device")]
+        type_id_index_name = "idx_device_type_id"
+
+        if type_id_index_name not in indexes:
+            print(f"Creating index {type_id_index_name} on device.type_id...")
+            conn.execute(text(f"CREATE INDEX {type_id_index_name} ON device (type_id)"))
+            conn.commit()
+            print(f"Index {type_id_index_name} created.")
+        else:
+            print(f"Index {type_id_index_name} already exists.")
+
+        # 2. Индекс на Group.map_id
+        if not inspector.has_table("groups"):
+            print("Table groups not found, skipping index creation.")
+            return
+
+        indexes = [idx["name"] for idx in inspector.get_indexes("groups")]
+        group_map_id_index_name = "idx_group_map_id"
+
+        if group_map_id_index_name not in indexes:
+            print(f"Creating index {group_map_id_index_name} on groups.map_id...")
+            conn.execute(text(f"CREATE INDEX {group_map_id_index_name} ON groups (map_id)"))
+            conn.commit()
+            print(f"Index {group_map_id_index_name} created.")
+        else:
+            print(f"Index {group_map_id_index_name} already exists.")
+
+        print("Index migration completed successfully!")
+
+
 if __name__ == "__main__":
-    run_migration()
+    # Проверяем аргументы командной строки
+    if len(sys.argv) > 1 and sys.argv[1] == "--indexes":
+        add_indexes()
+    else:
+        run_migration()
