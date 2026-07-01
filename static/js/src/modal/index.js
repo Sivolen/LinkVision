@@ -9,11 +9,12 @@ import { initGroupModal, openGroupManager, editGroup, deleteGroup } from './grou
 import { initShapeModal, openShapeModal, saveShape, deleteShape } from './shape.js';
 import { initHistoryModal, loadHistory, loadHistoryPage } from './history.js';
 import { initIpManagement, addIpRow, getIpsFromForm, setIpsInForm } from './ipManager.js';
-import { initToast, showToast } from './ui.js';
+import { showToast, initToast } from '../utils/toast.js';
 import { initUtils, escapeHtml, getErrorMessage, formatDateTime, getStatusBadgeClass } from './utils.js';
 import { initMapIntegration, withViewportRestore, reloadMapWithViewportRestore } from './mapIntegration.js';
 import { initLinkModal, openLinkModal, openLinkModalForEdit, confirmCreateLink, deleteLink } from './link.js';
 import { openPermissionsModal, addPermission, addRolePermission } from './permissions.js';
+import { http } from '../utils/http.js';
 
 // Экспорт для глобального доступа
 window.openDeviceModal = openDeviceModal;
@@ -47,14 +48,7 @@ export function exportMap() {
         showToast('Ошибка', 'Не удалось определить карту', 'error');
         return;
     }
-    fetch(`/api/map/${mapId}/export`, {
-        method: 'GET',
-        headers: { 'X-CSRFToken': getCsrfToken() }
-    })
-    .then(async res => {
-        if (!res.ok) throw new Error(await getErrorMessage(res));
-        return res.json();
-    })
+    http.get(`/api/map/${mapId}/export`)
     .then(async data => {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const fileName = `map_${mapId}_export.json`;

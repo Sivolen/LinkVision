@@ -5,9 +5,10 @@
 
 // Импорты
 import { addIpRow, getIpsFromForm, setIpsInForm } from './ipManager.js';
-import { showToast } from './ui.js';
-import { escapeHtml, getErrorMessage } from './utils.js';
+import { showToast } from '../utils/toast.js';
+import { getErrorMessage } from './utils.js';
 import { withViewportRestore, reloadMapWithViewportRestore } from './mapIntegration.js';
+import { http } from '../utils/http.js';
 
 // Глобальные переменные модуля
 let deviceModal = null;
@@ -22,8 +23,7 @@ let historyPerPage = 10;
 function loadDeviceTypes(selectEl, callback) {
     if (!selectEl) return;
     
-    fetch('/api/types')
-        .then(res => res.ok ? res.json() : [])
+    http.get('/api/types')
         .then(types => {
             window.deviceTypes = types;
             selectEl.innerHTML = '<option value="">-- Выберите тип --</option>';
@@ -67,14 +67,28 @@ function loadGroups(selectEl, selectedGroupId) {
 }
 
 /**
- * Открыть модальное окно устройства
+ * Загрузить типы устройств
  */
-export function openDeviceModal(node) {
-    if (!deviceModal) {
-        const el = document.getElementById('deviceModal');
-        if (el) deviceModal = new bootstrap.Modal(el);
-        else return;
-    }
+function loadDeviceTypes(selectEl, callback) {
+    if (!selectEl) return;
+
+    http.get('/api/types')
+        .then(types => {
+            window.deviceTypes = types;
+            selectEl.innerHTML = '<option value="">-- Выберите тип --</option>';
+            types.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t.id;
+                option.textContent = t.name;
+                selectEl.appendChild(option);
+            });
+            if (callback) callback();
+        })
+        .catch(err => {
+            Logger.error('Ошибка загрузки типов:', err);
+            if (callback) callback();
+        });
+}
 
     const devId = document.getElementById('dev_id');
     const devName = document.getElementById('dev_name');
@@ -239,17 +253,7 @@ export async function saveDevice() {
     window.setSkipNextMapUpdate();
 
     try {
-        const res = await fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
-            },
-            body: JSON.stringify(data)
-        });
-
-        if (!res.ok) throw new Error(await getErrorMessage(res));
-        const result = await res.json();
+        const result = await http.put(url, data);
 
         if (!devId) {
             const newDevice = {
@@ -322,27 +326,7 @@ export function deleteDevice(deviceId) {
         window.setSkipNextMapUpdate();
         
         try {
-            const res = await fetch(`/api/device/${deviceId}`, {
-                method: 'DELETE',
-                headers: { 'X-CSRFToken': getCsrfToken() }
-            });
-
-            if (res.status === 404) {
-                if (typeof window.removeDeviceFromGraph === 'function') {
-                    window.removeDeviceFromGraph(deviceId);
-                }
-
-                await reloadMapWithViewportRestore();
-
-                deviceModal.hide();
-                showToast('Успешно', 'Устройство удалено', 'success');
-                return;
-            }
-
-            if (!res.ok) {
-                const errorMsg = await getErrorMessage(res);
-                throw new Error(errorMsg);
-            }
+            const result = await http.del(`/api/device/${deviceId}`);
 
             if (typeof window.removeDeviceFromGraph === 'function') {
                 window.removeDeviceFromGraph(deviceId);

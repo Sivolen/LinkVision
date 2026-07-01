@@ -1,4 +1,7 @@
 // undoRedo.js – управление историей позиций всех узлов (устройства, фигуры, группы)
+import { http } from '../utils/http.js';
+import { showToast } from '../utils/toast.js';
+
 let history = [];
 let currentIndex = -1;
 let maxHistory = 50;
@@ -87,16 +90,7 @@ export function initUndoRedo(cy, getMapId) {
         // Все устройства — одним bulk-запросом
         if (deviceUpdates.length) {
             promises.push(
-                fetch('/api/devices/positions', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken(),
-                    },
-                    body: JSON.stringify(
-                        deviceUpdates.map((u) => ({ id: u.id, x: u.x, y: u.y }))
-                    ),
-                })
+                http.put('/api/devices/positions', deviceUpdates.map((u) => ({ id: u.id, x: u.x, y: u.y })))
             );
         }
 
@@ -104,14 +98,7 @@ export function initUndoRedo(cy, getMapId) {
         for (const upd of shapeUpdates) {
             const shapeId = upd.id.replace('shape_', '');
             promises.push(
-                fetch(`/api/shape/${shapeId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken(),
-                    },
-                    body: JSON.stringify({ x: upd.x, y: upd.y }),
-                })
+                http.put(`/api/shape/${shapeId}`, { x: upd.x, y: upd.y })
             );
         }
 

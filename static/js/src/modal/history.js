@@ -4,7 +4,7 @@
  */
 
 import { formatDateTime, getStatusBadgeClass } from './utils.js';
-import { showToast } from './ui.js';
+import { showToast } from '../utils/toast.js';
 
 // Переменные модуля
 let currentDeviceId = null;

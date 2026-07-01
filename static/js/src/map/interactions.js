@@ -5,6 +5,8 @@ import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes
 import { updateEdgeLabelsForNode } from './edgeLabels.js';
 import { updateGroupsForNode, updateAllGroups } from './groupResize.js';
 import { isDragLocked } from './lock.js';
+import { showToast } from '../utils/toast.js';
+import { http } from '../utils/http.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
@@ -109,11 +111,7 @@ export function initInteractions(cy) {
         clearTimeout(dragTimeouts[node.id()]);
         dragTimeouts[node.id()] = setTimeout(() => {
             window.setSkipNextMapUpdate();
-            fetch(`/api/device/${node.id()}/position`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
-            })
+            http.put(`/api/device/${node.id()}/position`, { x: Math.round(pos.x), y: Math.round(pos.y) })
             .then(() => {
                 if (typeof window.saveState === 'function') window.saveState('Перемещение устройства');
             })
@@ -159,11 +157,7 @@ export function initInteractions(cy) {
             window.setSkipNextMapUpdate();  // устанавливаем флаг перед запросами
 
             const promises = deviceUpdates.map(upd =>
-                fetch(`/api/device/${upd.id}/position`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                    body: JSON.stringify({ x: upd.x, y: upd.y })
-                })
+                http.put(`/api/device/${upd.id}/position`, { x: upd.x, y: upd.y })
             );
 
             Promise.all(promises)
@@ -195,14 +189,9 @@ export function initInteractions(cy) {
         clearTimeout(dragTimeouts[shapeId]);
         dragTimeouts[shapeId] = setTimeout(() => {
             window.setSkipNextMapUpdate();
-            fetch(`/api/shape/${shapeId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                body: JSON.stringify({ x: Math.round(pos.x), y: Math.round(pos.y) })
-            })
+            http.put(`/api/shape/${shapeId}`, { x: Math.round(pos.x), y: Math.round(pos.y) })
             .catch(err => console.error('Error saving shape position:', err))
             .finally(() => {
-                // Увеличено до 2 секунд чтобы гарантированно пропустить map_updated событие
                 setTimeout(() => window.clearSkipNextMapUpdate(), 2000);
             });
             delete dragTimeouts[shapeId];
@@ -243,21 +232,12 @@ export function initInteractions(cy) {
             window.setSkipNextMapUpdate();   // ставим флаг
 
             // Отправляем один массовый запрос вместо многих
-            fetch('/api/devices/positions', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                body: JSON.stringify(updates)
-            })
+            http.put('/api/devices/positions', updates)
             .then(response => {
-                if (!response.ok) throw new Error('Failed to update positions');
-                return response.json();
-            })
-            .then(() => {
                 if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
             })
             .catch(err => console.error('Error moving group:', err))
             .finally(() => {
-                // Сбрасываем флаг через 2 секунды – достаточно, чтобы пережить одно приходящее map_updated
                 setTimeout(() => window.clearSkipNextMapUpdate(), 10000);
             });
 
