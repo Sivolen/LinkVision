@@ -7,6 +7,7 @@ import { updateGroupsForNode, updateAllGroups } from './groupResize.js';
 import { isDragLocked } from './lock.js';
 import { showToast } from '../utils/toast.js';
 import { http } from '../utils/http.js';
+import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
@@ -110,16 +111,16 @@ export function initInteractions(cy) {
         updateEdgeLabelsForNode(node);
         clearTimeout(dragTimeouts[node.id()]);
         dragTimeouts[node.id()] = setTimeout(() => {
-            window.setSkipNextMapUpdate();
+            beginSelfUpdate();
             http.put(`/api/device/${node.id()}/position`, { x: Math.round(pos.x), y: Math.round(pos.y) })
             .then(() => {
                 if (typeof window.saveState === 'function') window.saveState('Перемещение устройства');
             })
             .catch(err => console.error(err))
             .finally(() => {
-                setTimeout(() => window.clearSkipNextMapUpdate(), 500);
+                endSelfUpdate();
+                delete dragTimeouts[node.id()];
             });
-            delete dragTimeouts[node.id()];
         }, 500);
     });
     // Групповое перетаскивание
@@ -154,7 +155,7 @@ export function initInteractions(cy) {
         clearTimeout(groupBatchTimeout);
         updateAllGroups();
         groupBatchTimeout = setTimeout(() => {
-            window.setSkipNextMapUpdate();  // устанавливаем флаг перед запросами
+            beginSelfUpdate();
 
             const promises = deviceUpdates.map(upd =>
                 http.put(`/api/device/${upd.id}/position`, { x: upd.x, y: upd.y })
@@ -166,8 +167,7 @@ export function initInteractions(cy) {
                 })
                 .catch(console.error)
                 .finally(() => {
-                    // Сбрасываем флаг через 500 мс, чтобы map_updated от своего же запроса был проигнорирован
-                    setTimeout(() => window.clearSkipNextMapUpdate(), 10000);
+                    endSelfUpdate();
                 });
         }, 500);
         selectedNodes.forEach(n => delete n._private.scratch._dragStartPos);
@@ -188,13 +188,13 @@ export function initInteractions(cy) {
         const shapeId = node.id().replace('shape_', '');
         clearTimeout(dragTimeouts[shapeId]);
         dragTimeouts[shapeId] = setTimeout(() => {
-            window.setSkipNextMapUpdate();
+            beginSelfUpdate();
             http.put(`/api/shape/${shapeId}`, { x: Math.round(pos.x), y: Math.round(pos.y) })
             .catch(err => console.error('Error saving shape position:', err))
             .finally(() => {
-                setTimeout(() => window.clearSkipNextMapUpdate(), 2000);
+                endSelfUpdate();
+                delete dragTimeouts[shapeId];
             });
-            delete dragTimeouts[shapeId];
         }, 500);
         if (typeof window.saveState === 'function') window.saveState('Перемещение фигуры');
     });
@@ -229,7 +229,7 @@ export function initInteractions(cy) {
 
         clearTimeout(dragTimeouts[groupNode.id()]);
         dragTimeouts[groupNode.id()] = setTimeout(() => {
-            window.setSkipNextMapUpdate();   // ставим флаг
+            beginSelfUpdate();
 
             // Отправляем один массовый запрос вместо многих
             http.put('/api/devices/positions', updates)
@@ -238,10 +238,9 @@ export function initInteractions(cy) {
             })
             .catch(err => console.error('Error moving group:', err))
             .finally(() => {
-                setTimeout(() => window.clearSkipNextMapUpdate(), 10000);
+                endSelfUpdate();
+                delete dragTimeouts[groupNode.id()];
             });
-
-            delete dragTimeouts[groupNode.id()];
         }, 500);
     });
 
