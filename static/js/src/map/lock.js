@@ -8,6 +8,9 @@ let currentMapId = null;
 // Состояние блокировки хранится для каждой карты отдельно
 const mapLockStates = new Map();
 
+// Вешаем слушатель загрузки элементов один раз
+let elementsLoadedHooked = false;
+
 /**
  * Инициализация модуля блокировки
  */
@@ -16,6 +19,17 @@ export function initLock(instance) {
     currentMapId = window.currentMapId || null;
 
     console.log('🔒 initLock called, mapId:', currentMapId);
+
+    // После (пере)загрузки элементов заново применяем passthrough к свежим
+    // группам/фигурам: при открытии уже заблокированной карты они добавляются
+    // в граф ПОСЛЕ applyDragLockToCanvas, поэтому иначе не получают events:'no'
+    // и продолжают перехватывать клик вместо пропускания пана.
+    if (!elementsLoadedHooked) {
+        elementsLoadedHooked = true;
+        window.addEventListener('elements:loaded', () => {
+            if (isDragLocked()) applyDragLockToCanvas(true);
+        });
+    }
 
     // Инициализируем window.dragLocked для совместимости
     window.dragLocked = false;
