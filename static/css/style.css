@@ -954,14 +954,15 @@ body.resizing-sidebar .main-content {
   position: absolute;
   right: 12px;
   bottom: 12px;
-  width: 210px;   /* максимальная область (используется для расчёта масштаба) */
-  height: 150px;
+  width: 410px;   /* максимальная область (используется для расчёта масштаба) */
+  height: 350px;
   z-index: 6;
   display: flex;
   align-items: flex-end;      /* прижимаем снимок к правому-нижнему углу */
   justify-content: flex-end;
   background: transparent;    /* фон убран, чтобы не было пустых полей вокруг */
   pointer-events: none;       /* кликается только внутренний блок */
+  padding: 6px;
 }
 /* Видимая «рамка» обтягивает сам снимок — без белых полос по краям */
 .minimap-inner {
@@ -985,7 +986,7 @@ body.resizing-sidebar .main-content {
   position: absolute;
   border: 2px solid var(--accent-color);
   background: rgba(70, 130, 180, 0.15);
-  border-radius: 2px;
+  border-radius: 10px;
   pointer-events: none;
 }
 
