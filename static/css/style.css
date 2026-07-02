@@ -280,6 +280,28 @@ body.resizing-sidebar .main-content {
   transition: none;
 }
 
+/* Кастомный тултип с названием карты при свёрнутом сайдбаре */
+.sidebar-tooltip {
+  position: fixed;
+  transform: translateY(-50%);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+  z-index: 3000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.sidebar-tooltip.visible {
+  opacity: 1;
+}
+
 /* Свёрнутый сайдбар */
 .sidebar.collapsed {
   width: 80px;
