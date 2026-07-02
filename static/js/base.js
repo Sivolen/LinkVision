@@ -345,6 +345,41 @@ let wasDisconnected = false;
             });
         })();
 
+        // Кастомный тултип с названием карты, когда сайдбар свёрнут
+        // (названия скрыты, показываем их по наведению рядом с пунктом).
+        (function setupCollapsedMapTooltip() {
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar) return;
+            let tip = null;
+
+            const hide = () => { if (tip) tip.classList.remove('visible'); };
+
+            sidebar.addEventListener('mouseover', (e) => {
+                if (!sidebar.classList.contains('collapsed')) return;
+                const item = e.target.closest('.map-item');
+                if (!item) return;
+                const nameEl = item.querySelector('.map-item-name');
+                const name = (nameEl ? nameEl.textContent : item.textContent).trim();
+                if (!name) return;
+                if (!tip) {
+                    tip = document.createElement('div');
+                    tip.className = 'sidebar-tooltip';
+                    document.body.appendChild(tip);
+                }
+                tip.textContent = name;
+                const r = item.getBoundingClientRect();
+                tip.style.top = (r.top + r.height / 2) + 'px';
+                tip.style.left = (r.right + 12) + 'px';
+                tip.classList.add('visible');
+            });
+            sidebar.addEventListener('mouseout', (e) => {
+                if (e.target.closest('.map-item')) hide();
+            });
+            // Прячем тултип при уходе мыши и при сворачивании/разворачивании
+            sidebar.addEventListener('mouseleave', hide);
+            sidebar.addEventListener('transitionend', hide);
+        })();
+
         const savedSidebar = localStorage.getItem('sidebarCollapsed');
         if (savedSidebar === 'true') {
             const sidebar = document.getElementById('sidebar');
