@@ -954,22 +954,25 @@ body.resizing-sidebar .main-content {
   position: absolute;
   right: 12px;
   bottom: 12px;
-  width: 210px;
+  width: 210px;   /* максимальная область (используется для расчёта масштаба) */
   height: 150px;
   z-index: 6;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
+  align-items: flex-end;      /* прижимаем снимок к правому-нижнему углу */
+  justify-content: flex-end;
+  background: transparent;    /* фон убран, чтобы не было пустых полей вокруг */
+  pointer-events: none;       /* кликается только внутренний блок */
+}
+/* Видимая «рамка» обтягивает сам снимок — без белых полос по краям */
+.minimap-inner {
+  position: relative;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 10px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
   overflow: hidden;
+  pointer-events: auto;
   cursor: pointer;
-}
-.minimap-inner {
-  position: relative;
 }
 .minimap-img {
   display: block;
