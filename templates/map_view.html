@@ -4,7 +4,8 @@
 {% set is_operator = is_operator|default(false) %}
 
 <script>
-    window.isOperator = {{ 'true' if is_operator else 'false' }};
+    // Устанавливаем data-map-id на body (body находится в base.html)
+    document.body.dataset.mapId = {{ map.id if map else 'null' }};
 </script>
 
 <div class="toolbar">
@@ -706,14 +707,4 @@
 <script src="{{ url_for('static', filename='js/dist/common.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dist/map.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dist/modal.min.js') }}"></script>
-<script>
-    window.currentMapId = {% if map %}{{ map.id }}{% else %}null{% endif %};
-    document.addEventListener('DOMContentLoaded', function() {
-        if (typeof initMap === 'function') {
-            initMap(window.currentMapId);
-        } else {
-            console.error('initMap not defined');
-        }
-    });
-</script>
 {% endblock %}
