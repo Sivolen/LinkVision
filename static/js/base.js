@@ -373,11 +373,17 @@ let wasDisconnected = false;
                 tip.classList.add('visible');
             });
             sidebar.addEventListener('mouseout', (e) => {
-                if (e.target.closest('.map-item')) hide();
+                const item = e.target.closest('.map-item');
+                if (!item) return;
+                // Не прячем, пока курсор переходит между внутренними элементами
+                // того же пункта (иначе тултип мигает при движении по иконке/тексту).
+                if (e.relatedTarget && item.contains(e.relatedTarget)) return;
+                hide();
             });
-            // Прячем тултип при уходе мыши и при сворачивании/разворачивании
+            // Прячем при уходе курсора из сайдбара. (Раньше был transitionend на
+            // сайдбаре — он ловил анимацию :hover самого пункта и прятал тултип
+            // сразу после показа.)
             sidebar.addEventListener('mouseleave', hide);
-            sidebar.addEventListener('transitionend', hide);
         })();
 
         const savedSidebar = localStorage.getItem('sidebarCollapsed');
