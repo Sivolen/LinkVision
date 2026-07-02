@@ -161,7 +161,7 @@ export async function saveShape() {
     beginSelfUpdate();
 
     try {
-        const result = await http.put(url, data);
+        const result = await (method === 'POST' ? http.post : http.put)(url, data);
         Logger.info('✅ Shape saved successfully');
         Logger.info('📝 Shape ID:', id);
 
