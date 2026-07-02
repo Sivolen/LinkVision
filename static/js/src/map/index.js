@@ -87,6 +87,14 @@ export function initMap(id) {
     let statusBatchTimeout = null;
     const STATUS_BATCH_DELAY = 100; // Увеличено с 50мс для производительности
 
+    // Реалтайм-обработчики регистрируем только если сокет создан. Иначе (когда
+    // window.socket ещё не готов) не роняем initMap — карта и мини-карта уже
+    // инициализированы выше, дальше только socket.on(...).
+    if (!window.socket) {
+        console.warn('⚠ window.socket не инициализирован — реалтайм отключён');
+        return;
+    }
+
     window.socket.on('device_status', (data) => {
         if (Number(data.map_id) !== Number(mapId)) return;
         const node = cy.getElementById(String(data.id));
