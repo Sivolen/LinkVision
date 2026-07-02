@@ -69,3 +69,9 @@ yarn-error.log
 
 migrations/versions/*.pyc
 webnetmap.db.save
+/fix.md
+/fix2.md
+/fix3.md
+/fix4.md
+/ARCHITECTURE-REVIEW.md
+/LinkVision-OPTIMIZATION.md
