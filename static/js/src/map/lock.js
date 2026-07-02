@@ -127,12 +127,27 @@ export function isDragLocked() {
 }
 
 /**
- * Применить блокировку к полотну: физически запрещаем/разрешаем захват узлов
- * мышью. autoungrabify действует и на существующие, и на будущие узлы, при этом
- * выделение, клики и панорама остаются доступны.
+ * Применить блокировку к полотну. При блокировке:
+ *  - autoungrabify — ни один узел нельзя перетаскивать (для существующих и
+ *    будущих), но устройства остаются КЛИКАБЕЛЬНЫМИ (можно открыть карточку);
+ *  - events:'no' только на группах и фигурах — их фон пропускает указатель
+ *    «сквозь» себя, поэтому по нему можно панорамировать карту, как по
+ *    рабочему столу, а устройства поверх по-прежнему кликаются.
  */
+function passthroughEls() {
+    return cy ? cy.nodes().filter(n => n.data('isGroup') || n.data('isShape')) : null;
+}
+
 function applyDragLockToCanvas(isLocked) {
-    if (cy) cy.autoungrabify(!!isLocked);
+    if (!cy) return;
+    cy.autoungrabify(!!isLocked);
+    const bg = passthroughEls();
+    if (!bg) return;
+    if (isLocked) {
+        bg.style('events', 'no');
+    } else {
+        bg.removeStyle('events');
+    }
 }
 
 /**
