@@ -18,8 +18,10 @@
 
     {% block extra_css %}{% endblock %}
 </head>
-<body data-user-id="{{ current_user.id if current_user.is_authenticated else '' }}" data-is-admin="{{ 'true' if current_user.is_admin else 'false' }}" data-is-operator="{{ 'true' if current_user.is_operator else 'false' }}" data-debug-mode="{{ 'true' if debug_mode else 'false' }}">
-    <script src="{{ url_for('static', filename='js/src/app-init.js') }}"></script>
+<body data-user-id="{{ current_user.id if current_user.is_authenticated else '' }}"
+      data-is-admin="{{ 'true' if current_user.is_admin else 'false' }}"
+      data-is-operator="{{ 'true' if current_user.is_operator else 'false' }}"
+      data-debug-mode="{{ 'true' if debug_mode else 'false' }}">
     <!-- ====================================================================
          САЙДБАР (только для авторизованных И если не скрыт)
          ==================================================================== -->
@@ -240,6 +242,7 @@
     </script>
 <!--    <script src="{{ url_for('static', filename='js/base.js') }}"></script>-->
         <script src="{{ url_for('static', filename='js/dist/base.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/src/app-init.js') }}"></script>
     {% block scripts %}{% endblock %}
 
     {% block extra_js %}{% endblock %}

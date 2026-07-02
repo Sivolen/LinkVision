@@ -1,4 +1,4 @@
-// app-init.js – единая точка инициализации из data-* атрибутов
+// app-init.js – читает data-* атрибуты и устанавливает window.*
 (function () {
     'use strict';
 
@@ -13,22 +13,8 @@
     window.debugMode = body.dataset.debugMode === 'true';
 
     // Карта: data-map-id может быть установлен позже (в map_view.html)
-    // Поэтому проверяем и в DOMContentLoaded
-    function initIfReady() {
-        var mapId = body.dataset.mapId;
-        if (mapId) {
-            window.currentMapId = Number(mapId);
-            if (typeof initMap === 'function') {
-                initMap(window.currentMapId);
-            }
-        }
-    }
-
-    // Проверяем сразу (если data-map-id уже установлен)
-    if (body.dataset.mapId) {
-        initIfReady();
-    } else {
-        // Иначе ждём DOMContentLoaded (когда map_view.html установит data-map-id)
-        document.addEventListener('DOMContentLoaded', initIfReady);
+    var mapId = body.dataset.mapId;
+    if (mapId) {
+        window.currentMapId = Number(mapId);
     }
 })();
