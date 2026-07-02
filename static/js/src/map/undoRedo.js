@@ -51,19 +51,6 @@ export function initUndoRedo(cy, getMapId) {
             cy.resize();
             syncPositionsToServer(cy);
 
-            // Не вызываем updateAllGroups – группы не участвуют
-
-    //        if (state.viewport) {
-    //            cy.viewport({
-    //                pan: state.viewport.pan,
-    //                zoom: state.viewport.zoom
-    //            });
-    //            if (typeof window.updateBackgroundTransform === 'function')
-    //                window.updateBackgroundTransform();
-    //            if (typeof window.enforcePanBounds === 'function')
-    //                window.enforcePanBounds();
-    //        }
-
             currentIndex = index;
             updateButtons();
         } catch (err) {

@@ -125,9 +125,6 @@ class Map(db.Model):
     links = db.relationship(
         "Link", backref="map", cascade="all, delete-orphan", lazy="dynamic"
     )
-    # pan_x = db.Column(db.Float, default=0)
-    # pan_y = db.Column(db.Float, default=0)
-    # zoom = db.Column(db.Float, default=1)
 
 
 class MapPermission(db.Model):

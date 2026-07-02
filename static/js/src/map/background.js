@@ -59,8 +59,15 @@ export function updateBackgroundTransform() {
     const cyEl = cy.container();
     if (cyEl) {
         const cell = GRID_STEP * zoom;
+        // При отдалении ячейки мельчают и плотные точки рябят. Плавно гасим
+        // прозрачность точек с уменьшением шага (через color-mix), а при шаге
+        // < ~7px прячем сетку совсем. При приближении — точки полные.
+        const alpha = Math.max(0, Math.min(1, (cell - 7) / (GRID_STEP - 7)));
         cyEl.style.backgroundSize = `${cell}px ${cell}px`;
         cyEl.style.backgroundPosition = `${pan.x}px ${pan.y}px`;
+        cyEl.style.backgroundImage = alpha <= 0
+            ? 'none'
+            : `radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--cy-grid) ${Math.round(alpha * 100)}%, transparent) 1px, transparent 1px)`;
     }
 
     // Фото-подложка (если задана) едет тем же трансформом
