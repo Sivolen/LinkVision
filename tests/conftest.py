@@ -94,6 +94,50 @@ def app():
         dtype = DeviceType(name="Router", icon_filename="")
         db.session.add(dtype)
 
+        # Создаём карты для тестов прав доступа
+        admin = User.query.filter_by(username="admin").first()
+        testuser = User.query.filter_by(username="testuser").first()
+
+        # Own Map (владелец: testuser)
+        own_map = Map(name="Own Map", owner_id=testuser.id)
+        db.session.add(own_map)
+
+        # Foreign Map (владелец: admin)
+        foreign_map = Map(name="Foreign Map", owner_id=admin.id)
+        db.session.add(foreign_map)
+
+        # Locked Map (владелец: testuser, заблокирована)
+        locked_map = Map(name="Locked Map", owner_id=testuser.id, is_locked=True)
+        db.session.add(locked_map)
+
+        db.session.commit()
+
+        # Shared Viewer Map (admin даёт testuser роль viewer)
+        from models import MapPermission
+        shared_viewer = Map(name="Shared Viewer Map", owner_id=admin.id)
+        db.session.add(shared_viewer)
+        db.session.commit()
+        db.session.refresh(shared_viewer)
+        db.session.add(MapPermission(map_id=shared_viewer.id, user_id=testuser.id, role="viewer"))
+
+        # Shared Editor Map (admin даёт testuser роль editor)
+        shared_editor = Map(name="Shared Editor Map", owner_id=admin.id)
+        db.session.add(shared_editor)
+        db.session.commit()
+        db.session.refresh(shared_editor)
+        db.session.add(MapPermission(map_id=shared_editor.id, user_id=testuser.id, role="editor"))
+
+        # Operator Shared Map (admin даёт роль editor всем операторам)
+        operator_shared = Map(name="Operator Shared Map", owner_id=admin.id)
+        db.session.add(operator_shared)
+        db.session.commit()
+        db.session.refresh(operator_shared)
+        db.session.add(MapPermission(map_id=operator_shared.id, role="editor"))
+
+        # Devices
+        db.session.add(Device(map_id=own_map.id, type_id=dtype.id, name="Own Device"))
+        db.session.add(Device(map_id=foreign_map.id, type_id=dtype.id, name="Foreign Device"))
+
         db.session.commit()
 
         yield app
@@ -107,3 +151,5 @@ def app():
 def client(app):
     """Create test client."""
     return app.test_client()
+
+

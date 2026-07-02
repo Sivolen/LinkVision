@@ -243,7 +243,6 @@ linkvision/
 ├── fix_db.py                   # скрипт исправления миграций БД (v2.0)
 ├── install.sh                  # скрипт автоматической установки
 ├── linkvision.service          # systemd-сервис для фоновой работы
-├── vite.config.js              # конфигурация Vite для сборки frontend-ресурсов
 ├── package.json                # зависимости Node.js для frontend-сборки
 ├── blueprints/                 # модули (разделы приложения)
 │   ├── __init__.py
@@ -452,7 +451,7 @@ python -m pytest tests/test_services.py::TestValidators -v
 - **Cytoscape.js** – визуализация графа сети
 - **Socket.IO client** – взаимодействие с сервером
 - **JavaScript (ES6)** – логика клиента
-- **Vite** – сборка frontend-ресурсов
+- **esbuild** – сборка frontend-ресурсов
 
 ### Logging
 
