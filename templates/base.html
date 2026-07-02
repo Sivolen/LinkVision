@@ -241,8 +241,11 @@
         });
     </script>
 <!--    <script src="{{ url_for('static', filename='js/base.js') }}"></script>-->
-        <script src="{{ url_for('static', filename='js/dist/base.min.js') }}"></script>
+    <!-- app-init.js ставит window.currentUserId/isAdmin/... из data-* и должен идти
+         ДО base.min.js: тот при загрузке создаёт window.socket, только если
+         currentUserId уже задан. Иначе сокет не создаётся и initMap падает. -->
     <script src="{{ url_for('static', filename='js/src/app-init.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/dist/base.min.js') }}"></script>
     {% block scripts %}{% endblock %}
 
     {% block extra_js %}{% endblock %}
