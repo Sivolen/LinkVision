@@ -974,10 +974,20 @@ body.resizing-sidebar .main-content {
   pointer-events: auto;
   cursor: pointer;
 }
-.minimap-img {
-  display: block;
+/* Слой фона-плана: заполняет весь «мир» превью */
+.minimap-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+/* Слой элементов: позиционируется из JS по мировым координатам */
+.minimap-img {
+  position: absolute;
   pointer-events: none;
   user-select: none;
 }
