@@ -240,7 +240,7 @@ export async function saveDevice() {
     beginSelfUpdate();
 
     try {
-        const result = await http.put(url, data);
+        const result = await (method === 'POST' ? http.post : http.put)(url, data);
 
         if (!devId) {
             const newDevice = {
