@@ -12,6 +12,7 @@ import { initFullscreen } from './fullscreen.js';
 import { initPulse, addPulsingNode, removePulsingNode } from './pulse.js';
 import { initBulk } from './bulk.js';
 import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
+import { initMinimap } from './minimap.js';
 import { initUndoRedo } from './undoRedo.js';
 import { beginSelfUpdate, endSelfUpdate, isSelfUpdating, getPendingCount } from '../utils/state.js';
 
@@ -67,6 +68,7 @@ export function initMap(id) {
     initPulse(cy);
     initBulk(cy);
     initSidebarCounter(cy);
+    initMinimap(cy);
 
     const bgEl = document.getElementById('cy-background');
     if (bgEl && bgEl.dataset.background) loadBackground(bgEl.dataset.background);

@@ -119,6 +119,9 @@
         <button class="toolbar-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="Полноэкранный режим">
             <i class="fas fa-expand"></i>
         </button>
+        <button class="toolbar-btn" id="minimapToggle" onclick="toggleMinimap()" title="Мини-карта (обзор)">
+            <i class="fas fa-map"></i>
+        </button>
     </div>
 <!--    <div class="toolbar-group">-->
 <!--        <button class="toolbar-btn" onclick="saveLayout()">-->
@@ -135,6 +138,13 @@
          data-pan-y="{{ user_pan_y }}"
          data-zoom="{{ user_zoom }}">
 
+    </div>
+    <!-- Мини-карта (обзор всего графа + рамка вьюпорта) -->
+    <div id="minimap" class="minimap">
+        <div class="minimap-inner">
+            <img class="minimap-img" alt="Обзор карты">
+            <div class="minimap-viewport"></div>
+        </div>
     </div>
 </div>
 <button id="exitFullscreenBtn" class="exit-fullscreen-btn" style="display: none;" onclick="exitFullscreen()" title="Выйти из полноэкранного режима">
