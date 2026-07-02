@@ -96,16 +96,21 @@ function refresh() {
 function updateViewportRect() {
     if (!cy || !visible || !bbox || !rectEl) return;
     const ext = cy.extent(); // видимая область в модельных координатах
-    let left = (ext.x1 - bbox.x1) * scale;
-    let top = (ext.y1 - bbox.y1) * scale;
-    let w = (ext.x2 - ext.x1) * scale;
-    let h = (ext.y2 - ext.y1) * scale;
     const iw = inner.clientWidth, ih = inner.clientHeight;
-    // Ограничиваем рамку границами мини-карты
-    const l = Math.max(0, Math.min(left, iw));
-    const t = Math.max(0, Math.min(top, ih));
+    // Сырые границы рамки в координатах мини-карты
+    const rawL = (ext.x1 - bbox.x1) * scale;
+    const rawT = (ext.y1 - bbox.y1) * scale;
+    const rawR = (ext.x2 - bbox.x1) * scale;
+    const rawB = (ext.y2 - bbox.y1) * scale;
+    // Обрезаем КАЖДУЮ границу к [0, размер] независимо — тогда рамка корректно
+    // сжимается с любой стороны при выходе за пределы (в т.ч. вверх/влево, где
+    // координаты уходят в минус).
+    const l = Math.max(0, Math.min(rawL, iw));
+    const t = Math.max(0, Math.min(rawT, ih));
+    const r = Math.max(0, Math.min(rawR, iw));
+    const b = Math.max(0, Math.min(rawB, ih));
     rectEl.style.left = l + 'px';
     rectEl.style.top = t + 'px';
-    rectEl.style.width = Math.max(6, Math.min(w, iw - l)) + 'px';
-    rectEl.style.height = Math.max(6, Math.min(h, ih - t)) + 'px';
+    rectEl.style.width = Math.max(0, r - l) + 'px';
+    rectEl.style.height = Math.max(0, b - t) + 'px';
 }
