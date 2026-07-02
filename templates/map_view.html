@@ -707,4 +707,9 @@
 <script src="{{ url_for('static', filename='js/dist/common.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dist/map.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dist/modal.min.js') }}"></script>
+<script>
+    if (window.currentMapId && typeof initMap === 'function') {
+        initMap(window.currentMapId);
+    }
+</script>
 {% endblock %}
