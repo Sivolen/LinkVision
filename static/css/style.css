@@ -948,6 +948,45 @@ body.resizing-sidebar .main-content {
 }
 
 /* ============================================================================
+МИНИ-КАРТА (обзор + рамка вьюпорта)
+============================================================================ */
+.minimap {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 210px;
+  height: 150px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  cursor: pointer;
+}
+.minimap-inner {
+  position: relative;
+}
+.minimap-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+.minimap-viewport {
+  position: absolute;
+  border: 2px solid var(--accent-color);
+  background: rgba(70, 130, 180, 0.15);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* ============================================================================
 ПАНЕЛЬ ИНСТРУМЕНТОВ
 ============================================================================ */
 .toolbar {
