@@ -18,7 +18,10 @@
 
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body data-user-id="{{ current_user.id if current_user.is_authenticated else '' }}"
+      data-is-admin="{{ 'true' if current_user.is_admin else 'false' }}"
+      data-is-operator="{{ 'true' if current_user.is_operator else 'false' }}"
+      data-debug-mode="{{ 'true' if debug_mode else 'false' }}">
     <!-- ====================================================================
          САЙДБАР (только для авторизованных И если не скрыт)
          ==================================================================== -->
@@ -226,11 +229,6 @@
     <script src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
     <script src="{{ url_for('static', filename='js/cytoscape.min.js') }}"></script>
     <script>
-        window.debugMode = {{ 'true' if debug_mode else 'false' }};
-        window.currentUserId = {{ current_user.id if current_user.is_authenticated else 'null' }};
-        window.isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
-        window.isOperator = {{ 'true' if current_user.is_operator else 'false' }};
-
         // Получаем CSRF токен из скрытой формы
         document.addEventListener('DOMContentLoaded', function() {
             const csrfForm = document.getElementById('csrf-form');
@@ -244,6 +242,7 @@
     </script>
 <!--    <script src="{{ url_for('static', filename='js/base.js') }}"></script>-->
         <script src="{{ url_for('static', filename='js/dist/base.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/src/app-init.js') }}"></script>
     {% block scripts %}{% endblock %}
 
     {% block extra_js %}{% endblock %}
