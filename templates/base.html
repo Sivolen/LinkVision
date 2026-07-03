@@ -249,5 +249,20 @@
     {% block scripts %}{% endblock %}
 
     {% block extra_js %}{% endblock %}
+
+    <!-- Авто-скрытие alert-сообщений -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    var bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                    if (bsAlert) {
+                        bsAlert.close();
+                    }
+                }, 4000);
+            });
+        });
+    </script>
 </body>
 </html>

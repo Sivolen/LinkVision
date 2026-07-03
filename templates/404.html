@@ -2,23 +2,6 @@
 
 {% block extra_css %}
 <style>
-    :root {
-        --accent-color: #3498db;
-        --accent-secondary: #2ecc71;
-        --accent-warning: #f39c12;
-        --bg-primary: #ffffff;
-        --bg-secondary: #f8f9fa;
-        --text-primary: #2c3e50;
-        --text-secondary: #6c757d;
-    }
-
-    [data-theme="dark"] {
-        --bg-primary: #1a1a2e;
-        --bg-secondary: #16213e;
-        --text-primary: #eaeaea;
-        --text-secondary: #a0a0a0;
-    }
-
     .error-page {
         min-height: calc(100vh - 120px);
         display: flex;
@@ -55,14 +38,14 @@
         backdrop-filter: blur(10px);
         border-radius: 2rem;
         padding: 3rem;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
         text-align: center;
     }
 
     [data-theme="dark"] .error-content {
-        background: rgba(26, 26, 46, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(45, 45, 45, 0.95);
+        border: 1px solid var(--border-color);
     }
 
     .error-code {
@@ -72,12 +55,12 @@
         margin-bottom: 1rem;
         background: linear-gradient(135deg,
             var(--accent-color) 0%,
-            var(--accent-secondary) 100%);
+            #10b981 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
         position: relative;
-        filter: drop-shadow(0 10px 30px rgba(52, 152, 219, 0.3));
+        filter: drop-shadow(0 10px 30px color-mix(in srgb, var(--accent-color) 30%, transparent));
     }
 
     .glitch {
@@ -134,7 +117,7 @@
         position: absolute;
         width: 12px;
         height: 12px;
-        background: var(--accent-secondary);
+        background: #10b981;
         border-radius: 50%;
         opacity: 0;
         animation: packet-float 3s infinite;
@@ -167,15 +150,11 @@
     }
 
     .error-suggestions {
-        background: rgba(52, 152, 219, 0.1);
+        background: color-mix(in srgb, var(--accent-color) 10%, transparent);
         border-radius: 1rem;
         padding: 1.5rem;
         margin-bottom: 2rem;
         text-align: left;
-    }
-
-    [data-theme="dark"] .error-suggestions {
-        background: rgba(52, 152, 219, 0.15);
     }
 
     .suggestion-item {
@@ -187,7 +166,7 @@
     }
 
     .suggestion-item i {
-        color: var(--accent-secondary);
+        color: #10b981;
         font-size: 1.2rem;
     }
 
@@ -215,14 +194,14 @@
     .btn-primary {
         background: linear-gradient(135deg,
             var(--accent-color) 0%,
-            #2980b9 100%);
+            var(--accent-hover) 100%);
         color: white;
-        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        box-shadow: 0 4px 15px color-mix(in srgb, var(--accent-color) 30%, transparent);
     }
 
     .btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        box-shadow: 0 6px 20px color-mix(in srgb, var(--accent-color) 40%, transparent);
     }
 
     .btn-outline {
@@ -369,157 +348,10 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/network-animation.js') }}"></script>
 <script>
-    // Network animation canvas
-    class NetworkAnimation {
-        constructor(canvas) {
-            this.canvas = canvas;
-            this.ctx = canvas.getContext('2d');
-            this.nodes = [];
-            this.mouseX = 0;
-            this.mouseY = 0;
-            this.init();
-        }
-
-        init() {
-            this.resize();
-            this.createNodes();
-            this.addEventListeners();
-            this.animate();
-        }
-
-        resize() {
-            this.canvas.width = window.innerWidth;
-            this.canvas.height = window.innerHeight;
-            this.dpr = window.devicePixelRatio || 1;
-            this.canvas.width *= this.dpr;
-            this.canvas.height *= this.dpr;
-            this.ctx.scale(this.dpr, this.dpr);
-            this.canvas.style.width = window.innerWidth + 'px';
-            this.canvas.style.height = window.innerHeight + 'px';
-        }
-
-        createNodes() {
-            const nodeCount = Math.floor((this.canvas.width / this.dpr * this.canvas.height / this.dpr) / 25000);
-            this.nodes = [];
-
-            for (let i = 0; i < nodeCount; i++) {
-                this.nodes.push({
-                    x: Math.random() * this.canvas.width / this.dpr,
-                    y: Math.random() * this.canvas.height / this.dpr,
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: (Math.random() - 0.5) * 0.5,
-                    radius: Math.random() * 3 + 2,
-                    pulse: Math.random() * Math.PI * 2
-                });
-            }
-        }
-
-        addEventListeners() {
-            window.addEventListener('resize', () => this.resize());
-            this.canvas.addEventListener('mousemove', (e) => {
-                this.mouseX = e.clientX;
-                this.mouseY = e.clientY;
-            });
-        }
-
-        updateNodes() {
-            const width = this.canvas.width / this.dpr;
-            const height = this.canvas.height / this.dpr;
-
-            this.nodes.forEach(node => {
-                node.x += node.vx;
-                node.y += node.vy;
-                node.pulse += 0.05;
-
-                // Bounce off edges
-                if (node.x < 0 || node.x > width) node.vx *= -1;
-                if (node.y < 0 || node.y > height) node.vy *= -1;
-
-                // Mouse interaction
-                const dx = this.mouseX - node.x;
-                const dy = this.mouseY - node.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 150) {
-                    const force = (150 - dist) / 150;
-                    node.vx -= (dx / dist) * force * 0.02;
-                    node.vy -= (dy / dist) * force * 0.02;
-                }
-
-                // Damping
-                node.vx *= 0.99;
-                node.vy *= 0.99;
-            });
-        }
-
-        drawNodes() {
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const nodeColor = isDark ? 'rgba(52, 152, 219, ' : 'rgba(41, 128, 185, ';
-
-            this.nodes.forEach(node => {
-                const pulse = Math.sin(node.pulse) * 0.3 + 1;
-
-                this.ctx.beginPath();
-                this.ctx.arc(node.x, node.y, node.radius * pulse, 0, Math.PI * 2);
-                this.ctx.fillStyle = nodeColor + (0.6 + pulse * 0.2) + ')';
-                this.ctx.fill();
-
-                // Glow effect
-                this.ctx.beginPath();
-                this.ctx.arc(node.x, node.y, node.radius * pulse * 2, 0, Math.PI * 2);
-                const gradient = this.ctx.createRadialGradient(
-                    node.x, node.y, 0,
-                    node.x, node.y, node.radius * pulse * 2
-                );
-                gradient.addColorStop(0, nodeColor + '0.3)');
-                gradient.addColorStop(1, nodeColor + '0)');
-                this.ctx.fillStyle = gradient;
-                this.ctx.fill();
-            });
-        }
-
-        drawConnections() {
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const maxDist = 180;
-
-            for (let i = 0; i < this.nodes.length; i++) {
-                for (let j = i + 1; j < this.nodes.length; j++) {
-                    const dx = this.nodes[i].x - this.nodes[j].x;
-                    const dy = this.nodes[i].y - this.nodes[j].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dist < maxDist) {
-                        const opacity = (1 - dist / maxDist) * 0.4;
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(this.nodes[i].x, this.nodes[i].y);
-                        this.ctx.lineTo(this.nodes[j].x, this.nodes[j].y);
-                        this.ctx.strokeStyle = isDark
-                            ? `rgba(52, 152, 219, ${opacity})`
-                            : `rgba(41, 128, 185, ${opacity})`;
-                        this.ctx.lineWidth = 1;
-                        this.ctx.stroke();
-                    }
-                }
-            }
-        }
-
-        animate() {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.updateNodes();
-            this.drawNodes();
-            this.drawConnections();
-            requestAnimationFrame(() => this.animate());
-        }
-    }
-
-    // Initialize on page load
+    // Packet animation variables
     document.addEventListener('DOMContentLoaded', () => {
-        const canvas = document.getElementById('networkCanvas');
-        if (canvas) {
-            new NetworkAnimation(canvas);
-        }
-
-        // Packet animation variables
         const packets = document.querySelectorAll('.packet');
         packets.forEach((packet, index) => {
             const angles = [45, 135, 225];
