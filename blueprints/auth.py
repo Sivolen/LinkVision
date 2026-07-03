@@ -4,6 +4,7 @@ from extensions import db
 
 from forms import LoginForm, RegisterForm, ChangePasswordForm
 from services import user_service, rate_limit, log_auth_action, validate_password_full
+from services.security_service import rate_limiter
 from utils.logger import auth_logger
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -84,7 +85,7 @@ def change_password():
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
-@rate_limit(max_requests=3, window_seconds=3600)  # 3 регистрации за час
+@rate_limit(max_requests=20, window_seconds=300)  # 20 регистраций за 5 минут
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
@@ -114,3 +115,17 @@ def register():
             flash("Ошибка при регистрации")
 
     return render_template("register.html", form=form)
+
+
+@auth_bp.route("/admin/reset-rate-limit", methods=["POST"])
+@login_required
+def reset_rate_limit():
+    """Сбросить все rate limit счётчики (только для админов)."""
+    if not current_user.is_admin:
+        flash("Доступ запрещён", "error")
+        return redirect(url_for("main.dashboard"))
+
+    rate_limiter.reset_all()
+    flash("Rate limit счётчики сброшены", "success")
+    return redirect(request.referrer or url_for("main.dashboard"))
+
