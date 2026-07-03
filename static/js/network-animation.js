@@ -6,6 +6,7 @@ class NetworkAnimation {
         this.nodes = [];
         this.mouseX = 0;
         this.mouseY = 0;
+        this.dpr = window.devicePixelRatio || 1;
         this.init();
     }
 
@@ -17,20 +18,19 @@ class NetworkAnimation {
     }
 
     resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.dpr = window.devicePixelRatio || 1;
-        this.canvas.width *= this.dpr;
-        this.canvas.height *= this.dpr;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        // Устанавливаем размеры канваса в физических пикселях
+        this.canvas.width = width * this.dpr;
+        this.canvas.height = height * this.dpr;
+        // Масштабируем контекст для рисования в логических пикселях
         this.ctx.scale(this.dpr, this.dpr);
-        this.canvas.style.width = window.innerWidth + 'px';
-        this.canvas.style.height = window.innerHeight + 'px';
+        // НЕ ТРОГАЕМ canvas.style.width/height — они заданы через CSS
     }
 
     createNodes() {
-        const width = this.canvas.width / this.dpr;
-        const height = this.canvas.height / this.dpr;
-        // Плотность: 1 узел на 25000px²
+        const width = window.innerWidth;
+        const height = window.innerHeight;
         const nodeCount = Math.floor((width * height) / 25000);
         this.nodes = [];
 
@@ -55,19 +55,17 @@ class NetworkAnimation {
     }
 
     updateNodes() {
-        const width = this.canvas.width / this.dpr;
-        const height = this.canvas.height / this.dpr;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
 
         this.nodes.forEach(node => {
             node.x += node.vx;
             node.y += node.vy;
             node.pulse += 0.05;
 
-            // Отскок от краёв
             if (node.x < 0 || node.x > width) node.vx *= -1;
             if (node.y < 0 || node.y > height) node.vy *= -1;
 
-            // Взаимодействие с мышью
             const dx = this.mouseX - node.x;
             const dy = this.mouseY - node.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -77,7 +75,6 @@ class NetworkAnimation {
                 node.vy -= (dy / dist) * force * 0.02;
             }
 
-            // Затухание
             node.vx *= 0.99;
             node.vy *= 0.99;
         });
@@ -86,7 +83,6 @@ class NetworkAnimation {
     getAccentColor() {
         const style = getComputedStyle(document.documentElement);
         const color = style.getPropertyValue('--accent-color').trim();
-        // Преобразуем hex в rgb для rgba использования
         const hex = color.replace('#', '');
         const r = parseInt(hex.substring(0, 2), 16);
         const g = parseInt(hex.substring(2, 4), 16);
@@ -105,7 +101,6 @@ class NetworkAnimation {
             this.ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.6 + pulse * 0.2})`;
             this.ctx.fill();
 
-            // Glow эффект
             this.ctx.beginPath();
             this.ctx.arc(node.x, node.y, node.radius * pulse * 2, 0, Math.PI * 2);
             const gradient = this.ctx.createRadialGradient(

@@ -16,6 +16,8 @@ from flask_login import login_required, current_user
 from extensions import db
 from models import Map
 from services import user_service, device_type_service, settings_service
+from services.security_service import rate_limiter
+from services.device_type_service import invalidate_types_cache
 from services.device_type_service import invalidate_types_cache
 from utils.logger import admin_logger
 
@@ -222,6 +224,10 @@ def settings():
             return redirect(url_for("admin.settings"))
         elif "restore_backup" in request.form:
             return restore_backup_action()
+        elif "reset_rate_limit" in request.form:
+            rate_limiter.reset_all()
+            flash("Счётчики rate limit успешно сброшены", "success")
+            return redirect(url_for("admin.settings"))
 
     ping_count, ping_interval = settings_service.get_ping_settings()
     return render_template(

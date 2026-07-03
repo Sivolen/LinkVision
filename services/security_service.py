@@ -132,6 +132,18 @@ class RateLimiter:
         else:
             self._storage[key] = []
 
+    def reset_all(self) -> None:
+        """Сбросить все rate limit счётчики."""
+        redis = self._get_redis()
+        if redis:
+            # Удалить все ключи rate limit
+            keys = redis.keys("ratelimit:*")
+            if keys:
+                redis.delete(*keys)
+        else:
+            self._storage.clear()
+            self._lock_counts.clear()
+
     def lock_account(self, key: str, max_attempts: int = 5) -> None:
         """Заблокировать аккаунт после неудачных попыток."""
         self._lock_counts[key] += 1
@@ -175,13 +187,27 @@ def rate_limit(max_requests: int = 10, window_seconds: int = 60):
                 )
                 retry_after = window_seconds
 
+                # Если запрос JSON — возвращаем JSON
+                if request.is_json:
+                    return (
+                        jsonify(
+                            {
+                                "error": "Слишком много запросов",
+                                "retry_after": retry_after,
+                                "remaining": remaining,
+                            }
+                        ),
+                        429,
+                    )
+
+                # Если запрос HTML — возвращаем красивую страницу
+                from flask import render_template, redirect, url_for
+
                 return (
-                    jsonify(
-                        {
-                            "error": "Слишком много запросов",
-                            "retry_after": retry_after,
-                            "remaining": remaining,
-                        }
+                    render_template(
+                        "429.html",
+                        retry_after=retry_after,
+                        hide_rate_limit_alerts=True,
                     ),
                     429,
                 )

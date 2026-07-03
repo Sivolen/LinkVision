@@ -57,4 +57,20 @@
         </form>
     </div>
 </div>
+<!-- Сброс ограничений -->
+<div class="admin-card mt-4">
+    <div class="card-header bg-warning text-dark">
+        <i class="fas fa-exclamation-triangle"></i> Сброс ограничений
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Если пользователи жалуются на "Слишком много запросов" (ошибка 429), нажмите кнопку ниже для сброса счётчиков.</p>
+        <form method="POST" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
+            <input type="hidden" name="reset_rate_limit" value="1">
+            <button type="submit" class="btn btn-warning" onclick="return confirm('Вы уверены? Все счётчики rate limit будут сброшены.')">
+                <i class="fas fa-sync-alt"></i> Сбросить счётчики
+            </button>
+        </form>
+    </div>
+</div>
 {% endblock %}
