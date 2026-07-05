@@ -1,5 +1,5 @@
 import { initCy, updateGroupLabelColor } from './core.js';
-import { loadBackground, setElementsLoaded, setBackgroundLoaded } from './background.js';
+import { loadBackground, setElementsLoaded, setBackgroundLoaded, markUserInteracted, resetUserInteracted } from './background.js';
 import { updateMapBackground } from './background.js';
 import { loadElements } from './elements.js';
 import { initInteractions } from './interactions.js';
@@ -57,6 +57,21 @@ export function initMap(id) {
     const cy = initCy(mapId);
     window.cy = cy;
     updateGroupLabelColor();
+
+    // Отмена «телепортации»: если пользователь начал скроллить/зумить/тянуть карту
+    // до того, как отработал начальный авто-фит (фон+элементы грузятся асинхронно),
+    // помечаем взаимодействие — и авто-фит уже не перекрывает вид.
+    resetUserInteracted();
+    const cyContainer = document.getElementById('cy');
+    if (cyContainer) {
+        const onFirstInteract = () => {
+            markUserInteracted();
+            cyContainer.removeEventListener('wheel', onFirstInteract);
+            cyContainer.removeEventListener('mousedown', onFirstInteract);
+        };
+        cyContainer.addEventListener('wheel', onFirstInteract, { passive: true });
+        cyContainer.addEventListener('mousedown', onFirstInteract);
+    }
 
     initInteractions(cy);
     initModes(cy);

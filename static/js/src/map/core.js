@@ -35,7 +35,7 @@ export function initCy(mapId, onReady) {
         autounselectify: true,
         minZoom: 0.1,
         maxZoom: 5,
-        wheelSensitivity: 2,
+        wheelSensitivity: 1, // было 2 — резкий зум; Cytoscape рекомендует 1
         fit: false
     });
 
