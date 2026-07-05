@@ -7,6 +7,12 @@ let backgroundLoaded = false;
 let elementsLoaded = false;
 let pendingFit = false;
 let skipAutoFit = false;
+// Пользователь начал взаимодействовать с картой (скролл/зум/перетаскивание) —
+// значит начальный авто-фит применять уже нельзя, иначе будет «телепортация».
+let userInteracted = false;
+
+export function markUserInteracted() { userInteracted = true; }
+export function resetUserInteracted() { userInteracted = false; }
 
 export function setSkipAutoFit(value) { skipAutoFit = value; window._skipAutoFit = value;}
 export function setElementsLoaded(loaded) { elementsLoaded = loaded; checkReadyAndFit(); }
@@ -132,6 +138,9 @@ export function fitImageToView() {
 }
 
 function checkReadyAndFit() {
+    // Если пользователь уже начал взаимодействовать с картой до конца загрузки —
+    // не трогаем вьюпорт (иначе резкая «телепортация» на подогнанную позицию).
+    if (userInteracted) return;
     if (!skipAutoFit && backgroundLoaded && elementsLoaded && !pendingFit) {
         const cyEl = document.getElementById('cy');
         const panX = parseFloat(cyEl.dataset.panX) || 0;
