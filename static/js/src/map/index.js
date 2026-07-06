@@ -37,6 +37,14 @@ import {
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateAllGroups } from './groupResize.js';
 
+// ─── Утилита: обёртка для socket-событий с проверкой map_id ─────────────────────
+function onMapEvent(socket, mapId, event, handler) {
+    socket.on(event, data => {
+        if (Number(data.map_id) !== Number(mapId)) return;
+        handler(data);
+    });
+}
+
 let mapId = null;
 
 export function initMap(id) {
@@ -111,7 +119,6 @@ export function initMap(id) {
     }
 
     window.socket.on('device_status', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
         const node = cy.getElementById(String(data.id));
         if (!node.length) return;
         const newStatus = data.status;
@@ -127,11 +134,11 @@ export function initMap(id) {
 
         if (node.data('status') === newStatus) return;
 
-        statusBatch.push({ node, newStatus, mapId: data.map_id });
+        statusBatch.push({ node, newStatus });
         if (statusBatchTimeout) clearTimeout(statusBatchTimeout);
         statusBatchTimeout = setTimeout(() => {
             cy.batch(() => {
-                statusBatch.forEach(({ node, newStatus, mapId }) => {
+                statusBatch.forEach(({ node, newStatus }) => {
                     node.data('status', newStatus);
                     removePulsingNode(cy, node);
                     if (newStatus === 'down') {
@@ -187,90 +194,77 @@ export function initMap(id) {
     // ─── Точечные события ─────────────────────────────────────────────────────────
 
     // Создание устройства
-    window.socket.on('device_created', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'device_created', (data) => {
         cy.batch(() => {
             _addDeviceToGraph(data.device);
         });
     });
 
     // Обновление устройства
-    window.socket.on('device_updated', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'device_updated', (data) => {
         _updateDevice(data.device);
     });
 
     // Удаление устройства
-    window.socket.on('device_deleted', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'device_deleted', (data) => {
         _removeDeviceFromGraph(data.device_id);
     });
 
     // Изменение позиции устройства
-    window.socket.on('device_position_updated', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'device_position_updated', (data) => {
         updateDevicePositionInGraph(data.device_id, data.x, data.y);
     });
 
     // Массовое изменение позиций
-    window.socket.on('bulk_position_updated', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'bulk_position_updated', (data) => {
         // Позиции уже обновлены на клиенте через dragfree — просто обновим метки
         if (typeof window.updateAllEdgeLabels === 'function') window.updateAllEdgeLabels();
         if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
     });
 
     // Создание связи
-    window.socket.on('link_created', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'link_created', (data) => {
         cy.batch(() => {
             addLinkToGraph(data.link);
         });
     });
 
     // Обновление связи
-    window.socket.on('link_updated', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'link_updated', (data) => {
         updateLinkInGraph(data.link);
     });
 
     // Удаление связи
-    window.socket.on('link_deleted', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'link_deleted', (data) => {
         _removeLinkFromGraph(`link_${data.link_id}`);
     });
 
     // Создание группы
-    window.socket.on('group_created', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'group_created', (data) => {
         cy.batch(() => {
             addGroupToGraph(data.group);
         });
     });
 
     // Обновление группы
-    window.socket.on('group_updated', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'group_updated', (data) => {
         updateGroupInGraph(data.group);
     });
 
     // Удаление группы
-    window.socket.on('group_deleted', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'group_deleted', (data) => {
         removeGroupFromGraph(data.group_id);
     });
 
     // Создание фигуры
-    window.socket.on('shape_created', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'shape_created', (data) => {
         cy.batch(() => {
             _addShapeToGraph(data.shape);
         });
     });
 
     // Обновление фигуры
-    window.socket.on('shape_updated', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'shape_updated', (data) => {
         const shape = data.shape;
         const node = cy.getElementById(`shape_${shape.id}`);
         if (node.length) {
@@ -288,8 +282,7 @@ export function initMap(id) {
     });
 
     // Удаление фигуры
-    window.socket.on('shape_deleted', (data) => {
-        if (Number(data.map_id) !== Number(mapId)) return;
+    onMapEvent(window.socket, mapId, 'shape_deleted', (data) => {
         _removeShapeFromGraph(data.shape_id);
     });
 
