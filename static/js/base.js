@@ -20,10 +20,22 @@ let wasDisconnected = false;
         confirmText = 'Удалить',
         variant = 'danger'
     } = {}, onConfirm = null, onCancel = null) {
+        let opts;
         // Поддержка старого синтаксиса: confirmAction(title, message, onConfirm, onCancel)
-        let opts = typeof title === 'object' ? title : { title, message };
-        if (typeof onConfirm === 'function') opts.onConfirm = onConfirm;
-        if (typeof onCancel === 'function') opts.onCancel = onCancel;
+        if (arguments.length > 0 && typeof arguments[0] === 'string') {
+            opts = {
+                title: arguments[0],
+                message: arguments[1] || 'Вы уверены?',
+                confirmText: 'Удалить',
+                variant: 'danger'
+            };
+            if (typeof arguments[2] === 'function') opts.onConfirm = arguments[2];
+            if (typeof arguments[3] === 'function') opts.onCancel = arguments[3];
+        } else {
+            opts = { title, message, confirmText, variant };
+            if (typeof onConfirm === 'function') opts.onConfirm = onConfirm;
+            if (typeof onCancel === 'function') opts.onCancel = onCancel;
+        }
 
         return new Promise((resolve) => {
             const modalEl = document.getElementById('confirmModal');
@@ -45,10 +57,7 @@ let wasDisconnected = false;
             modalMessage.textContent = opts.message;
             confirmBtn.textContent = opts.confirmText || 'Удалить';
             confirmBtn.className = `btn btn-${opts.variant || 'danger'}`;
-
-            // Блокируем кнопку на время выполнения
-            const originalText = confirmBtn.textContent;
-            confirmBtn.disabled = true;
+            confirmBtn.disabled = false;
 
             const cleanup = () => {
                 confirmBtn.removeEventListener('click', onConfirmClick);
@@ -59,7 +68,7 @@ let wasDisconnected = false;
 
             const onConfirmClick = () => {
                 confirmBtn.disabled = true;
-                confirmBtn.textContent = '⏳ Выполняется...';
+                confirmBtn.textContent = 'Выполняется...';
                 if (opts.onConfirm) {
                     const result = opts.onConfirm();
                     if (result && typeof result.finally === 'function') {

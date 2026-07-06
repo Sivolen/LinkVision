@@ -39,6 +39,12 @@ def create_link(
     db.session.add(link)
     db.session.commit()
     api_logger.info(f"Link created: ID={link.id}")
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+
     return link
 
 
@@ -62,13 +68,26 @@ def update_link(link_id: int, **kwargs) -> Link:
 
     db.session.commit()
     api_logger.info(f"Link updated: ID={link_id}")
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(link.map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {link.map_id}")
+
     return link
 
 
 def delete_link(link_id: int) -> int:
     """Удалить связь."""
     link = Link.query.get_or_404(link_id)
+    map_id = link.map_id
     db.session.delete(link)
     db.session.commit()
     api_logger.info(f"Link deleted: ID={link_id}")
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+
     return link_id

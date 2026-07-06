@@ -9,7 +9,6 @@
 
 from typing import Optional, List, Dict, Any
 import datetime
-import ipaddress
 
 from sqlalchemy.exc import IntegrityError
 
@@ -241,6 +240,12 @@ def create_device(
         api_logger.info(
             f"Device created: ID={device.id}, name={device.name}, ips={ips}"
         )
+
+        # Инвалидируем кэш элементов карты
+        from .map_service import invalidate_map_elements_cache
+        invalidate_map_elements_cache(map_id)
+        api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+
         return device
 
     except IntegrityError as e:
@@ -314,15 +319,27 @@ def update_device(device_id: int, **kwargs: Any) -> Device:
 
     db.session.commit()
     api_logger.info(f"Device updated: ID={device_id}")
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(device.map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {device.map_id}")
+
     return device
 
 
 def delete_device(device_id: int) -> None:
     """Удалить устройство."""
     device = Device.query.get_or_404(device_id)
+    map_id = device.map_id
     db.session.delete(device)
     db.session.commit()
     api_logger.info(f"Device deleted: ID={device_id}")
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
 
 
 def update_device_position(device_id: int, x: float, y: float) -> Device:
@@ -332,6 +349,12 @@ def update_device_position(device_id: int, x: float, y: float) -> Device:
     device.pos_y = y
     db.session.commit()
     api_logger.info(f"Device position updated: ID={device_id} -> ({x}, {y})")
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(device.map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {device.map_id}")
+
     return device
 
 
@@ -342,7 +365,24 @@ def get_all_device_types():
 
 def update_devices_positions(updates: List[Dict[str, Any]]) -> int:
     """Массовое обновление позиций."""
-    return device_repo.update_positions(updates)
+    from .map_service import invalidate_map_elements_cache
+
+    map_ids = set()
+    for update in updates:
+        device = Device.query.get(update["id"])
+        if device:
+            device.pos_x = update["x"]
+            device.pos_y = update["y"]
+            map_ids.add(device.map_id)
+
+    db.session.commit()
+
+    # Инвалидируем кэш для всех затронутых карт
+    for map_id in map_ids:
+        invalidate_map_elements_cache(map_id)
+        api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+
+    return len(updates)
 
 
 # Кэш для типов устройств вынесен в device_type_service

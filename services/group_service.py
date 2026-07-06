@@ -19,6 +19,12 @@ def create_group(
     db.session.add(group)
     db.session.commit()
     api_logger.info(f"Group created: ID={group.id}, name={group.name}, map={map_id}")
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+
     return group
 
 
@@ -40,14 +46,27 @@ def update_group(
 
     db.session.commit()
     api_logger.info(f"Group updated: ID={group_id}")
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(group.map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {group.map_id}")
+
     return group
 
 
 def delete_group(group_id: int) -> int:
     """Удалить группу (устройства остаются без группы)."""
     group = Group.query.get_or_404(group_id)
+    map_id = group.map_id
     Device.query.filter_by(group_id=group_id).update({"group_id": None})
     db.session.delete(group)
     db.session.commit()
     api_logger.info(f"Group deleted: ID={group_id}")
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+
     return group_id

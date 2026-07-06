@@ -2,6 +2,7 @@
 import { http } from '../utils/http.js';
 import { showToast } from '../utils/toast.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
+import { isShapeId, parseRawId } from './ids.js';
 
 let history = [];
 let currentIndex = -1;
@@ -69,8 +70,8 @@ export function initUndoRedo(cy, getMapId) {
         if (updates.length === 0) return;
 
         // Разделяем на устройства и фигуры
-        const deviceUpdates = updates.filter(u => !u.id.startsWith('shape_'));
-        const shapeUpdates = updates.filter(u => u.id.startsWith('shape_'));
+        const deviceUpdates = updates.filter(u => !isShapeId(u.id));
+        const shapeUpdates = updates.filter(u => isShapeId(u.id));
 
         beginSelfUpdate();
         const promises = [];
@@ -84,7 +85,7 @@ export function initUndoRedo(cy, getMapId) {
 
         // Фигуры (нет bulk-эндпоинта) — по одной
         for (const upd of shapeUpdates) {
-            const shapeId = upd.id.replace('shape_', '');
+            const shapeId = parseRawId(upd.id);
             promises.push(
                 http.put(`/api/shape/${shapeId}`, { x: upd.x, y: upd.y })
             );

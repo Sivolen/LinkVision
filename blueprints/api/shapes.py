@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
 from services import map_service
+from services import shape_service
 from services.permissions import can_edit_map
 from services.notifications import (
     notify_shape_created,
@@ -81,7 +82,7 @@ def update_shape(shape_id):
         f"🔷 API update_shape: shape_id={shape_id}, map_id={shape.map_id}, data={data}"
     )
     try:
-        map_service.update_shape(shape_id, **data)
+        shape_service.update_shape(shape_id, **data)
         shape_data = {
             "id": shape_id,
             "shape_type": shape.shape_type,

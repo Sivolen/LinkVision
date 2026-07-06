@@ -8,6 +8,7 @@ import { isDragLocked } from './lock.js';
 import { showToast } from '../utils/toast.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
+import { isShapeId, parseRawId } from './ids.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
@@ -145,7 +146,7 @@ export function initInteractions(cy) {
             }
             node.position({ x, y });
             if (node.data('isShape')) {
-                shapeUpdates.push({ id: node.id().replace('shape_', ''), x: Math.round(x), y: Math.round(y) });
+                shapeUpdates.push({ id: parseRawId(node.id()), x: Math.round(x), y: Math.round(y) });
             } else {
                 deviceUpdates.push({ id: node.id(), x: Math.round(x), y: Math.round(y) });
             }
@@ -185,11 +186,15 @@ export function initInteractions(cy) {
                 pos = bounded;
             }
         }
-        const shapeId = node.id().replace('shape_', '');
+        const shapeId = parseRawId(node.id());
+        console.log("[DEBUG] dragfree shape:", { nodeId: node.id(), shapeId, x: Math.round(pos.x), y: Math.round(pos.y) });
         clearTimeout(dragTimeouts[shapeId]);
         dragTimeouts[shapeId] = setTimeout(() => {
             beginSelfUpdate();
-            http.put(`/api/shape/${shapeId}`, { x: Math.round(pos.x), y: Math.round(pos.y) })
+            const url = `/api/shape/${shapeId}`;
+            console.log("[DEBUG] PUT shape:", url, { x: Math.round(pos.x), y: Math.round(pos.y) });
+            http.put(url, { x: Math.round(pos.x), y: Math.round(pos.y) })
+            .then(res => console.log("[DEBUG] Shape saved OK:", res))
             .catch(err => console.error('Error saving shape position:', err))
             .finally(() => {
                 endSelfUpdate();
@@ -467,7 +472,7 @@ export function initInteractions(cy) {
             showContextMenu([
                 { icon: 'fa-edit', label: 'Редактировать фигуру', action: () => window.openShapeModal(node) },
                 { icon: 'fa-trash', label: 'Удалить фигуру', action: () => {
-                    const id = node.id().replace('shape_', '');
+                    const id = parseRawId(node.id());
                     if (typeof window.deleteShape === 'function') window.deleteShape(id);
                 }}
             ], x, y);
