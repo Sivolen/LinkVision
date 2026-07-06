@@ -316,7 +316,7 @@ let wasDisconnected = false;
 
             const onMove = (e) => {
                 if (!dragging) return;
-                const w = Math.min(MAX, Math.max(MIN, e.clientX));
+                const w = Math.max(200, Math.min(800, e.clientX));
                 root.style.setProperty('--sidebar-width', w + 'px');
             };
             const onUp = () => {
@@ -328,15 +328,16 @@ let wasDisconnected = false;
                 if (px) localStorage.setItem(KEY, px);
             };
 
-            resizer.addEventListener('mousedown', (e) => {
+            resizer.addEventListener('pointerdown', (e) => {
                 if (sidebar.classList.contains('collapsed')) return; // свёрнутый не тянем
                 dragging = true;
+                resizer.setPointerCapture(e.pointerId);
                 resizer.classList.add('dragging');
                 document.body.classList.add('resizing-sidebar');
                 e.preventDefault();
             });
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('mouseup', onUp);
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
 
             // Двойной клик по ручке — сброс к ширине по умолчанию
             resizer.addEventListener('dblclick', () => {
