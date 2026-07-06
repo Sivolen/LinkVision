@@ -26,7 +26,7 @@
                     </a>
                     <form method="POST" action="{{ url_for('admin.delete_map', id=map.id) }}" style="display: inline;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-action" onclick="return confirm('Удалить карту и все устройства?')" title="Удалить">
+                        <button type="submit" class="btn-action" data-confirm-delete="map" title="Удалить">
                             <i class="fas fa-trash"></i>
                         </button>
                     </form>

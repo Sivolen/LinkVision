@@ -51,7 +51,7 @@
                 <label class="form-label">Выберите файл базы данных (.db)</label>
                 <input type="file" name="backup_file" class="form-control" accept=".db" required>
             </div>
-            <button type="submit" class="btn btn-danger" onclick="return confirm('Вы уверены? Текущая база данных будет заменена.')">
+            <button type="submit" class="btn btn-danger" data-confirm-delete="backup">
                 <i class="fas fa-undo-alt"></i> Восстановить
             </button>
         </form>
@@ -67,7 +67,7 @@
         <form method="POST" style="display:inline;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
             <input type="hidden" name="reset_rate_limit" value="1">
-            <button type="submit" class="btn btn-warning" onclick="return confirm('Вы уверены? Все счётчики rate limit будут сброшены.')">
+            <button type="submit" class="btn btn-warning" data-confirm-delete="rate_limit">
                 <i class="fas fa-sync-alt"></i> Сбросить счётчики
             </button>
         </form>
