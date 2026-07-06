@@ -7,6 +7,7 @@ import { showToast } from '../utils/toast.js';
 import { reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
+import { parseRawId } from '../map/ids.js';
 
 // Переменные модуля
 let shapeModal = null;
@@ -35,7 +36,7 @@ export function openShapeModal(shapeNode = null) {
     const fontSizeInput = document.getElementById('shape_font_size');
 
     if (shapeNode) {
-        currentShapeId = shapeNode.id().replace('shape_', '');
+        currentShapeId = parseRawId(shapeNode.id());
         idField.value = currentShapeId; // Устанавливаем ID в скрытое поле!
 
         // Сохраняем текущую позицию фигуры из графа

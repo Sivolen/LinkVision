@@ -6,6 +6,7 @@
 import { showToast } from '../utils/toast.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
+import { parseRawId } from '../map/ids.js';
 
 // Переменные модуля
 let linkModal = null;
@@ -207,7 +208,7 @@ function createLinkWithInterfaces(sourceId, targetId, srcIface, tgtIface, linkTy
  * Обновить связь
  */
 export function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, lineWidth, lineStyle, fontSize) {
-    const numericId = linkId.replace('link_', '');
+    const numericId = parseRawId(linkId);
     beginSelfUpdate();
 
     http.put(`/api/link/${numericId}`, {
@@ -272,7 +273,7 @@ export function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, line
  */
 export function deleteLink(linkId) {
     window.confirmAction('Удаление связи', 'Удалить эту связь?', () => {
-        const numericId = String(linkId).replace('link_', '');
+        const numericId = parseRawId(String(linkId));
         beginSelfUpdate();
 
         http.del(`/api/link/${numericId}`)

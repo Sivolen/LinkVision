@@ -38,6 +38,12 @@ def create_shape(
     )
     db.session.add(shape)
     db.session.commit()
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+
     return shape
 
 
@@ -60,11 +66,23 @@ def update_shape(shape_id: int, **kwargs) -> MapShape:
     db.session.commit()
 
     api_logger.info(f"  ✅ Shape saved: x={shape.x}, y={shape.y}")
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(shape.map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {shape.map_id}")
+
     return shape
 
 
 def delete_shape(shape_id: int) -> None:
     """Удалить фигуру."""
     shape = MapShape.query.get_or_404(shape_id)
+    map_id = shape.map_id
     db.session.delete(shape)
     db.session.commit()
+
+    # Инвалидируем кэш элементов карты
+    from .map_service import invalidate_map_elements_cache
+    invalidate_map_elements_cache(map_id)
+    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
