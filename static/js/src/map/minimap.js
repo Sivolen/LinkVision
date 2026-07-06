@@ -42,9 +42,16 @@ export function initMinimap(instance) {
         const z = cy.zoom();
         cy.pan({ x: cy.width() / 2 - mx * z, y: cy.height() / 2 - my * z });
     };
-    inner.addEventListener('mousedown', (e) => { dragging = true; navTo(e.clientX, e.clientY); e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (dragging) navTo(e.clientX, e.clientY); });
-    window.addEventListener('mouseup', () => { dragging = false; });
+    inner.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        inner.setPointerCapture(e.pointerId);
+        navTo(e.clientX, e.clientY);
+        e.preventDefault();
+    });
+    inner.addEventListener('pointermove', (e) => {
+        if (dragging) navTo(e.clientX, e.clientY);
+    });
+    inner.addEventListener('pointerup', () => { dragging = false; });
 
     window.toggleMinimap = () => {
         visible = !visible;
