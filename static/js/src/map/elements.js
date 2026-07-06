@@ -165,7 +165,6 @@ export function loadElements(mapId, force = false) {
 
             // Пакетное применение стилей — один проход рендера
             cy.batch(() => {
-                monitoringOffNodes.forEach(node => applyGrayStyle(node));
                 downNodes.forEach(node => addPulsingNode(cy, node, 'down'));
                 partialNodes.forEach(node => addPulsingNode(cy, node, 'partial'));
             });
@@ -447,23 +446,6 @@ export function reloadMapElements(force = false) {
     if (mapId) loadElements(mapId, force);
 }
 
-// Принудительное применение серого стиля для выключенного мониторинга
-export function applyGrayStyle(node) {
-    if (!node || !node.length) return;
-    node.style({
-        'border-color': '#6c757d',
-        'border-style': 'dotted',
-        'border-width': '3px',
-        'opacity': '0.7',
-        'overlay-opacity': '0',
-        'overlay-color': 'transparent'
-    });
-    if (typeof window.removePulsingNode === 'function') {
-        window.removePulsingNode(window.cy, node);
-    }
-}
-
 // Экспорт для глобального доступа
-window.applyGrayStyle = applyGrayStyle;
 window.addShapeToGraph = addShapeToGraph;
 window.removeShapeFromGraph = removeShapeFromGraph;
