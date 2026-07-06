@@ -12,55 +12,97 @@ let wasDisconnected = false;
         debug: function(...args) { if (this.enabledDebug) console.debug('[DEBUG]', ...args); }
     };
     // ============================================================================
-    // УТИЛИТА: Модальное окно подтверждения действия
+    // УТИЛИТА: Модальное окно подтверждения действия (Promise-based)
     // ============================================================================
-    window.confirmAction = function(title, message, onConfirm, onCancel) {
-        // Проверяем, есть ли кастомное модальное окно в base.html
-        const modalEl = document.getElementById('confirmModal');
+    window.confirmAction = function({
+        title = 'Подтверждение',
+        message = 'Вы уверены?',
+        confirmText = 'Удалить',
+        variant = 'danger'
+    } = {}, onConfirm = null, onCancel = null) {
+        // Поддержка старого синтаксиса: confirmAction(title, message, onConfirm, onCancel)
+        let opts = typeof title === 'object' ? title : { title, message };
+        if (typeof onConfirm === 'function') opts.onConfirm = onConfirm;
+        if (typeof onCancel === 'function') opts.onCancel = onCancel;
 
-        if (modalEl) {
-            // Используем Bootstrap-модалку из base.html
+        return new Promise((resolve) => {
+            const modalEl = document.getElementById('confirmModal');
+            if (!modalEl) {
+                // Fallback: нативный confirm(), если модалки нет
+                const confirmed = confirm(`${opts.title}\n\n${opts.message}`);
+                if (confirmed && opts.onConfirm) opts.onConfirm();
+                else if (!confirmed && opts.onCancel) opts.onCancel();
+                resolve(confirmed);
+                return;
+            }
+
             const modalTitle = modalEl.querySelector('.modal-title');
             const modalMessage = modalEl.querySelector('.modal-body');
-            const confirmBtn = modalEl.querySelector('.btn-danger, .btn-confirm');
-            const cancelBtn = modalEl.querySelector('.btn-secondary, .btn-cancel');
+            const confirmBtn = modalEl.querySelector('.btn-danger');
+            const cancelBtn = modalEl.querySelector('.btn-secondary');
 
-            if (modalTitle) modalTitle.textContent = title || 'Подтверждение';
-            if (modalMessage) modalMessage.textContent = message || 'Вы уверены?';
+            modalTitle.textContent = opts.title;
+            modalMessage.textContent = opts.message;
+            confirmBtn.textContent = opts.confirmText || 'Удалить';
+            confirmBtn.className = `btn btn-${opts.variant || 'danger'}`;
 
-            // Очищаем предыдущие обработчики
-            const newConfirmBtn = confirmBtn?.cloneNode(true);
-            const newCancelBtn = cancelBtn?.cloneNode(true);
-            if (confirmBtn && newConfirmBtn) confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-            if (cancelBtn && newCancelBtn) cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            // Блокируем кнопку на время выполнения
+            const originalText = confirmBtn.textContent;
+            confirmBtn.disabled = true;
 
-            // Навешиваем новые обработчики
-            newConfirmBtn?.addEventListener('click', function handler() {
-                if (typeof onConfirm === 'function') onConfirm();
+            const cleanup = () => {
+                confirmBtn.removeEventListener('click', onConfirmClick);
+                cancelBtn.removeEventListener('click', onCancelClick);
+                modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                confirmBtn.disabled = false;
+            };
+
+            const onConfirmClick = () => {
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = '⏳ Выполняется...';
+                if (opts.onConfirm) {
+                    const result = opts.onConfirm();
+                    if (result && typeof result.finally === 'function') {
+                        // Async: ждём промис
+                        result.finally(() => {
+                            cleanup();
+                            resolve(true);
+                            const modal = bootstrap.Modal.getInstance(modalEl);
+                            modal?.hide();
+                        });
+                    } else {
+                        cleanup();
+                        resolve(true);
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        modal?.hide();
+                    }
+                } else {
+                    cleanup();
+                    resolve(true);
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal?.hide();
+                }
+            };
+
+            const onCancelClick = () => {
+                cleanup();
+                resolve(false);
                 const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-                newConfirmBtn?.removeEventListener('click', handler);
-                newCancelBtn?.removeEventListener('click', handler);
-            });
+                modal?.hide();
+            };
 
-            newCancelBtn?.addEventListener('click', function handler() {
-                if (typeof onCancel === 'function') onCancel();
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-                newConfirmBtn?.removeEventListener('click', handler);
-                newCancelBtn?.removeEventListener('click', handler);
-            });
+            const onHidden = () => {
+                cleanup();
+                resolve(false);
+            };
+
+            confirmBtn.addEventListener('click', onConfirmClick);
+            cancelBtn.addEventListener('click', onCancelClick);
+            modalEl.addEventListener('hidden.bs.modal', onHidden);
 
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
-        } else {
-            // Fallback: нативный confirm(), если модалки нет
-            if (confirm(`${title}\n\n${message}`)) {
-                if (typeof onConfirm === 'function') onConfirm();
-            } else {
-                if (typeof onCancel === 'function') onCancel();
-            }
-        }
+        });
     };
     window.getCsrfToken = function() {
         const meta = document.querySelector('meta[name="csrf-token"]');
@@ -298,6 +340,34 @@ let wasDisconnected = false;
 
     // Инициализация при загрузке DOM
     document.addEventListener('DOMContentLoaded', function() {
+        // Глобальный обработчик для data-confirm-delete (замена confirm())
+        document.addEventListener('submit', async function(e) {
+            const form = e.target;
+            const confirmBtn = form.querySelector('[data-confirm-delete]');
+            if (!confirmBtn) return;
+
+            e.preventDefault();
+            const action = confirmBtn.getAttribute('data-confirm-delete');
+            const actionLabels = {
+                'map': 'карту и все устройства',
+                'user': 'пользователя',
+                'type': 'тип устройств',
+                'backup': 'текущую базу данных',
+                'rate_limit': 'все счётчики rate limit'
+            };
+            const confirmed = await window.confirmAction({
+                title: 'Подтверждение удаления',
+                message: `Вы уверены, что хотите удалить ${actionLabels[action] || 'элемент'}?`,
+                confirmText: 'Удалить',
+                variant: 'danger'
+            });
+            if (!confirmed) return;
+
+            // Восстанавливаем обработчик и отправляем форму
+            form.removeEventListener('submit', arguments.callee);
+            form.submit();
+        });
+
         // Ширина сайдбара из localStorage + перетаскиваемый сплиттер
         (function setupSidebarResizer() {
             const MIN = 200, MAX = 480, KEY = 'sidebarWidth';

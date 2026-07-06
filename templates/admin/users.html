@@ -73,7 +73,7 @@
                     </button>
                     <form method="POST" action="{{ url_for('admin.delete_user', id=user.id) }}" style="display: inline;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-action" onclick="return confirm('Удалить пользователя?')" title="Удалить">
+                        <button type="submit" class="btn-action" data-confirm-delete="user" title="Удалить">
                             <i class="fas fa-trash"></i>
                         </button>
                     </form>

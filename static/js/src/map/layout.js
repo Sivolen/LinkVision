@@ -37,7 +37,7 @@ export function initLayout(cy) {
         });
         layout.run();
     };
-    window.confirmLayout = (layoutName, direction = null) => {
+    window.confirmLayout = async (layoutName, direction = null) => {
         const names = {
             grid: 'Сетка',
             circle: 'Круг',
@@ -55,7 +55,13 @@ export function initLayout(cy) {
             };
             msg += ` (${dirNames[direction]})`;
         }
-        if (confirm(`${msg}?`)) {
+        const confirmed = await window.confirmAction({
+            title: 'Раскладка карты',
+            message: msg + '?',
+            confirmText: 'Применить',
+            variant: 'primary'
+        });
+        if (confirmed) {
             window.applyLayout(layoutName, direction);
         }
     };

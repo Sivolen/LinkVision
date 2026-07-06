@@ -268,8 +268,14 @@ window.editPermission = async function(permId, currentRole) {
  * Удалить право
  */
 window.deletePermission = async function(permId) {
-    if (!confirm('Вы уверены, что хотите удалить это право доступа?')) return;
-    
+    const confirmed = await window.confirmAction({
+        title: 'Удаление права доступа',
+        message: 'Вы уверены, что хотите удалить это право доступа?',
+        confirmText: 'Удалить',
+        variant: 'danger'
+    });
+    if (!confirmed) return;
+
     try {
         const result = await http.del(`/api/map/${currentMapId}/permissions/${permId}`);
 
