@@ -121,7 +121,6 @@ export function initMap(id) {
 
         if (!monitoringEnabled) {
             if (typeof removePulsingNode === 'function') removePulsingNode(cy, node);
-            if (typeof window.applyGrayStyle === 'function') window.applyGrayStyle(node);
             node.data('status', 'up');
             return;
         }
