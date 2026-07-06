@@ -1,6 +1,6 @@
 // layout.js – авто‑раскладка (grid, circle, cose и т.д.)
 import { getCy } from './core.js';
-import { boundNodePosition } from './background.js';
+import { boundNodePosition, getBgDimensions } from './background.js';
 import { showToast } from '../utils/toast.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
