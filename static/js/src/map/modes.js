@@ -3,6 +3,18 @@ let cy = null;
 let linkModeActive = false;
 let sourceNode = null;
 
+const MODE_LABELS = {
+    pan: 'Просмотр',
+    select: 'Редактирование',
+    link: 'Создание связи'
+};
+
+const MODE_CLASSES = {
+    pan: 'mode-view',
+    select: 'mode-edit',
+    link: 'mode-link'
+};
+
 export function initModes(instance) { cy = instance; }
 
 export function isLinkMode() { return linkModeActive; }
@@ -14,6 +26,10 @@ export function setMode(mode) {
     const selectBtn = document.getElementById('selectMode');
     if (panBtn) panBtn.classList.toggle('active', mode === 'pan');
     if (selectBtn) selectBtn.classList.toggle('active', mode === 'select');
+
+    // Обновляем индикатор режима
+    updateModeIndicator(mode);
+
     if (mode === 'select') {
         cy.boxSelectionEnabled(true);
         cy.autounselectify(false);
@@ -31,6 +47,15 @@ export function setMode(mode) {
     window.currentMode = mode; // для внешних проверок
 }
 
+function updateModeIndicator(mode) {
+    const indicator = document.getElementById('modeIndicator');
+    if (!indicator) return;
+
+    const label = MODE_LABELS[mode] || mode;
+    indicator.textContent = label;
+    indicator.className = 'mode-badge ' + (MODE_CLASSES[mode] || '');
+}
+
 export function startLinkMode(clickedNode = null) {
     if (window.isOperator) {
         alert('Оператор не может создавать связи');
@@ -38,6 +63,8 @@ export function startLinkMode(clickedNode = null) {
     }
     resetLinkMode();
     linkModeActive = true;
+    updateModeIndicator('link');
+
     if (clickedNode) {
         sourceNode = clickedNode;
         sourceNode.addClass('cy-link-source');
@@ -60,6 +87,11 @@ export function resetLinkMode() {
     document.body.style.cursor = 'default';
     const info = document.getElementById('linkInfo');
     if (info) info.remove();
+
+    // Возвращаем индикатор в режим просмотра
+    const currentMode = window.currentMode || 'pan';
+    updateModeIndicator(currentMode);
+
     if (cy) {
         cy.elements().deselect();
         cy.nodes().forEach(node => {

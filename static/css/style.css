@@ -1046,6 +1046,53 @@ body.resizing-sidebar .main-content {
   color: white;
 }
 
+/* Индикатор текущего режима карты */
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  user-select: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.mode-badge.mode-view {
+  background: rgba(40, 167, 69, 0.15);
+  color: #28a745;
+  border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.mode-badge.mode-edit {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.mode-badge.mode-link {
+  background: rgba(0, 123, 255, 0.15);
+  color: #007bff;
+  border: 1px solid rgba(0, 123, 255, 0.3);
+}
+
+[data-theme="dark"] .mode-badge.mode-view {
+  background: rgba(40, 167, 69, 0.25);
+  color: #5dd779;
+}
+
+[data-theme="dark"] .mode-badge.mode-edit {
+  background: rgba(255, 193, 7, 0.25);
+  color: #ffd54f;
+}
+
+[data-theme="dark"] .mode-badge.mode-link {
+  background: rgba(0, 123, 255, 0.25);
+  color: #4dabf7;
+}
+
 /* Поиск */
 .search-filter-bar {
   flex: 0 1 auto;
