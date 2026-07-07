@@ -14,6 +14,13 @@ from models import (
 from utils.logger import api_logger
 
 
+def _check_map_edit_permission(map_id: int) -> None:
+    """Проверить право редактирования карты. Вызывает ValueError если нет доступа."""
+    from services.permissions import can_edit_map
+    if not can_edit_map(map_id):
+        raise PermissionError("Доступ запрещён")
+
+
 def export_map_data(map_id: int) -> dict:
     """
     Экспортировать карту в JSON-формат.
@@ -97,6 +104,7 @@ def import_map(data: dict, current_user) -> Map:
         map_obj = Map.query.get(map_id)
         if not map_obj:
             raise ValueError("Map not found")
+        _check_map_edit_permission(map_id)
         Link.query.filter_by(map_id=map_id).delete()
         Device.query.filter_by(map_id=map_id).delete()
         Group.query.filter_by(map_id=map_id).delete()

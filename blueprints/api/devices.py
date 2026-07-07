@@ -15,14 +15,7 @@ from services import (
     validate_name,
     log_device_action,
 )
-from services.notifications import (
-    notify_device_created,
-    notify_device_updated,
-    notify_device_deleted,
-    notify_device_position_updated,
-    notify_bulk_position_updated,
-)
-from services.permissions import can_edit_device
+from services.permissions import can_edit_device, can_edit_map
 from utils.logger import api_logger
 
 devices_bp = Blueprint("devices", __name__)
@@ -92,6 +85,10 @@ def create_device():
     # Валидация обязательных полей
     if not all(k in data for k in ["map_id", "type_id", "name"]):
         return jsonify({"error": "map_id, type_id, name required"}), 400
+
+    # Проверка права редактирования карты
+    if not can_edit_map(data["map_id"]):
+        return jsonify({"error": "Доступ запрещён"}), 403
 
     # Валидация названия
     is_valid, error = validate_name(data["name"])

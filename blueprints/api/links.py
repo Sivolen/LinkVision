@@ -36,6 +36,10 @@ def create_link():
             400,
         )
 
+    # Проверка права редактирования карты
+    if not can_edit_map(data["map_id"]):
+        return jsonify({"error": "Доступ запрещён"}), 403
+
     try:
         # Валидация карты
         map_service.validate_map(data["map_id"])
