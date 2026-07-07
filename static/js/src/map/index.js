@@ -1,6 +1,5 @@
 import { initCy, updateGroupLabelColor } from './core.js';
-import { loadBackground, setElementsLoaded, setBackgroundLoaded, markUserInteracted, resetUserInteracted } from './background.js';
-import { updateMapBackground } from './background.js';
+import { loadBackground, setElementsLoaded, setBackgroundLoaded, markUserInteracted, resetUserInteracted, fitImageToView, updateMapBackground } from './background.js';
 import { loadElements } from './elements.js';
 import { initInteractions } from './interactions.js';
 import { initModes, setMode } from './modes.js';
@@ -320,18 +319,7 @@ window.resetZoom = () => {
     const cy = window.cy;
     if (cy) cy.fit(null, 50);
 };
-window.fitImageToView = () => {
-    const cy = window.cy;
-    if (cy && window.bgImageWidth && window.bgImageHeight) {
-        const container = document.getElementById('cy').getBoundingClientRect();
-        const zoom = Math.min(container.width / window.bgImageWidth, container.height / window.bgImageHeight) * 0.95;
-        const panX = (container.width / zoom - window.bgImageWidth) / 2;
-        const panY = (container.height / zoom - window.bgImageHeight) / 2;
-        cy.viewport({ pan: { x: panX, y: panY }, zoom });
-    } else {
-        cy.fit(null, 50);
-    }
-};
+window.fitImageToView = fitImageToView;
 window.initMap = initMap;
 window.setMode = setMode;
 window.saveViewportToServer = saveViewportToServer;
