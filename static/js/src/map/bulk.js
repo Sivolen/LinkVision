@@ -35,8 +35,7 @@ async function openBulkEditModal() {
 }
 
 async function loadTypesForBulk() {
-    const res = await fetchWithRetry('/api/types');
-    const types = await res.json();
+    const types = await http.get('/api/types');
     const select = document.getElementById('bulk_type');
     select.innerHTML = '<option value="">-- Не изменять --</option>';
     types.forEach(t => {
@@ -48,8 +47,7 @@ async function loadTypesForBulk() {
 }
 
 async function loadGroupsForBulk() {
-    const res = await fetchWithRetry(`/api/map/${window.currentMapId}/groups`);
-    const groups = await res.json();
+    const groups = await http.get(`/api/map/${window.currentMapId}/groups`);
     const select = document.getElementById('bulk_group');
     select.innerHTML = '<option value="">-- Не изменять --</option>';
     groups.forEach(g => {
