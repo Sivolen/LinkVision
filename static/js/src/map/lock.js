@@ -54,20 +54,13 @@ export function initLock(instance) {
 
         try {
             const data = await http.put(`/api/map/${currentMapId}/lock`, { locked: newState });
+            // Локально применяем сразу (отзывчивость). Остальным клиентам разошлёт
+            // сервер через событие map_lock_updated (см. notify_map_lock на бэке),
+            // поэтому клиентский emit больше не нужен.
             mapLockStates.set(currentMapId, data.is_locked);
             window.dragLocked = data.is_locked;
             applyDragLockToCanvas(data.is_locked);
             updateLockButton();
-
-            // Уведомляем другие клиенты через WebSocket
-            if (window.socket) {
-                window.socket.emit('map_lock_updated', {
-                    map_id: currentMapId,
-                    is_locked: data.is_locked,
-                    user_id: window.currentUserId,
-                    username: window.currentUsername,
-                });
-            }
 
             console.log(`🔒 Map ${currentMapId} lock: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
         } catch (err) {
@@ -80,14 +73,23 @@ export function initLock(instance) {
     if (window.socket) {
         window.socket.off('map_lock_updated'); // Очищаем старый слушатель перед новым
         window.socket.on('map_lock_updated', (data) => {
-            if (Number(data.map_id) === Number(currentMapId)) {
-                mapLockStates.set(currentMapId, data.is_locked);
-                window.dragLocked = data.is_locked;
-                applyDragLockToCanvas(data.is_locked);
-                updateLockButton();
+            if (Number(data.map_id) !== Number(currentMapId)) return;
 
-                const action = data.is_locked ? 'заблокировал' : 'разблокировал';
-                console.log(`🔔 Карта ${action} пользователем ${data.username || 'Unknown'}`);
+            mapLockStates.set(currentMapId, data.is_locked);
+            window.dragLocked = data.is_locked;
+            applyDragLockToCanvas(data.is_locked);
+            updateLockButton();
+
+            // Тост показываем только если заблокировал/разблокировал ДРУГОЙ
+            // пользователь (своё действие клиент и так отразил в toggleLock).
+            const isOwnAction = Number(data.user_id) === Number(window.currentUserId);
+            if (!isOwnAction) {
+                const who = data.username || 'Другой пользователь';
+                if (data.is_locked) {
+                    showToast('Карта заблокирована', `${who} заблокировал изменения карты`, 'info');
+                } else {
+                    showToast('Карта разблокирована', `${who} разблокировал изменения карты`, 'success');
+                }
             }
         });
     }
@@ -153,6 +155,8 @@ function passthroughEls() {
 }
 
 function applyDragLockToCanvas(isLocked) {
+    // Класс на body — CSS отключает панель редактирования (.map-locked .edit-tools).
+    document.body.classList.toggle('map-locked', !!isLocked);
     if (!cy) return;
     cy.autoungrabify(!!isLocked);
     const bg = passthroughEls();
