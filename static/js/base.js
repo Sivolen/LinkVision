@@ -605,7 +605,9 @@ if (editMapForm) {
                     window.reloadMapElements();
                 }
             }
-            bootstrap.Modal.getInstance(document.getElementById('editMapModal')).hide();
+            // Null-check: модалка может быть не инициализирована
+            const editMapModalEl = document.getElementById('editMapModal');
+            (bootstrap.Modal.getInstance(editMapModalEl) ?? new bootstrap.Modal(editMapModalEl)).hide();
             showToast('Успешно', 'Карта обновлена', 'success');
         })
         .catch(err => {
