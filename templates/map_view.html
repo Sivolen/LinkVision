@@ -11,57 +11,57 @@
 <div class="toolbar">
     {% if can_edit %}
     <div class="toolbar-group">
-        <button class="toolbar-btn" onclick="openDeviceModal()">
-            <i class="fas fa-plus"></i> Устройство
+        <button class="toolbar-btn" onclick="openDeviceModal()" aria-label="Добавить устройство">
+            <i class="fas fa-plus" aria-hidden="true"></i> Устройство
         </button>
-        <button class="toolbar-btn" onclick="startLinkMode()">
-            <i class="fas fa-link"></i> Связь
+        <button class="toolbar-btn" onclick="startLinkMode()" aria-label="Создать связь">
+            <i class="fas fa-link" aria-hidden="true"></i> Связь
         </button>
     </div>
     {% endif %}
 
     <div class="toolbar-group">
-        <button class="toolbar-btn" id="panMode" onclick="setMode('pan')" title="Перемещение карты">
-            <i class="fas fa-hand-paper"></i> Пан
+        <button class="toolbar-btn" id="panMode" onclick="setMode('pan')" title="Перемещение карты" aria-label="Режим перемещения карты">
+            <i class="fas fa-hand-paper" aria-hidden="true"></i> Пан
         </button>
-        <button class="toolbar-btn" id="selectMode" onclick="setMode('select')" title="Выделение нескольких устройств">
-            <i class="fas fa-object-group"></i> Выделение
+        <button class="toolbar-btn" id="selectMode" onclick="setMode('select')" title="Выделение нескольких устройств" aria-label="Режим выделения устройств">
+            <i class="fas fa-object-group" aria-hidden="true"></i> Выделение
         </button>
     </div>
 
     {% if can_edit %}
     <div class="toolbar-group" id="bulkEditGroup" style="display:none;">
-        <button class="toolbar-btn" onclick="openBulkEditModal()">
-            <i class="fas fa-edit"></i> Редактировать выбранные
+        <button class="toolbar-btn" onclick="openBulkEditModal()" aria-label="Массовое редактирование выбранных устройств">
+            <i class="fas fa-edit" aria-hidden="true"></i> Редактировать выбранные
         </button>
     </div>
     {% endif %}
 
     <div class="toolbar-group">
-        <button class="toolbar-btn" onclick="zoomIn()">
-            <i class="fas fa-search-plus"></i>
+        <button class="toolbar-btn" onclick="zoomIn()" aria-label="Увеличить масштаб">
+            <i class="fas fa-search-plus" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" onclick="zoomOut()">
-            <i class="fas fa-search-minus"></i>
+        <button class="toolbar-btn" onclick="zoomOut()" aria-label="Уменьшить масштаб">
+            <i class="fas fa-search-minus" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" onclick="resetZoom()">
-            <i class="fas fa-compress-arrows-alt"></i>
+        <button class="toolbar-btn" onclick="resetZoom()" aria-label="Сбросить масштаб">
+            <i class="fas fa-compress-arrows-alt" aria-hidden="true"></i>
         </button>
     </div>
 
     {% if can_edit %}
     <div class="toolbar-group">
-        <button class="toolbar-btn" onclick="openGroupManager()">
-            <i class="fas fa-layer-group"></i> Группы
+        <button class="toolbar-btn" onclick="openGroupManager()" aria-label="Управление группами устройств">
+            <i class="fas fa-layer-group" aria-hidden="true"></i> Группы
         </button>
-        <button class="toolbar-btn" onclick="openShapeModal()">
-            <i class="fas fa-shapes"></i> Фигура
+        <button class="toolbar-btn" onclick="openShapeModal()" aria-label="Создать фигуру">
+            <i class="fas fa-shapes" aria-hidden="true"></i> Фигура
         </button>
     </div>
     <div class="toolbar-group">
         <div class="dropdown">
-            <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="fas fa-project-diagram"></i> Автораскладка
+            <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-label="Автораскладка карты">
+                <i class="fas fa-project-diagram" aria-hidden="true"></i> Автораскладка
             </button>
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="#" onclick="confirmLayout('grid')">Сетка (grid)</a></li>
@@ -93,34 +93,34 @@
     </div>
     {% if can_edit %}
     <div class="toolbar-group">
-        <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="Отменить (Ctrl+Z)" disabled>
-            <i class="fas fa-undo-alt"></i>
+        <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="Отменить (Ctrl+Z)" aria-label="Отменить последнее действие" disabled>
+            <i class="fas fa-undo-alt" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" id="redoBtn" onclick="redo()" title="Повторить (Ctrl+Y)" disabled>
-            <i class="fas fa-redo-alt"></i>
+        <button class="toolbar-btn" id="redoBtn" onclick="redo()" title="Повторить (Ctrl+Y)" aria-label="Повторить отменённое действие" disabled>
+            <i class="fas fa-redo-alt" aria-hidden="true"></i>
         </button>
     </div>
     {% endif %}
     {% if can_edit %}
     <div class="toolbar-group">
-        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="Заблокировать/разблокировать перемещение устройств">
-            <i class="fas fa-lock-open"></i>
+        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="Заблокировать/разблокировать перемещение устройств" aria-label="Заблокировать или разблокировать перемещение устройств">
+            <i class="fas fa-lock-open" aria-hidden="true"></i>
         </button>
     </div>
     {% endif %}
     {% if current_user.is_admin %}
     <div class="toolbar-group">
-        <button class="toolbar-btn" onclick="openPermissionsModal({{ map.id }}, '{{ map.name }}')" title="Управление правами доступа">
-            <i class="fas fa-users-cog"></i> Права
+        <button class="toolbar-btn" onclick="openPermissionsModal({{ map.id }}, '{{ map.name }}')" title="Управление правами доступа" aria-label="Управление правами доступа к карте">
+            <i class="fas fa-users-cog" aria-hidden="true"></i> Права
         </button>
     </div>
     {% endif %}
     <div class="toolbar-group">
-        <button class="toolbar-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="Полноэкранный режим">
-            <i class="fas fa-expand"></i>
+        <button class="toolbar-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="Полноэкранный режим" aria-label="Переключить полноэкранный режим">
+            <i class="fas fa-expand" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" id="minimapToggle" onclick="toggleMinimap()" title="Мини-карта (обзор)">
-            <i class="fas fa-map"></i>
+        <button class="toolbar-btn" id="minimapToggle" onclick="toggleMinimap()" title="Мини-карта (обзор)" aria-label="Переключить мини-карту">
+            <i class="fas fa-map" aria-hidden="true"></i>
         </button>
     </div>
 <!--    <div class="toolbar-group">-->
@@ -148,8 +148,8 @@
         </div>
     </div>
 </div>
-<button id="exitFullscreenBtn" class="exit-fullscreen-btn" style="display: none;" onclick="exitFullscreen()" title="Выйти из полноэкранного режима">
-    <i class="fas fa-times"></i> Выйти
+<button id="exitFullscreenBtn" class="exit-fullscreen-btn" style="display: none;" onclick="exitFullscreen()" title="Выйти из полноэкранного режима" aria-label="Выйти из полноэкранного режима">
+    <i class="fas fa-times" aria-hidden="true"></i> Выйти
 </button>
 <!-- Модальное окно устройства -->
 <div class="modal fade" id="deviceModal" tabindex="-1">
