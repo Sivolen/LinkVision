@@ -29,6 +29,11 @@
         </button>
     </div>
 
+    <!-- Индикатор текущего режима -->
+    <div class="toolbar-group">
+        <span id="modeIndicator" class="mode-badge" role="status" aria-live="polite">Просмотр</span>
+    </div>
+
     {% if can_edit %}
     <div class="toolbar-group edit-tools" id="bulkEditGroup" style="display:none;">
         <button class="toolbar-btn" onclick="openBulkEditModal()" aria-label="Массовое редактирование выбранных устройств">
