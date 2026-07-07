@@ -112,5 +112,7 @@ async function applyBulkEdit() {
         setTimeout(() => { if (typeof window.setSkipAutoFit === 'function') window.setSkipAutoFit(false); }, 600);
     }
 
-    bootstrap.Modal.getInstance(document.getElementById('bulkEditModal')).hide();
+    // Null-check: модалка может быть не инициализирована
+    const bulkModalEl = document.getElementById('bulkEditModal');
+    (bootstrap.Modal.getInstance(bulkModalEl) ?? new bootstrap.Modal(bulkModalEl)).hide();
 }
