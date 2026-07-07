@@ -360,6 +360,8 @@ export function initInteractions(cy) {
 
         const menu = document.createElement('div');
         menu.className = 'context-menu';
+        menu.setAttribute('role', 'menu');
+        menu.setAttribute('aria-label', 'Контекстное меню');
         menu.style.cssText = `
             position: fixed;
             top: ${mouseY}px;
@@ -373,9 +375,13 @@ export function initInteractions(cy) {
             overflow: hidden;
         `;
 
-        items.forEach(item => {
+        const buttons = [];
+        items.forEach((item, i) => {
             const btn = document.createElement('button');
             btn.className = 'context-menu-item';
+            btn.setAttribute('role', 'menuitem');
+            btn.setAttribute('tabindex', i === 0 ? '0' : '-1');
+            btn.setAttribute('aria-label', item.label);
             btn.style.cssText = `
                 display: flex;
                 align-items: center;
@@ -390,7 +396,7 @@ export function initInteractions(cy) {
                 cursor: pointer;
                 transition: background 0.15s;
             `;
-            btn.innerHTML = `<i class="fas ${item.icon}" style="width: 20px;"></i> ${item.label}`;
+            btn.innerHTML = `<i class="fas ${item.icon}" style="width: 20px;" aria-hidden="true"></i> ${item.label}`;
             btn.onclick = (e) => {
                 e.stopPropagation();
                 item.action();
@@ -399,10 +405,36 @@ export function initInteractions(cy) {
             btn.onmouseenter = () => btn.style.backgroundColor = 'var(--accent-color)';
             btn.onmouseleave = () => btn.style.backgroundColor = 'transparent';
             menu.appendChild(btn);
+            buttons.push(btn);
         });
 
         document.body.appendChild(menu);
         contextMenu = menu;
+
+        // Фокус на первый элемент
+        buttons[0]?.focus();
+
+        // Клавиатурная навигация
+        menu.addEventListener('keydown', (e) => {
+            const idx = buttons.indexOf(document.activeElement);
+            if (idx === -1) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const next = (idx + 1) % buttons.length;
+                buttons[next].focus();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const prev = (idx - 1 + buttons.length) % buttons.length;
+                buttons[prev].focus();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeMenu();
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                closeMenu();
+            }
+        });
 
         // Закрыть при клике вне
         const closeHandler = (e) => {
@@ -411,6 +443,9 @@ export function initInteractions(cy) {
                 document.removeEventListener('click', closeHandler);
                 document.removeEventListener('contextmenu', closeHandler);
             }
+        };
+        const closeMenu = () => {
+            if (contextMenu) contextMenu.remove();
         };
         setTimeout(() => {
             document.addEventListener('click', closeHandler);
