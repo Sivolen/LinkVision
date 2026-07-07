@@ -71,7 +71,10 @@ def create_app():
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
     csrf = CSRFProtect(app)
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
+    if os.environ.get("BEHIND_PROXY") == "True":
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     init_extensions(app)
 
