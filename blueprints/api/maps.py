@@ -16,7 +16,7 @@ from services import (
     log_map_action,
 )
 
-from services.notifications import notify_map_updated
+from services.notifications import notify_map_updated, notify_map_lock
 from utils.file_validation import safe_save_upload
 from utils.logger import api_logger
 
@@ -216,7 +216,11 @@ def toggle_map_lock(map_id):
     # Используем сервис для обновления
     map_obj = toggle_map_lock_service(map_id, locked_value)
 
-    notify_map_updated(map_id)
+    # Синхронизируем блокировку между клиентами (без полного reload карты —
+    # элементы не менялись).
+    notify_map_lock(
+        map_id, map_obj.is_locked, current_user.id, current_user.username
+    )
 
     # Аудит
     log_map_action(

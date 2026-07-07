@@ -10,7 +10,7 @@
 
 <div class="toolbar">
     {% if can_edit %}
-    <div class="toolbar-group">
+    <div class="toolbar-group edit-tools">
         <button class="toolbar-btn" onclick="openDeviceModal()" aria-label="Добавить устройство">
             <i class="fas fa-plus" aria-hidden="true"></i> Устройство
         </button>
@@ -30,7 +30,7 @@
     </div>
 
     {% if can_edit %}
-    <div class="toolbar-group" id="bulkEditGroup" style="display:none;">
+    <div class="toolbar-group edit-tools" id="bulkEditGroup" style="display:none;">
         <button class="toolbar-btn" onclick="openBulkEditModal()" aria-label="Массовое редактирование выбранных устройств">
             <i class="fas fa-edit" aria-hidden="true"></i> Редактировать выбранные
         </button>
@@ -50,7 +50,7 @@
     </div>
 
     {% if can_edit %}
-    <div class="toolbar-group">
+    <div class="toolbar-group edit-tools">
         <button class="toolbar-btn" onclick="openGroupManager()" aria-label="Управление группами устройств">
             <i class="fas fa-layer-group" aria-hidden="true"></i> Группы
         </button>
@@ -58,7 +58,7 @@
             <i class="fas fa-shapes" aria-hidden="true"></i> Фигура
         </button>
     </div>
-    <div class="toolbar-group">
+    <div class="toolbar-group edit-tools">
         <div class="dropdown">
             <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-label="Автораскладка карты">
                 <i class="fas fa-project-diagram" aria-hidden="true"></i> Автораскладка
@@ -92,7 +92,7 @@
         </div>
     </div>
     {% if can_edit %}
-    <div class="toolbar-group">
+    <div class="toolbar-group edit-tools">
         <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="Отменить (Ctrl+Z)" aria-label="Отменить последнее действие" disabled>
             <i class="fas fa-undo-alt" aria-hidden="true"></i>
         </button>

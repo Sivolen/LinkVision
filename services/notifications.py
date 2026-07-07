@@ -11,6 +11,24 @@ def notify_map_updated(map_id, skip_sid=None):
     )
 
 
+def notify_map_lock(map_id, is_locked, user_id=None, username=None):
+    """Синхронизировать блокировку карты между всеми клиентами в комнате.
+
+    Рассылается ВСЕМ (включая инициатора) — клиент сам отфильтрует собственное
+    действие по user_id, чтобы не показывать себе тост.
+    """
+    socketio.emit(
+        "map_lock_updated",
+        {
+            "map_id": map_id,
+            "is_locked": is_locked,
+            "user_id": user_id,
+            "username": username,
+        },
+        room=f"map_{map_id}",
+    )
+
+
 # ─── Точечные уведомления ──────────────────────────────────────────────────────
 
 def _notify(map_id, event, payload, skip_sid=None):
