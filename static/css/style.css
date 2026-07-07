@@ -1011,6 +1011,13 @@ body.resizing-sidebar .main-content {
   align-items: center;
 }
 
+/* Когда карта заблокирована — гасим и отключаем инструменты редактирования
+   (кнопка блокировки в .edit-tools НЕ входит, чтобы можно было разблокировать). */
+body.map-locked .edit-tools {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .toolbar-group {
   display: flex;
   gap: 2px;
