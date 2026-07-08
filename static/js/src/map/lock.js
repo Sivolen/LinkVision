@@ -11,6 +11,11 @@ const mapLockStates = new Map();
 // Вешаем слушатель загрузки элементов один раз
 let elementsLoadedHooked = false;
 
+// Флаг: ждём эхо СВОЕГО же переключения лока (чтобы не показать тост самому себе).
+// Идентифицируем именно эту вкладку, а не пользователя — иначе другая вкладка того
+// же аккаунта не увидит тост.
+let awaitingOwnLockEcho = false;
+
 /**
  * Инициализация модуля блокировки
  */
@@ -53,6 +58,10 @@ export function initLock(instance) {
         const newState = !currentState;
 
         try {
+            // Помечаем, что следующее событие лока — эхо моего действия (без тоста).
+            // Ставим ДО запроса: эхо от сервера может прийти раньше ответа PUT.
+            awaitingOwnLockEcho = true;
+            setTimeout(() => { awaitingOwnLockEcho = false; }, 4000); // fallback, если эхо не пришло
             const data = await http.put(`/api/map/${currentMapId}/lock`, { locked: newState });
             // Локально применяем сразу (отзывчивость). Остальным клиентам разошлёт
             // сервер через событие map_lock_updated (см. notify_map_lock на бэке),
@@ -80,10 +89,12 @@ export function initLock(instance) {
             applyDragLockToCanvas(data.is_locked);
             updateLockButton();
 
-            // Тост показываем только если заблокировал/разблокировал ДРУГОЙ
-            // пользователь (своё действие клиент и так отразил в toggleLock).
-            const isOwnAction = Number(data.user_id) === Number(window.currentUserId);
-            if (!isOwnAction) {
+            // Тост НЕ показываем только той вкладке, которая сама переключила лок
+            // (у неё уже всё отражено в toggleLock). Любая другая вкладка — в т.ч.
+            // того же пользователя — тост увидит.
+            if (awaitingOwnLockEcho) {
+                awaitingOwnLockEcho = false; // это эхо моего действия — гасим один раз
+            } else {
                 const who = data.username || 'Другой пользователь';
                 if (data.is_locked) {
                     showToast('Карта заблокирована', `${who} заблокировал изменения карты`, 'info');
