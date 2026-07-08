@@ -4,8 +4,6 @@ import { addPulsingNode } from './pulse.js';
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateAllGroups } from './groupResize.js';
 import { http } from '../utils/http.js';
-import { showMapLoading, hideMapLoading } from '../utils/loadingOverlay.js';
-import { showToast } from '../utils/toast.js';
 
 const wrapText = window.wrapText || ((text) => text);
 
@@ -33,10 +31,6 @@ export function loadElements(mapId, force = false) {
 
     console.log(`🔄 Loading elements for map ${mapId}, force=${force}`);
 
-    // Показываем индикатор загрузки
-    showMapLoading();
-
-    // Сбрасываем элементы сразу, чтобы пользователь видел, что что-то происходит
     cy.elements().remove();
 
     fetchWithRetry(`/api/map/${mapId}/elements`)
@@ -191,13 +185,7 @@ export function loadElements(mapId, force = false) {
                 setTimeout(() => window.loadSidebarMaps(), 300);
             }
         })
-        .catch(err => {
-            console.error('Load elements error:', err);
-            showToast('Ошибка', 'Не удалось загрузить карту. Попробуйте обновить страницу.', 'error');
-        })
-        .finally(() => {
-            hideMapLoading();
-        });
+        .catch(err => console.error('Load elements error:', err));
 }
 
 export async function addDeviceToGraph(device) {
@@ -251,11 +239,27 @@ export async function addDeviceToGraph(device) {
                 height: device.height || null,
                 fontSize: device.font_size || null
             },
-            position: { x: device.x || 100, y: device.y || 100 }
+            // Позиция: из модалки приходит x/y, из сокет-события device_created —
+            // pos_x/pos_y. Принимаем оба, иначе устройство «уезжает» в (100,100)
+            // и на чужом экране кажется, что оно не появилось.
+            position: {
+                x: device.x ?? device.pos_x ?? 100,
+                y: device.y ?? device.pos_y ?? 100
+            }
         });
     });
     cy.style().update();
     cy.resize(); // принудительный пересчёт размеров
+
+    // Если добавленное устройство уже проблемное (и мониторится) — запускаем
+    // пульсацию сразу, а не только после следующего статус-события.
+    const monOn = device.monitoring_enabled === true || device.monitoring_enabled === 'true';
+    if (monOn) {
+        const added = cy.getElementById(String(device.id));
+        if (device.status === 'down') addPulsingNode(cy, added, 'down');
+        else if (device.status === 'partial') addPulsingNode(cy, added, 'partial');
+    }
+
     console.log('✅ Device added to graph:', device.id);
 }
 
@@ -276,22 +280,37 @@ export function updateDevice(device) {
     const cy = getCy();
     if (!cy) return;
     const node = cy.getElementById(String(device.id));
-    if (node.length) {
-        node.data({
-            name: device.name,
-            ips: device.ips || [],
-            type_id: device.type_id,
-            group_id: device.group_id,
-            monitoring_enabled: device.monitoring_enabled ? 'true' : 'false'
-        });
-        let groupParent = undefined;
-        if (device.group_id) {
-            const groupNode = cy.getElementById(`group_${device.group_id}`);
-            if (groupNode.length) groupParent = `group_${device.group_id}`;
-        }
-        node.data('parent', groupParent);
-        cy.style().update();
+    if (!node.length) return;
+
+    const has = (k) => Object.prototype.hasOwnProperty.call(device, k);
+    const monitoringOn = device.monitoring_enabled === true || device.monitoring_enabled === 'true';
+    const ipLabel = (device.ips && device.ips.length) ? device.ips.join(', ') : '';
+
+    node.data({
+        name: device.name,
+        type_id: device.type_id,
+        group_id: device.group_id,
+        monitoring_enabled: monitoringOn ? 'true' : 'false',
+        // Обновляем только пришедшие поля (из сокета приходят iconUrl/ips/размеры,
+        // из модалки — нет; так смена типа/IP отражается у других клиентов без F5,
+        // а частичный вызов не затирает прежние значения).
+        ...(has('ips') ? { ip: ipLabel, ips: device.ips || [] } : {}),
+        ...(has('iconUrl') ? { iconUrl: device.iconUrl || '' } : {}),
+        ...(has('width') ? { width: device.width ?? null } : {}),
+        ...(has('height') ? { height: device.height ?? null } : {}),
+    });
+
+    let groupParent = undefined;
+    if (device.group_id) {
+        const groupNode = cy.getElementById(`group_${device.group_id}`);
+        if (groupNode.length) groupParent = `group_${device.group_id}`;
     }
+    node.data('parent', groupParent);
+
+    // Серый стиль мониторинга в ver2 — чисто data-driven (селектор
+    // node[monitoring_enabled="false"] в styles.js), поэтому достаточно обновить
+    // data + пересчитать стиль: селектор сам наложит/снимет серый.
+    cy.style().update();
 }
 
 export function addShapeToGraph(shape) {
@@ -343,6 +362,13 @@ export function addLinkToGraph(linkData) {
 
     // Проверим, не существует ли уже
     if (cy.getElementById(linkId).length) return;
+
+    // Оба конца должны быть в графе — иначе Cytoscape бросит ошибку (ребро без узла).
+    // Может случиться при переупорядочивании событий (связь пришла раньше устройства).
+    if (!cy.getElementById(srcId).length || !cy.getElementById(tgtId).length) {
+        console.warn('addLinkToGraph: пропущено — нет узла-конца связи', srcId, tgtId);
+        return;
+    }
 
     const parts = (linkData.label || `${linkData.source_interface || 'eth0'}↔${linkData.target_interface || 'eth0'}`).split('↔');
 
