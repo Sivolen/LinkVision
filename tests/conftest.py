@@ -48,7 +48,13 @@ def app():
     from blueprints.main import main_bp
     from blueprints.api import api_bp
 
-    app = Flask(__name__)
+    # Указываем пути к шаблонам и статике от корня проекта
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    app = Flask(
+        __name__,
+        template_folder=os.path.join(project_root, "templates"),
+        static_folder=os.path.join(project_root, "static"),
+    )
     app.config.from_object(TestConfig)
 
     # Initialize extensions
