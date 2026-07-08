@@ -34,24 +34,64 @@ export function initMinimap(instance) {
 
     // Навигация: клик/перетаскивание по мини-карте центрирует карту
     let dragging = false;
-    const navTo = (clientX, clientY) => {
+    let isDrag = false; // отличаем клик от перетаскивания
+    let dragStartPos = { x: 0, y: 0 };
+    const DRAG_THRESHOLD = 5; // px — порог для отличия клика от drag
+
+    const navTo = (clientX, clientY, animate = false) => {
         if (!world) return;
         const r = inner.getBoundingClientRect();
         const mx = world.x + (clientX - r.left) / scale;
         const my = world.y + (clientY - r.top) / scale;
         const z = cy.zoom();
-        cy.pan({ x: cy.width() / 2 - mx * z, y: cy.height() / 2 - my * z });
+        const targetPan = { x: cy.width() / 2 - mx * z, y: cy.height() / 2 - my * z };
+
+        if (animate) {
+            // Анимированный переход для одиночного клика
+            cy.animate(
+                { pan: targetPan },
+                { duration: 150, easing: 'ease-out' }
+            );
+        } else {
+            // Мгновенный переход для drag
+            cy.pan(targetPan);
+        }
     };
+
     inner.addEventListener('pointerdown', (e) => {
         dragging = true;
+        isDrag = false;
+        dragStartPos = { x: e.clientX, y: e.clientY };
         inner.setPointerCapture(e.pointerId);
-        navTo(e.clientX, e.clientY);
+        navTo(e.clientX, e.clientY, false); // Мгновенно при нажатии
         e.preventDefault();
     });
+
     inner.addEventListener('pointermove', (e) => {
-        if (dragging) navTo(e.clientX, e.clientY);
+        if (!dragging) return;
+
+        // Проверяем, превышено ли расстояние для drag
+        const dx = e.clientX - dragStartPos.x;
+        const dy = e.clientY - dragStartPos.y;
+        if (!isDrag && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+            isDrag = true;
+        }
+
+        if (dragging) {
+            navTo(e.clientX, e.clientY, false); // Всегда мгновенно при drag
+        }
     });
-    inner.addEventListener('pointerup', () => { dragging = false; });
+
+    inner.addEventListener('pointerup', (e) => {
+        if (!dragging) return;
+        dragging = false;
+
+        // Если не было drag — это клик, анимируем
+        if (!isDrag) {
+            navTo(e.clientX, e.clientY, true); // Анимированный переход
+        }
+        isDrag = false;
+    });
 
     window.toggleMinimap = () => {
         visible = !visible;

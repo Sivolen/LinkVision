@@ -3,7 +3,7 @@ import secrets
 from pathlib import Path
 
 from flask import Flask, request, render_template, jsonify
-from flask_login import current_user
+from flask_login import current_user, login_required
 from flask_migrate import Migrate
 from flask_socketio import join_room
 from flask_wtf.csrf import CSRFProtect
@@ -71,7 +71,10 @@ def create_app():
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
     csrf = CSRFProtect(app)
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
+    if os.environ.get("BEHIND_PROXY") == "True":
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     init_extensions(app)
 
@@ -82,8 +85,10 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
 
-    # Отключаем CSRF для API endpoints (используем сессионную аутентификацию)
-    csrf.exempt(api_bp)
+    # CSRFProtect активен для всех endpoints.
+    # GET-запросы не проверяются (безопасно, не меняют состояние).
+    # POST/PUT/DELETE требуют X-CSRFToken заголовок.
+    # Фронтенд уже добавляет его через http.js.
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -107,9 +112,11 @@ def create_app():
             admin.must_change_password = True
             db.session.add(admin)
             db.session.commit()
-            app_logger.warning(
-                f"✅ Создан администратор admin. Временный пароль: {default_password}"
-            )
+
+            # В лог — без пароля
+            app_logger.warning("✅ Создан администратор admin. Пароль выведен в консоль при первом запуске.")
+            # В консоль — печатаем напрямую, не через ротируемый файловый логгер
+            print(f"\n{'='*60}\n  Temporary admin password: {default_password}\n{'='*60}\n")
 
         # --- Настройки мониторинга, если ещё не заданы ---
         if not db.session.get(Settings, "ping_count"):
@@ -161,6 +168,7 @@ def create_app():
     atexit.register(stop_monitor)
 
     @app.route("/static/uploads/maps/<path:filename>")
+    @login_required
     def serve_map_background(filename):
         from flask import send_from_directory
 
@@ -168,6 +176,7 @@ def create_app():
         return send_from_directory(maps_dir, filename)
 
     @app.route("/static/uploads/icons/<path:filename>")
+    @login_required
     def serve_icon(filename):
         from flask import send_from_directory
 
