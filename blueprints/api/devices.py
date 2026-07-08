@@ -15,6 +15,13 @@ from services import (
     validate_name,
     log_device_action,
 )
+from services.notifications import (
+    notify_device_created,
+    notify_device_updated,
+    notify_device_deleted,
+    notify_device_position_updated,
+    notify_bulk_position_updated,
+)
 from services.permissions import can_edit_device, can_edit_map
 from utils.logger import api_logger
 
