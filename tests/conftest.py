@@ -153,3 +153,53 @@ def client(app):
     return app.test_client()
 
 
+@pytest.fixture
+def login(client, app):
+    """Залогинить пользователя по имени через сессию (без формы логина)."""
+    def _login(username):
+        with app.app_context():
+            u = User.query.filter_by(username=username).first()
+            assert u is not None, f"Нет тестового пользователя {username}"
+            uid = u.id
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(uid)
+            sess["_fresh"] = True
+        return uid
+    return _login
+
+
+@pytest.fixture
+def map_ids(app):
+    """Словарь {название карты: id} для тестовых карт из conftest."""
+    with app.app_context():
+        return {m.name: m.id for m in Map.query.all()}
+
+
+@pytest.fixture
+def router_type_id(app):
+    """ID тестового типа устройства (Router)."""
+    with app.app_context():
+        return DeviceType.query.filter_by(name="Router").first().id
+
+
+@pytest.fixture
+def emit_recorder(app, monkeypatch):
+    """Перехватывает socketio.emit → список [{event, payload, room, skip_sid}]
+    для проверки реалтайм-событий без реального веб-сокета."""
+    from services import notifications
+    calls = []
+
+    def _rec(event, payload=None, **kwargs):
+        calls.append(
+            {
+                "event": event,
+                "payload": payload,
+                "room": kwargs.get("room"),
+                "skip_sid": kwargs.get("skip_sid"),
+            }
+        )
+
+    monkeypatch.setattr(notifications.socketio, "emit", _rec)
+    return calls
+
+
