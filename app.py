@@ -85,8 +85,10 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
 
-    # Отключаем CSRF для API endpoints (используем сессионную аутентификацию)
-    csrf.exempt(api_bp)
+    # CSRFProtect активен для всех endpoints.
+    # GET-запросы не проверяются (безопасно, не меняют состояние).
+    # POST/PUT/DELETE требуют X-CSRFToken заголовок.
+    # Фронтенд уже добавляет его через http.js.
 
     @login_manager.user_loader
     def load_user(user_id):
