@@ -1439,6 +1439,54 @@ modal-header,
 /* ============================================================================
 АДАПТИВНОСТЬ
 ============================================================================ */
+/* Тулбар карты на средних/небольших экранах: вместо переноса кнопок на
+   следующую строку — прячем текстовые подписи (остаются иконки + title-тултип
+   и aria-label для скринридеров) и переключаем ряд в горизонтальный скролл,
+   чтобы он всегда оставался в одну строку. */
+@media (max-width: 1300px) {
+  .toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 8px;
+  }
+
+  .toolbar-group {
+    flex-shrink: 0;
+  }
+
+  .toolbar-btn .btn-label {
+    display: none;
+  }
+
+  .toolbar-btn {
+    padding: 8px 10px;
+    gap: 0;
+  }
+
+  .search-filter-bar .form-control {
+    width: 180px;
+  }
+
+  .mode-badge {
+    white-space: nowrap;
+  }
+}
+
+/* Тонкий скроллбар для тулбара в WebKit-браузерах (Chrome/Safari/Edge) */
+@media (max-width: 1300px) {
+  .toolbar::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .toolbar::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+  }
+}
+
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
