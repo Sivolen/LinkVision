@@ -41,17 +41,6 @@ def _get_user_map_permission(map_id: int) -> Optional[MapPermission]:
 
     return perm
 
-    # Если пользователь оператор — ищем разрешение для роли
-    if current_user.is_operator:
-        perm = MapPermission.query.filter_by(map_id=map_id, role="editor").first()
-        if perm:
-            return perm
-        perm = MapPermission.query.filter_by(map_id=map_id, role="viewer").first()
-        if perm:
-            return perm
-
-    return None
-
 
 def can_view_map(map_id: int) -> bool:
     """
