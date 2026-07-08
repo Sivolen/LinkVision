@@ -4,6 +4,8 @@ import { addPulsingNode } from './pulse.js';
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateAllGroups } from './groupResize.js';
 import { http } from '../utils/http.js';
+import { showMapLoading, hideMapLoading } from '../utils/loadingOverlay.js';
+import { showToast } from '../utils/toast.js';
 
 const wrapText = window.wrapText || ((text) => text);
 
@@ -31,6 +33,10 @@ export function loadElements(mapId, force = false) {
 
     console.log(`🔄 Loading elements for map ${mapId}, force=${force}`);
 
+    // Показываем индикатор загрузки
+    showMapLoading();
+
+    // Сбрасываем элементы сразу, чтобы пользователь видел, что что-то происходит
     cy.elements().remove();
 
     fetchWithRetry(`/api/map/${mapId}/elements`)
@@ -185,7 +191,13 @@ export function loadElements(mapId, force = false) {
                 setTimeout(() => window.loadSidebarMaps(), 300);
             }
         })
-        .catch(err => console.error('Load elements error:', err));
+        .catch(err => {
+            console.error('Load elements error:', err);
+            showToast('Ошибка', 'Не удалось загрузить карту. Попробуйте обновить страницу.', 'error');
+        })
+        .finally(() => {
+            hideMapLoading();
+        });
 }
 
 export async function addDeviceToGraph(device) {

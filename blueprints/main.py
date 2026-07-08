@@ -148,15 +148,14 @@ def get_sidebar_maps():
 @main_bp.route("/api/map/<int:map_id>", methods=["DELETE"])
 @login_required
 def delete_map(map_id):
-    if not current_user.is_admin:
-        return jsonify({"error": "Только администратор может удалять карты"}), 403
+    from services.permissions import can_delete_map
+
+    if not can_delete_map(map_id):
+        return jsonify({"error": "Доступ запрещён"}), 403
 
     map_obj = map_service.get_map_by_id(map_id)
     if not map_obj:
         return jsonify({"error": "Map not found"}), 404
-
-    # Проверка админа уже сделана выше, владельцу удаление запрещено
-    # Только администраторы могут удалять карты
 
     try:
         owner_id = map_obj.owner_id

@@ -6,7 +6,7 @@
 // Импорты
 import { addIpRow, getIpsFromForm, setIpsInForm } from './ipManager.js';
 import { showToast } from '../utils/toast.js';
-import { getErrorMessage } from './utils.js';
+import { getErrorMessage, escapeHtml } from './utils.js';
 import { withViewportRestore, reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
@@ -119,7 +119,8 @@ export function openDeviceModal(node) {
                     neighborsBody.innerHTML = '';
                     data.neighbors.forEach(n => {
                         const row = neighborsBody.insertRow();
-                        row.insertCell().innerHTML = `<a href="#" onclick="goToDevice(${n.device_id})">${n.device_name}</a>`;
+                        row.insertCell().innerHTML =
+                            `<a href="#" onclick="goToDevice(${Number(n.device_id) || 0})">${escapeHtml(n.device_name)}</a>`;
                         row.insertCell().textContent = n.interface;
                         row.insertCell().textContent = '↔';
                         row.insertCell().textContent = n.neighbor_interface;

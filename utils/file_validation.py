@@ -3,7 +3,7 @@ import uuid
 from werkzeug.utils import secure_filename
 from PIL import Image
 
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "svg"}
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 MAX_FILE_SIZE = 16 * 1024 * 1024  # 16 MB
 
 
@@ -24,7 +24,7 @@ def validate_image(file):
     if size > MAX_FILE_SIZE:
         return False
 
-    # Проверка через Pillow (безопасное открытие)
+    # Проверка через Pillow
     try:
         img = Image.open(file)
         img.verify()  # Проверка на корректность изображения
@@ -32,13 +32,6 @@ def validate_image(file):
     except Exception:
         return False
 
-    # Дополнительная проверка сигнатур для SVG (Pillow не поддерживает SVG)
-    head = file.read(1024)
-    file.seek(0)
-    if head.startswith(b"<?xml") or head.startswith(b"<svg"):
-        return "svg" in ALLOWED_EXTENSIONS
-
-    # Для остальных форматов достаточно проверки Pillow
     return True
 
 

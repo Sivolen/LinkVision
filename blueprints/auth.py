@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from extensions import db
+from urllib.parse import urlsplit
 
 from forms import LoginForm, RegisterForm, ChangePasswordForm
 from services import user_service, rate_limit, log_auth_action, validate_password_full
@@ -8,6 +9,14 @@ from services.security_service import rate_limiter
 from utils.logger import auth_logger
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+
+def _is_safe_redirect_url(target: str) -> bool:
+    """Разрешаем редирект только на локальный путь (без схемы и хоста)."""
+    if not target:
+        return False
+    parsed = urlsplit(target)
+    return not parsed.netloc and not parsed.scheme and target.startswith("/")
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
@@ -34,11 +43,9 @@ def login():
                 return redirect(url_for("auth.change_password"))
 
             next_page = request.args.get("next")
-            return (
-                redirect(next_page)
-                if next_page
-                else redirect(url_for("main.dashboard"))
-            )
+            if next_page and _is_safe_redirect_url(next_page):
+                return redirect(next_page)
+            return redirect(url_for("main.dashboard"))
         else:
             # Логирование неудачной попытки
             log_auth_action("login_failed", 0, username)

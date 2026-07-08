@@ -15,6 +15,7 @@ from services import (
     validate_name,
     log_map_action,
 )
+from services.permissions import can_edit_map
 
 from services.notifications import notify_map_updated, notify_map_lock
 from utils.file_validation import safe_save_upload
@@ -100,6 +101,11 @@ def import_map_route():
     data = request.get_json()
     if not data:
         return jsonify({"error": "No data provided"}), 400
+
+    # Если импорт затрагивает существующую карту — проверяем право редактирования
+    map_id = data.get("id")
+    if map_id and not can_edit_map(map_id):
+        return jsonify({"error": "Доступ запрещён"}), 403
 
     try:
         map_obj = map_service.import_map(data, current_user)
