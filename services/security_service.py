@@ -359,28 +359,3 @@ def get_client_ip() -> str:
     else:
         return request.remote_addr or "unknown"
 
-
-def sanitize_input(value: str, max_length: int = 256) -> str:
-    """
-    Очистить пользовательский ввод.
-
-    Args:
-        value: Входная строка
-        max_length: Максимальная длина
-
-    Returns:
-        str: Очищенная строка
-    """
-    if not value:
-        return ""
-
-    # Ограничить длину
-    value = value[:max_length]
-
-    # Удалить опасные символы (базовая защита от XSS)
-    value = value.replace("<", "&lt;")
-    value = value.replace(">", "&gt;")
-    value = value.replace('"', "&quot;")
-    value = value.replace("'", "&#x27;")
-
-    return value.strip()

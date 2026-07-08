@@ -3,7 +3,7 @@ import secrets
 from pathlib import Path
 
 from flask import Flask, request, render_template, jsonify
-from flask_login import current_user
+from flask_login import current_user, login_required
 from flask_migrate import Migrate
 from flask_socketio import join_room
 from flask_wtf.csrf import CSRFProtect
@@ -110,9 +110,11 @@ def create_app():
             admin.must_change_password = True
             db.session.add(admin)
             db.session.commit()
-            app_logger.warning(
-                f"✅ Создан администратор admin. Временный пароль: {default_password}"
-            )
+
+            # В лог — без пароля
+            app_logger.warning("✅ Создан администратор admin. Пароль выведен в консоль при первом запуске.")
+            # В консоль — печатаем напрямую, не через ротируемый файловый логгер
+            print(f"\n{'='*60}\n  Temporary admin password: {default_password}\n{'='*60}\n")
 
         # --- Настройки мониторинга, если ещё не заданы ---
         if not db.session.get(Settings, "ping_count"):
@@ -164,6 +166,7 @@ def create_app():
     atexit.register(stop_monitor)
 
     @app.route("/static/uploads/maps/<path:filename>")
+    @login_required
     def serve_map_background(filename):
         from flask import send_from_directory
 
@@ -171,6 +174,7 @@ def create_app():
         return send_from_directory(maps_dir, filename)
 
     @app.route("/static/uploads/icons/<path:filename>")
+    @login_required
     def serve_icon(filename):
         from flask import send_from_directory
 

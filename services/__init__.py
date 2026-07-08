@@ -73,7 +73,6 @@ from .security_service import (
     validate_password_full,
     check_password_common,
     get_client_ip,
-    sanitize_input,
 )
 from .validators import (
     validate_ip_address,
@@ -135,7 +134,6 @@ __all__ = [
     "validate_password_full",
     "check_password_common",
     "get_client_ip",
-    "sanitize_input",
     # Валидаторы
     "validate_ip_address",
     "validate_ip_list",
