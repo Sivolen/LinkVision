@@ -22,7 +22,7 @@ from services.notifications import (
     notify_device_position_updated,
     notify_bulk_position_updated,
 )
-from services.permissions import can_edit_device, can_edit_map
+from services.permissions import can_edit_device
 from utils.logger import api_logger
 
 devices_bp = Blueprint("devices", __name__)
@@ -93,10 +93,6 @@ def create_device():
     if not all(k in data for k in ["map_id", "type_id", "name"]):
         return jsonify({"error": "map_id, type_id, name required"}), 400
 
-    # Проверка права редактирования карты
-    if not can_edit_map(data["map_id"]):
-        return jsonify({"error": "Доступ запрещён"}), 403
-
     # Валидация названия
     is_valid, error = validate_name(data["name"])
     if not is_valid:
@@ -147,6 +143,7 @@ def create_device():
         device_data = {
             "id": dev.id,
             "name": dev.name,
+            "ips": [ip.ip_address for ip in dev.ips],
             "type_id": dev.type_id,
             "pos_x": dev.pos_x,
             "pos_y": dev.pos_y,
@@ -229,15 +226,33 @@ def update_device(device_id):
         device = device_service.get_device_by_id(device_id)
         map_service.invalidate_sidebar_cache(device.map.owner_id)
 
+        # Иконка/размеры по (возможно новому) типу — чтобы смена типа отражалась
+        # у других клиентов в реалтайме, без F5.
+        dtype = device.type
+        icon_url = None
+        width = None
+        height = None
+        if dtype and dtype.icon_filename:
+            icon_url = (
+                url_for("static", filename=f"uploads/icons/{dtype.icon_filename}")
+                + f"?v={dtype.id}"
+            )
+            width = dtype.width
+            height = dtype.height
+
         device_data = {
             "id": device.id,
             "name": device.name,
+            "ips": [ip.ip_address for ip in device.ips],
             "type_id": device.type_id,
             "pos_x": device.pos_x,
             "pos_y": device.pos_y,
             "status": device.status,
             "monitoring_enabled": device.monitoring_enabled,
             "group_id": device.group_id,
+            "iconUrl": icon_url,
+            "width": width,
+            "height": height,
         }
         notify_device_updated(device.map_id, device_data)
 
