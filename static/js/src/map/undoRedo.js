@@ -3,6 +3,7 @@ import { http } from '../utils/http.js';
 import { showToast } from '../utils/toast.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 import { isShapeId, parseRawId } from './ids.js';
+import { flushPendingDragSaves } from './interactions.js';
 
 let history = [];
 let currentIndex = -1;
@@ -102,12 +103,22 @@ export function initUndoRedo(cy, getMapId) {
         if (redoBtn) redoBtn.disabled = (currentIndex >= history.length - 1);
     }
 
-    window.undo = () => {
+    window.undo = async () => {
+        // Если только что был drag (устройства/фигуры/группы) — его сохранение
+        // ещё может ждать в 500мс debounce. Если пользователь жмёт "Отменить"
+        // раньше, чем оно долетит до saveState(), это отложенное сохранение
+        // прилетит ПОЗЖЕ восстановления и перезапишет историю поверх того,
+        // что пользователь только что отменил — с эффектом "работает через раз".
+        // Поэтому сначала принудительно завершаем все такие сохранения.
+        await flushPendingDragSaves();
+
         if (currentIndex > 0) restoreState(currentIndex - 1);
         else if (typeof showToast === 'function') showToast('Нет действий для отмены', '', 'info');
     };
 
-    window.redo = () => {
+    window.redo = async () => {
+        await flushPendingDragSaves();
+
         if (currentIndex < history.length - 1) restoreState(currentIndex + 1);
         else if (typeof showToast === 'function') showToast('Нет действий для повтора', '', 'info');
     };

@@ -17,6 +17,32 @@ let pendingHighlight = null;
 let highlightedNodes = new Set();
 let highlightedEdges = new Set();
 
+// Отложенные (debounced) сохранения позиций после drag, которые ещё не
+// долетели до сервера/истории undo. Ключ -> функция, которая немедленно
+// выполняет сохранение (используется flushPendingDragSaves()).
+const pendingDragSaves = {};
+
+/**
+ * Принудительно и немедленно выполняет все отложенные сохранения позиций
+ * (устройства, фигуры, групповые перемещения), которые сейчас ждут в
+ * debounce-таймере. Нужно вызывать перед undo/redo — иначе можно словить
+ * гонку: пользователь тащит устройство, сразу жмёт "Отменить", а через
+ * 500 мс всё равно прилетает отложенное saveState() поверх уже
+ * восстановленного состояния, и история выглядит "случайной".
+ */
+export function flushPendingDragSaves() {
+    const entries = Object.entries(pendingDragSaves);
+    if (!entries.length) return Promise.resolve();
+
+    const jobs = entries.map(([key, commit]) => {
+        clearTimeout(dragTimeouts[key]);
+        delete dragTimeouts[key];
+        return commit();
+    });
+    clearTimeout(groupBatchTimeout);
+    return Promise.all(jobs);
+}
+
 function fallbackCopy(text) {
     const textarea = document.createElement('textarea');
     textarea.value = text;
@@ -97,7 +123,6 @@ function clearHighlight() {
 export function initInteractions(cy) {
     // Перетаскивание одиночного узла
     cy.on('dragfree', 'node', function(evt) {
-    console.log('dragfree, saving state');
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
         if (window.isOperator || isDragLocked()) return;
@@ -110,21 +135,27 @@ export function initInteractions(cy) {
             pos = node.position();
         }
         updateEdgeLabelsForNode(node);
-        clearTimeout(dragTimeouts[node.id()]);
-        dragTimeouts[node.id()] = setTimeout(() => {
+
+        const key = `device:${node.id()}`;
+        const commitDeviceMove = () => {
+            delete pendingDragSaves[key];
             beginSelfUpdate();
-            http.put(`/api/device/${node.id()}/position`, { x: Math.round(pos.x), y: Math.round(pos.y) })
+            return http.put(`/api/device/${node.id()}/position`, { x: Math.round(pos.x), y: Math.round(pos.y) })
             .then(() => {
                 if (typeof window.saveState === 'function') window.saveState('Перемещение устройства');
             })
             .catch(err => console.error(err))
             .finally(() => {
                 endSelfUpdate();
-                delete dragTimeouts[node.id()];
+                delete dragTimeouts[key];
             });
-        }, 500);
+        };
+
+        clearTimeout(dragTimeouts[key]);
+        dragTimeouts[key] = setTimeout(commitDeviceMove, 500);
+        pendingDragSaves[key] = commitDeviceMove;
     });
-    // Групповое перетаскивание
+    // Групповое перетаскивание (несколько выделенных узлов сразу)
     cy.on('dragfree', 'node:selected', function(evt) {
         if (window.isOperator || isDragLocked()) return;
         const draggedNode = evt.target;
@@ -132,46 +163,53 @@ export function initInteractions(cy) {
         if (draggedNode.data('isGroup')) return;
         const selectedNodes = cy.nodes(':selected').filter(n => !n.data('isGroup'));
         if (selectedNodes.length <= 1) return;
-        const oldPos = draggedNode._private.scratch._dragStartPos;
-        if (!oldPos) return;
-        const deltaX = draggedNode.position().x - oldPos.x;
-        const deltaY = draggedNode.position().y - oldPos.y;
+
+        // Cytoscape уже переместил ВСЕ выделенные узлы за время drag
+        // (стандартное поведение multi-select drag) — просто читаем финальные
+        // позиции. Раньше здесь пересчитывалась и повторно применялась
+        // дельта относительно node._private.scratch._dragStartPos, но эта
+        // scratch-переменная нигде не устанавливалась — ветка либо была
+        // мертва (если проверялся oldPos), либо задваивала смещение узлов.
         const deviceUpdates = [], shapeUpdates = [];
         selectedNodes.forEach(node => {
-            let x = node.position().x + deltaX;
-            let y = node.position().y + deltaY;
+            let { x, y } = node.position();
             if (getBgDimensions().width) {
                 const bounded = boundNodePosition({ x, y });
-                x = bounded.x; y = bounded.y;
+                if (bounded.x !== x || bounded.y !== y) {
+                    node.position(bounded);
+                    x = bounded.x; y = bounded.y;
+                }
             }
-            node.position({ x, y });
             if (node.data('isShape')) {
                 shapeUpdates.push({ id: parseRawId(node.id()), x: Math.round(x), y: Math.round(y) });
             } else {
                 deviceUpdates.push({ id: node.id(), x: Math.round(x), y: Math.round(y) });
             }
         });
+
         selectedNodes.forEach(node => updateGroupsForNode(node));
         selectedNodes.forEach(node => updateEdgeLabelsForNode(node));
-        clearTimeout(groupBatchTimeout);
         updateAllGroups();
-        groupBatchTimeout = setTimeout(() => {
+
+        const key = 'multiSelect';
+        const commitGroupMove = () => {
+            delete pendingDragSaves[key];
             beginSelfUpdate();
-
-            const promises = deviceUpdates.map(upd =>
-                http.put(`/api/device/${upd.id}/position`, { x: upd.x, y: upd.y })
-            );
-
-            Promise.all(promises)
+            const promises = [
+                ...deviceUpdates.map(upd => http.put(`/api/device/${upd.id}/position`, { x: upd.x, y: upd.y })),
+                ...shapeUpdates.map(upd => http.put(`/api/shape/${upd.id}`, { x: upd.x, y: upd.y })),
+            ];
+            return Promise.all(promises)
                 .then(() => {
                     if (typeof window.saveState === 'function') window.saveState('Перемещение группы устройств');
                 })
                 .catch(console.error)
-                .finally(() => {
-                    endSelfUpdate();
-                });
-        }, 500);
-        selectedNodes.forEach(n => delete n._private.scratch._dragStartPos);
+                .finally(() => endSelfUpdate());
+        };
+
+        clearTimeout(groupBatchTimeout);
+        groupBatchTimeout = setTimeout(commitGroupMove, 500);
+        pendingDragSaves[key] = commitGroupMove;
     });
     // Перетаскивание одиночной фигуры
     cy.on('dragfree', 'node[isShape]', function(evt) {
@@ -187,28 +225,32 @@ export function initInteractions(cy) {
             }
         }
         const shapeId = parseRawId(node.id());
-        console.log("[DEBUG] dragfree shape:", { nodeId: node.id(), shapeId, x: Math.round(pos.x), y: Math.round(pos.y) });
-        clearTimeout(dragTimeouts[shapeId]);
-        dragTimeouts[shapeId] = setTimeout(() => {
+        const key = `shape:${shapeId}`;
+
+        const commitShapeMove = () => {
+            delete pendingDragSaves[key];
             beginSelfUpdate();
-            const url = `/api/shape/${shapeId}`;
-            console.log("[DEBUG] PUT shape:", url, { x: Math.round(pos.x), y: Math.round(pos.y) });
-            http.put(url, { x: Math.round(pos.x), y: Math.round(pos.y) })
-            .then(res => console.log("[DEBUG] Shape saved OK:", res))
+            return http.put(`/api/shape/${shapeId}`, { x: Math.round(pos.x), y: Math.round(pos.y) })
+            .then(() => {
+                // ВАЖНО: saveState теперь вызывается только после успешного
+                // сохранения на сервере — раньше он срабатывал сразу при
+                // dragfree, до debounce и до реального PUT, из-за чего
+                // история могла зафиксировать позицию, которая ещё не
+                // была (или не будет, при ошибке сети) сохранена на бэкенде.
+                if (typeof window.saveState === 'function') window.saveState('Перемещение фигуры');
+            })
             .catch(err => console.error('Error saving shape position:', err))
             .finally(() => {
                 endSelfUpdate();
-                delete dragTimeouts[shapeId];
+                delete dragTimeouts[key];
             });
-        }, 500);
-        if (typeof window.saveState === 'function') window.saveState('Перемещение фигуры');
+        };
+
+        clearTimeout(dragTimeouts[key]);
+        dragTimeouts[key] = setTimeout(commitShapeMove, 500);
+        pendingDragSaves[key] = commitShapeMove;
     });
     // Перетаскивание группы
-    //cy.on('dragfree', 'node[isGroup]', function(evt) {
-    //    if (window.isOperator || isDragLocked()) return;
-    //    // Сохраняем состояние после перемещения группы
-    //    if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
-    //});
     cy.on('dragfree', 'node[isGroup]', function(evt) {
         if (window.isOperator || isDragLocked()) return;
         const groupNode = evt.target;
@@ -232,21 +274,26 @@ export function initInteractions(cy) {
             y: Math.round(child.position().y)
         }));
 
-        clearTimeout(dragTimeouts[groupNode.id()]);
-        dragTimeouts[groupNode.id()] = setTimeout(() => {
+        const key = `group:${groupNode.id()}`;
+        const commitGroupNodeMove = () => {
+            delete pendingDragSaves[key];
             beginSelfUpdate();
 
             // Отправляем один массовый запрос вместо многих
-            http.put('/api/devices/positions', updates)
+            return http.put('/api/devices/positions', updates)
             .then(response => {
                 if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
             })
             .catch(err => console.error('Error moving group:', err))
             .finally(() => {
                 endSelfUpdate();
-                delete dragTimeouts[groupNode.id()];
+                delete dragTimeouts[key];
             });
-        }, 500);
+        };
+
+        clearTimeout(dragTimeouts[key]);
+        dragTimeouts[key] = setTimeout(commitGroupNodeMove, 500);
+        pendingDragSaves[key] = commitGroupNodeMove;
     });
 
     // Клики по узлам
