@@ -8,7 +8,7 @@ from utils.logger import api_logger
 
 def get_link_by_id(link_id: int):
     """Получить связь по ID или вернуть None."""
-    return Link.query.get(link_id)
+    return db.session.get(Link, link_id)
 
 
 def create_link(
