@@ -135,6 +135,39 @@ class TestJsI18nInjection:
         # ru как fallback — для ключей, которых нет в en
         assert data["fallback"]["connection"]["serverUp"] == "Сервер доступен"
 
+    def test_device_modal_keys_present_in_payload(self):
+        # Ключи, которые рендерятся СРАЗУ при открытии модалки устройства
+        # (тип/группа/IP). Если их нет в инъекции — t() покажет сырой ключ.
+        from services.js_i18n import js_i18n_payload
+
+        for loc in ("ru", "en"):
+            msg = js_i18n_payload(loc)["messages"]
+            assert msg["modal"]["device"]["selectTypeOpt"]
+            assert msg["modal"]["device"]["noGroupOpt"]
+            assert msg["modal"]["ip"]["placeholder"]
+
+    def test_js_dict_cache_invalidates_on_file_change(self, tmp_path, monkeypatch):
+        # Кэш словаря должен инвалидироваться по mtime: после деплоя/правки JSON
+        # долгоживущий процесс обязан перечитать файл без рестарта (иначе на
+        # клиенте — сырые ключи).
+        import json as _json
+        import os
+        from services import js_i18n
+
+        d = tmp_path / "static" / "js" / "src" / "i18n"
+        d.mkdir(parents=True)
+        f = d / "en.json"
+        f.write_text(_json.dumps({"a": "1"}), encoding="utf-8")
+        monkeypatch.setattr(js_i18n, "BASE_DIR", str(tmp_path))
+        js_i18n._CACHE.clear()
+
+        assert js_i18n.load_js_dict("en") == {"a": "1"}
+        # меняем файл + двигаем mtime вперёд
+        f.write_text(_json.dumps({"a": "2", "b": "3"}), encoding="utf-8")
+        os.utime(f, (f.stat().st_mtime + 5, f.stat().st_mtime + 5))
+        assert js_i18n.load_js_dict("en") == {"a": "2", "b": "3"}
+        js_i18n._CACHE.clear()
+
     def test_js_dict_keys_match_between_locales(self, app):
         # ru и en должны иметь одинаковый набор ключей (иначе часть UI не
         # переведётся). Читаем словари напрямую — без HTTP (кэш локали в

@@ -12,22 +12,36 @@ import os
 
 from config import Config, BASE_DIR
 
-_CACHE = {}
+_CACHE = {}  # locale -> (mtime, data)
 
 
 def load_js_dict(locale):
-    """Словарь фронтенда для локали (с кэшем). {} если файла нет/битый."""
-    if locale in _CACHE:
-        return _CACHE[locale]
+    """Словарь фронтенда для локали. {} если файла нет/битый.
+
+    Кэш инвалидируется по mtime файла: если <locale>.json изменился на диске
+    (деплой, правка переводчиком), следующий вызов перечитает его — рестарт
+    процесса не нужен. Без этого долгоживущий процесс мог отдавать УСТАРЕВШИЙ
+    словарь (напр. без секции modal), и t() на клиенте показывал сырые ключи.
+    """
     path = os.path.join(
         BASE_DIR, "static", "js", "src", "i18n", f"{locale}.json"
     )
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        _CACHE.pop(locale, None)
+        return {}
+
+    cached = _CACHE.get(locale)
+    if cached is not None and cached[0] == mtime:
+        return cached[1]
+
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, ValueError):
         data = {}
-    _CACHE[locale] = data
+    _CACHE[locale] = (mtime, data)
     return data
 
 
