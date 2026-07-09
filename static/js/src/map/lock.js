@@ -1,6 +1,7 @@
 // lock.js – блокировка перемещения устройств (per-map, v2.0)
 import { http } from '../utils/http.js';
 import { showToast } from '../utils/toast.js';
+import { t } from '../i18n/i18n.js';
 
 let cy = null;
 let currentMapId = null;
@@ -74,7 +75,7 @@ export function initLock(instance) {
             console.log(`🔒 Map ${currentMapId} lock: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
         } catch (err) {
             console.error('Error toggling lock:', err);
-            showToast('Ошибка', 'Не удалось изменить блокировку', 'error');
+            showToast(t('toast.errorTitle'), t('lock.toggleError'), 'error');
         }
     };
 
@@ -95,11 +96,11 @@ export function initLock(instance) {
             if (awaitingOwnLockEcho) {
                 awaitingOwnLockEcho = false; // это эхо моего действия — гасим один раз
             } else {
-                const who = data.username || 'Другой пользователь';
+                const who = data.username || t('common.otherUser');
                 if (data.is_locked) {
-                    showToast('Карта заблокирована', `${who} заблокировал изменения карты`, 'info');
+                    showToast(t('lock.lockedTitle'), t('lock.lockedBy', { who }), 'info');
                 } else {
-                    showToast('Карта разблокирована', `${who} разблокировал изменения карты`, 'success');
+                    showToast(t('lock.unlockedTitle'), t('lock.unlockedBy', { who }), 'success');
                 }
             }
         });
@@ -136,7 +137,7 @@ async function loadMapLockState(mapId) {
         if (lockBtn) {
             lockBtn.disabled = !canEdit;
             if (!canEdit) {
-                lockBtn.title = 'Нет прав для изменения блокировки';
+                lockBtn.title = t('lock.btnNoRightsChange');
             }
         }
 
@@ -197,11 +198,11 @@ function updateLockButton() {
     if (isLocked) {
         lockBtn.classList.add('active');
         lockBtn.innerHTML = '<i class="fas fa-lock"></i>';
-        lockBtn.title = canEdit ? 'Разблокировать перемещение' : 'Карта заблокирована';
+        lockBtn.title = canEdit ? t('lock.btnUnlock') : t('lock.btnLockedNoRights');
     } else {
         lockBtn.classList.remove('active');
         lockBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
-        lockBtn.title = canEdit ? 'Заблокировать перемещение' : 'Нет прав для блокировки';
+        lockBtn.title = canEdit ? t('lock.btnLock') : t('lock.btnNoRightsLock');
     }
 }
 

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: LinkVision 2.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-09 14:23+1100\n"
+"POT-Creation-Date: 2026-07-09 14:49+1100\n"
 "PO-Revision-Date: 2026-07-09 14:24+1100\n"
 "Last-Translator: LinkVision\n"
 "Language: en\n"
@@ -37,6 +37,10 @@ msgstr "Theme"
 msgid "Выход"
 msgstr "Log out"
 
+#: templates/base.html:117
+msgid "Проверка..."
+msgstr "Checking..."
+
 #: templates/login.html:237
 msgid "Вход в систему"
 msgstr "Sign in"
@@ -60,3 +64,4 @@ msgstr "Sign in"
 #: templates/login.html:263
 msgid "Нет аккаунта? Зарегистрироваться"
 msgstr "No account? Sign up"
+
