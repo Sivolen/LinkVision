@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask_babel import gettext as _
 from flask_login import login_user, logout_user, login_required, current_user
 from extensions import db
 from urllib.parse import urlsplit
@@ -49,7 +50,7 @@ def login():
         else:
             # Логирование неудачной попытки
             log_auth_action("login_failed", 0, username)
-            flash("Неверный логин или пароль")
+            flash(_("Неверный логин или пароль"))
 
     return render_template("login.html", form=form)
 
