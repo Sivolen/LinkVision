@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n.js';
 // loadingOverlay.js – индикатор загрузки элементов карты
 let overlay = null;
 
@@ -12,7 +13,7 @@ export function showMapLoading() {
     overlay.innerHTML = `
         <div class="map-loading-content">
             <div class="map-loading-spinner"></div>
-            <span class="map-loading-text">Загрузка карты...</span>
+            <span class="map-loading-text">${t('loading.mapLoading')}</span>
         </div>
     `;
     document.getElementById('cy')?.parentElement?.appendChild(overlay);
