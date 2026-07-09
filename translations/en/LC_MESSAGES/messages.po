@@ -30,9 +30,8 @@ msgid "Пароль должен содержать хотя бы одну бу�
 msgstr "Password must contain at least one letter and one digit"
 
 #: forms.py:36
-#, fuzzy
 msgid "Подтверждение пароля"
-msgstr "Repeat password"
+msgstr "Password confirmation"
 
 #: forms.py:37
 msgid "Пароли не совпадают"
@@ -43,9 +42,8 @@ msgid "Неверный логин или пароль"
 msgstr "Invalid username or password"
 
 #: blueprints/auth.py:76
-#, fuzzy
 msgid "Неверный текущий пароль"
-msgstr "Invalid username or password"
+msgstr "Invalid current password"
 
 #: blueprints/auth.py:81 blueprints/auth.py:114
 #, python-format
@@ -156,9 +154,8 @@ msgid "Администрирование"
 msgstr "Administration"
 
 #: templates/base.html:101
-#, fuzzy
 msgid "Пользователи"
-msgstr "Username"
+msgstr "Users"
 
 #: templates/base.html:104
 msgid "Типы устройств"
@@ -182,9 +179,8 @@ msgstr "For example: Moscow Office"
 
 #: templates/base.html:170 templates/base.html:204 templates/base.html:223
 #: templates/dashboard.html:52
-#, fuzzy
 msgid "Отмена"
-msgstr "Theme"
+msgstr "Cancel"
 
 #: templates/base.html:171 templates/dashboard.html:53
 msgid "Создать"
@@ -323,9 +319,8 @@ msgid "Регистрация"
 msgstr "Sign up"
 
 #: templates/register.html:223
-#, fuzzy
 msgid "Зарегистрироваться"
-msgstr "No account? Sign up"
+msgstr "Sign up"
 
 #: templates/register.html:226
 msgid "Уже есть аккаунт? Войти"
