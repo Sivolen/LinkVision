@@ -73,12 +73,12 @@ def change_password():
     form = ChangePasswordForm()
     if form.validate_on_submit():
         if not current_user.check_password(form.current_password.data):
-            flash("Неверный текущий пароль", "error")
+            flash(_("Неверный текущий пароль"), "error")
             return redirect(url_for("auth.change_password"))
 
         is_valid, error = validate_password_full(form.new_password.data, current_user.username)
         if not is_valid:
-            flash(f"Слабый пароль: {error}", "error")
+            flash(_("Слабый пароль: %(error)s", error=error), "error")
             return redirect(url_for("auth.change_password"))
 
         # Используем сервис для смены пароля
@@ -86,7 +86,7 @@ def change_password():
 
         log_auth_action("password_changed", current_user.id, current_user.username)
         auth_logger.info(f"Пароль изменён: {current_user.username}")
-        flash("Пароль успешно изменён. Теперь используйте новый пароль.", "success")
+        flash(_("Пароль успешно изменён. Теперь используйте новый пароль."), "success")
         return redirect(url_for("main.dashboard"))
 
     return render_template("auth/change_password.html", form=form)
@@ -105,22 +105,22 @@ def register():
 
         # Проверка существования
         if user_service.get_user_by_username(username):
-            flash("Пользователь уже существует")
+            flash(_("Пользователь уже существует"))
             return redirect(url_for("auth.register"))
 
         # Валидация сложности пароля
         is_valid, error = validate_password_full(password, username)
         if not is_valid:
-            flash(f"Слабый пароль: {error}")
+            flash(_("Слабый пароль: %(error)s", error=error))
             return redirect(url_for("auth.register"))
 
         try:
             user_service.create_user(username, password, role="user")
-            flash("Регистрация успешна. Войдите.")
+            flash(_("Регистрация успешна. Войдите."))
             return redirect(url_for("auth.login"))
         except Exception as e:
             auth_logger.error(f"Registration error: {e}")
-            flash("Ошибка при регистрации")
+            flash(_("Ошибка при регистрации"))
 
     return render_template("register.html", form=form)
 
@@ -130,10 +130,10 @@ def register():
 def reset_rate_limit():
     """Сбросить все rate limit счётчики (только для админов)."""
     if not current_user.is_admin:
-        flash("Доступ запрещён", "error")
+        flash(_("Доступ запрещён"), "error")
         return redirect(url_for("main.dashboard"))
 
     rate_limiter.reset_all()
-    flash("Rate limit счётчики сброшены", "success")
+    flash(_("Rate limit счётчики сброшены"), "success")
     return redirect(request.referrer or url_for("main.dashboard"))
 

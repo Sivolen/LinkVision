@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: LinkVision 2.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-09 14:49+1100\n"
+"POT-Creation-Date: 2026-07-09 15:03+1100\n"
 "PO-Revision-Date: 2026-07-09 14:24+1100\n"
 "Last-Translator: LinkVision\n"
 "Language: en\n"
@@ -17,17 +17,131 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: forms.py:16
+#: forms.py:16 forms.py:22
 msgid "Имя пользователя"
 msgstr "Username"
 
-#: forms.py:17
+#: forms.py:17 forms.py:25
 msgid "Пароль"
 msgstr "Password"
+
+#: forms.py:31
+msgid "Пароль должен содержать хотя бы одну букву и одну цифру"
+msgstr "Password must contain at least one letter and one digit"
+
+#: forms.py:36
+#, fuzzy
+msgid "Подтверждение пароля"
+msgstr "Repeat password"
+
+#: forms.py:37
+msgid "Пароли не совпадают"
+msgstr "Passwords do not match"
 
 #: blueprints/auth.py:53
 msgid "Неверный логин или пароль"
 msgstr "Invalid username or password"
+
+#: blueprints/auth.py:76
+#, fuzzy
+msgid "Неверный текущий пароль"
+msgstr "Invalid username or password"
+
+#: blueprints/auth.py:81 blueprints/auth.py:114
+#, python-format
+msgid "Слабый пароль: %(error)s"
+msgstr "Weak password: %(error)s"
+
+#: blueprints/auth.py:89
+msgid "Пароль успешно изменён. Теперь используйте новый пароль."
+msgstr "Password changed successfully. Use the new password from now on."
+
+#: blueprints/auth.py:108
+msgid "Пользователь уже существует"
+msgstr "User already exists"
+
+#: blueprints/auth.py:119
+msgid "Регистрация успешна. Войдите."
+msgstr "Registration successful. Please sign in."
+
+#: blueprints/auth.py:123
+msgid "Ошибка при регистрации"
+msgstr "Registration error"
+
+#: blueprints/auth.py:133
+msgid "Доступ запрещён"
+msgstr "Access denied"
+
+#: blueprints/auth.py:137
+msgid "Rate limit счётчики сброшены"
+msgstr "Rate limit counters reset"
+
+#: blueprints/main.py:94
+msgid "Оператор не может создавать карты"
+msgstr "Operator cannot create maps"
+
+#: templates/404.html:284
+msgid "Упс! Узел не найден"
+msgstr "Oops! Node not found"
+
+#: templates/404.html:286
+msgid "Похоже, этот узел сети потерялся в пространстве."
+msgstr "Looks like this network node got lost in space."
+
+#: templates/404.html:287
+msgid "Возможно, он был отключён или перемещён."
+msgstr "It may have been disconnected or moved."
+
+#: templates/404.html:290
+msgid "Проверьте адрес в строке"
+msgstr "Check the address bar"
+
+#: templates/404.html:291
+msgid "Вернитесь на главную карту"
+msgstr "Return to the main map"
+
+#: templates/404.html:292
+msgid "Обновите страницу"
+msgstr "Refresh the page"
+
+#: templates/404.html:296
+msgid "На главную карту"
+msgstr "To the main map"
+
+#: templates/404.html:299 templates/429.html:217
+msgid "Назад"
+msgstr "Back"
+
+#: templates/429.html:201
+msgid "Слишком много запросов"
+msgstr "Too many requests"
+
+#: templates/429.html:204
+msgid ""
+"Вы отправили слишком много запросов. Пожалуйста, подождите несколько "
+"минут перед повторной попыткой."
+msgstr ""
+
+#: templates/429.html:209
+#, python-format
+msgid "Повторите попытку через %(sec)s секунд"
+msgstr "Try again in %(sec)s seconds"
+
+#: templates/429.html:214
+msgid "На страницу входа"
+msgstr "To the login page"
+
+#: templates/base.html:53 templates/base.html:110
+msgid "Карты"
+msgstr "Maps"
+
+#: templates/base.html:59 templates/base.html:160 templates/dashboard.html:42
+msgid "Новая карта"
+msgstr "New map"
+
+#: templates/base.html:62
+msgid "Импорт карты"
+msgstr "Import map"
 
 #: templates/base.html:71
 msgid "Тема"
@@ -37,23 +151,144 @@ msgstr "Theme"
 msgid "Выход"
 msgstr "Log out"
 
+#: templates/base.html:99
+msgid "Администрирование"
+msgstr "Administration"
+
+#: templates/base.html:101
+#, fuzzy
+msgid "Пользователи"
+msgstr "Username"
+
+#: templates/base.html:104
+msgid "Типы устройств"
+msgstr "Device types"
+
+#: templates/base.html:107
+msgid "Настройки"
+msgstr "Settings"
+
 #: templates/base.html:117
 msgid "Проверка..."
 msgstr "Checking..."
+
+#: templates/base.html:165 templates/base.html:189 templates/dashboard.html:47
+msgid "Название карты"
+msgstr "Map name"
+
+#: templates/base.html:166 templates/dashboard.html:48
+msgid "Например: Офис Москва"
+msgstr "For example: Moscow Office"
+
+#: templates/base.html:170 templates/base.html:204 templates/base.html:223
+#: templates/dashboard.html:52
+#, fuzzy
+msgid "Отмена"
+msgstr "Theme"
+
+#: templates/base.html:171 templates/dashboard.html:53
+msgid "Создать"
+msgstr "Create"
+
+#: templates/base.html:183
+msgid "Редактировать карту"
+msgstr "Edit map"
+
+#: templates/base.html:193
+msgid "Фоновое изображение"
+msgstr "Background image"
+
+#: templates/base.html:195
+msgid "Оставьте пустым, чтобы не менять"
+msgstr "Leave empty to keep unchanged"
+
+#: templates/base.html:199
+msgid "Удалить текущий фон"
+msgstr "Remove current background"
+
+#: templates/base.html:203
+msgid "Экспорт"
+msgstr "Export"
+
+#: templates/base.html:205
+msgid "Сохранить"
+msgstr "Save"
+
+#: templates/base.html:216
+msgid "Подтверждение"
+msgstr "Confirmation"
+
+#: templates/base.html:220
+msgid "Вы уверены?"
+msgstr "Are you sure?"
+
+#: templates/base.html:224 templates/dashboard.html:22
+msgid "Удалить"
+msgstr "Delete"
+
+#: templates/base.html:234
+msgid "Успешно"
+msgstr "Success"
+
+#: templates/base.html:235
+msgid "только что"
+msgstr "just now"
+
+#: templates/base.html:236
+msgid "Закрыть"
+msgstr "Close"
+
+#: templates/base.html:239
+msgid "Операция выполнена успешно"
+msgstr "Operation completed successfully"
+
+#: templates/dashboard.html:4
+msgid "Мои карты"
+msgstr "My maps"
+
+#: templates/dashboard.html:6
+msgid "Создать карту"
+msgstr "Create map"
+
+#: templates/dashboard.html:17
+#, python-format
+msgid "Владелец: %(name)s"
+msgstr "Owner: %(name)s"
+
+#: templates/dashboard.html:18
+#, python-format
+msgid "Создана: %(date)s"
+msgstr "Created: %(date)s"
+
+#: templates/dashboard.html:20
+msgid "Открыть"
+msgstr "Open"
+
+#: templates/dashboard.html:22
+msgid "Удалить карту и все устройства?"
+msgstr "Delete the map and all its devices?"
+
+#: templates/dashboard.html:30
+msgid "У вас пока нет карт"
+msgstr "You don't have any maps yet"
+
+#: templates/dashboard.html:31
+msgid "Создайте первую карту для начала работы с мониторингом сети."
+msgstr "Create your first map to start monitoring your network."
 
 #: templates/login.html:237
 msgid "Вход в систему"
 msgstr "Sign in"
 
-#: templates/login.html:243
+#: templates/login.html:243 templates/register.html:203
 msgid "Введите логин"
 msgstr "Enter username"
 
-#: templates/login.html:248
+#: templates/login.html:248 templates/register.html:208
 msgid "Введите пароль"
 msgstr "Enter password"
 
-#: templates/login.html:257
+#: templates/login.html:257 templates/register.html:217
 msgid "Повторите пароль"
 msgstr "Repeat password"
 
@@ -64,4 +299,35 @@ msgstr "Sign in"
 #: templates/login.html:263
 msgid "Нет аккаунта? Зарегистрироваться"
 msgstr "No account? Sign up"
+
+#: templates/no_maps.html:4
+msgid "Нет доступных карт"
+msgstr "No maps available"
+
+#: templates/no_maps.html:5
+msgid ""
+"В системе пока нет ни одной карты. Обратитесь к администратору для "
+"создания карты."
+msgstr ""
+
+#: templates/no_maps.html:7
+msgid "Вы можете вернуться на главную страницу позже."
+msgstr "You can return to the home page later."
+
+#: templates/no_maps.html:7
+msgid "На главную"
+msgstr "Home"
+
+#: templates/register.html:197
+msgid "Регистрация"
+msgstr "Sign up"
+
+#: templates/register.html:223
+#, fuzzy
+msgid "Зарегистрироваться"
+msgstr "No account? Sign up"
+
+#: templates/register.html:226
+msgid "Уже есть аккаунт? Войти"
+msgstr "Already have an account? Sign in"
 

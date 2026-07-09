@@ -19,22 +19,22 @@ class LoginForm(FlaskForm):
 
 class RegisterForm(FlaskForm):
     username = StringField(
-        "Имя пользователя", validators=[DataRequired(), Length(min=3, max=64)]
+        _l("Имя пользователя"), validators=[DataRequired(), Length(min=3, max=64)]
     )
     password = PasswordField(
-        "Пароль",
+        _l("Пароль"),
         validators=[
             DataRequired(),
             Length(min=8),
             Regexp(
                 r"^(?=.*[A-Za-z])(?=.*\d)",
-                message="Пароль должен содержать хотя бы одну букву и одну цифру",
+                message=_l("Пароль должен содержать хотя бы одну букву и одну цифру"),
             ),
         ],
     )
     confirm = PasswordField(
-        "Подтверждение пароля",
-        validators=[DataRequired(), EqualTo("password", message="Пароли не совпадают")],
+        _l("Подтверждение пароля"),
+        validators=[DataRequired(), EqualTo("password", message=_l("Пароли не совпадают"))],
     )
 
 

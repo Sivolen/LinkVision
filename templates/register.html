@@ -194,18 +194,18 @@
             <img src="{{ url_for('static', filename='images/logo.png') }}" alt="LinkVision">
         </div>
         <div class="auth-card">
-            <div class="card-header"><i class="fas fa-user-plus"></i> Регистрация</div>
+            <div class="card-header"><i class="fas fa-user-plus"></i> {{ _('Регистрация') }}</div>
             <div class="card-body">
                 <form method="POST">
                     {{ form.hidden_tag() }}
                     <div class="mb-3">
                         <label class="form-label">{{ form.username.label.text }}</label>
-                        {{ form.username(class="form-control", placeholder="Введите логин") }}
+                        {{ form.username(class="form-control", placeholder=_('Введите логин')) }}
                     </div>
                     <div class="mb-3">
                         <label class="form-label">{{ form.password.label.text }}</label>
                         <div class="password-field-wrapper">
-                            {{ form.password(class="form-control", placeholder="Введите пароль", id="passwordField") }}
+                            {{ form.password(class="form-control", placeholder=_('Введите пароль'), id="passwordField") }}
                             <button type="button" class="toggle-password" onclick="togglePassword('passwordField')">
                                 <i class="fas fa-eye" id="passwordToggleIcon"></i>
                             </button>
@@ -214,16 +214,16 @@
                     <div class="mb-3">
                         <label class="form-label">{{ form.confirm.label.text }}</label>
                         <div class="password-field-wrapper">
-                            {{ form.confirm(class="form-control", placeholder="Повторите пароль", id="confirmField") }}
+                            {{ form.confirm(class="form-control", placeholder=_('Повторите пароль'), id="confirmField") }}
                             <button type="button" class="toggle-password" onclick="togglePassword('confirmField')">
                                 <i class="fas fa-eye" id="confirmToggleIcon"></i>
                             </button>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Зарегистрироваться</button>
+                    <button type="submit" class="btn btn-primary w-100">{{ _('Зарегистрироваться') }}</button>
                 </form>
                 <div class="auth-login-link">
-                    <a href="{{ url_for('auth.login') }}">Уже есть аккаунт? Войти</a>
+                    <a href="{{ url_for('auth.login') }}">{{ _('Уже есть аккаунт? Войти') }}</a>
                 </div>
             </div>
         </div>
