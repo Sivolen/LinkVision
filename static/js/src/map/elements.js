@@ -3,6 +3,7 @@ import { boundNodePosition, setElementsLoaded, getBgImageSize } from './backgrou
 import { addPulsingNode } from './pulse.js';
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
+import { refreshZoomEmphasis } from './zoomEmphasis.js';
 import { updateAllGroups } from './groupResize.js';
 import { http } from '../utils/http.js';
 
@@ -139,10 +140,11 @@ export function loadElements(mapId, force = false) {
                 });
             }
 
-            // Обновление меток и групп
+            // Обновление меток, разведения линий и групп
             updateAllEdgeLabels();
             updateEdgeCurves();
             updateAllGroups();
+            refreshZoomEmphasis();
 
             setElementsLoaded(true);
             cy.resize();
