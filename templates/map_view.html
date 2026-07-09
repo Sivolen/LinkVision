@@ -11,72 +11,72 @@
 <div class="toolbar">
     {% if can_edit %}
     <div class="toolbar-group edit-tools">
-        <button class="toolbar-btn" onclick="openDeviceModal()" aria-label="Добавить устройство">
-            <i class="fas fa-plus" aria-hidden="true"></i> <span class="btn-label">Устройство</span>
+        <button class="toolbar-btn" onclick="openDeviceModal()" aria-label="{{ _('Добавить устройство') }}">
+            <i class="fas fa-plus" aria-hidden="true"></i> <span class="btn-label">{{ _('Устройство') }}</span>
         </button>
-        <button class="toolbar-btn" onclick="startLinkMode()" aria-label="Создать связь">
-            <i class="fas fa-link" aria-hidden="true"></i> <span class="btn-label">Связь</span>
+        <button class="toolbar-btn" onclick="startLinkMode()" aria-label="{{ _('Создать связь') }}">
+            <i class="fas fa-link" aria-hidden="true"></i> <span class="btn-label">{{ _('Связь') }}</span>
         </button>
     </div>
     {% endif %}
 
     <div class="toolbar-group">
-        <button class="toolbar-btn" id="panMode" onclick="setMode('pan')" title="Перемещение карты" aria-label="Режим перемещения карты">
-            <i class="fas fa-hand-paper" aria-hidden="true"></i> <span class="btn-label">Пан</span>
+        <button class="toolbar-btn" id="panMode" onclick="setMode('pan')" title="{{ _('Перемещение карты') }}" aria-label="{{ _('Режим перемещения карты') }}">
+            <i class="fas fa-hand-paper" aria-hidden="true"></i> <span class="btn-label">{{ _('Пан') }}</span>
         </button>
-        <button class="toolbar-btn" id="selectMode" onclick="setMode('select')" title="Выделение нескольких устройств" aria-label="Режим выделения устройств">
-            <i class="fas fa-object-group" aria-hidden="true"></i> <span class="btn-label">Выделение</span>
+        <button class="toolbar-btn" id="selectMode" onclick="setMode('select')" title="{{ _('Выделение нескольких устройств') }}" aria-label="{{ _('Режим выделения устройств') }}">
+            <i class="fas fa-object-group" aria-hidden="true"></i> <span class="btn-label">{{ _('Выделение') }}</span>
         </button>
     </div>
 
     <!-- Индикатор текущего режима -->
     <div class="toolbar-group">
-        <span id="modeIndicator" class="mode-badge" role="status" aria-live="polite">Просмотр</span>
+        <span id="modeIndicator" class="mode-badge" role="status" aria-live="polite">{{ _('Просмотр') }}</span>
     </div>
 
     {% if can_edit %}
     <div class="toolbar-group edit-tools" id="bulkEditGroup" style="display:none;">
-        <button class="toolbar-btn" onclick="openBulkEditModal()" aria-label="Массовое редактирование выбранных устройств">
-            <i class="fas fa-edit" aria-hidden="true"></i> <span class="btn-label">Редактировать выбранные</span>
+        <button class="toolbar-btn" onclick="openBulkEditModal()" aria-label="{{ _('Массовое редактирование выбранных устройств') }}">
+            <i class="fas fa-edit" aria-hidden="true"></i> <span class="btn-label">{{ _('Редактировать выбранные') }}</span>
         </button>
     </div>
     {% endif %}
 
     <div class="toolbar-group">
-        <button class="toolbar-btn" onclick="zoomIn()" aria-label="Увеличить масштаб">
+        <button class="toolbar-btn" onclick="zoomIn()" aria-label="{{ _('Увеличить масштаб') }}">
             <i class="fas fa-search-plus" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" onclick="zoomOut()" aria-label="Уменьшить масштаб">
+        <button class="toolbar-btn" onclick="zoomOut()" aria-label="{{ _('Уменьшить масштаб') }}">
             <i class="fas fa-search-minus" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" onclick="resetZoom()" aria-label="Сбросить масштаб">
+        <button class="toolbar-btn" onclick="resetZoom()" aria-label="{{ _('Сбросить масштаб') }}">
             <i class="fas fa-compress-arrows-alt" aria-hidden="true"></i>
         </button>
     </div>
 
     {% if can_edit %}
     <div class="toolbar-group edit-tools">
-        <button class="toolbar-btn" onclick="openGroupManager()" aria-label="Управление группами устройств">
-            <i class="fas fa-layer-group" aria-hidden="true"></i> <span class="btn-label">Группы</span>
+        <button class="toolbar-btn" onclick="openGroupManager()" aria-label="{{ _('Управление группами устройств') }}">
+            <i class="fas fa-layer-group" aria-hidden="true"></i> <span class="btn-label">{{ _('Группы') }}</span>
         </button>
-        <button class="toolbar-btn" onclick="openShapeModal()" aria-label="Создать фигуру">
-            <i class="fas fa-shapes" aria-hidden="true"></i> <span class="btn-label">Фигура</span>
+        <button class="toolbar-btn" onclick="openShapeModal()" aria-label="{{ _('Создать фигуру') }}">
+            <i class="fas fa-shapes" aria-hidden="true"></i> <span class="btn-label">{{ _('Фигура') }}</span>
         </button>
     </div>
     <div class="toolbar-group edit-tools">
         <div class="dropdown">
-            <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-label="Автораскладка карты">
-                <i class="fas fa-project-diagram" aria-hidden="true"></i> <span class="btn-label">Автораскладка</span>
+            <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-label="{{ _('Автораскладка карты') }}">
+                <i class="fas fa-project-diagram" aria-hidden="true"></i> <span class="btn-label">{{ _('Автораскладка') }}</span>
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('grid')">Сетка (grid)</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('circle')">Круг (circle)</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('concentric')">Концентрический (concentric)</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'downward')">Дерево (сверху → вниз)</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'upward')">Дерево (снизу → вверх)</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'rightward')">Дерево (слева → направо)</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'leftward')">Дерево (справа → налево)</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('cose')">Силовой (cose)</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('grid')">{{ _('Сетка (grid)') }}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('circle')">{{ _('Круг (circle)') }}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('concentric')">{{ _('Концентрический (concentric)') }}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'downward')">{{ _('Дерево (сверху → вниз)') }}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'upward')">{{ _('Дерево (снизу → вверх)') }}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'rightward')">{{ _('Дерево (слева → направо)') }}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'leftward')">{{ _('Дерево (справа → налево)') }}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="confirmLayout('cose')">{{ _('Силовой (cose)') }}</a></li>
             </ul>
         </div>
     </div>
@@ -85,46 +85,46 @@
     <div class="search-filter-bar toolbar-group">
         <div class="input-group">
             <span class="input-group-text bg-secondary text-white"><i class="fas fa-search"></i></span>
-            <input type="text" id="searchInput" class="form-control" placeholder="Поиск по имени, IP или типу...">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Фильтр</button>
+            <input type="text" id="searchInput" class="form-control" placeholder="{{ _('Поиск по имени, IP или типу...') }}">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ _('Фильтр') }}</button>
             <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="#" onclick="filterByStatus('all')">Все устройства</a></li>
-                <li><a class="dropdown-item" href="#" onclick="filterByStatus('true')">Только UP</a></li>
-                <li><a class="dropdown-item" href="#" onclick="filterByStatus('false')">Только DOWN</a></li>
+                <li><a class="dropdown-item" href="#" onclick="filterByStatus('all')">{{ _('Все устройства') }}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="filterByStatus('true')">{{ _('Только UP') }}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="filterByStatus('false')">{{ _('Только DOWN') }}</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="#" onclick="clearSearch()">Сбросить поиск</a></li>
+                <li><a class="dropdown-item" href="#" onclick="clearSearch()">{{ _('Сбросить поиск') }}</a></li>
             </ul>
         </div>
     </div>
     {% if can_edit %}
     <div class="toolbar-group edit-tools">
-        <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="Отменить (Ctrl+Z)" aria-label="Отменить последнее действие" disabled>
+        <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="{{ _('Отменить (Ctrl+Z)') }}" aria-label="{{ _('Отменить последнее действие') }}" disabled>
             <i class="fas fa-undo-alt" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" id="redoBtn" onclick="redo()" title="Повторить (Ctrl+Y)" aria-label="Повторить отменённое действие" disabled>
+        <button class="toolbar-btn" id="redoBtn" onclick="redo()" title="{{ _('Повторить (Ctrl+Y)') }}" aria-label="{{ _('Повторить отменённое действие') }}" disabled>
             <i class="fas fa-redo-alt" aria-hidden="true"></i>
         </button>
     </div>
     {% endif %}
     {% if can_edit %}
     <div class="toolbar-group">
-        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="Заблокировать/разблокировать перемещение устройств" aria-label="Заблокировать или разблокировать перемещение устройств">
+        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="{{ _('Заблокировать/разблокировать перемещение устройств') }}" aria-label="{{ _('Заблокировать или разблокировать перемещение устройств') }}">
             <i class="fas fa-lock-open" aria-hidden="true"></i>
         </button>
     </div>
     {% endif %}
     {% if current_user.is_admin %}
     <div class="toolbar-group">
-        <button class="toolbar-btn" onclick="openPermissionsModal({{ map.id }}, '{{ map.name }}')" title="Управление правами доступа" aria-label="Управление правами доступа к карте">
-            <i class="fas fa-users-cog" aria-hidden="true"></i> <span class="btn-label">Права</span>
+        <button class="toolbar-btn" onclick="openPermissionsModal({{ map.id }}, '{{ map.name }}')" title="{{ _('Управление правами доступа') }}" aria-label="{{ _('Управление правами доступа к карте') }}">
+            <i class="fas fa-users-cog" aria-hidden="true"></i> <span class="btn-label">{{ _('Права') }}</span>
         </button>
     </div>
     {% endif %}
     <div class="toolbar-group">
-        <button class="toolbar-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="Полноэкранный режим" aria-label="Переключить полноэкранный режим">
+        <button class="toolbar-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="{{ _('Полноэкранный режим') }}" aria-label="{{ _('Переключить полноэкранный режим') }}">
             <i class="fas fa-expand" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" id="minimapToggle" onclick="toggleMinimap()" title="Мини-карта (обзор)" aria-label="Переключить мини-карту">
+        <button class="toolbar-btn" id="minimapToggle" onclick="toggleMinimap()" title="{{ _('Мини-карта (обзор)') }}" aria-label="{{ _('Переключить мини-карту') }}">
             <i class="fas fa-map" aria-hidden="true"></i>
         </button>
     </div>
@@ -148,13 +148,13 @@
     <div id="minimap" class="minimap">
         <div class="minimap-inner">
             <img class="minimap-bg" alt="">
-            <img class="minimap-img" alt="Обзор карты">
+            <img class="minimap-img" alt="{{ _('Обзор карты') }}">
             <div class="minimap-viewport"></div>
         </div>
     </div>
 </div>
-<button id="exitFullscreenBtn" class="exit-fullscreen-btn" style="display: none;" onclick="exitFullscreen()" title="Выйти из полноэкранного режима" aria-label="Выйти из полноэкранного режима">
-    <i class="fas fa-times" aria-hidden="true"></i> Выйти
+<button id="exitFullscreenBtn" class="exit-fullscreen-btn" style="display: none;" onclick="exitFullscreen()" title="{{ _('Выйти из полноэкранного режима') }}" aria-label="{{ _('Выйти из полноэкранного режима') }}">
+    <i class="fas fa-times" aria-hidden="true"></i> {{ _('Выйти') }}
 </button>
 <!-- Модальное окно устройства -->
 <div class="modal fade" id="deviceModal" tabindex="-1">
@@ -163,13 +163,13 @@
             <div class="modal-header">
                 <ul class="nav nav-tabs card-header-tabs" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link active" data-bs-toggle="tab" href="#device-info">Информация</a>
+                        <a class="nav-link active" data-bs-toggle="tab" href="#device-info">{{ _('Информация') }}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#device-history">История</a>
+                        <a class="nav-link" data-bs-toggle="tab" href="#device-history">{{ _('История') }}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#device-neighbors">Соседи</a>
+                        <a class="nav-link" data-bs-toggle="tab" href="#device-neighbors">{{ _('Соседи') }}</a>
                     </li>
                 </ul>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -180,48 +180,48 @@
                     <div class="tab-pane active" id="device-info">
                         <input type="hidden" id="dev_id">
                         <div class="mb-3">
-                            <label class="form-label">Имя *</label>
+                            <label class="form-label">{{ _('Имя') }} *</label>
                             <input type="text" id="dev_name" class="form-control" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">IP-адреса</label>
+                            <label class="form-label fw-semibold">{{ _('IP-адреса') }}</label>
                             <div id="ips-container" class="ip-list">
                                 <div class="ip-row">
                                     <div class="ip-input-wrapper">
-                                        <input type="text" class="form-control ip-input" placeholder="IPv4 или IPv6">
-                                        <button class="btn-remove-ip" type="button" title="Удалить IP">&times;</button>
+                                        <input type="text" class="form-control ip-input" placeholder="{{ _('IPv4 или IPv6') }}">
+                                        <button class="btn-remove-ip" type="button" title="{{ _('Удалить IP') }}">&times;</button>
                                     </div>
                                 </div>
                             </div>
                             <div class="d-flex justify-content-end mt-2">
                                 <button type="button" id="add-ip-btn" class="btn-outline-light">
-                                    <i class="fas fa-plus-circle"></i> Добавить IP
+                                    <i class="fas fa-plus-circle"></i> {{ _('Добавить IP') }}
                                 </button>
                             </div>
-                            <small class="text-muted d-block mt-2">Нажмите Enter, чтобы добавить новый IP</small>
+                            <small class="text-muted d-block mt-2">{{ _('Нажмите Enter, чтобы добавить новый IP') }}</small>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Тип устройства *</label>
+                            <label class="form-label">{{ _('Тип устройства') }} *</label>
                             <select id="dev_type" class="form-select" required>
-                                <option value="">-- Выберите тип --</option>
+                                <option value="">{{ _('-- Выберите тип --') }}</option>
                             </select>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-8">
-                                <label class="form-label">Группа</label>
+                                <label class="form-label">{{ _('Группа') }}</label>
                                 <select id="dev_group" class="form-select">
-                                    <option value="">-- Без группы --</option>
+                                    <option value="">{{ _('-- Без группы --') }}</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Размер шрифта (px)</label>
+                                <label class="form-label">{{ _('Размер шрифта (px)') }}</label>
                                 <input type="number" id="dev_font_size" class="form-control" value="11" min="8" max="48" step="1">
-                                <small class="text-muted">Оставьте пустым для стандартного</small>
+                                <small class="text-muted">{{ _('Оставьте пустым для стандартного') }}</small>
                             </div>
                         </div>
                         <div class="form-check mb-3">
                             <input type="checkbox" class="form-check-input" id="dev_monitoring">
-                            <label class="form-check-label" for="dev_monitoring">Мониторинг включён</label>
+                            <label class="form-check-label" for="dev_monitoring">{{ _('Мониторинг включён') }}</label>
                         </div>
                     </div>
                     <!-- Вкладка "История" -->
@@ -229,21 +229,21 @@
                         <table class="modern-table">
                             <thead>
                                 <tr>
-                                    <th>Время</th>
-                                    <th>Старый статус</th>
-                                    <th>Новый статус</th>
+                                    <th>{{ _('Время') }}</th>
+                                    <th>{{ _('Старый статус') }}</th>
+                                    <th>{{ _('Новый статус') }}</th>
                                 </tr>
                             </thead>
                             <tbody id="device-history-body">
-                                <tr><td colspan="3" class="text-center text-muted">Загрузка...</td></tr>
+                                <tr><td colspan="3" class="text-center text-muted">{{ _('Загрузка...') }}</td></tr>
                             </tbody>
                         </table>
 
                     <!-- Пагинация -->
                     <div class="pagination-container" id="history-pagination" style="display: none;">
-                        <button class="pagination-btn" id="history-prev" disabled>‹ Предыдущая</button>
-                        <span class="pagination-info" id="history-page-info">Страница 1 из 1</span>
-                        <button class="pagination-btn" id="history-next" disabled>Следующая ›</button>
+                        <button class="pagination-btn" id="history-prev" disabled>{{ _('‹ Предыдущая') }}</button>
+                        <span class="pagination-info" id="history-page-info">{{ _('Страница 1 из 1') }}</span>
+                        <button class="pagination-btn" id="history-next" disabled>{{ _('Следующая ›') }}</button>
                     </div>
                     </div>
                     <!-- Вкладка "Соседи" -->
@@ -251,30 +251,30 @@
                         <table class="modern-table">
                             <thead>
                                 <tr>
-                                    <th>Устройство</th>
-                                    <th>Интерфейс</th>
+                                    <th>{{ _('Устройство') }}</th>
+                                    <th>{{ _('Интерфейс') }}</th>
                                     <th>↔</th>
-                                    <th>Интерфейс соседа</th>
-                                    <th>Тип линии</th>
+                                    <th>{{ _('Интерфейс соседа') }}</th>
+                                    <th>{{ _('Тип линии') }}</th>
                                 </tr>
                             </thead>
                             <tbody id="device-neighbors-body">
-                                <tr><td colspan="5" class="text-center text-muted">Загрузка...</td></tr>
+                                <tr><td colspan="5" class="text-center text-muted">{{ _('Загрузка...') }}</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
                 {% if can_edit %}
                 <button type="button" class="btn btn-primary" onclick="saveDevice()" id="saveDeviceBtn">
-                    <span class="btn-text">Сохранить</span>
+                    <span class="btn-text">{{ _('Сохранить') }}</span>
                     <span class="btn-loader d-none">
-                        <span class="spinner"></span> Сохранение...
+                        <span class="spinner"></span> {{ _('Сохранение...') }}
                     </span>
                 </button>
-                <button type="button" class="btn btn-danger" id="deleteDeviceBtn" style="display:none;" onclick="deleteDevice()">Удалить</button>
+                <button type="button" class="btn btn-danger" id="deleteDeviceBtn" style="display:none;" onclick="deleteDevice()">{{ _('Удалить') }}</button>
                 {% endif %}
             </div>
         </div>
@@ -286,7 +286,7 @@
     <div class="modal-dialog modal-md">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="linkModalTitle">Настройка связи</h5>
+                <h5 class="modal-title" id="linkModalTitle">{{ _('Настройка связи') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -297,11 +297,11 @@
                 <!-- Интерфейсы -->
                 <div class="row g-2 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label small">Интерфейс источника</label>
+                        <label class="form-label small">{{ _('Интерфейс источника') }}</label>
                         <input type="text" id="link_src_iface" class="form-control form-control-sm" placeholder="eth0">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small">Интерфейс назначения</label>
+                        <label class="form-label small">{{ _('Интерфейс назначения') }}</label>
                         <input type="text" id="link_tgt_iface" class="form-control form-control-sm" placeholder="eth0">
                     </div>
                 </div>
@@ -313,9 +313,9 @@
 
                 <!-- Тип линии (предустановки) -->
                 <div class="mb-3">
-                    <label class="form-label small">Тип линии (предустановки)</label>
+                    <label class="form-label small">{{ _('Тип линии (предустановки)') }}</label>
                     <select id="link_type" class="form-select form-select-sm" onchange="applyLinkTypePreset(this.value)">
-                        <option value="">-- Ручная настройка --</option>
+                        <option value="">{{ _('-- Ручная настройка --') }}</option>
                         <option value="100m">100m</option>
                         <option value="1G">1G</option>
                         <option value="10G">10G</option>
@@ -331,19 +331,19 @@
                 <!-- Тонкая настройка линии -->
                 <div class="row g-2 mb-3">
                     <div class="col-md-4">
-                        <label class="form-label small">Цвет линии</label>
+                        <label class="form-label small">{{ _('Цвет линии') }}</label>
                         <input type="color" id="link_line_color" class="form-control form-control-sm" value="#6c757d">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small">Толщина (px)</label>
+                        <label class="form-label small">{{ _('Толщина (px)') }}</label>
                         <input type="number" id="link_line_width" class="form-control form-control-sm" min="1" max="10" value="2">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small">Стиль линии</label>
+                        <label class="form-label small">{{ _('Стиль линии') }}</label>
                         <select id="link_line_style" class="form-select form-select-sm">
-                            <option value="solid">Сплошная</option>
-                            <option value="dashed">Пунктирная</option>
-                            <option value="dotted">Точечная</option>
+                            <option value="solid">{{ _('Сплошная') }}</option>
+                            <option value="dashed">{{ _('Пунктирная') }}</option>
+                            <option value="dotted">{{ _('Точечная') }}</option>
                         </select>
                     </div>
                 </div>
@@ -351,20 +351,20 @@
                 <!-- Размер шрифта подписи -->
                 <div class="row g-2">
                     <div class="col-md-12">
-                        <label class="form-label small">Размер шрифта подписи (px)</label>
+                        <label class="form-label small">{{ _('Размер шрифта подписи (px)') }}</label>
                         <input type="number" id="link_font_size" class="form-control form-control-sm" min="6" max="20" value="8">
-                        <small class="text-muted">Оставьте пустым для использования стандартного размера (8px)</small>
+                        <small class="text-muted">{{ _('Оставьте пустым для использования стандартного размера (8px)') }}</small>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
                 {% if can_edit %}
-                <button type="button" class="btn btn-danger btn-sm" id="linkDeleteBtn" style="display:none;" onclick="deleteLink()">Удалить</button>
+                <button type="button" class="btn btn-danger btn-sm" id="linkDeleteBtn" style="display:none;" onclick="deleteLink()">{{ _('Удалить') }}</button>
                 <button type="button" class="btn btn-primary btn-sm" onclick="confirmCreateLink()" id="saveLinkBtn">
-                    <span class="btn-text">Сохранить</span>
+                    <span class="btn-text">{{ _('Сохранить') }}</span>
                     <span class="btn-loader d-none">
-                        <span class="spinner"></span> Сохранение...
+                        <span class="spinner"></span> {{ _('Сохранение...') }}
                     </span>
                 </button>
                 {% endif %}
@@ -380,10 +380,10 @@
             <!-- Header -->
             <div class="modal-header border-0 pb-0">
                 <div>
-                    <h5 class="modal-title fw-bold" id="groupModalLabel">Группы устройств</h5>
-                    <small class="text-muted">Организуйте устройства по категориям</small>
+                    <h5 class="modal-title fw-bold" id="groupModalLabel">{{ _('Группы устройств') }}</h5>
+                    <small class="text-muted">{{ _('Организуйте устройства по категориям') }}</small>
                 </div>
-                <button type="button" class="btn-close btn-close-gray" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                <button type="button" class="btn-close btn-close-gray" data-bs-dismiss="modal" aria-label="{{ _('Закрыть') }}"></button>
             </div>
 
             <!-- Body -->
@@ -397,24 +397,24 @@
                         <!-- Название -->
                         <div class="form-group">
                             <label for="group_name" class="form-label">
-                                Название группы <span class="text-danger">*</span>
+                                {{ _('Название группы') }} <span class="text-danger">*</span>
                             </label>
                             <div class="input-wrapper">
                                 <i class="fas fa-tag input-icon"></i>
                                 <input type="text"
                                        id="group_name"
                                        class="form-control modern-input"
-                                       placeholder="Например: Серверная"
+                                       placeholder="{{ _('Например: Серверная') }}"
                                        pattern="^.{2,50}$"
-                                       title="От 2 до 50 символов"
+                                       title="{{ _('От 2 до 50 символов') }}"
                                        required>
                             </div>
-                            <div class="invalid-feedback">Введите название от 2 до 50 символов</div>
+                            <div class="invalid-feedback">{{ _('Введите название от 2 до 50 символов') }}</div>
                         </div>
 
                         <!-- Цвет -->
                          <div class="form-group">
-                            <label class="form-label">Цвет метки</label>
+                            <label class="form-label">{{ _('Цвет метки') }}</label>
 
                             <div class="color-picker-simple">
                                 <!-- Кнопка выбора -->
@@ -438,23 +438,23 @@
                                     </div>
                                     <div class="color-custom">
                                         <input type="color" id="group_color" value="#3498db">
-                                        <label for="group_color">Свой цвет</label>
+                                        <label for="group_color">{{ _('Свой цвет') }}</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Размер шрифта (px)</label>
+                            <label class="form-label">{{ _('Размер шрифта (px)') }}</label>
                             <input type="number" id="group_font_size" class="form-control" value="11" min="8" max="48" step="1">
                         </div>
                     </div>
                     <!-- Кнопки формы -->
                     <div class="form-actions">
-                        <button type="button" class="btn btn-ghost" id="resetFormBtn">Сбросить</button>
+                        <button type="button" class="btn btn-ghost" id="resetFormBtn">{{ _('Сбросить') }}</button>
                         <button type="submit" class="btn btn-primary modern-btn" id="submitBtn">
-                            <span class="btn-text">Добавить группу</span>
+                            <span class="btn-text">{{ _('Добавить группу') }}</span>
                             <span class="btn-loader d-none">
-                                <span class="spinner"></span> Сохранение...
+                                <span class="spinner"></span> {{ _('Сохранение...') }}
                             </span>
                         </button>
                     </div>
@@ -466,7 +466,7 @@
                 <!-- Список групп -->
                 <div class="groups-section">
                     <div class="section-header">
-                        <h6 class="mb-0 fw-semibold">Существующие группы</h6>
+                        <h6 class="mb-0 fw-semibold">{{ _('Существующие группы') }}</h6>
                         <span class="badge bg-light text-dark" id="groupsCount">0</span>
                     </div>
 
@@ -476,7 +476,7 @@
                         <input type="text"
                                id="groupsSearch"
                                class="form-control modern-input search-input"
-                               placeholder="Поиск по названию...">
+                               placeholder="{{ _('Поиск по названию...') }}">
                     </div>
 
                     <!-- Таблица -->
@@ -484,10 +484,10 @@
                         <table class="table modern-table align-middle">
                             <thead>
                                 <tr>
-                                    <th style="width:40%">Название</th>
-                                    <th style="width:20%">Цвет</th>
-                                    <th style="width:20%" class="text-center">Устройств</th>
-                                    <th style="width:20%" class="text-end">Действия</th>
+                                    <th style="width:40%">{{ _('Название') }}</th>
+                                    <th style="width:20%">{{ _('Цвет') }}</th>
+                                    <th style="width:20%" class="text-center">{{ _('Устройств') }}</th>
+                                    <th style="width:20%" class="text-end">{{ _('Действия') }}</th>
                                 </tr>
                             </thead>
                             <tbody id="groupListBody">
@@ -499,8 +499,8 @@
                     <!-- Пустое состояние -->
                     <div class="empty-state d-none" id="emptyState">
                         <i class="fas fa-folder-open empty-icon"></i>
-                        <p class="mb-0 text-muted">Нет созданных групп</p>
-                        <small class="text-muted opacity-75">Создайте первую группу выше</small>
+                        <p class="mb-0 text-muted">{{ _('Нет созданных групп') }}</p>
+                        <small class="text-muted opacity-75">{{ _('Создайте первую группу выше') }}</small>
                     </div>
 
                     <!-- Skeleton загрузка -->
@@ -514,7 +514,7 @@
 
             <!-- Footer -->
             <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('Закрыть') }}</button>
             </div>
         </div>
     </div>
@@ -524,39 +524,39 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Редактировать выбранные устройства (<span id="selectedCount"></span>)</h5>
+                <h5 class="modal-title">{{ _('Редактировать выбранные устройства') }} (<span id="selectedCount"></span>)</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">Тип устройства</label>
+                    <label class="form-label">{{ _('Тип устройства') }}</label>
                     <select id="bulk_type" class="form-select">
-                        <option value="">-- Не изменять --</option>
+                        <option value="">{{ _('-- Не изменять --') }}</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Мониторинг</label>
+                    <label class="form-label">{{ _('Мониторинг') }}</label>
                     <select id="bulk_monitoring" class="form-select">
-                        <option value="">-- Не изменять --</option>
-                        <option value="true">Включено</option>
-                        <option value="false">Выключено</option>
+                        <option value="">{{ _('-- Не изменять --') }}</option>
+                        <option value="true">{{ _('Включено') }}</option>
+                        <option value="false">{{ _('Выключено') }}</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Группа</label>
+                    <label class="form-label">{{ _('Группа') }}</label>
                     <select id="bulk_group" class="form-select">
-                        <option value="">-- Не изменять --</option>
+                        <option value="">{{ _('-- Не изменять --') }}</option>
                     </select>
                 </div>
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" id="bulk_center">
-                    <label class="form-check-label" for="bulk_center">Переместить в центр видимой области</label>
+                    <label class="form-check-label" for="bulk_center">{{ _('Переместить в центр видимой области') }}</label>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
                 {% if can_edit %}
-                <button type="button" class="btn btn-primary" onclick="applyBulkEdit()">Применить</button>
+                <button type="button" class="btn btn-primary" onclick="applyBulkEdit()">{{ _('Применить') }}</button>
                 {% endif %}
             </div>
         </div>
@@ -567,34 +567,34 @@
     <div class="modal-dialog modal-md">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Фигура</h5>
+                <h5 class="modal-title">{{ _('Фигура') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="shape_id">
                 <div class="mb-3">
-                    <label class="form-label">Тип фигуры</label>
+                    <label class="form-label">{{ _('Тип фигуры') }}</label>
                     <select id="shape_type" class="form-select">
-                        <option value="square">Квадрат</option>
-                        <option value="rectangle">Прямоугольник</option>
-                        <option value="triangle">Треугольник</option>
-                        <option value="diamond">Ромб</option>
-                        <option value="ellipse">Круг</option>
+                        <option value="square">{{ _('Квадрат') }}</option>
+                        <option value="rectangle">{{ _('Прямоугольник') }}</option>
+                        <option value="triangle">{{ _('Треугольник') }}</option>
+                        <option value="diamond">{{ _('Ромб') }}</option>
+                        <option value="ellipse">{{ _('Круг') }}</option>
                     </select>
                 </div>
                 <div class="row g-2">
                     <div class="col-md-6">
-                        <label class="form-label">Ширина (px)</label>
+                        <label class="form-label">{{ _('Ширина (px)') }}</label>
                         <input type="number" id="shape_width" class="form-control" value="80" step="5" min="20">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Высота (px)</label>
+                        <label class="form-label">{{ _('Высота (px)') }}</label>
                         <input type="number" id="shape_height" class="form-control" value="80" step="5" min="20">
                     </div>
                 </div>
                 <div class="row g-2 mt-2">
                     <div class="col-md-6">
-                        <label class="form-label">Цвет</label>
+                        <label class="form-label">{{ _('Цвет') }}</label>
                         <div class="color-picker-simple">
                             <button type="button" id="shapeColorPickerBtn" class="color-btn">
                                 <span class="color-box" id="shapeColorPreview"></span>
@@ -614,31 +614,31 @@
                                 </div>
                                 <div class="color-custom">
                                     <input type="color" id="shape_color" value="#3498db">
-                                    <label for="shape_color">Свой цвет</label>
+                                    <label for="shape_color">{{ _('Свой цвет') }}</label>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Прозрачность</label>
+                        <label class="form-label">{{ _('Прозрачность') }}</label>
                         <input type="range" id="shape_opacity" class="form-range" min="0" max="1" step="0.05" value="1">
                         <span id="opacity_value" class="small text-muted">100%</span>
                     </div>
                 </div>
                 <div class="mb-3 mt-2">
-                    <label class="form-label">Размер шрифта (px)</label>
+                    <label class="form-label">{{ _('Размер шрифта (px)') }}</label>
                     <input type="number" id="shape_font_size" class="form-control" value="12" min="8" max="48" step="1">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Описание (отображается по центру)</label>
-                    <input type="text" id="shape_description" class="form-control" placeholder="Текст">
+                    <label class="form-label">{{ _('Описание (отображается по центру)') }}</label>
+                    <input type="text" id="shape_description" class="form-control" placeholder="{{ _('Текст') }}">
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
                 {% if can_edit %}
-                <button type="button" class="btn btn-danger" id="deleteShapeBtn" style="display:none;">Удалить</button>
-                <button type="button" class="btn btn-primary" onclick="saveShape()">Сохранить</button>
+                <button type="button" class="btn btn-danger" id="deleteShapeBtn" style="display:none;">{{ _('Удалить') }}</button>
+                <button type="button" class="btn btn-primary" onclick="saveShape()">{{ _('Сохранить') }}</button>
                 {% endif %}
             </div>
         </div>
@@ -650,15 +650,15 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Права доступа: <span id="permissionsMapName"></span></h5>
+                <h5 class="modal-title">{{ _('Права доступа:') }} <span id="permissionsMapName"></span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <!-- Текущие права -->
                 <div class="mb-4">
-                    <h6 class="fw-bold mb-3">Текущие права доступа</h6>
+                    <h6 class="fw-bold mb-3">{{ _('Текущие права доступа') }}</h6>
                     <div id="permissionsList">
-                        <div class="text-center"><div class="spinner-border spinner-border-sm"></div> Загрузка...</div>
+                        <div class="text-center"><div class="spinner-border spinner-border-sm"></div> {{ _('Загрузка...') }}</div>
                     </div>
                 </div>
 
@@ -667,49 +667,49 @@
                 <!-- Добавить право пользователю -->
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <h6 class="fw-bold mb-3">Добавить право пользователю</h6>
+                        <h6 class="fw-bold mb-3">{{ _('Добавить право пользователю') }}</h6>
                         <div class="mb-3">
-                            <label class="form-label">Пользователь</label>
+                            <label class="form-label">{{ _('Пользователь') }}</label>
                             <select id="permissionUserSelect" class="form-select">
-                                <option value="">Загрузка...</option>
+                                <option value="">{{ _('Загрузка...') }}</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Роль</label>
+                            <label class="form-label">{{ _('Роль') }}</label>
                             <select id="permissionRoleSelect" class="form-select">
-                                <option value="">Выберите роль</option>
-                                <option value="viewer">Просмотр (viewer)</option>
-                                <option value="editor">Редактор (editor)</option>
-                                <option value="admin">Админ (admin)</option>
+                                <option value="">{{ _('Выберите роль') }}</option>
+                                <option value="viewer">{{ _('Просмотр (viewer)') }}</option>
+                                <option value="editor">{{ _('Редактор (editor)') }}</option>
+                                <option value="admin">{{ _('Админ (admin)') }}</option>
                             </select>
                         </div>
                         <button type="button" class="btn btn-primary" onclick="window.addPermission()">
-                            <i class="fas fa-plus"></i> Добавить право
+                            <i class="fas fa-plus"></i> {{ _('Добавить право') }}
                         </button>
                     </div>
 
                     <div class="col-md-6">
-                        <h6 class="fw-bold mb-3">Добавить право для операторов</h6>
+                        <h6 class="fw-bold mb-3">{{ _('Добавить право для операторов') }}</h6>
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i>
-                            Эти права будут действовать для всех пользователей с ролью <strong>Operator</strong>
+                            {{ _('Эти права будут действовать для всех пользователей с ролью') }} <strong>Operator</strong>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Роль для операторов</label>
+                            <label class="form-label">{{ _('Роль для операторов') }}</label>
                             <select id="operatorRoleSelect" class="form-select">
-                                <option value="">Выберите роль</option>
-                                <option value="viewer">Просмотр (viewer)</option>
-                                <option value="editor">Редактор (editor)</option>
+                                <option value="">{{ _('Выберите роль') }}</option>
+                                <option value="viewer">{{ _('Просмотр (viewer)') }}</option>
+                                <option value="editor">{{ _('Редактор (editor)') }}</option>
                             </select>
                         </div>
                         <button type="button" class="btn btn-success" onclick="window.addRolePermission()">
-                            <i class="fas fa-user-shield"></i> Добавить для операторов
+                            <i class="fas fa-user-shield"></i> {{ _('Добавить для операторов') }}
                         </button>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Закрыть') }}</button>
             </div>
         </div>
     </div>

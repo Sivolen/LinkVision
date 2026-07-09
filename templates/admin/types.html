@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="page-title">📦 Типы устройств</h2>
+<h2 class="page-title">📦 {{ _('Типы устройств') }}</h2>
 
 <!-- Форма создания/редактирования -->
 <div class="admin-card">
     <div class="card-header">
         {% if edit_type %}
-        <i class="fas fa-edit"></i> Редактировать тип
+        <i class="fas fa-edit"></i> {{ _('Редактировать тип') }}
         {% else %}
-        <i class="fas fa-plus"></i> Добавить новый тип
+        <i class="fas fa-plus"></i> {{ _('Добавить новый тип') }}
         {% endif %}
     </div>
     <div class="card-body">
@@ -17,36 +17,36 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
             <div class="col-md-4">
                 <input type="text" name="name" class="form-control"
-                       placeholder="Название типа" value="{{ edit_type.name if edit_type else '' }}" required>
+                       placeholder="{{ _('Название типа') }}" value="{{ edit_type.name if edit_type else '' }}" required>
             </div>
             <div class="col-md-2">
                 <input type="number" name="width" class="form-control"
-                       placeholder="Ширина (px)" value="{{ edit_type.width if edit_type else '' }}">
+                       placeholder="{{ _('Ширина (px)') }}" value="{{ edit_type.width if edit_type else '' }}">
             </div>
             <div class="col-md-2">
                 <input type="number" name="height" class="form-control"
-                       placeholder="Высота (px)" value="{{ edit_type.height if edit_type else '' }}">
+                       placeholder="{{ _('Высота (px)') }}" value="{{ edit_type.height if edit_type else '' }}">
             </div>
             <div class="col-md-3">
                 <input type="file" name="icon" class="form-control" accept="image/*">
                 {% if edit_type and edit_type.icon_filename %}
                 <small class="text-muted mt-2 d-block">
-                    Текущая иконка: <img src="{{ url_for('static', filename='uploads/icons/' + edit_type.icon_filename) }}" width="32" class="ms-2">
+                    {{ _('Текущая иконка:') }} <img src="{{ url_for('static', filename='uploads/icons/' + edit_type.icon_filename) }}" width="32" class="ms-2">
                 </small>
                 {% endif %}
             </div>
             <div class="col-md-1">
                 <button type="submit" class="btn btn-success w-100">
-                    <i class="fas fa-save"></i> {{ 'Обновить' if edit_type else 'Добавить' }}
+                    <i class="fas fa-save"></i> {{ _('Обновить') if edit_type else _('Добавить') }}
                 </button>
             </div>
         </form>
         {% if edit_type %}
         <div class="mt-3">
-            <a href="{{ url_for('admin.types') }}" class="btn btn-secondary btn-sm">Отмена</a>
+            <a href="{{ url_for('admin.types') }}" class="btn btn-secondary btn-sm">{{ _('Отмена') }}</a>
             <a href="{{ url_for('admin.delete_type', id=edit_type.id) }}"
-               class="btn btn-danger btn-sm" onclick="return confirm('Удалить тип? Все устройства этого типа потеряют иконку.')">
-                <i class="fas fa-trash"></i> Удалить тип
+               class="btn btn-danger btn-sm" onclick="return confirm('{{ _('Удалить тип? Все устройства этого типа потеряют иконку.') }}')">
+                <i class="fas fa-trash"></i> {{ _('Удалить тип') }}
             </a>
         </div>
         {% endif %}
@@ -58,12 +58,12 @@
     <thead>
         <tr>
             <th>ID</th>
-            <th>Название</th>
-            <th>Ширина</th>
-            <th>Высота</th>
-            <th>Иконка</th>
-            <th>Устройств</th>
-            <th>Действия</th>
+            <th>{{ _('Название') }}</th>
+            <th>{{ _('Ширина') }}</th>
+            <th>{{ _('Высота') }}</th>
+            <th>{{ _('Иконка') }}</th>
+            <th>{{ _('Устройств') }}</th>
+            <th>{{ _('Действия') }}</th>
         </tr>
     </thead>
     <tbody>
@@ -77,18 +77,18 @@
                 {% if type.icon_filename %}
                     <img src="{{ url_for('static', filename='uploads/icons/' + type.icon_filename) }}" width="40" height="40" style="object-fit: contain;" alt="icon">
                 {% else %}
-                    <span class="badge bg-secondary">нет</span>
+                    <span class="badge bg-secondary">{{ _('нет') }}</span>
                 {% endif %}
             </td>
             <td><span class="badge bg-info">{{ type.devices.count() }}</span></td>
             <td class="text-end">
                 <div class="table-actions">
-                    <a href="{{ url_for('admin.edit_type', id=type.id) }}" class="btn-action" title="Редактировать">
+                    <a href="{{ url_for('admin.edit_type', id=type.id) }}" class="btn-action" title="{{ _('Редактировать') }}">
                         <i class="fas fa-edit"></i>
                     </a>
                     <form method="POST" action="{{ url_for('admin.delete_type', id=type.id) }}" style="display: inline;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-action" onclick="return confirm('Удалить тип?')" title="Удалить">
+                        <button type="submit" class="btn-action" onclick="return confirm('{{ _('Удалить тип?') }}')" title="{{ _('Удалить') }}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </form>
