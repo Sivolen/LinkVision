@@ -45,6 +45,17 @@ class Config:
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "icons")
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
+    # ─── i18n (Flask-Babel) ──────────────────────────────────────────────────
+    # msgid'ы в коде — на русском, поэтому отдельный каталог для ru не заводим:
+    # при отсутствии перевода Babel показывает сам msgid, т.е. русский текст.
+    # Переводим только в en. Каталоги лежат в translations/<lang>/LC_MESSAGES/.
+    LANGUAGES = {
+        "ru": "Русский",
+        "en": "English",
+    }
+    BABEL_DEFAULT_LOCALE = "ru"
+    BABEL_TRANSLATION_DIRECTORIES = "translations"
+
     VERSION = "2.0.0"
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
     LOG_FOLDER = os.path.join(BASE_DIR, "logs")

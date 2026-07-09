@@ -12,7 +12,8 @@ class User(UserMixin, db.Model):
     is_operator = db.Column(db.Boolean, default=False)
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    last_map_id = db.Column(db.Integer, db.ForeignKey("map.id", use_alter=True), nullable=True)
+    last_map_id = db.Column(db.Integer, db.ForeignKey("map.id"), nullable=True)
+    locale = db.Column(db.String(8), nullable=True)  # 'ru' / 'en' / None (авто)
 
     # Явно указываем foreign_keys для связи maps
     maps = db.relationship(

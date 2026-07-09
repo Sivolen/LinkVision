@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="light" {% if hide_rate_limit_alerts %}class="rate-limit-page"{% endif %}>
+<html lang="{{ current_locale }}" data-theme="light" {% if hide_rate_limit_alerts %}class="rate-limit-page"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,7 +21,8 @@
 <body data-user-id="{{ current_user.id if current_user.is_authenticated else '' }}"
       data-is-admin="{{ 'true' if current_user.is_admin else 'false' }}"
       data-is-operator="{{ 'true' if current_user.is_operator else 'false' }}"
-      data-debug-mode="{{ 'true' if debug_mode else 'false' }}">
+      data-debug-mode="{{ 'true' if debug_mode else 'false' }}"
+      data-locale="{{ current_locale }}">
     <!-- ====================================================================
          САЙДБАР (только для авторизованных И если не скрыт)
          ==================================================================== -->
@@ -67,11 +68,31 @@
         <div class="sidebar-footer">
             <div class="d-flex gap-2">
                 <button class="theme-toggle  w-50" onclick="toggleTheme()">
-                    <i class="fas fa-moon"></i> <span>Тема</span>
+                    <i class="fas fa-moon"></i> <span>{{ _('Тема') }}</span>
                 </button>
                 <a href="{{ url_for('auth.logout') }}" class="theme-toggle w-50">
-                    <i class="fas fa-sign-out-alt"></i> <span>Выход</span>
+                    <i class="fas fa-sign-out-alt"></i> <span>{{ _('Выход') }}</span>
                 </a>
+            </div>
+
+            <!-- Переключатель языка -->
+            <div class="lang-switcher mt-2 dropdown">
+                <button class="theme-toggle w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-globe"></i> <span>{{ available_languages[current_locale] }}</span>
+                </button>
+                <ul class="dropdown-menu w-100">
+                    {% for code, label in available_languages.items() %}
+                    <li>
+                        <form action="{{ url_for('i18n.set_language', lang_code=code) }}" method="POST" class="m-0">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <button type="submit" class="dropdown-item {{ 'active' if code == current_locale else '' }}">
+                                {{ label }}
+                            </button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
             </div>
             {% if current_user.is_admin %}
             <div class="admin-menu mt-3 pt-3 border-top border-secondary">
