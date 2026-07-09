@@ -4,6 +4,7 @@
  */
 
 import { formatDateTime, getStatusBadgeClass } from './utils.js';
+import { t } from '../i18n/i18n.js';
 import { showToast } from '../utils/toast.js';
 
 // Переменные модуля
@@ -28,12 +29,12 @@ export function loadHistory(deviceId, page = 1) {
     const pageInfo = document.getElementById('history-page-info');
 
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Загрузка...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">' + t('common.loading') + '</td></tr>';
     if (paginationDiv) paginationDiv.style.display = 'none';
 
     fetch(`/api/device/${deviceId}/history?page=${page}&per_page=${historyPerPage}`)
         .then(response => {
-            if (!response.ok) throw new Error('Ошибка загрузки истории');
+            if (!response.ok) throw new Error(t('modal.history.loadError'));
             return response.json();
         })
         .then(data => {
@@ -59,7 +60,7 @@ export function loadHistory(deviceId, page = 1) {
             if (paginationDiv) {
                 if (totalPages > 1) {
                     paginationDiv.style.display = 'flex';
-                    pageInfo.textContent = `Страница ${currentPage} из ${totalPages}`;
+                    pageInfo.textContent = t('modal.history.pageInfo', { page: currentPage, total: totalPages });
                     if (prevBtn) prevBtn.disabled = currentPage <= 1;
                     if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
                 } else {
@@ -72,9 +73,9 @@ export function loadHistory(deviceId, page = 1) {
         })
         .catch(error => {
             Logger.error('Ошибка загрузки истории:', error);
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Ошибка загрузки</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">' + t('common.loadError') + '</td></tr>';
             if (paginationDiv) paginationDiv.style.display = 'none';
-            showToast('Ошибка', 'Не удалось загрузить историю', 'error');
+            showToast(t('toast.errorTitle'), t('modal.history.loadFail'), 'error');
         });
 }
 
@@ -85,7 +86,7 @@ function renderHistoryTable(items, tbody) {
     if (!tbody) return;
     
     if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Нет записей истории</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">' + t('modal.history.noRecords') + '</td></tr>';
         return;
     }
 

@@ -2,6 +2,7 @@
  * Utility Functions Module
  * Общие вспомогательные функции
  */
+import { t } from '../i18n/i18n.js';
 
 /**
  * Экранирование HTML
@@ -19,9 +20,9 @@ export function escapeHtml(str) {
 export async function getErrorMessage(response) {
     try {
         const data = await response.json();
-        return data.error || data.message || 'Ошибка';
+        return data.error || data.message || t('toast.errorTitle');
     } catch {
-        return `Ошибка ${response.status}`;
+        return t('toast.httpErrorShort', { status: response.status });
     }
 }
 

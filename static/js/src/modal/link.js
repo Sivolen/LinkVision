@@ -4,6 +4,7 @@
  */
 
 import { showToast } from '../utils/toast.js';
+import { t } from '../i18n/i18n.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 import { parseRawId } from '../map/ids.js';
@@ -40,7 +41,7 @@ export function openLinkModal(sourceId, targetId) {
     document.getElementById('link_line_color').value = '#6c757d';
     document.getElementById('link_line_width').value = 2;
     document.getElementById('link_line_style').value = 'solid';
-    document.getElementById('linkModalTitle').textContent = 'Новая связь';
+    document.getElementById('linkModalTitle').textContent = t('modal.link.newTitle');
     document.getElementById('linkDeleteBtn').style.display = 'none';
     document.getElementById('link_font_size').value = 8;
     updateLinkPreview();
@@ -84,7 +85,7 @@ export function openLinkModalForEdit(edge) {
     document.getElementById('link_line_color').value = data.color || '#6c757d';
     document.getElementById('link_line_width').value = data.width || 2;
     document.getElementById('link_line_style').value = data.style || 'solid';
-    document.getElementById('linkModalTitle').textContent = 'Редактировать связь';
+    document.getElementById('linkModalTitle').textContent = t('modal.link.editTitle');
     document.getElementById('linkDeleteBtn').style.display = 'inline-block';
     document.getElementById('linkDeleteBtn').onclick = () => deleteLink(data.id);
     document.getElementById('link_font_size').value = data.font_size || 8;
@@ -116,7 +117,7 @@ export function confirmCreateLink() {
     const fontSize = parseInt(document.getElementById('link_font_size').value, 10) || 8;
 
     if (!src || !tgt) {
-        showToast('Ошибка', 'Не выбраны устройства', 'error');
+        showToast(t('toast.errorTitle'), t('modal.link.noDevices'), 'error');
         return;
     }
 
@@ -124,7 +125,7 @@ export function confirmCreateLink() {
     const targetId = typeof tgt === 'number' ? tgt : parseInt(tgt);
 
     if (isNaN(sourceId) || isNaN(targetId)) {
-        showToast('Ошибка', 'Неверные ID устройств', 'error');
+        showToast(t('toast.errorTitle'), t('modal.link.invalidIds'), 'error');
         return;
     }
 
@@ -190,13 +191,13 @@ function createLinkWithInterfaces(sourceId, targetId, srcIface, tgtIface, linkTy
             });
 
             if (typeof window.resetLinkMode === 'function') window.resetLinkMode();
-            showToast('Успешно', 'Связь создана', 'success');
+            showToast(t('toast.successTitle'), t('modal.link.created'), 'success');
         }
         if (linkModal) linkModal.hide();
     })
     .catch(err => {
         Logger.error('Ошибка создания связи:', err);
-        showToast('Ошибка', err.message || 'Не удалось создать связь', 'error');
+        showToast(t('toast.errorTitle'), err.message || t('modal.link.createFail'), 'error');
     })
     .finally(() => {
         endSelfUpdate();
@@ -255,12 +256,12 @@ export function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, line
             window.cy.style().update();
         }
         
-        showToast('Успешно', 'Связь обновлена', 'success');
+        showToast(t('toast.successTitle'), t('modal.link.updated'), 'success');
         if (linkModal) linkModal.hide();
     })
     .catch(err => {
         Logger.error('Ошибка обновления связи:', err);
-        showToast('Ошибка', err.message || 'Не удалось обновить связь', 'error');
+        showToast(t('toast.errorTitle'), err.message || t('modal.link.updateFail'), 'error');
     })
     .finally(() => {
         endSelfUpdate();
@@ -272,7 +273,7 @@ export function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, line
  * Удалить связь
  */
 export function deleteLink(linkId) {
-    window.confirmAction('Удаление связи', 'Удалить эту связь?', () => {
+    window.confirmAction(t('modal.link.deleteTitle'), t('modal.link.deleteMsg'), () => {
         const numericId = parseRawId(String(linkId));
         beginSelfUpdate();
 
@@ -283,11 +284,11 @@ export function deleteLink(linkId) {
             }
             
             if (linkModal) linkModal.hide();
-            showToast('Успешно', 'Связь удалена', 'success');
+            showToast(t('toast.successTitle'), t('modal.link.deleted'), 'success');
         })
         .catch(err => {
             Logger.error('Ошибка удаления связи:', err);
-            showToast('Ошибка', err.message || 'Не удалось удалить связь', 'error');
+            showToast(t('toast.errorTitle'), err.message || t('modal.link.deleteFail'), 'error');
         })
         .finally(() => {
             endSelfUpdate();
