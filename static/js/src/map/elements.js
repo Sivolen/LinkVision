@@ -2,6 +2,7 @@ import { getCy } from './core.js';
 import { boundNodePosition, setElementsLoaded, getBgImageSize } from './background.js';
 import { addPulsingNode } from './pulse.js';
 import { updateAllEdgeLabels } from './edgeLabels.js';
+import { updateEdgeCurves } from './edgeBundling.js';
 import { updateAllGroups } from './groupResize.js';
 import { http } from '../utils/http.js';
 
@@ -140,6 +141,7 @@ export function loadElements(mapId, force = false) {
 
             // Обновление меток и групп
             updateAllEdgeLabels();
+            updateEdgeCurves();
             updateAllGroups();
 
             setElementsLoaded(true);
@@ -420,8 +422,9 @@ export function updateDevicePositionInGraph(deviceId, x, y) {
     if (!node.length) return;
 
     node.position({ x, y });
-    // Обновим метки рёбер и размеры групп
+    // Обновим метки рёбер, разведение связей и размеры групп
     if (typeof window.updateAllEdgeLabels === 'function') window.updateAllEdgeLabels();
+    if (typeof window.updateEdgeCurves === 'function') window.updateEdgeCurves();
     if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
 }
 

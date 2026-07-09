@@ -7,6 +7,7 @@ import { isShapeId, parseRawId } from './ids.js';
 import { flushPendingDragSaves } from './interactions.js';
 import { updateAllGroups } from './groupResize.js';
 import { updateAllEdgeLabels } from './edgeLabels.js';
+import { updateEdgeCurves } from './edgeBundling.js';
 
 let history = [];
 let currentIndex = -1;
@@ -74,6 +75,7 @@ export function initUndoRedo(cy, getMapId) {
             // Без этого группа визуально остаётся на новом месте.
             updateAllGroups();
             updateAllEdgeLabels();
+            updateEdgeCurves();
 
             syncPositionsToServer(cy);
 

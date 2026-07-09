@@ -4,6 +4,7 @@ import { t } from '../i18n/i18n.js';
 import { boundNodePosition, getBgDimensions } from './background.js';
 import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes.js';
 import { updateEdgeLabelsForNode } from './edgeLabels.js';
+import { updateEdgeCurves } from './edgeBundling.js';
 import { updateGroupsForNode, updateAllGroups } from './groupResize.js';
 import { isDragLocked } from './lock.js';
 import { showToast } from '../utils/toast.js';
@@ -150,6 +151,7 @@ export function initInteractions(cy) {
             pos = node.position();
         }
         updateEdgeLabelsForNode(node);
+        updateEdgeCurves();
 
         const key = `device:${node.id()}`;
         const commitDeviceMove = () => {
@@ -204,6 +206,7 @@ export function initInteractions(cy) {
 
         selectedNodes.forEach(node => updateGroupsForNode(node));
         selectedNodes.forEach(node => updateEdgeLabelsForNode(node));
+        updateEdgeCurves();
         updateAllGroups();
 
         const key = 'multiSelect';
@@ -288,6 +291,9 @@ export function initInteractions(cy) {
             x: Math.round(child.position().x),
             y: Math.round(child.position().y)
         }));
+
+        children.forEach(child => updateEdgeLabelsForNode(child));
+        updateEdgeCurves();
 
         const key = `group:${groupNode.id()}`;
         const commitGroupNodeMove = () => {
