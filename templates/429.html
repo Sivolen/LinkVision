@@ -198,23 +198,23 @@
                 <i class="fas fa-clock"></i>
             </div>
 
-            <h1 class="rate-limit-title">Слишком много запросов</h1>
+            <h1 class="rate-limit-title">{{ _('Слишком много запросов') }}</h1>
 
             <p class="rate-limit-message">
-                Вы отправили слишком много запросов. Пожалуйста, подождите несколько минут перед повторной попыткой.
+                {{ _('Вы отправили слишком много запросов. Пожалуйста, подождите несколько минут перед повторной попыткой.') }}
             </p>
 
             <div class="rate-limit-timer">
                 <i class="fas fa-hourglass-half me-2"></i>
-                Повторите попытку через {{ retry_after }} секунд
+                {{ _('Повторите попытку через %(sec)s секунд', sec=retry_after) }}
             </div>
 
             <div class="rate-limit-actions">
                 <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
-                    <i class="fas fa-sign-in-alt me-2"></i>На страницу входа
+                    <i class="fas fa-sign-in-alt me-2"></i>{{ _('На страницу входа') }}
                 </a>
                 <button onclick="history.back()" class="btn btn-outline">
-                    <i class="fas fa-arrow-left me-2"></i>Назад
+                    <i class="fas fa-arrow-left me-2"></i>{{ _('Назад') }}
                 </button>
             </div>
         </div>
