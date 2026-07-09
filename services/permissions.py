@@ -12,7 +12,7 @@ from functools import wraps
 from typing import Optional, Callable, Any
 from flask import jsonify
 from flask_login import current_user
-from models import Map, Device, MapPermission
+from models import Map, Device, MapPermission, db
 
 
 def _get_user_map_permission(map_id: int) -> Optional[MapPermission]:
@@ -71,7 +71,7 @@ def can_view_map(map_id: int) -> bool:
         return True
 
     # Владелец карты всегда видит свою карту
-    map_obj = Map.query.get(map_id)
+    map_obj = db.session.get(Map, map_id)
     if map_obj and map_obj.owner_id == current_user.id:
         return True
 
@@ -108,7 +108,7 @@ def can_edit_map(map_id: int) -> bool:
     if current_user.is_admin:
         return True
 
-    map_obj = Map.query.get(map_id)
+    map_obj = db.session.get(Map, map_id)
     if not map_obj:
         return False
 
@@ -158,7 +158,7 @@ def can_delete_map(map_id: int) -> bool:
         return True
 
     # Владелец может удалить свою карту
-    map_obj = Map.query.get(map_id)
+    map_obj = db.session.get(Map, map_id)
     return map_obj is not None and map_obj.owner_id == current_user.id
 
 
@@ -187,7 +187,7 @@ def has_device_access(device_id: int) -> bool:
     Returns:
         bool: True если доступ разрешён
     """
-    device = Device.query.get(device_id)
+    device = db.session.get(Device, device_id)
     if not device:
         return False
 
@@ -205,7 +205,7 @@ def can_edit_device(device_id: int) -> bool:
     Returns:
         bool: True если пользователь может редактировать
     """
-    device = Device.query.get(device_id)
+    device = db.session.get(Device, device_id)
     if not device:
         return False
 
@@ -352,7 +352,7 @@ def require_map_owner_or_admin(f: Callable) -> Callable:
         if current_user.is_admin:
             return f(map_id, *args, **kwargs)
 
-        map_obj = Map.query.get(map_id)
+        map_obj = db.session.get(Map, map_id)
         if not map_obj or map_obj.owner_id != current_user.id:
             return jsonify({"error": "Только владелец карты или администратор"}), 403
 
@@ -427,7 +427,7 @@ def get_user_editable_map_ids() -> list[int]:
     # Персональные разрешения editor/admin
     perms = MapPermission.query.filter_by(user_id=current_user.id, role="editor").all()
     for perm in perms:
-        map_obj = Map.query.get(perm.map_id)
+        map_obj = db.session.get(Map, perm.map_id)
         if map_obj and not map_obj.is_locked:
             editable_ids.append(perm.map_id)
 
@@ -435,7 +435,7 @@ def get_user_editable_map_ids() -> list[int]:
     if current_user.is_operator:
         perms = MapPermission.query.filter_by(role="editor").all()
         for perm in perms:
-            map_obj = Map.query.get(perm.map_id)
+            map_obj = db.session.get(Map, perm.map_id)
             if map_obj and not map_obj.is_locked:
                 editable_ids.append(perm.map_id)
 

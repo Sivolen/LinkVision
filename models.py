@@ -12,7 +12,7 @@ class User(UserMixin, db.Model):
     is_operator = db.Column(db.Boolean, default=False)
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    last_map_id = db.Column(db.Integer, db.ForeignKey("map.id"), nullable=True)
+    last_map_id = db.Column(db.Integer, db.ForeignKey("map.id", use_alter=True), nullable=True)
 
     # Явно указываем foreign_keys для связи maps
     maps = db.relationship(
@@ -139,7 +139,7 @@ class MapPermission(db.Model):
 
     __tablename__ = "map_permission"
     id = db.Column(db.Integer, primary_key=True)
-    map_id = db.Column(db.Integer, db.ForeignKey("map.id"), nullable=False, index=True)
+    map_id = db.Column(db.Integer, db.ForeignKey("map.id", use_alter=True), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     role = db.Column(db.String(20), nullable=True)  # 'viewer', 'editor', 'admin'
 

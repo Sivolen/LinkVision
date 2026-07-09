@@ -25,7 +25,7 @@ class DeviceRepository:
         Returns:
             Optional[Device]: Устройство или None
         """
-        return Device.query.get(device_id)
+        return db.session.get(Device, device_id)
 
     @staticmethod
     def get_with_relations(device_id: int) -> Optional[Device]:
@@ -38,9 +38,9 @@ class DeviceRepository:
         Returns:
             Optional[Device]: Устройство с relations или None
         """
-        return Device.query.options(
+        return db.session.get(Device, device_id, options=[
             joinedload(Device.type), joinedload(Device.ips), joinedload(Device.group)
-        ).get(device_id)
+        ])
 
     @staticmethod
     def get_by_map(map_id: int) -> List[Device]:
@@ -157,7 +157,7 @@ class DeviceRepository:
         Returns:
             Optional[Device]: Обновленное устройство или None
         """
-        device = Device.query.get(device_id)
+        device = db.session.get(Device, device_id)
         if not device:
             return None
 
@@ -182,7 +182,7 @@ class DeviceRepository:
 
         updated = 0
         for item in updates:
-            device = Device.query.get(item.get("id"))
+            device = db.session.get(Device, item.get("id"))
             if device:
                 device.pos_x = item.get("x", device.pos_x)
                 device.pos_y = item.get("y", device.pos_y)
@@ -203,7 +203,7 @@ class DeviceRepository:
         Returns:
             Optional[Device]: Обновленное устройство или None
         """
-        device = Device.query.get(device_id)
+        device = db.session.get(Device, device_id)
         if not device:
             return None
 
@@ -223,7 +223,7 @@ class DeviceRepository:
         Returns:
             bool: True если удалено
         """
-        device = Device.query.get(device_id)
+        device = db.session.get(Device, device_id)
         if not device:
             return False
 
