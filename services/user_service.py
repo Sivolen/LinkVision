@@ -4,7 +4,7 @@ from utils.logger import admin_logger, auth_logger
 
 def get_user_by_id(user_id):
     """Получить пользователя по ID или None."""
-    return User.query.get(user_id)
+    return db.session.get(User, user_id)
 
 
 def get_user_by_username(username):
@@ -74,7 +74,7 @@ def update_last_map_id(user_id: int, map_id: int) -> None:
         user_id: ID пользователя
         map_id: ID карты
     """
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if user and user.last_map_id != map_id:
         user.last_map_id = map_id
         db.session.commit()

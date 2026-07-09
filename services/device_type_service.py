@@ -44,7 +44,7 @@ def get_all_device_types() -> List[DeviceType]:
 
 def get_device_type_by_id(type_id: int) -> Optional[DeviceType]:
     """Получить тип устройства по ID."""
-    return DeviceType.query.get(type_id)
+    return db.session.get(DeviceType, type_id)
 
 
 def create_device_type(

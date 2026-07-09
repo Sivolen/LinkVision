@@ -25,7 +25,7 @@ class MapRepository:
         Returns:
             Optional[Map]: Карта или None
         """
-        return Map.query.get(map_id)
+        return db.session.get(Map, map_id)
 
     @staticmethod
     def get_all() -> List[Map]:
@@ -126,7 +126,7 @@ class MapRepository:
         Returns:
             Optional[Map]: Обновленная карта или None
         """
-        map_obj = Map.query.get(map_id)
+        map_obj = db.session.get(Map, map_id)
         if not map_obj:
             return None
 
@@ -152,7 +152,7 @@ class MapRepository:
         Returns:
             bool: True если удалено
         """
-        map_obj = Map.query.get(map_id)
+        map_obj = db.session.get(Map, map_id)
         if not map_obj:
             return False
 
@@ -171,7 +171,7 @@ class MapRepository:
         Returns:
             bool: True если карта существует
         """
-        return Map.query.get(map_id) is not None
+        return db.session.get(Map, map_id) is not None
 
 
 # Singleton instance
