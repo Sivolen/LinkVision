@@ -7,12 +7,31 @@ LinkVision uses `pytest` for testing with the following structure:
 ```
 tests/
 ├── __init__.py
-├── conftest.py          # Shared fixtures and configuration
-├── test_services.py     # Unit tests for services and validators
-├── test_api.py          # API endpoint tests
-├── test_integration.py  # Integration tests for workflows
+├── conftest.py                    # Shared fixtures and configuration
+├── test_services.py               # Unit tests for services and validators
+├── test_notifications.py          # Регресс: payload'ы реалтайм-событий (map_id, комната)
+├── test_lock_and_permissions.py   # Регресс: блокировка карты + права доступа на edit
+├── test_realtime_events.py        # Регресс: события add/update/move несут поля для рендера без F5
 └── README.md
 ```
+
+## Регресс-тесты ver2
+
+Эти модули фиксируют поведение, которое уже ломалось, чтобы функционал не
+деградировал при будущих правках:
+
+- **`test_notifications.py`** — каждое точечное событие
+  (`device/link/group/shape × create/update/delete/position` + `bulk_position`)
+  обязано нести верхнеуровневый `map_id` и уходить в комнату `map_<id>`.
+  Раньше `map_id` отсутствовал → клиент отфильтровывал событие и реалтайм не
+  работал. Плюс проверка payload'а синхронизации блокировки (`map_lock_updated`).
+- **`test_lock_and_permissions.py`** — заблокированная карта (`is_locked`)
+  отдаёт `403` на edit-эндпоинтах (кроме админа); соблюдаются права
+  владельца/viewer/editor/оператора/анонима; переключение замка через API.
+- **`test_realtime_events.py`** — при добавлении/изменении/перемещении
+  устройства сервер шлёт в событии поля, которых клиенту хватает для
+  инкрементального обновления без перезагрузки: `pos_x/pos_y` (иначе устройство
+  «уезжает» и «не появляется» без F5), `ips`, `iconUrl`, размеры.
 
 ## Setup
 
@@ -74,10 +93,10 @@ pytest tests/ -v -m "integration"
 |---------|-------------|
 | `app` | Flask application with test config |
 | `client` | Test client for making requests |
-| `runner` | CLI test runner |
-| `auth_headers` | Authenticated session headers |
-| `sample_map` | Creates a test map |
-| `sample_device` | Creates a test device on map |
+| `login` | `login("testuser")` — залогинить пользователя через сессию без формы |
+| `map_ids` | Словарь `{название карты: id}` тестовых карт |
+| `router_type_id` | ID тестового типа устройства (Router) |
+| `emit_recorder` | Перехватывает `socketio.emit` → список событий для проверки реалтайма |
 
 ### Using fixtures
 ```python
