@@ -1,5 +1,6 @@
 // undoRedo.js – управление историей позиций всех узлов (устройства, фигуры, группы)
 import { http } from '../utils/http.js';
+import { t } from '../i18n/i18n.js';
 import { showToast } from '../utils/toast.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 import { isShapeId, parseRawId } from './ids.js';
@@ -140,7 +141,7 @@ export function initUndoRedo(cy, getMapId) {
         }
 
         if (currentIndex > 0) restoreState(currentIndex - 1);
-        else if (typeof showToast === 'function') showToast('Нет действий для отмены', '', 'info');
+        else if (typeof showToast === 'function') showToast(t('undoRedo.nothingUndo'), '', 'info');
     };
 
     window.redo = async () => {
@@ -151,7 +152,7 @@ export function initUndoRedo(cy, getMapId) {
         }
 
         if (currentIndex < history.length - 1) restoreState(currentIndex + 1);
-        else if (typeof showToast === 'function') showToast('Нет действий для повтора', '', 'info');
+        else if (typeof showToast === 'function') showToast(t('undoRedo.nothingRedo'), '', 'info');
     };
 
     // Не сохраняем начальное состояние здесь – оно будет сохранено после загрузки карты

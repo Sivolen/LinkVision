@@ -1,5 +1,6 @@
 // layout.js – авто‑раскладка (grid, circle, cose и т.д.)
 import { getCy } from './core.js';
+import { t } from '../i18n/i18n.js';
 import { boundNodePosition, getBgDimensions } from './background.js';
 import { showToast } from '../utils/toast.js';
 import { http } from '../utils/http.js';
@@ -39,26 +40,26 @@ export function initLayout(cy) {
     };
     window.confirmLayout = async (layoutName, direction = null) => {
         const names = {
-            grid: 'Сетка',
-            circle: 'Круг',
-            concentric: 'Концентрический',
-            breadthfirst: 'Дерево',
-            cose: 'Силовой'
+            grid: t('layout.grid'),
+            circle: t('layout.circle'),
+            concentric: t('layout.concentric'),
+            breadthfirst: t('layout.tree'),
+            cose: t('layout.force')
         };
-        let msg = `Применить раскладку "${names[layoutName] || layoutName}"`;
+        let msg = t('layout.applyPrompt', { name: names[layoutName] || layoutName });
         if (direction) {
             const dirNames = {
-                'top-bottom': 'сверху вниз',
-                'bottom-top': 'снизу вверх',
-                'left-right': 'слева направо',
-                'right-left': 'справа налево'
+                'top-bottom': t('layout.dirTopBottom'),
+                'bottom-top': t('layout.dirBottomTop'),
+                'left-right': t('layout.dirLeftRight'),
+                'right-left': t('layout.dirRightLeft')
             };
             msg += ` (${dirNames[direction]})`;
         }
         const confirmed = await window.confirmAction({
-            title: 'Раскладка карты',
+            title: t('layout.confirmTitle'),
             message: msg + '?',
-            confirmText: 'Применить',
+            confirmText: t('layout.apply'),
             variant: 'primary'
         });
         if (confirmed) {
@@ -82,15 +83,15 @@ async function saveAllPositions() {
         return { id: device.id(), x: Math.round(pos.x), y: Math.round(pos.y) };
     });
     if (!updates.length) return;
-    const toast = showToast('Сохранение', 'Сохранение позиций...', 'info', { autoHide: false });
+    const toast = showToast(t('layout.saving'), t('layout.savingPositions'), 'info', { autoHide: false });
     beginSelfUpdate();
     try {
         const data = await http.put('/api/devices/positions', updates);
-        showToast('Успешно', `Сохранены позиции ${data.updated} устройств`, 'success');
+        showToast(t('toast.successTitle'), t('layout.savedPositions', { count: data.updated }), 'success');
         if (typeof window.saveState === 'function') window.saveState('Авто-раскладка');
     } catch (err) {
         console.error(err);
-        showToast('Ошибка', err.message, 'error');
+        showToast(t('toast.errorTitle'), err.message, 'error');
     } finally {
         endSelfUpdate();
         if (toast && toast.hide) toast.hide();
