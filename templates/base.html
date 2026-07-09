@@ -114,7 +114,7 @@
             <!-- Индикатор состояния бэкенда и версия -->
             <div class="status-indicator">
                 <div class="status-dot" id="backend-status-dot"></div>
-                <span id="backend-status-text">Проверка...</span>
+                <span id="backend-status-text">{{ _('Проверка...') }}</span>
                 <span class="version-badge">v{{ app_version }}</span>
             </div>
         </div>
@@ -262,9 +262,13 @@
         });
     </script>
 <!--    <script src="{{ url_for('static', filename='js/base.js') }}"></script>-->
-    <!-- app-init.js ставит window.currentUserId/isAdmin/... из data-* и должен идти
-         ДО base.min.js: тот при загрузке создаёт window.socket, только если
-         currentUserId уже задан. Иначе сокет не создаётся и initMap падает. -->
+    <!-- i18n-словарь фронтенда: синхронная инъекция ДО app-init.js/бандлов —
+         никакого fetch, нет гонки и мигания сырых ключей. Заполняется сервером
+         (inject_globals → js_i18n) для текущей локали + ru как fallback. -->
+    <script>window.__I18N__ = {{ js_i18n | tojson }};</script>
+    <!-- app-init.js ставит window.currentUserId/isAdmin/... из data-* и определяет
+         window.t() из __I18N__. Должен идти ДО base.min.js: тот при загрузке создаёт
+         window.socket, только если currentUserId уже задан, и использует t() в тостах. -->
     <script src="{{ url_for('static', filename='js/src/app-init.js') }}"></script>
         <script src="{{ url_for('static', filename='js/dist/base.min.js') }}"></script>
     {% block scripts %}{% endblock %}

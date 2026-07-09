@@ -3,6 +3,7 @@
  * Единая реализация showToast для всего приложения
  * Заменяет дублирующиеся реализации в base.js и modal/ui.js
  */
+import { t } from '../i18n/i18n.js';
 
 /**
  * Показать Toast уведомление
@@ -33,7 +34,7 @@ export function showToast(title, message, type = 'success', options = {}) {
     
     if (toastTitle) toastTitle.textContent = title;
     if (toastMessage) toastMessage.textContent = message;
-    if (toastTime) toastTime.textContent = 'только что';
+    if (toastTime) toastTime.textContent = t('common.justNow');
     
     // Стили по типу
     const typeStyles = {

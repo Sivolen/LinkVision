@@ -1,0 +1,67 @@
+{
+  "common": {
+    "confirmTitle": "Confirmation",
+    "areYouSure": "Are you sure?",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "running": "Working...",
+    "justNow": "just now",
+    "element": "item",
+    "otherUser": "Another user"
+  },
+  "toast": {
+    "successTitle": "Success",
+    "errorTitle": "Error",
+    "httpError": "Error {status}: {statusText}"
+  },
+  "connection": {
+    "serverUp": "Server is available",
+    "serverDown": "Server is unavailable",
+    "checking": "Checking...",
+    "restoredTitle": "Connection restored",
+    "restoredMsg": "Connection to the server has been restored",
+    "lostTitle": "Connection lost",
+    "lostMsg": "Connection to the server was lost, trying to reconnect..."
+  },
+  "map": {
+    "deleteTitle": "Delete map",
+    "deleteConfirm": "Delete this map?",
+    "deleted": "Map deleted",
+    "deleteFailed": "Failed to delete the map",
+    "updated": "Map updated",
+    "saveError": "Error while saving"
+  },
+  "importExport": {
+    "done": "Import complete",
+    "error": "Error while importing",
+    "badJson": "Invalid JSON file"
+  },
+  "confirmDelete": {
+    "title": "Confirm deletion",
+    "message": "Are you sure you want to delete {label}?",
+    "labels": {
+      "map": "the map and all its devices",
+      "user": "the user",
+      "type": "the device type",
+      "backup": "the current database",
+      "rate_limit": "all rate limit counters"
+    }
+  },
+  "lock": {
+    "toggleError": "Failed to change the lock",
+    "lockedTitle": "Map locked",
+    "unlockedTitle": "Map unlocked",
+    "lockedBy": "{who} locked map editing",
+    "unlockedBy": "{who} unlocked map editing",
+    "btnUnlock": "Unlock dragging",
+    "btnLock": "Lock dragging",
+    "btnLockedNoRights": "Map is locked",
+    "btnNoRightsLock": "No permission to lock",
+    "btnNoRightsChange": "No permission to change the lock"
+  },
+  "bulk": {
+    "operatorForbidden": "Operator cannot edit devices",
+    "noneSelected": "No devices selected",
+    "noChanges": "No changes"
+  }
+}

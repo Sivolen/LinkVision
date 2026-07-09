@@ -15,9 +15,9 @@ let wasDisconnected = false;
     // УТИЛИТА: Модальное окно подтверждения действия (Promise-based)
     // ============================================================================
     window.confirmAction = function({
-        title = 'Подтверждение',
-        message = 'Вы уверены?',
-        confirmText = 'Удалить',
+        title = t('common.confirmTitle'),
+        message = t('common.areYouSure'),
+        confirmText = t('common.delete'),
         variant = 'danger'
     } = {}, onConfirm = null, onCancel = null) {
         let opts;
@@ -25,8 +25,8 @@ let wasDisconnected = false;
         if (arguments.length > 0 && typeof arguments[0] === 'string') {
             opts = {
                 title: arguments[0],
-                message: arguments[1] || 'Вы уверены?',
-                confirmText: 'Удалить',
+                message: arguments[1] || t('common.areYouSure'),
+                confirmText: t('common.delete'),
                 variant: 'danger'
             };
             if (typeof arguments[2] === 'function') opts.onConfirm = arguments[2];
@@ -55,7 +55,7 @@ let wasDisconnected = false;
 
             modalTitle.textContent = opts.title;
             modalMessage.textContent = opts.message;
-            confirmBtn.textContent = opts.confirmText || 'Удалить';
+            confirmBtn.textContent = opts.confirmText || t('common.delete');
             confirmBtn.className = `btn btn-${opts.variant || 'danger'}`;
             confirmBtn.disabled = false;
 
@@ -68,7 +68,7 @@ let wasDisconnected = false;
 
             const onConfirmClick = () => {
                 confirmBtn.disabled = true;
-                confirmBtn.textContent = 'Выполняется...';
+                confirmBtn.textContent = t('common.running');
                 if (opts.onConfirm) {
                     const result = opts.onConfirm();
                     if (result && typeof result.finally === 'function') {
@@ -128,7 +128,7 @@ let wasDisconnected = false;
         const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: options.autoHide === false ? 0 : 3500 });
         document.getElementById('toastTitle').textContent = title;
         document.getElementById('toastMessage').textContent = message;
-        document.getElementById('toastTime').textContent = 'только что';
+        document.getElementById('toastTime').textContent = t('common.justNow');
         const icon = document.getElementById('toastIcon');
         const header = toastEl.querySelector('.toast-header');
         if (type === 'error') {
@@ -148,13 +148,13 @@ let wasDisconnected = false;
     window.getErrorMessage = async function(response) {
         try {
             const data = await response.clone().json();
-            return data.error || `Ошибка ${response.status}: ${response.statusText}`;
+            return data.error || t('toast.httpError', { status: response.status, statusText: response.statusText });
         } catch (e) {
             try {
                 const text = await response.clone().text();
                 if (text) return text;
             } catch (e2) {}
-            return `Ошибка ${response.status}: ${response.statusText}`;
+            return t('toast.httpError', { status: response.status, statusText: response.statusText });
         }
     };
 
@@ -164,10 +164,10 @@ let wasDisconnected = false;
         if (!dot || !text) return;
         if (isConnected) {
             dot.className = 'status-dot online';
-            text.textContent = 'Сервер доступен';
+            text.textContent = t('connection.serverUp');
         } else {
             dot.className = 'status-dot offline';
-            text.textContent = 'Сервер недоступен';
+            text.textContent = t('connection.serverDown');
         }
     };
 
@@ -255,7 +255,7 @@ let wasDisconnected = false;
     window.deleteMap = function(event, mapId) {
         event.preventDefault();
         event.stopPropagation();
-        confirmAction('Удаление карты', 'Удалить эту карту?', () => {
+        confirmAction(t('map.deleteTitle'), t('map.deleteConfirm'), () => {
             window.setSkipNextMapUpdate();
             fetch(`/api/map/${mapId}`, {
                 method: 'DELETE',
@@ -272,15 +272,15 @@ let wasDisconnected = false;
                         const li = mapItemElement.closest('li');
                         if (li) li.remove();
                     }
-                    showToast('Успешно', 'Карта удалена', 'success');
+                    showToast(t('toast.successTitle'), t('map.deleted'), 'success');
                 } else {
                     const errorMsg = await getErrorMessage(res);
-                    showToast('Ошибка', errorMsg, 'error');
+                    showToast(t('toast.errorTitle'), errorMsg, 'error');
                 }
             })
             .catch(err => {
                 Logger.error('Error deleting map:', err);
-                showToast('Ошибка', 'Не удалось удалить карту', 'error');
+                showToast(t('toast.errorTitle'), t('map.deleteFailed'), 'error');
             })
             .finally(() => window.clearSkipNextMapUpdate());
         });
@@ -326,7 +326,7 @@ let wasDisconnected = false;
                         return res.json();
                     })
                     .then(result => {
-                        alert('Импорт выполнен');
+                        alert(t('importExport.done'));
                         if (result.id) {
                             window.location.href = `/map/${result.id}`;
                         } else {
@@ -335,11 +335,11 @@ let wasDisconnected = false;
                     })
                     .catch(err => {
                         Logger.error(err);
-                        alert(err.message || 'Ошибка при импорте');
+                        alert(err.message || t('importExport.error'));
                     })
                     .finally(() => window.clearSkipNextMapUpdate());
                 } catch (ex) {
-                    alert('Некорректный JSON-файл');
+                    alert(t('importExport.badJson'));
                 }
             };
             reader.readAsText(file);
@@ -357,17 +357,13 @@ let wasDisconnected = false;
 
             e.preventDefault();
             const action = confirmBtn.getAttribute('data-confirm-delete');
-            const actionLabels = {
-                'map': 'карту и все устройства',
-                'user': 'пользователя',
-                'type': 'тип устройств',
-                'backup': 'текущую базу данных',
-                'rate_limit': 'все счётчики rate limit'
-            };
+            const label = t(`confirmDelete.labels.${action}`);
+            // t() вернёт сам ключ, если метки нет — тогда падаем на «элемент»
+            const safeLabel = label.startsWith('confirmDelete.') ? t('common.element') : label;
             const confirmed = await window.confirmAction({
-                title: 'Подтверждение удаления',
-                message: `Вы уверены, что хотите удалить ${actionLabels[action] || 'элемент'}?`,
-                confirmText: 'Удалить',
+                title: t('confirmDelete.title'),
+                message: t('confirmDelete.message', { label: safeLabel }),
+                confirmText: t('common.delete'),
                 variant: 'danger'
             });
             if (!confirmed) return;
@@ -527,7 +523,7 @@ let wasDisconnected = false;
                 updateBackendStatus(true);
                 if (wasDisconnected) {
                     if (connectionToast) connectionToast.hide();
-                    connectionToast = showToast('Связь восстановлена', 'Соединение с сервером восстановлено', 'success', { autoHide: 3000 });
+                    connectionToast = showToast(t('connection.restoredTitle'), t('connection.restoredMsg'), 'success', { autoHide: 3000 });
                     wasDisconnected = false;
                 }
             });
@@ -535,7 +531,7 @@ let wasDisconnected = false;
                 Logger.debug('Socket disconnected (global):', reason);
                 updateBackendStatus(false);
                 if (!connectionToast) {
-                    connectionToast = showToast('Потеря связи', 'Соединение с сервером потеряно, попытка восстановления...', 'error', { autoHide: false });
+                    connectionToast = showToast(t('connection.lostTitle'), t('connection.lostMsg'), 'error', { autoHide: false });
                     wasDisconnected = true;
                 }
             });
@@ -548,7 +544,7 @@ let wasDisconnected = false;
                 updateBackendStatus(true);
                 if (wasDisconnected) {
                     if (connectionToast) connectionToast.hide();
-                    connectionToast = showToast('Связь восстановлена', 'Соединение с сервером восстановлено', 'success', { autoHide: 3000 });
+                    connectionToast = showToast(t('connection.restoredTitle'), t('connection.restoredMsg'), 'success', { autoHide: 3000 });
                     wasDisconnected = false;
                 }
             });
@@ -608,11 +604,11 @@ if (editMapForm) {
             // Null-check: модалка может быть не инициализирована
             const editMapModalEl = document.getElementById('editMapModal');
             (bootstrap.Modal.getInstance(editMapModalEl) ?? new bootstrap.Modal(editMapModalEl)).hide();
-            showToast('Успешно', 'Карта обновлена', 'success');
+            showToast(t('toast.successTitle'), t('map.updated'), 'success');
         })
         .catch(err => {
             Logger.error(err);
-            showToast('Ошибка', err.message || 'Ошибка при сохранении', 'error');
+            showToast(t('toast.errorTitle'), err.message || t('map.saveError'), 'error');
         })
         .finally(() => window.clearSkipNextMapUpdate());
     });

@@ -223,13 +223,17 @@ def create_app():
         from config import Config
         from flask_wtf.csrf import generate_csrf
         from flask_babel import get_locale  # выбранная локаль (не селектор!)
+        from services.js_i18n import js_i18n_payload
 
+        locale = str(get_locale() or Config.BABEL_DEFAULT_LOCALE)
         return {
             "app_version": Config.VERSION,
             "debug_mode": app.debug,
             "csrf_token": lambda: generate_csrf(),
-            "current_locale": str(get_locale() or Config.BABEL_DEFAULT_LOCALE),
+            "current_locale": locale,
             "available_languages": Config.LANGUAGES,
+            # Словарь для фронтенда — синхронная инъекция в window.__I18N__ (Фаза 2)
+            "js_i18n": js_i18n_payload(locale),
         }
 
     @app.errorhandler(404)

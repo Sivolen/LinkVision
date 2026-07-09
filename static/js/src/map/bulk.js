@@ -1,6 +1,7 @@
 // bulk.js – массовое редактирование выбранных устройств
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
+import { t } from '../i18n/i18n.js';
 
 let cy = null;
 
@@ -20,12 +21,12 @@ export function updateBulkEditButton() {
 
 async function openBulkEditModal() {
     if (window.isOperator) {
-        alert('Оператор не может редактировать устройства');
+        alert(t('bulk.operatorForbidden'));
         return;
     }
     const selected = cy.nodes(':selected').filter(n => !n.data('isGroup'));
     if (selected.length === 0) {
-        alert('Нет выбранных устройств');
+        alert(t('bulk.noneSelected'));
         return;
     }
     document.getElementById('selectedCount').textContent = selected.length;
@@ -83,7 +84,7 @@ async function applyBulkEdit() {
         if (Object.keys(update).length === 0) return;
         promises.push(http.put(`/api/device/${node.id()}`, update));
     });
-    if (!promises.length) { alert('Нет изменений'); return; }
+    if (!promises.length) { alert(t('bulk.noChanges')); return; }
 
     beginSelfUpdate();
     try {
