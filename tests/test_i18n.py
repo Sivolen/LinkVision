@@ -149,3 +149,33 @@ class TestJsI18nInjection:
 
         with app.app_context():
             assert flat(load_js_dict("ru")) == flat(load_js_dict("en"))
+
+
+class TestBatch3Templates:
+    """Батч 3: каркас base.html + входные страницы переведены через Babel."""
+
+    def test_register_page_translated_en(self, client):
+        html = client.get("/auth/register?lang=en").get_data(as_text=True)
+        assert "Sign up" in html                       # заголовок «Регистрация»
+        assert "Already have an account? Sign in" in html
+        assert "Регистрация" not in html
+
+    def test_register_page_default_ru(self, client):
+        html = client.get("/auth/register").get_data(as_text=True)
+        assert "Регистрация" in html
+        assert "Уже есть аккаунт? Войти" in html
+
+    def test_dashboard_template_translated_en(self, app):
+        # Дашборд «/» для юзера с картами редиректит, поэтому рендерим шаблон
+        # напрямую с принудительной локалью (force_locale обходит и редирект,
+        # и кэш локали в держащемся app_context).
+        from flask import render_template
+        from flask_babel import force_locale
+
+        with app.test_request_context("/"):
+            with force_locale("en"):
+                html = render_template("dashboard.html", maps=[])
+        assert 'lang="en"' in html
+        assert "My maps" in html                     # заголовок
+        assert "You don't have any maps yet" in html  # пустое состояние
+        assert "Мои карты" not in html

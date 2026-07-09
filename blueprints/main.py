@@ -9,6 +9,7 @@ from flask import (
     flash,
     abort,
 )
+from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from extensions import db
 from models import User, Map, Device
@@ -90,7 +91,7 @@ def dashboard():
 @login_required
 def create_map():
     if current_user.is_operator:
-        flash("Оператор не может создавать карты")
+        flash(_("Оператор не может создавать карты"))
         return redirect(url_for("main.dashboard"))
 
     name = request.form.get("name")
