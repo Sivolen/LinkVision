@@ -4,6 +4,7 @@
  */
 
 import { escapeHtml } from './utils.js';
+import { t } from '../i18n/i18n.js';
 
 /**
  * Добавить строку с IP
@@ -16,8 +17,8 @@ export function addIpRow(value = '') {
     row.className = 'ip-row';
     row.innerHTML = `
         <div class="ip-input-wrapper">
-            <input type="text" class="form-control ip-input" placeholder="IPv4 или IPv6" value="${escapeHtml(value)}">
-            <button class="btn-remove-ip" type="button" title="Удалить IP">&times;</button>
+            <input type="text" class="form-control ip-input" placeholder="${t('modal.ip.placeholder')}" value="${escapeHtml(value)}">
+            <button class="btn-remove-ip" type="button" title="${t('modal.ip.removeIp')}">&times;</button>
         </div>
     `;
     

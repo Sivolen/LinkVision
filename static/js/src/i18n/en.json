@@ -7,12 +7,18 @@
     "running": "Working...",
     "justNow": "just now",
     "element": "item",
-    "otherUser": "Another user"
+    "otherUser": "Another user",
+    "loading": "Loading...",
+    "save": "Save",
+    "accessDenied": "Access denied",
+    "loadError": "Loading error"
   },
   "toast": {
     "successTitle": "Success",
     "errorTitle": "Error",
-    "httpError": "Error {status}: {statusText}"
+    "httpError": "Error {status}: {statusText}",
+    "infoTitle": "Info",
+    "httpErrorShort": "Error {status}"
   },
   "connection": {
     "serverUp": "Server is available",
@@ -63,5 +69,113 @@
     "operatorForbidden": "Operator cannot edit devices",
     "noneSelected": "No devices selected",
     "noChanges": "No changes"
+  },
+  "modal": {
+    "permissions": {
+      "noPerms": "No permissions assigned. Add users or a role.",
+      "thType": "Type",
+      "thUserRole": "User/Role",
+      "thRole": "Role",
+      "thActions": "Actions",
+      "typeUser": "User",
+      "typeRole": "Role",
+      "allOperatorsEditor": "All operators (editor)",
+      "allOperatorsViewer": "All operators (viewer)",
+      "loadPermsError": "Failed to load permissions",
+      "selectUser": "Select a user",
+      "selectRole": "Select a role",
+      "permAdded": "Permission granted",
+      "permAddFail": "Failed to grant permission",
+      "selectRoleVE": "Select a role (viewer or editor)",
+      "roleAddedForOperators": "Role {role} added for all operators",
+      "roleAddFail": "Failed to add role",
+      "promptNewRole": "New role (viewer, editor, admin):",
+      "invalidRole": "Invalid role",
+      "roleUpdated": "Role updated",
+      "roleUpdateFail": "Failed to update role",
+      "deletePermTitle": "Delete permission",
+      "deletePermMsg": "Are you sure you want to delete this permission?",
+      "permDeleted": "Permission deleted",
+      "permDeleteFail": "Failed to delete permission",
+      "badgeViewer": "View",
+      "badgeEditor": "Editor",
+      "badgeAdmin": "Admin",
+      "lockInfo": "Map locking is available via the toolbar button"
+    },
+    "device": {
+      "selectTypeOpt": "-- Select type --",
+      "noGroupOpt": "-- No group --",
+      "switchToHistory": "Switch to the \"History\" tab",
+      "noLinks": "No links",
+      "loadFail": "Failed to load device data",
+      "noData": "No data",
+      "nameTypeRequired": "Device name and type are required",
+      "invalidIp": "Invalid IP address: {ip}",
+      "noCurrentMap": "Could not determine the current map",
+      "renderFail": "Failed to render the device on the map",
+      "created": "Device created",
+      "updated": "Device updated",
+      "saveFail": "Failed to save the device",
+      "deleteTitle": "Delete device",
+      "deleteMsg": "Are you sure you want to delete this device?",
+      "deleted": "Device deleted",
+      "deleteFail": "Failed to delete the device"
+    },
+    "link": {
+      "newTitle": "New link",
+      "editTitle": "Edit link",
+      "noDevices": "No devices selected",
+      "invalidIds": "Invalid device IDs",
+      "created": "Link created",
+      "createFail": "Failed to create the link",
+      "updated": "Link updated",
+      "updateFail": "Failed to update the link",
+      "deleteTitle": "Delete link",
+      "deleteMsg": "Delete this link?",
+      "deleted": "Link deleted",
+      "deleteFail": "Failed to delete the link"
+    },
+    "group": {
+      "enterName": "Enter a group name",
+      "updated": "Group updated",
+      "created": "Group created",
+      "nameLabel": "Group \"{name}\"",
+      "saveFail": "Failed to save",
+      "addBtn": "Add group",
+      "loadError": "Loading error: {msg}",
+      "loadFail": "Failed to load groups",
+      "deleteTitle": "Delete group",
+      "deleteConfirm": "Delete group \"{name}\"?",
+      "deleted": "Group deleted",
+      "deletedMsg": "Group \"{name}\" deleted",
+      "deleteFail": "Failed to delete the group",
+      "adminOnly": "Only an administrator can manage groups",
+      "operatorNo": "Operator cannot manage groups"
+    },
+    "shape": {
+      "required": "Type, width and height are required",
+      "created": "Shape created",
+      "updated": "Shape updated",
+      "saveFail": "Failed to save the shape",
+      "deleteTitle": "Delete shape",
+      "deleted": "Shape deleted",
+      "deleteFail": "Failed to delete the shape"
+    },
+    "export": {
+      "noMap": "Could not determine the map",
+      "exported": "Map exported",
+      "saveFileFail": "Failed to save the file",
+      "exportFail": "Failed to export the map"
+    },
+    "history": {
+      "loadError": "Failed to load history",
+      "pageInfo": "Page {page} of {total}",
+      "loadFail": "Failed to load the history",
+      "noRecords": "No history records"
+    },
+    "ip": {
+      "placeholder": "IPv4 or IPv6",
+      "removeIp": "Remove IP"
+    }
   }
 }

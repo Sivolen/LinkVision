@@ -3,6 +3,7 @@
  */
 
 import { showToast } from '../utils/toast.js';
+import { t } from '../i18n/i18n.js';
 import { http } from '../utils/http.js';
 
 let currentMapId = null;
@@ -43,7 +44,7 @@ async function loadPermissions(mapId) {
     const container = document.getElementById('permissionsList');
     if (!container) return;
     
-    container.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div> Загрузка...</div>';
+    container.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div> ' + t('common.loading') + '</div>';
     
     try {
         const response = await fetch(`/api/map/${mapId}/permissions`);
@@ -54,17 +55,17 @@ async function loadPermissions(mapId) {
         const permissions = await response.json();
         
         if (permissions.length === 0) {
-            container.innerHTML = '<p class="text-muted">Нет назначенных прав. Добавьте пользователей или роль.</p>';
+            container.innerHTML = '<p class="text-muted">' + t('modal.permissions.noPerms') + '</p>';
             return;
         }
         
         let html = '<div class="table-responsive"><table class="table table-sm">';
-        html += '<thead><tr><th>Тип</th><th>Пользователь/Роль</th><th>Роль</th><th>Действия</th></tr></thead>';
+        html += `<thead><tr><th>${t('modal.permissions.thType')}</th><th>${t('modal.permissions.thUserRole')}</th><th>${t('modal.permissions.thRole')}</th><th>${t('modal.permissions.thActions')}</th></tr></thead>`;
         html += '<tbody>';
         
         permissions.forEach(perm => {
-            const typeLabel = perm.type === 'user' ? 'Пользователь' : 'Роль';
-            const nameLabel = perm.username || (perm.role === 'editor' ? 'Все операторы (редактор)' : 'Все операторы (просмотр)');
+            const typeLabel = perm.type === 'user' ? t('modal.permissions.typeUser') : t('modal.permissions.typeRole');
+            const nameLabel = perm.username || (perm.role === 'editor' ? t('modal.permissions.allOperatorsEditor') : t('modal.permissions.allOperatorsViewer'));
             const roleBadge = getRoleBadge(perm.role);
             
             html += `<tr data-perm-id="${perm.id}">`;
@@ -98,7 +99,7 @@ async function loadPermissions(mapId) {
         
     } catch (err) {
         console.error('Error loading permissions:', err);
-        container.innerHTML = '<div class="alert alert-danger">Ошибка загрузки прав</div>';
+        container.innerHTML = '<div class="alert alert-danger">' + t('modal.permissions.loadPermsError') + '</div>';
     }
 }
 
@@ -109,7 +110,7 @@ async function loadUsersForPermission(mapId) {
     const selectEl = document.getElementById('permissionUserSelect');
     if (!selectEl) return;
     
-    selectEl.innerHTML = '<option value="">Загрузка...</option>';
+    selectEl.innerHTML = '<option value="">' + t('common.loading') + '</option>';
     
     try {
         const response = await fetch('/admin/users');
@@ -163,7 +164,7 @@ async function loadUsersForPermission(mapId) {
         console.log(`👥 Total non-admin users: ${users.length}`);
 
         // Заполняем select
-        selectEl.innerHTML = '<option value="">Выберите пользователя</option>';
+        selectEl.innerHTML = '<option value="">' + t('modal.permissions.selectUser') + '</option>';
         users.forEach(user => {
             const option = document.createElement('option');
             option.value = user.id;
@@ -173,7 +174,7 @@ async function loadUsersForPermission(mapId) {
         
     } catch (err) {
         console.error('Error loading users:', err);
-        selectEl.innerHTML = '<option value="">Ошибка загрузки</option>';
+        selectEl.innerHTML = '<option value="">' + t('common.loadError') + '</option>';
     }
 }
 
@@ -187,12 +188,12 @@ export async function addPermission() {
     const role = document.getElementById('permissionRoleSelect').value;
     
     if (!userId) {
-        showToast('Ошибка', 'Выберите пользователя', 'warning');
+        showToast(t('toast.errorTitle'), t('modal.permissions.selectUser'), 'warning');
         return;
     }
     
     if (!role) {
-        showToast('Ошибка', 'Выберите роль', 'warning');
+        showToast(t('toast.errorTitle'), t('modal.permissions.selectRole'), 'warning');
         return;
     }
     
@@ -203,13 +204,13 @@ export async function addPermission() {
         });
         
         if (result) {
-            showToast('Успешно', 'Право доступа добавлено', 'success');
+            showToast(t('toast.successTitle'), t('modal.permissions.permAdded'), 'success');
             await loadPermissions(currentMapId);
             await loadUsersForPermission(currentMapId);
         }
     } catch (err) {
         console.error('Error adding permission:', err);
-        showToast('Ошибка', err.message || 'Не удалось добавить право', 'error');
+        showToast(t('toast.errorTitle'), err.message || t('modal.permissions.permAddFail'), 'error');
     }
 }
 
@@ -222,7 +223,7 @@ export async function addRolePermission() {
     const role = document.getElementById('operatorRoleSelect').value;
 
     if (!role || !['viewer', 'editor'].includes(role)) {
-        showToast('Ошибка', 'Выберите роль (viewer или editor)', 'warning');
+        showToast(t('toast.errorTitle'), t('modal.permissions.selectRoleVE'), 'warning');
         return;
     }
     
@@ -230,12 +231,12 @@ export async function addRolePermission() {
         const result = await http.post(`/api/map/${currentMapId}/permissions/role`, { role });
 
         if (result) {
-            showToast('Успешно', `Роль ${role} добавлена для всех операторов`, 'success');
+            showToast(t('toast.successTitle'), t('modal.permissions.roleAddedForOperators', { role }), 'success');
             await loadPermissions(currentMapId);
         }
     } catch (err) {
         console.error('Error adding role permission:', err);
-        showToast('Ошибка', err.message || 'Не удалось добавить роль', 'error');
+        showToast(t('toast.errorTitle'), err.message || t('modal.permissions.roleAddFail'), 'error');
     }
 }
 
@@ -243,9 +244,9 @@ export async function addRolePermission() {
  * Редактировать право
  */
 window.editPermission = async function(permId, currentRole) {
-    const newRole = prompt('Новая роль (viewer, editor, admin):', currentRole);
+    const newRole = prompt(t('modal.permissions.promptNewRole'), currentRole);
     if (!newRole || !['viewer', 'editor', 'admin'].includes(newRole)) {
-        showToast('Ошибка', 'Некорректная роль', 'warning');
+        showToast(t('toast.errorTitle'), t('modal.permissions.invalidRole'), 'warning');
         return;
     }
     
@@ -255,12 +256,12 @@ window.editPermission = async function(permId, currentRole) {
         const result = await http.put(`/api/map/${currentMapId}/permissions/${permId}`, { role: newRole });
 
         if (result) {
-            showToast('Успешно', 'Роль обновлена', 'success');
+            showToast(t('toast.successTitle'), t('modal.permissions.roleUpdated'), 'success');
             await loadPermissions(currentMapId);
         }
     } catch (err) {
         console.error('Error updating permission:', err);
-        showToast('Ошибка', err.message || 'Не удалось обновить роль', 'error');
+        showToast(t('toast.errorTitle'), err.message || t('modal.permissions.roleUpdateFail'), 'error');
     }
 };
 
@@ -269,9 +270,9 @@ window.editPermission = async function(permId, currentRole) {
  */
 window.deletePermission = async function(permId) {
     const confirmed = await window.confirmAction({
-        title: 'Удаление права доступа',
-        message: 'Вы уверены, что хотите удалить это право доступа?',
-        confirmText: 'Удалить',
+        title: t('modal.permissions.deletePermTitle'),
+        message: t('modal.permissions.deletePermMsg'),
+        confirmText: t('common.delete'),
         variant: 'danger'
     });
     if (!confirmed) return;
@@ -280,12 +281,12 @@ window.deletePermission = async function(permId) {
         const result = await http.del(`/api/map/${currentMapId}/permissions/${permId}`);
 
         if (result) {
-            showToast('Успешно', 'Право доступа удалено', 'success');
+            showToast(t('toast.successTitle'), t('modal.permissions.permDeleted'), 'success');
             await loadPermissions(currentMapId);
         }
     } catch (err) {
         console.error('Error deleting permission:', err);
-        showToast('Ошибка', err.message || 'Не удалось удалить право', 'error');
+        showToast(t('toast.errorTitle'), err.message || t('modal.permissions.permDeleteFail'), 'error');
     }
 };
 
@@ -294,9 +295,9 @@ window.deletePermission = async function(permId) {
  */
 function getRoleBadge(role) {
     const badges = {
-        'viewer': '<span class="badge bg-info">Просмотр</span>',
-        'editor': '<span class="badge bg-primary">Редактор</span>',
-        'admin': '<span class="badge bg-danger">Админ</span>',
+        'viewer': '<span class="badge bg-info">' + t('modal.permissions.badgeViewer') + '</span>',
+        'editor': '<span class="badge bg-primary">' + t('modal.permissions.badgeEditor') + '</span>',
+        'admin': '<span class="badge bg-danger">' + t('modal.permissions.badgeAdmin') + '</span>',
     };
     return badges[role] || `<span class="badge bg-secondary">${role}</span>`;
 }
@@ -306,7 +307,7 @@ function getRoleBadge(role) {
  */
 export async function toggleMapLock() {
     console.warn('toggleMapLock deprecated - use toolbar button instead');
-    showToast('Инфо', 'Блокировка карты доступна через кнопку на панели инструментов', 'info');
+    showToast(t('toast.infoTitle'), t('modal.permissions.lockInfo'), 'info');
 }
 
 // Экспорт глобальных функций
