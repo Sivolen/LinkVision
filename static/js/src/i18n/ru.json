@@ -68,7 +68,8 @@
   "bulk": {
     "operatorForbidden": "Оператор не может редактировать устройства",
     "noneSelected": "Нет выбранных устройств",
-    "noChanges": "Нет изменений"
+    "noChanges": "Нет изменений",
+    "keepUnchanged": "-- Не изменять --"
   },
   "modal": {
     "permissions": {
@@ -177,5 +178,57 @@
       "placeholder": "IPv4 или IPv6",
       "removeIp": "Удалить IP"
     }
+  },
+  "modes": {
+    "pan": "Просмотр",
+    "select": "Редактирование",
+    "link": "Создание связи",
+    "operatorNoLinks": "Оператор не может создавать связи",
+    "selectFirst": "Выберите ПЕРВОЕ устройство",
+    "sourceSelectSecond": "✅ Источник: {name}\n Выберите второе устройство"
+  },
+  "layout": {
+    "grid": "Сетка",
+    "circle": "Круг",
+    "concentric": "Концентрический",
+    "tree": "Дерево",
+    "force": "Силовой",
+    "applyPrompt": "Применить раскладку \"{name}\"",
+    "dirTopBottom": "сверху вниз",
+    "dirBottomTop": "снизу вверх",
+    "dirLeftRight": "слева направо",
+    "dirRightLeft": "справа налево",
+    "confirmTitle": "Раскладка карты",
+    "apply": "Применить",
+    "saving": "Сохранение",
+    "savingPositions": "Сохранение позиций...",
+    "savedPositions": "Сохранены позиции {count} устройств"
+  },
+  "search": {
+    "notFound": "Ничего не найдено по запросу \"{term}\"",
+    "foundCount": "Найдено результатов: {count}"
+  },
+  "undoRedo": {
+    "nothingUndo": "Нет действий для отмены",
+    "nothingRedo": "Нет действий для повтора"
+  },
+  "contextMenu": {
+    "createDevice": "Создать устройство",
+    "createShape": "Создать фигуру",
+    "editGroup": "Редактировать группу",
+    "deleteGroup": "Удалить группу",
+    "editShape": "Редактировать фигуру",
+    "deleteShape": "Удалить фигуру",
+    "edit": "Редактировать",
+    "copyIp": "Копировать IP",
+    "history": "История изменений",
+    "editLink": "Редактировать связь",
+    "deleteLink": "Удалить связь",
+    "menuAria": "Контекстное меню",
+    "copied": "Скопировано",
+    "copiedFallback": "IP {ip} (резервный способ)"
+  },
+  "loading": {
+    "mapLoading": "Загрузка карты..."
   }
 }
