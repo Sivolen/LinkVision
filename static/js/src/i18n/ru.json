@@ -7,12 +7,18 @@
     "running": "Выполняется...",
     "justNow": "только что",
     "element": "элемент",
-    "otherUser": "Другой пользователь"
+    "otherUser": "Другой пользователь",
+    "loading": "Загрузка...",
+    "save": "Сохранить",
+    "accessDenied": "Доступ запрещён",
+    "loadError": "Ошибка загрузки"
   },
   "toast": {
     "successTitle": "Успешно",
     "errorTitle": "Ошибка",
-    "httpError": "Ошибка {status}: {statusText}"
+    "httpError": "Ошибка {status}: {statusText}",
+    "infoTitle": "Инфо",
+    "httpErrorShort": "Ошибка {status}"
   },
   "connection": {
     "serverUp": "Сервер доступен",
@@ -63,5 +69,113 @@
     "operatorForbidden": "Оператор не может редактировать устройства",
     "noneSelected": "Нет выбранных устройств",
     "noChanges": "Нет изменений"
+  },
+  "modal": {
+    "permissions": {
+      "noPerms": "Нет назначенных прав. Добавьте пользователей или роль.",
+      "thType": "Тип",
+      "thUserRole": "Пользователь/Роль",
+      "thRole": "Роль",
+      "thActions": "Действия",
+      "typeUser": "Пользователь",
+      "typeRole": "Роль",
+      "allOperatorsEditor": "Все операторы (редактор)",
+      "allOperatorsViewer": "Все операторы (просмотр)",
+      "loadPermsError": "Ошибка загрузки прав",
+      "selectUser": "Выберите пользователя",
+      "selectRole": "Выберите роль",
+      "permAdded": "Право доступа добавлено",
+      "permAddFail": "Не удалось добавить право",
+      "selectRoleVE": "Выберите роль (viewer или editor)",
+      "roleAddedForOperators": "Роль {role} добавлена для всех операторов",
+      "roleAddFail": "Не удалось добавить роль",
+      "promptNewRole": "Новая роль (viewer, editor, admin):",
+      "invalidRole": "Некорректная роль",
+      "roleUpdated": "Роль обновлена",
+      "roleUpdateFail": "Не удалось обновить роль",
+      "deletePermTitle": "Удаление права доступа",
+      "deletePermMsg": "Вы уверены, что хотите удалить это право доступа?",
+      "permDeleted": "Право доступа удалено",
+      "permDeleteFail": "Не удалось удалить право",
+      "badgeViewer": "Просмотр",
+      "badgeEditor": "Редактор",
+      "badgeAdmin": "Админ",
+      "lockInfo": "Блокировка карты доступна через кнопку на панели инструментов"
+    },
+    "device": {
+      "selectTypeOpt": "-- Выберите тип --",
+      "noGroupOpt": "-- Без группы --",
+      "switchToHistory": "Переключитесь на вкладку \"История\"",
+      "noLinks": "Нет связей",
+      "loadFail": "Не удалось загрузить данные устройства",
+      "noData": "Нет данных",
+      "nameTypeRequired": "Имя и тип устройства обязательны",
+      "invalidIp": "Неверный IP-адрес: {ip}",
+      "noCurrentMap": "Не удалось определить текущую карту",
+      "renderFail": "Не удалось отобразить устройство на карте",
+      "created": "Устройство создано",
+      "updated": "Устройство обновлено",
+      "saveFail": "Не удалось сохранить устройство",
+      "deleteTitle": "Удаление устройства",
+      "deleteMsg": "Вы уверены, что хотите удалить это устройство?",
+      "deleted": "Устройство удалено",
+      "deleteFail": "Не удалось удалить устройство"
+    },
+    "link": {
+      "newTitle": "Новая связь",
+      "editTitle": "Редактировать связь",
+      "noDevices": "Не выбраны устройства",
+      "invalidIds": "Неверные ID устройств",
+      "created": "Связь создана",
+      "createFail": "Не удалось создать связь",
+      "updated": "Связь обновлена",
+      "updateFail": "Не удалось обновить связь",
+      "deleteTitle": "Удаление связи",
+      "deleteMsg": "Удалить эту связь?",
+      "deleted": "Связь удалена",
+      "deleteFail": "Не удалось удалить связь"
+    },
+    "group": {
+      "enterName": "Введите название группы",
+      "updated": "Группа обновлена",
+      "created": "Группа создана",
+      "nameLabel": "Группа \"{name}\"",
+      "saveFail": "Не удалось сохранить",
+      "addBtn": "Добавить группу",
+      "loadError": "Ошибка загрузки: {msg}",
+      "loadFail": "Не удалось загрузить группы",
+      "deleteTitle": "Удаление группы",
+      "deleteConfirm": "Удалить группу \"{name}\"?",
+      "deleted": "Группа удалена",
+      "deletedMsg": "Группа \"{name}\" удалена",
+      "deleteFail": "Не удалось удалить группу",
+      "adminOnly": "Только администратор может управлять группами",
+      "operatorNo": "Оператор не может управлять группами"
+    },
+    "shape": {
+      "required": "Тип, ширина и высота обязательны",
+      "created": "Фигура создана",
+      "updated": "Фигура обновлена",
+      "saveFail": "Не удалось сохранить фигуру",
+      "deleteTitle": "Удаление фигуры",
+      "deleted": "Фигура удалена",
+      "deleteFail": "Не удалось удалить фигуру"
+    },
+    "export": {
+      "noMap": "Не удалось определить карту",
+      "exported": "Карта экспортирована",
+      "saveFileFail": "Не удалось сохранить файл",
+      "exportFail": "Не удалось экспортировать карту"
+    },
+    "history": {
+      "loadError": "Ошибка загрузки истории",
+      "pageInfo": "Страница {page} из {total}",
+      "loadFail": "Не удалось загрузить историю",
+      "noRecords": "Нет записей истории"
+    },
+    "ip": {
+      "placeholder": "IPv4 или IPv6",
+      "removeIp": "Удалить IP"
+    }
   }
 }
