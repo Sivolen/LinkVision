@@ -34,6 +34,7 @@ import {
 
 // Импорт для обновления меток и групп
 import { updateAllEdgeLabels } from './edgeLabels.js';
+import { updateEdgeCurves } from './edgeBundling.js';
 import { updateAllGroups } from './groupResize.js';
 
 // ─── Утилита: обёртка для socket-событий с проверкой map_id ─────────────────────
@@ -218,6 +219,7 @@ export function initMap(id) {
     onMapEvent(window.socket, mapId, 'bulk_position_updated', (data) => {
         // Позиции уже обновлены на клиенте через dragfree — просто обновим метки
         if (typeof window.updateAllEdgeLabels === 'function') window.updateAllEdgeLabels();
+        if (typeof window.updateEdgeCurves === 'function') window.updateEdgeCurves();
         if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
     });
 
@@ -226,16 +228,19 @@ export function initMap(id) {
         cy.batch(() => {
             addLinkToGraph(data.link);
         });
+        if (typeof window.updateEdgeCurves === 'function') window.updateEdgeCurves();
     });
 
     // Обновление связи
     onMapEvent(window.socket, mapId, 'link_updated', (data) => {
         updateLinkInGraph(data.link);
+        if (typeof window.updateEdgeCurves === 'function') window.updateEdgeCurves();
     });
 
     // Удаление связи
     onMapEvent(window.socket, mapId, 'link_deleted', (data) => {
         _removeLinkFromGraph(`link_${data.link_id}`);
+        if (typeof window.updateEdgeCurves === 'function') window.updateEdgeCurves();
     });
 
     // Создание группы
@@ -331,6 +336,7 @@ window.addShapeToGraph = _addShapeToGraph;
 window.removeShapeFromGraph = _removeShapeFromGraph;
 window.updateMapBackground = updateMapBackground;
 window.updateAllEdgeLabels = updateAllEdgeLabels;
+window.updateEdgeCurves = updateEdgeCurves;
 window.addPulsingNode = addPulsingNode;
 window.removePulsingNode = removePulsingNode;
 window.withViewportRestore = withViewportRestore;
