@@ -81,7 +81,7 @@ def create_new_map(
 def get_shape_by_id(shape_id: int):
     """Получить фигуру по ID."""
     from models import MapShape
-    return MapShape.query.get(shape_id)
+    return db.session.get(MapShape, shape_id)
 
 
 def validate_map(map_id: int) -> Map:
@@ -97,7 +97,7 @@ def validate_map(map_id: int) -> Map:
     Raises:
         ValueError: Если карта не найдена
     """
-    map_obj = Map.query.get(map_id)
+    map_obj = db.session.get(Map, map_id)
     if not map_obj:
         raise ValueError(f"Map with id {map_id} not found")
     return map_obj
@@ -117,7 +117,7 @@ def validate_link(link_id: int):
         ValueError: Если связь не найдена
     """
     from models import Link
-    link = Link.query.get(link_id)
+    link = db.session.get(Link, link_id)
     if not link:
         raise ValueError(f"Link with id {link_id} not found")
     return link
@@ -162,7 +162,7 @@ def get_map_info(map_id: int) -> Optional[Dict[str, Any]]:
     Returns:
         Dict с информацией о карте или None
     """
-    map_obj = Map.query.get(map_id)
+    map_obj = db.session.get(Map, map_id)
     if not map_obj:
         return None
 

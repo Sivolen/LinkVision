@@ -101,7 +101,7 @@ def import_map(data: dict, current_user) -> Map:
     map_id = data.get("id")
 
     if map_id:
-        map_obj = Map.query.get(map_id)
+        map_obj = db.session.get(Map, map_id)
         if not map_obj:
             raise ValueError("Map not found")
         _check_map_edit_permission(map_id)
