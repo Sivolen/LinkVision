@@ -37,10 +37,15 @@ export function flushPendingDragSaves() {
     const jobs = entries.map(([key, commit]) => {
         clearTimeout(dragTimeouts[key]);
         delete dragTimeouts[key];
-        return commit();
+        try {
+            return commit();
+        } catch (e) {
+            console.error('Commit error in flushPendingDragSaves:', e);
+            return Promise.resolve();
+        }
     });
     clearTimeout(groupBatchTimeout);
-    return Promise.all(jobs);
+    return Promise.allSettled(jobs).then(() => undefined);
 }
 
 function fallbackCopy(text) {
@@ -121,11 +126,20 @@ function clearHighlight() {
 }
 
 export function initInteractions(cy) {
+    // Флаг: пользователь тащит compound-узел (группу), а не отдельное устройство.
+    // При перетаскивании группы Cytoscape генерирует dragfree на каждом ребёнке
+    // тоже — без этого флага каждый ребёнок создал бы отдельную запись в истории
+    // undo, и отмена "ничего не делала" бы (N одинаковых записей подряд).
+    let draggingGroup = false;
+    cy.on('grab', 'node[isGroup]', () => { draggingGroup = true; });
+
     // Перетаскивание одиночного узла
     cy.on('dragfree', 'node', function(evt) {
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
         if (window.isOperator || isDragLocked()) return;
+        // Если тащили группу — дети уже обработаны в node[isGroup], пропускаем
+        if (draggingGroup) return;
 
         let pos = node.position();
         const { width, height } = getBgDimensions();
@@ -294,9 +308,10 @@ export function initInteractions(cy) {
         clearTimeout(dragTimeouts[key]);
         dragTimeouts[key] = setTimeout(commitGroupNodeMove, 500);
         pendingDragSaves[key] = commitGroupNodeMove;
-    });
 
-    // Клики по узлам
+        // Сбрасываем флаг в следующем тике — после всех dragfree на детях
+        setTimeout(() => { draggingGroup = false; }, 0);
+    });
     cy.on('tap', 'node', function(evt) {
         const node = evt.target;
         if (isLinkMode()) {
