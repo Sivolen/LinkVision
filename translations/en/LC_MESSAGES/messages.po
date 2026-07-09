@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: LinkVision 2.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-09 15:17+1100\n"
+"POT-Creation-Date: 2026-07-09 15:30+1100\n"
 "PO-Revision-Date: 2026-07-09 14:24+1100\n"
 "Last-Translator: LinkVision\n"
 "Language: en\n"
@@ -17,11 +17,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: forms.py:16 forms.py:22
+#: forms.py:16 forms.py:22 templates/admin/users.html:14
+#: templates/admin/users.html:42 templates/admin/users.html:97
 msgid "Имя пользователя"
 msgstr "Username"
 
-#: forms.py:17 forms.py:25
+#: forms.py:17 forms.py:25 templates/admin/users.html:18
 msgid "Пароль"
 msgstr "Password"
 
@@ -36,6 +37,124 @@ msgstr "Password confirmation"
 #: forms.py:37
 msgid "Пароли не совпадают"
 msgstr "Passwords do not match"
+
+#: blueprints/admin.py:31
+msgid "Доступ запрещен. Требуются права администратора."
+msgstr "Access denied. Administrator rights required."
+
+#: blueprints/admin.py:54
+msgid "Имя пользователя и пароль обязательны"
+msgstr "Username and password are required"
+
+#: blueprints/admin.py:58 blueprints/admin.py:108
+msgid "Пользователь с таким именем уже существует"
+msgstr "A user with this name already exists"
+
+#: blueprints/admin.py:63
+msgid "Пользователь создан"
+msgstr "User created"
+
+#: blueprints/admin.py:66
+msgid "Ошибка при создании пользователя"
+msgstr "Error creating user"
+
+#: blueprints/admin.py:74
+msgid "Пользователь не найден"
+msgstr "User not found"
+
+#: blueprints/admin.py:78
+msgid "Нельзя удалить самого себя"
+msgstr "You cannot delete yourself"
+
+#: blueprints/admin.py:83
+msgid "Пользователь удалён"
+msgstr "User deleted"
+
+#: blueprints/admin.py:86
+msgid "Ошибка при удалении пользователя"
+msgstr "Error deleting user"
+
+#: blueprints/admin.py:102
+msgid "Имя пользователя обязательно"
+msgstr "Username is required"
+
+#: blueprints/admin.py:115
+msgid "Пользователь обновлён"
+msgstr "User updated"
+
+#: blueprints/admin.py:119
+msgid "Ошибка при обновлении пользователя"
+msgstr "Error updating user"
+
+#: blueprints/admin.py:146
+msgid "Название типа обязательно"
+msgstr "Type name is required"
+
+#: blueprints/admin.py:152
+msgid "Тип устройства создан"
+msgstr "Device type created"
+
+#: blueprints/admin.py:155
+msgid "Ошибка при создании типа"
+msgstr "Error creating type"
+
+#: blueprints/admin.py:174
+msgid "Тип устройства обновлён"
+msgstr "Device type updated"
+
+#: blueprints/admin.py:178
+msgid "Ошибка при обновлении типа"
+msgstr "Error updating type"
+
+#: blueprints/admin.py:189
+msgid "Тип устройства удалён"
+msgstr "Device type deleted"
+
+#: blueprints/admin.py:192
+msgid "Ошибка при удалении типа"
+msgstr "Error deleting type"
+
+#: blueprints/admin.py:221
+msgid "Настройки сохранены"
+msgstr "Settings saved"
+
+#: blueprints/admin.py:224
+msgid "Ошибка при сохранении настроек"
+msgstr "Error saving settings"
+
+#: blueprints/admin.py:230
+msgid "Счётчики rate limit успешно сброшены"
+msgstr "Rate limit counters reset successfully"
+
+#: blueprints/admin.py:261
+msgid "Карта удалена"
+msgstr "Map deleted"
+
+#: blueprints/admin.py:264
+msgid "Ошибка при удалении карты"
+msgstr "Error deleting map"
+
+#: blueprints/admin.py:273
+msgid "Файл не выбран"
+msgstr "No file selected"
+
+#: blueprints/admin.py:278
+msgid "Пустой файл"
+msgstr "Empty file"
+
+#: blueprints/admin.py:282
+msgid "Допустимы только файлы .db"
+msgstr "Only .db files are allowed"
+
+#: blueprints/admin.py:297
+msgid ""
+"База данных восстановлена. Пожалуйста, перезапустите приложение для "
+"применения изменений."
+msgstr "Database restored. Please restart the application to apply the changes."
+
+#: blueprints/admin.py:301
+msgid "Ошибка при восстановлении базы данных"
+msgstr "Error restoring the database"
 
 #: blueprints/auth.py:53
 msgid "Неверный логин или пароль"
@@ -118,7 +237,7 @@ msgstr "Too many requests"
 msgid ""
 "Вы отправили слишком много запросов. Пожалуйста, подождите несколько "
 "минут перед повторной попыткой."
-msgstr ""
+msgstr "You have sent too many requests. Please wait a few minutes before trying again."
 
 #: templates/429.html:209
 #, python-format
@@ -157,7 +276,7 @@ msgstr "Administration"
 msgid "Пользователи"
 msgstr "Users"
 
-#: templates/base.html:104
+#: templates/admin/types.html:3 templates/base.html:104
 msgid "Типы устройств"
 msgstr "Device types"
 
@@ -177,6 +296,7 @@ msgstr "Map name"
 msgid "Например: Офис Москва"
 msgstr "For example: Moscow Office"
 
+#: templates/admin/types.html:46 templates/admin/users.html:124
 #: templates/base.html:170 templates/base.html:204 templates/base.html:223
 #: templates/dashboard.html:52 templates/map_view.html:269
 #: templates/map_view.html:361 templates/map_view.html:557
@@ -208,8 +328,9 @@ msgstr "Remove current background"
 msgid "Экспорт"
 msgstr "Export"
 
-#: templates/base.html:205 templates/map_view.html:272
-#: templates/map_view.html:365 templates/map_view.html:641
+#: templates/admin/users.html:125 templates/base.html:205
+#: templates/map_view.html:272 templates/map_view.html:365
+#: templates/map_view.html:641
 msgid "Сохранить"
 msgstr "Save"
 
@@ -221,9 +342,10 @@ msgstr "Confirmation"
 msgid "Вы уверены?"
 msgstr "Are you sure?"
 
-#: templates/base.html:224 templates/dashboard.html:22
-#: templates/map_view.html:277 templates/map_view.html:363
-#: templates/map_view.html:640
+#: templates/admin/maps.html:29 templates/admin/types.html:91
+#: templates/admin/users.html:76 templates/base.html:224
+#: templates/dashboard.html:22 templates/map_view.html:277
+#: templates/map_view.html:363 templates/map_view.html:640
 msgid "Удалить"
 msgstr "Delete"
 
@@ -262,7 +384,7 @@ msgstr "Owner: %(name)s"
 msgid "Создана: %(date)s"
 msgstr "Created: %(date)s"
 
-#: templates/dashboard.html:20
+#: templates/admin/maps.html:24 templates/dashboard.html:20
 msgid "Открыть"
 msgstr "Open"
 
@@ -721,6 +843,7 @@ msgstr "Existing groups"
 msgid "Поиск по названию..."
 msgstr "Search by name..."
 
+#: templates/admin/maps.html:9 templates/admin/types.html:61
 #: templates/map_view.html:487
 msgid "Название"
 msgstr "Name"
@@ -729,11 +852,12 @@ msgstr "Name"
 msgid "Цвет"
 msgstr "Color"
 
-#: templates/map_view.html:489
+#: templates/admin/types.html:65 templates/map_view.html:489
 msgid "Устройств"
 msgstr "Devices"
 
-#: templates/map_view.html:490
+#: templates/admin/maps.html:12 templates/admin/types.html:66
+#: templates/admin/users.html:46 templates/map_view.html:490
 msgid "Действия"
 msgstr "Actions"
 
@@ -798,11 +922,11 @@ msgstr "Diamond"
 msgid "Круг"
 msgstr "Circle"
 
-#: templates/map_view.html:587
+#: templates/admin/types.html:24 templates/map_view.html:587
 msgid "Ширина (px)"
 msgstr "Width (px)"
 
-#: templates/map_view.html:591
+#: templates/admin/types.html:28 templates/map_view.html:591
 msgid "Высота (px)"
 msgstr "Height (px)"
 
@@ -830,11 +954,12 @@ msgstr "Current access permissions"
 msgid "Добавить право пользователю"
 msgstr "Grant permission to a user"
 
+#: templates/admin/users.html:24 templates/admin/users.html:111
 #: templates/map_view.html:672
 msgid "Пользователь"
 msgstr "User"
 
-#: templates/map_view.html:678
+#: templates/admin/users.html:108 templates/map_view.html:678
 msgid "Роль"
 msgstr "Role"
 
@@ -882,7 +1007,7 @@ msgstr "No maps available"
 msgid ""
 "В системе пока нет ни одной карты. Обратитесь к администратору для "
 "создания карты."
-msgstr ""
+msgstr "There are no maps in the system yet. Contact the administrator to create one."
 
 #: templates/no_maps.html:7
 msgid "Вы можете вернуться на главную страницу позже."
@@ -903,4 +1028,193 @@ msgstr "Sign up"
 #: templates/register.html:226
 msgid "Уже есть аккаунт? Войти"
 msgstr "Already have an account? Sign in"
+
+#: templates/admin/backups.html:4 templates/admin/settings.html:35
+msgid "Резервное копирование"
+msgstr "Backup"
+
+#: templates/admin/backups.html:8
+msgid "Текущая база данных"
+msgstr "Current database"
+
+#: templates/admin/backups.html:11 templates/admin/settings.html:38
+msgid "Размер:"
+msgstr "Size:"
+
+#: templates/admin/backups.html:12 templates/admin/settings.html:39
+msgid "Последнее изменение:"
+msgstr "Last modified:"
+
+#: templates/admin/backups.html:12 templates/admin/settings.html:39
+msgid "Неизвестно"
+msgstr "Unknown"
+
+#: templates/admin/backups.html:15 templates/admin/settings.html:42
+msgid "Скачать базу данных"
+msgstr "Download database"
+
+#: templates/admin/backups.html:23
+msgid "Восстановление из файла"
+msgstr "Restore from file"
+
+#: templates/admin/backups.html:26 templates/admin/settings.html:46
+msgid ""
+"Внимание! Восстановление заменит текущую базу данных. Все текущие данные "
+"будут потеряны. Рекомендуется предварительно сделать резервную копию."
+msgstr "Warning! Restoring will replace the current database. All current data will be lost. It is recommended to make a backup first."
+
+#: templates/admin/backups.html:29 templates/admin/settings.html:51
+msgid "Выберите файл базы данных (.db)"
+msgstr "Select a database file (.db)"
+
+#: templates/admin/backups.html:33 templates/admin/settings.html:55
+msgid "Восстановить"
+msgstr "Restore"
+
+#: templates/admin/maps.html:3
+msgid "Все карты системы"
+msgstr "All system maps"
+
+#: templates/admin/maps.html:10
+msgid "Владелец"
+msgstr "Owner"
+
+#: templates/admin/maps.html:11
+msgid "Дата создания"
+msgstr "Created date"
+
+#: templates/admin/settings.html:4
+msgid "Настройки мониторинга"
+msgstr "Monitoring settings"
+
+#: templates/admin/settings.html:8
+msgid "Параметры опроса устройств"
+msgstr "Device polling parameters"
+
+#: templates/admin/settings.html:14
+msgid "Количество пакетов (ping count)"
+msgstr "Packet count (ping count)"
+
+#: templates/admin/settings.html:16
+msgid "Сколько ICMP-пакетов отправлять при проверке"
+msgstr "How many ICMP packets to send per check"
+
+#: templates/admin/settings.html:19
+msgid "Интервал опроса (секунды)"
+msgstr "Polling interval (seconds)"
+
+#: templates/admin/settings.html:21
+msgid "Как часто проверять доступность устройств"
+msgstr "How often to check device availability"
+
+#: templates/admin/settings.html:25
+msgid "Сохранить настройки"
+msgstr "Save settings"
+
+#: templates/admin/settings.html:63
+msgid "Сброс ограничений"
+msgstr "Reset limits"
+
+#: templates/admin/settings.html:66
+msgid ""
+"Если пользователи жалуются на «Слишком много запросов» (ошибка 429), "
+"нажмите кнопку ниже для сброса счётчиков."
+msgstr "If users complain about "Too many requests" (error 429), click the button below to reset the counters."
+
+#: templates/admin/settings.html:71
+msgid "Сбросить счётчики"
+msgstr "Reset counters"
+
+#: templates/admin/types.html:9
+msgid "Редактировать тип"
+msgstr "Edit type"
+
+#: templates/admin/types.html:11
+msgid "Добавить новый тип"
+msgstr "Add new type"
+
+#: templates/admin/types.html:20
+msgid "Название типа"
+msgstr "Type name"
+
+#: templates/admin/types.html:34
+msgid "Текущая иконка:"
+msgstr "Current icon:"
+
+#: templates/admin/types.html:40
+msgid "Обновить"
+msgstr "Update"
+
+#: templates/admin/types.html:40 templates/admin/users.html:31
+msgid "Добавить"
+msgstr "Add"
+
+#: templates/admin/types.html:48
+msgid "Удалить тип? Все устройства этого типа потеряют иконку."
+msgstr "Delete type? All devices of this type will lose their icon."
+
+#: templates/admin/types.html:49
+msgid "Удалить тип"
+msgstr "Delete type"
+
+#: templates/admin/types.html:62
+msgid "Ширина"
+msgstr "Width"
+
+#: templates/admin/types.html:63
+msgid "Высота"
+msgstr "Height"
+
+#: templates/admin/types.html:64
+msgid "Иконка"
+msgstr "Icon"
+
+#: templates/admin/types.html:80
+msgid "нет"
+msgstr "none"
+
+#: templates/admin/types.html:86 templates/admin/users.html:71
+msgid "Редактировать"
+msgstr "Edit"
+
+#: templates/admin/types.html:91
+msgid "Удалить тип?"
+msgstr "Delete type?"
+
+#: templates/admin/users.html:3
+msgid "Управление пользователями"
+msgstr "User management"
+
+#: templates/admin/users.html:8
+msgid "Добавить нового пользователя"
+msgstr "Add a new user"
+
+#: templates/admin/users.html:25 templates/admin/users.html:44
+#: templates/admin/users.html:115
+msgid "Оператор"
+msgstr "Operator"
+
+#: templates/admin/users.html:26 templates/admin/users.html:119
+msgid "Администратор"
+msgstr "Administrator"
+
+#: templates/admin/users.html:43
+msgid "Админ"
+msgstr "Admin"
+
+#: templates/admin/users.html:45
+msgid "Дата регистрации"
+msgstr "Registration date"
+
+#: templates/admin/users.html:56 templates/admin/users.html:63
+msgid "Да"
+msgstr "Yes"
+
+#: templates/admin/users.html:58 templates/admin/users.html:65
+msgid "Нет"
+msgstr "No"
+
+#: templates/admin/users.html:101
+msgid "Новый пароль (оставьте пустым, чтобы не менять)"
+msgstr "New password (leave empty to keep unchanged)"
 
