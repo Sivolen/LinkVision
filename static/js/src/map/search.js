@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n.js';
 // search.js – поиск по имени/IP и фильтр по статусу
 let cy = null;
 let currentFilter = 'all';
@@ -55,9 +56,9 @@ function announceSearchResults(count, term) {
     }
 
     if (count === 0) {
-        searchStatus.textContent = `Ничего не найдено по запросу "${term}"`;
+        searchStatus.textContent = t('search.notFound', { term });
     } else {
-        searchStatus.textContent = `Найдено результатов: ${count}`;
+        searchStatus.textContent = t('search.foundCount', { count });
     }
 }
 

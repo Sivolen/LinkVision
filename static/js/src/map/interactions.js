@@ -1,5 +1,6 @@
 // interactions.js – перетаскивание узлов, клики, групповое перемещение
 import { getCy } from './core.js';
+import { t } from '../i18n/i18n.js';
 import { boundNodePosition, getBgDimensions } from './background.js';
 import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes.js';
 import { updateEdgeLabelsForNode } from './edgeLabels.js';
@@ -55,7 +56,7 @@ function fallbackCopy(text) {
     textarea.select();
     document.execCommand('copy');
     document.body.removeChild(textarea);
-    if (typeof showToast === 'function') showToast('Скопировано', `IP ${text} (резервный способ)`, 'info');
+    if (typeof showToast === 'function') showToast(t('contextMenu.copied'), t('contextMenu.copiedFallback', { ip: text }), 'info');
 }
 
 // Оптимизация highlight через requestAnimationFrame
@@ -340,7 +341,7 @@ export function initInteractions(cy) {
             if (ip && ip.trim()) {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(ip).then(() => {
-                        if (typeof showToast === 'function') showToast('Скопировано', `IP ${ip}`, 'info');
+                        if (typeof showToast === 'function') showToast(t('contextMenu.copied'), `IP ${ip}`, 'info');
                     }).catch(() => {
                         fallbackCopy(ip);
                     });
@@ -423,7 +424,7 @@ export function initInteractions(cy) {
         const menu = document.createElement('div');
         menu.className = 'context-menu';
         menu.setAttribute('role', 'menu');
-        menu.setAttribute('aria-label', 'Контекстное меню');
+        menu.setAttribute('aria-label', t('contextMenu.menuAria'));
         menu.style.cssText = `
             position: fixed;
             top: ${mouseY}px;
@@ -533,8 +534,8 @@ export function initInteractions(cy) {
         if (event.target === cy) {
             const { x, y } = getAbsoluteMousePosition(event);
             showContextMenu([
-                { icon: 'fa-plus-circle', label: 'Создать устройство', action: () => window.openDeviceModal() },
-                { icon: 'fa-shapes', label: 'Создать фигуру', action: () => window.openShapeModal() }
+                { icon: 'fa-plus-circle', label: t('contextMenu.createDevice'), action: () => window.openDeviceModal() },
+                { icon: 'fa-shapes', label: t('contextMenu.createShape'), action: () => window.openShapeModal() }
             ], x, y);
         }
     });
@@ -546,7 +547,7 @@ export function initInteractions(cy) {
 
         if (node.data('isGroup')) {
             showContextMenu([
-                { icon: 'fa-edit', label: 'Редактировать группу', action: () => {
+                { icon: 'fa-edit', label: t('contextMenu.editGroup'), action: () => {
                     const id = node.data('group_id');
                     const name = node.data('name');
                     const color = node.data('color');
@@ -556,7 +557,7 @@ export function initInteractions(cy) {
                         if (typeof window.openGroupManager === 'function') window.openGroupManager();
                     }
                 }},
-                { icon: 'fa-trash', label: 'Удалить группу', action: () => {
+                { icon: 'fa-trash', label: t('contextMenu.deleteGroup'), action: () => {
                     if (typeof window.deleteGroup === 'function') {
                         window.deleteGroup(node.data('group_id'), node.data('name'));
                     }
@@ -567,8 +568,8 @@ export function initInteractions(cy) {
 
         if (node.data('isShape')) {
             showContextMenu([
-                { icon: 'fa-edit', label: 'Редактировать фигуру', action: () => window.openShapeModal(node) },
-                { icon: 'fa-trash', label: 'Удалить фигуру', action: () => {
+                { icon: 'fa-edit', label: t('contextMenu.editShape'), action: () => window.openShapeModal(node) },
+                { icon: 'fa-trash', label: t('contextMenu.deleteShape'), action: () => {
                     const id = parseRawId(node.id());
                     if (typeof window.deleteShape === 'function') window.deleteShape(id);
                 }}
@@ -581,23 +582,23 @@ export function initInteractions(cy) {
         const deviceIp = node.data('ip');
 
         const items = [
-            { icon: 'fa-edit', label: 'Редактировать', action: () => window.openDeviceModal(node) },
-            { icon: 'fa-trash', label: 'Удалить', action: () => {
+            { icon: 'fa-edit', label: t('contextMenu.edit'), action: () => window.openDeviceModal(node) },
+            { icon: 'fa-trash', label: t('common.delete'), action: () => {
                 if (typeof window.deleteDevice === 'function') window.deleteDevice(deviceId);
             }}
         ];
         if (deviceIp && deviceIp.trim()) {
-            items.push({ icon: 'fa-copy', label: 'Копировать IP', action: () => {
+            items.push({ icon: 'fa-copy', label: t('contextMenu.copyIp'), action: () => {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(deviceIp).then(() => {
-                        if (typeof showToast === 'function') showToast('Скопировано', `IP ${deviceIp}`, 'info');
+                        if (typeof showToast === 'function') showToast(t('contextMenu.copied'), `IP ${deviceIp}`, 'info');
                     }).catch(() => fallbackCopy(deviceIp));
                 } else {
                     fallbackCopy(deviceIp);
                 }
             }});
         }
-        items.push({ icon: 'fa-history', label: 'История изменений', action: () => {
+        items.push({ icon: 'fa-history', label: t('contextMenu.history'), action: () => {
             if (typeof window.openDeviceModal === 'function') {
                 window.openDeviceModal(node);
                 setTimeout(() => {
@@ -618,10 +619,10 @@ export function initInteractions(cy) {
         const { x, y } = getAbsoluteMousePosition(evt);
         const linkId = edge.id();
         showContextMenu([
-            { icon: 'fa-edit', label: 'Редактировать связь', action: () => {
+            { icon: 'fa-edit', label: t('contextMenu.editLink'), action: () => {
                 if (typeof window.openLinkModalForEdit === 'function') window.openLinkModalForEdit(edge);
             }},
-            { icon: 'fa-trash', label: 'Удалить связь', action: () => {
+            { icon: 'fa-trash', label: t('contextMenu.deleteLink'), action: () => {
                 if (typeof window.deleteLink === 'function') window.deleteLink(linkId);
             }}
         ], x, y);

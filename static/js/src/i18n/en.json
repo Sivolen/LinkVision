@@ -68,7 +68,8 @@
   "bulk": {
     "operatorForbidden": "Operator cannot edit devices",
     "noneSelected": "No devices selected",
-    "noChanges": "No changes"
+    "noChanges": "No changes",
+    "keepUnchanged": "-- Keep unchanged --"
   },
   "modal": {
     "permissions": {
@@ -177,5 +178,57 @@
       "placeholder": "IPv4 or IPv6",
       "removeIp": "Remove IP"
     }
+  },
+  "modes": {
+    "pan": "View",
+    "select": "Editing",
+    "link": "Creating link",
+    "operatorNoLinks": "Operator cannot create links",
+    "selectFirst": "Select the FIRST device",
+    "sourceSelectSecond": "✅ Source: {name}\nSelect the second device"
+  },
+  "layout": {
+    "grid": "Grid",
+    "circle": "Circle",
+    "concentric": "Concentric",
+    "tree": "Tree",
+    "force": "Force-directed",
+    "applyPrompt": "Apply layout \"{name}\"",
+    "dirTopBottom": "top to bottom",
+    "dirBottomTop": "bottom to top",
+    "dirLeftRight": "left to right",
+    "dirRightLeft": "right to left",
+    "confirmTitle": "Map layout",
+    "apply": "Apply",
+    "saving": "Saving",
+    "savingPositions": "Saving positions...",
+    "savedPositions": "Saved positions for {count} devices"
+  },
+  "search": {
+    "notFound": "Nothing found for \"{term}\"",
+    "foundCount": "Found results: {count}"
+  },
+  "undoRedo": {
+    "nothingUndo": "Nothing to undo",
+    "nothingRedo": "Nothing to redo"
+  },
+  "contextMenu": {
+    "createDevice": "Create device",
+    "createShape": "Create shape",
+    "editGroup": "Edit group",
+    "deleteGroup": "Delete group",
+    "editShape": "Edit shape",
+    "deleteShape": "Delete shape",
+    "edit": "Edit",
+    "copyIp": "Copy IP",
+    "history": "Change history",
+    "editLink": "Edit link",
+    "deleteLink": "Delete link",
+    "menuAria": "Context menu",
+    "copied": "Copied",
+    "copiedFallback": "IP {ip} (fallback)"
+  },
+  "loading": {
+    "mapLoading": "Loading map..."
   }
 }

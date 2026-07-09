@@ -1,12 +1,13 @@
+import { t } from '../i18n/i18n.js';
 // modes.js – режимы pan / select / link mode
 let cy = null;
 let linkModeActive = false;
 let sourceNode = null;
 
 const MODE_LABELS = {
-    pan: 'Просмотр',
-    select: 'Редактирование',
-    link: 'Создание связи'
+    pan: 'modes.pan',
+    select: 'modes.select',
+    link: 'modes.link'
 };
 
 const MODE_CLASSES = {
@@ -51,14 +52,14 @@ function updateModeIndicator(mode) {
     const indicator = document.getElementById('modeIndicator');
     if (!indicator) return;
 
-    const label = MODE_LABELS[mode] || mode;
+    const label = MODE_LABELS[mode] ? t(MODE_LABELS[mode]) : mode;
     indicator.textContent = label;
     indicator.className = 'mode-badge ' + (MODE_CLASSES[mode] || '');
 }
 
 export function startLinkMode(clickedNode = null) {
     if (window.isOperator) {
-        alert('Оператор не может создавать связи');
+        alert(t('modes.operatorNoLinks'));
         return;
     }
     resetLinkMode();
@@ -68,11 +69,11 @@ export function startLinkMode(clickedNode = null) {
     if (clickedNode) {
         sourceNode = clickedNode;
         sourceNode.addClass('cy-link-source');
-        const info = createInfoDiv('✅ Источник: ' + sourceNode.data('name') + '\n Выберите второе устройство');
+        const info = createInfoDiv(t('modes.sourceSelectSecond', { name: sourceNode.data('name') }));
         document.body.appendChild(info);
     } else {
         document.body.style.cursor = 'crosshair';
-        const info = createInfoDiv('Выберите ПЕРВОЕ устройство');
+        const info = createInfoDiv(t('modes.selectFirst'));
         document.body.appendChild(info);
     }
 }
