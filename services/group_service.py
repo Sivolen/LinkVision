@@ -8,7 +8,7 @@ from utils.logger import api_logger
 
 def get_group_by_id(group_id: int):
     """Получить группу по ID или вернуть None."""
-    return Group.query.get(group_id)
+    return db.session.get(Group, group_id)
 
 
 def create_group(

@@ -5,7 +5,7 @@ API роуты для управления правами доступа (Permis
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
-from models import Map, MapPermission, User
+from models import Map, MapPermission, User, db
 from services import (
     require_map_access,
     require_map_owner_or_admin,
@@ -41,7 +41,7 @@ def get_map_permissions(map_id):
             "role": perm.role,
         }
         if perm.user_id:
-            user = User.query.get(perm.user_id)
+            user = db.session.get(User, perm.user_id)
             perm_data["user_id"] = user.id
             perm_data["username"] = user.username if user else "Unknown"
         result.append(perm_data)
@@ -78,7 +78,7 @@ def add_map_permission(map_id):
         return jsonify({"error": "user_id is required"}), 400
 
     # Проверка существования пользователя
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
