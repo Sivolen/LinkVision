@@ -4,6 +4,7 @@ import { updateBulkEditButton } from './bulk.js';
 import { cleanup as cleanupLock } from './lock.js';
 import { cleanup as cleanupEdgeLabels } from './edgeLabels.js';
 import { cleanup as cleanupEdgeBundling } from './edgeBundling.js';
+import { cleanup as cleanupZoomEmphasis } from './zoomEmphasis.js';
 import { cleanup as cleanupGroups } from './groupResize.js';
 
 let cy = null;
@@ -24,6 +25,7 @@ export function initCy(mapId, onReady) {
         cleanupLock();
         cleanupEdgeLabels();
         cleanupEdgeBundling();
+        cleanupZoomEmphasis();
         cleanupGroups();
 
         cy.destroy();

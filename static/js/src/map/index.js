@@ -35,6 +35,7 @@ import {
 // Импорт для обновления меток и групп
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
+import { initZoomEmphasis, refreshZoomEmphasis } from './zoomEmphasis.js';
 import { updateAllGroups } from './groupResize.js';
 
 // ─── Утилита: обёртка для socket-событий с проверкой map_id ─────────────────────
@@ -88,6 +89,7 @@ export function initMap(id) {
     initSearch(cy);
     initLock(cy);
     initFullscreen();
+    initZoomEmphasis(cy);
     initPulse(cy);
     initBulk(cy);
     initSidebarCounter(cy);
@@ -150,6 +152,7 @@ export function initMap(id) {
                 });
             });
             cy.style().update();
+            refreshZoomEmphasis();
             statusBatch = [];
             statusBatchTimeout = null;
         }, STATUS_BATCH_DELAY);
@@ -189,6 +192,7 @@ export function initMap(id) {
         });
         // Принудительно обновляем стили (для применения селекторов статусов)
         cy.style().update();
+        refreshZoomEmphasis();
     });
 
     // ─── Точечные события ─────────────────────────────────────────────────────────
