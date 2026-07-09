@@ -5,6 +5,7 @@
 
 // Импорты
 import { addIpRow, getIpsFromForm, setIpsInForm } from './ipManager.js';
+import { t } from '../i18n/i18n.js';
 import { showToast } from '../utils/toast.js';
 import { getErrorMessage, escapeHtml } from './utils.js';
 import { withViewportRestore, reloadMapWithViewportRestore } from './mapIntegration.js';
@@ -27,7 +28,7 @@ function loadDeviceTypes(selectEl, callback) {
     http.get('/api/types')
         .then(types => {
             window.deviceTypes = types;
-            selectEl.innerHTML = '<option value="">-- Выберите тип --</option>';
+            selectEl.innerHTML = '<option value="">' + t('modal.device.selectTypeOpt') + '</option>';
             types.forEach(t => {
                 const option = document.createElement('option');
                 option.value = t.id;
@@ -54,7 +55,7 @@ function loadGroups(selectEl, selectedGroupId) {
     fetch(`/api/map/${mapId}/groups`)
         .then(res => res.ok ? res.json() : [])
         .then(groups => {
-            selectEl.innerHTML = '<option value="">-- Без группы --</option>';
+            selectEl.innerHTML = '<option value="">' + t('modal.device.noGroupOpt') + '</option>';
             groups.forEach(g => {
                 const option = document.createElement('option');
                 option.value = g.id;
@@ -92,7 +93,7 @@ export function openDeviceModal(node) {
     const historyBody = document.getElementById('device-history-body');
     const fontSizeInput = document.getElementById('dev_font_size');
 
-    if (historyBody) historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Переключитесь на вкладку "История"</td></tr>';
+    if (historyBody) historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">' + t('modal.device.switchToHistory') + '</td></tr>';
     const paginationDiv = document.getElementById('history-pagination');
     if (paginationDiv) paginationDiv.style.display = 'none';
 
@@ -106,7 +107,7 @@ export function openDeviceModal(node) {
         if (neighborsTabItem) neighborsTabItem.style.display = 'block';
 
         fetch(`/api/device/${node.id()}/details`)
-            .then(res => res.ok ? res.json() : Promise.reject('Ошибка'))
+            .then(res => res.ok ? res.json() : Promise.reject(t('toast.errorTitle')))
             .then(data => {
                 loadDeviceTypes(devType, () => {
                     if (data.type_id) devType.value = data.type_id;
@@ -127,7 +128,7 @@ export function openDeviceModal(node) {
                         row.insertCell().textContent = n.link_type || '—';
                     });
                 } else {
-                    neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет связей</td></tr>';
+                    neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">' + t('modal.device.noLinks') + '</td></tr>';
                 }
                 if (monitoringCheck) monitoringCheck.checked = data.monitoring_enabled;
                 fontSizeInput.value = node.data('fontSize') || '';
@@ -135,8 +136,8 @@ export function openDeviceModal(node) {
             })
             .catch(err => {
                 Logger.error('Ошибка загрузки деталей:', err);
-                neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка загрузки</td></tr>';
-                showToast('Ошибка', 'Не удалось загрузить данные устройства', 'error');
+                neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">' + t('common.loadError') + '</td></tr>';
+                showToast(t('toast.errorTitle'), t('modal.device.loadFail'), 'error');
             });
     } else {
         devId.value = '';
@@ -144,7 +145,7 @@ export function openDeviceModal(node) {
         fontSizeInput.value = '';
         if (devType) devType.value = '';
         deleteBtn.style.display = 'none';
-        neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет данных</td></tr>';
+        neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">' + t('modal.device.noData') + '</td></tr>';
         loadGroups(devGroup);
         setIpsInForm([]);
 
@@ -186,7 +187,7 @@ export async function saveDevice() {
     const ips = getIpsFromForm();
 
     if (!name || !typeId) {
-        showToast('Ошибка', 'Имя и тип устройства обязательны', 'error');
+        showToast(t('toast.errorTitle'), t('modal.device.nameTypeRequired'), 'error');
         return;
     }
 
@@ -195,7 +196,7 @@ export async function saveDevice() {
     const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^(([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4})?::([0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}$/;
     for (let ip of ips) {
         if (ip && ip.trim() && !ipv4Regex.test(ip.trim()) && !ipv6Regex.test(ip.trim())) {
-            showToast('Ошибка', `Неверный IP-адрес: ${ip}`, 'error');
+            showToast(t('toast.errorTitle'), t('modal.device.invalidIp', { ip }), 'error');
             return;
         }
     }
@@ -212,7 +213,7 @@ export async function saveDevice() {
 
     if (!devId) {
         if (!window.currentMapId) {
-            showToast('Ошибка', 'Не удалось определить текущую карту', 'error');
+            showToast(t('toast.errorTitle'), t('modal.device.noCurrentMap'), 'error');
             return;
         }
         data.map_id = window.currentMapId;
@@ -267,11 +268,11 @@ export async function saveDevice() {
                     if (typeof window.updateAllEdgeLabels === 'function') window.updateAllEdgeLabels();
                 } catch (e) {
                     console.error('❌ addDeviceToGraph failed:', e);
-                    showToast('Ошибка', 'Не удалось отобразить устройство на карте', 'error');
+                    showToast(t('toast.errorTitle'), t('modal.device.renderFail'), 'error');
                     // Не прерываем выполнение – устройство уже создано на сервере
                 }
             }
-            showToast('Успешно', 'Устройство создано', 'success');
+            showToast(t('toast.successTitle'), t('modal.device.created'), 'success');
         } else {
             if (typeof window.updateDevice === 'function') {
                 window.updateDevice({
@@ -291,13 +292,13 @@ export async function saveDevice() {
             if (typeof window.loadSidebarMaps === 'function') {
                 setTimeout(() => window.loadSidebarMaps(), 200);
             }
-            showToast('Успешно', 'Устройство обновлено', 'success');
+            showToast(t('toast.successTitle'), t('modal.device.updated'), 'success');
         }
         
         deviceModal.hide();
     } catch (err) {
         Logger.error('Ошибка сохранения устройства:', err);
-        showToast('Ошибка', err.message || 'Не удалось сохранить устройство', 'error');
+        showToast(t('toast.errorTitle'), err.message || t('modal.device.saveFail'), 'error');
     } finally {
         if (btnText) btnText.classList.remove('d-none');
         if (btnLoader) btnLoader.classList.add('d-none');
@@ -310,7 +311,7 @@ export async function saveDevice() {
  * Удалить устройство
  */
 export function deleteDevice(deviceId) {
-    window.confirmAction('Удаление устройства', 'Вы уверены, что хотите удалить это устройство?', async () => {
+    window.confirmAction(t('modal.device.deleteTitle'), t('modal.device.deleteMsg'), async () => {
         beginSelfUpdate();
 
         try {
@@ -324,10 +325,10 @@ export function deleteDevice(deviceId) {
             await reloadMapWithViewportRestore();
 
             deviceModal.hide();
-            showToast('Успешно', 'Устройство удалено', 'success');
+            showToast(t('toast.successTitle'), t('modal.device.deleted'), 'success');
         } catch (err) {
             Logger.error('Ошибка удаления устройства:', err);
-            showToast('Ошибка', err.message || 'Не удалось удалить устройство', 'error');
+            showToast(t('toast.errorTitle'), err.message || t('modal.device.deleteFail'), 'error');
         } finally {
             endSelfUpdate();
         }
@@ -341,10 +342,10 @@ export function initDeviceModal() {
     // Обработчик скрытия модального окна
     document.getElementById('deviceModal')?.addEventListener('hidden.bs.modal', function() {
         const historyBody = document.getElementById('device-history-body');
-        if (historyBody) historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Переключитесь на вкладку "История"</td></tr>';
+        if (historyBody) historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">' + t('modal.device.switchToHistory') + '</td></tr>';
         
         const neighborsBody = document.getElementById('device-neighbors-body');
-        if (neighborsBody) neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Загрузка...</td></tr>';
+        if (neighborsBody) neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">' + t('common.loading') + '</td></tr>';
         
         const paginationDiv = document.getElementById('history-pagination');
         if (paginationDiv) paginationDiv.style.display = 'none';

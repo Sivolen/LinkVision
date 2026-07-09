@@ -5,6 +5,7 @@
 
 // Импорт модулей
 import { initDeviceModal, openDeviceModal, saveDevice, deleteDevice } from './device.js';
+import { t } from '../i18n/i18n.js';
 import { initGroupModal, openGroupManager, editGroup, deleteGroup } from './group.js';
 import { initShapeModal, openShapeModal, saveShape, deleteShape } from './shape.js';
 import { initHistoryModal, loadHistory, loadHistoryPage } from './history.js';
@@ -45,7 +46,7 @@ let savedViewport = null;
 export function exportMap() {
     const mapId = document.getElementById('edit_map_id').value;
     if (!mapId) {
-        showToast('Ошибка', 'Не удалось определить карту', 'error');
+        showToast(t('toast.errorTitle'), t('modal.export.noMap'), 'error');
         return;
     }
     http.get(`/api/map/${mapId}/export`)
@@ -68,11 +69,11 @@ export function exportMap() {
                 await writable.write(blob);
                 await writable.close();
                 saved = true;
-                showToast('Успешно', 'Карта экспортирована', 'success');
+                showToast(t('toast.successTitle'), t('modal.export.exported'), 'success');
             } catch (err) {
                 if (err.name !== 'AbortError') {
                     console.error('Error saving file:', err);
-                    showToast('Ошибка', 'Не удалось сохранить файл', 'error');
+                    showToast(t('toast.errorTitle'), t('modal.export.saveFileFail'), 'error');
                 }
             }
         }
@@ -89,13 +90,13 @@ export function exportMap() {
             URL.revokeObjectURL(url);
             // Задержка чтобы тост появился после закрытия диалога сохранения
             setTimeout(() => {
-                showToast('Успешно', 'Карта экспортирована', 'success');
+                showToast(t('toast.successTitle'), t('modal.export.exported'), 'success');
             }, 2000);
         }
     })
     .catch(err => {
         console.error('Error exporting map:', err);
-        showToast('Ошибка', err.message || 'Не удалось экспортировать карту', 'error');
+        showToast(t('toast.errorTitle'), err.message || t('modal.export.exportFail'), 'error');
     });
 }
 

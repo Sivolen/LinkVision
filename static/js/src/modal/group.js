@@ -4,6 +4,7 @@
  */
 
 import { showToast } from '../utils/toast.js';
+import { t } from '../i18n/i18n.js';
 import { escapeHtml } from './utils.js';
 import { reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
@@ -121,7 +122,7 @@ function initFormHandler() {
         const fontSize = parseInt(document.getElementById('group_font_size').value, 10) || 11;
 
         if (!name) {
-            showToast('Ошибка', 'Введите название группы', 'error');
+            showToast(t('toast.errorTitle'), t('modal.group.enterName'), 'error');
             return;
         }
 
@@ -144,14 +145,14 @@ function initFormHandler() {
             beginSelfUpdate();
             const result = await http.post(url, body);
 
-            showToast(isEdit ? 'Группа обновлена' : 'Группа создана', `Группа "${name}"`, 'success');
+            showToast(isEdit ? t('modal.group.updated') : t('modal.group.created'), t('modal.group.nameLabel', { name }), 'success');
             resetGroupForm();
             loadGroupsList();
             await reloadMapWithViewportRestore();
 
         } catch (err) {
             Logger.error('Submit error:', err);
-            showToast('Ошибка', err.message || 'Не удалось сохранить', 'error');
+            showToast(t('toast.errorTitle'), err.message || t('modal.group.saveFail'), 'error');
         } finally {
             if (btnText) btnText.classList.remove('d-none');
             if (btnLoader) btnLoader.classList.add('d-none');
@@ -184,7 +185,7 @@ function resetGroupForm() {
     if (fontSizeInput) fontSizeInput.value = 11;
 
     const btnText = document.querySelector('#submitBtn .btn-text');
-    if (btnText) btnText.textContent = 'Добавить группу';
+    if (btnText) btnText.textContent = t('modal.group.addBtn');
 
     const idField = document.getElementById('group_id');
     if (idField) idField.value = '';
@@ -254,8 +255,8 @@ async function loadGroupsList() {
 
     } catch (err) {
         Logger.error('Load groups error:', err);
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">Ошибка загрузки: ${err.message}</td></tr>`;
-        showToast('Ошибка', 'Не удалось загрузить группы', 'error');
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">${t('modal.group.loadError', { msg: err.message })}</td></tr>`;
+        showToast(t('toast.errorTitle'), t('modal.group.loadFail'), 'error');
     } finally {
         skeleton?.classList.add('d-none');
         tbody.closest('.table-responsive')?.classList.remove('d-none');
@@ -315,18 +316,18 @@ export function editGroup(id, name, color, fontSize) {
     if (fontSizeInput) fontSizeInput.value = fontSize || 11;
 
     const btnText = document.querySelector('#submitBtn .btn-text');
-    if (btnText) btnText.textContent = 'Сохранить';
+    if (btnText) btnText.textContent = t('common.save');
 }
 
 /**
  * Удалить группу
  */
 export async function deleteGroup(id, name) {
-    window.confirmAction('Удаление группы', `Удалить группу "${name}"?`, async () => {
+    window.confirmAction(t('modal.group.deleteTitle'), t('modal.group.deleteConfirm', { name }), async () => {
         beginSelfUpdate();
         try {
             await http.del(`/api/group/${id}`);
-            showToast('Группа удалена', `Группа "${name}" удалена`, 'success');
+            showToast(t('modal.group.deleted'), t('modal.group.deletedMsg', { name }), 'success');
 
             // Удаляем узел группы из графа немедленно
             if (window.cy) {
@@ -341,7 +342,7 @@ export async function deleteGroup(id, name) {
             await reloadMapWithViewportRestore();
         } catch (err) {
             Logger.error('Delete error:', err);
-            showToast('Ошибка', err.message || 'Не удалось удалить группу', 'error');
+            showToast(t('toast.errorTitle'), err.message || t('modal.group.deleteFail'), 'error');
         } finally {
             endSelfUpdate();
         }
@@ -356,12 +357,12 @@ export function openGroupManager() {
 
     if (!window.isAdmin) {
         Logger.warn('❌ Not admin');
-        showToast('Доступ запрещён', 'Только администратор может управлять группами', 'error');
+        showToast(t('common.accessDenied'), t('modal.group.adminOnly'), 'error');
         return;
     }
     if (window.isOperator) {
         Logger.warn('❌ Is operator');
-        showToast('Доступ запрещён', 'Оператор не может управлять группами', 'error');
+        showToast(t('common.accessDenied'), t('modal.group.operatorNo'), 'error');
         return;
     }
 

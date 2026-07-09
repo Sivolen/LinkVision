@@ -4,6 +4,7 @@
  */
 
 import { showToast } from '../utils/toast.js';
+import { t } from '../i18n/i18n.js';
 import { reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
@@ -128,7 +129,7 @@ export async function saveShape() {
     Logger.info('📋 Form data:', { id, shapeType, width, height, color, opacity, description, fontSize });
 
     if (!shapeType || !width || !height) {
-        showToast('Ошибка', 'Тип, ширина и высота обязательны', 'error');
+        showToast(t('toast.errorTitle'), t('modal.shape.required'), 'error');
         return;
     }
 
@@ -184,7 +185,7 @@ export async function saveShape() {
                 await window.addShapeToGraph(newShape);
             }
             Logger.info('📢 Showing toast: Фигура создана');
-            showToast('Успешно', 'Фигура создана', 'success');
+            showToast(t('toast.successTitle'), t('modal.shape.created'), 'success');
         } else {
             // Для обновления - удаляем старую фигуру и добавляем новую
             Logger.info('📢 Showing toast: Фигура обновлена');
@@ -207,13 +208,13 @@ export async function saveShape() {
             if (typeof window.addShapeToGraph === 'function') {
                 await window.addShapeToGraph(updatedShape);
             }
-            showToast('Успешно', 'Фигура обновлена', 'success');
+            showToast(t('toast.successTitle'), t('modal.shape.updated'), 'success');
         }
 
         shapeModal.hide();
     } catch (err) {
         Logger.error('❌ Ошибка сохранения фигуры:', err);
-        showToast('Ошибка', err.message || 'Не удалось сохранить фигуру', 'error');
+        showToast(t('toast.errorTitle'), err.message || t('modal.shape.saveFail'), 'error');
     } finally {
         if (btnText) btnText.classList.remove('d-none');
         if (btnLoader) btnLoader.classList.add('d-none');
@@ -226,7 +227,7 @@ export async function saveShape() {
  * Удалить фигуру
  */
 export async function deleteShape(shapeId) {
-    window.confirmAction('Удаление фигуры', 'Вы уверены?', async () => {
+    window.confirmAction(t('modal.shape.deleteTitle'), t('common.areYouSure'), async () => {
         beginSelfUpdate();
 
         try {
@@ -237,14 +238,14 @@ export async function deleteShape(shapeId) {
                 window.removeShapeFromGraph(shapeId);
             }
 
-            showToast('Успешно', 'Фигура удалена', 'success');
+            showToast(t('toast.successTitle'), t('modal.shape.deleted'), 'success');
 
             shapeModal.hide();
             
             await reloadMapWithViewportRestore();
         } catch (err) {
             Logger.error('Ошибка удаления фигуры:', err);
-            showToast('Ошибка', err.message || 'Не удалось удалить фигуру', 'error');
+            showToast(t('toast.errorTitle'), err.message || t('modal.shape.deleteFail'), 'error');
         } finally {
             endSelfUpdate();
         }
