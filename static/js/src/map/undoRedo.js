@@ -4,6 +4,8 @@ import { showToast } from '../utils/toast.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 import { isShapeId, parseRawId } from './ids.js';
 import { flushPendingDragSaves } from './interactions.js';
+import { updateAllGroups } from './groupResize.js';
+import { updateAllEdgeLabels } from './edgeLabels.js';
 
 let history = [];
 let currentIndex = -1;
@@ -14,8 +16,11 @@ export function initUndoRedo(cy, getMapId) {
     function saveState(description = '') {
         if (isUndoRedo) return;
 
-        // Сохраняем только устройства и фигуры (исключая группы)
-        const allNodes = cy.nodes().filter(n => !n.data('isGroup'));
+        // Сохраняем все узлы — устройства, фигуры И группы.
+        // Группы критичны: при перетаскивании группы Cytoscape меняет позицию
+        // только родительского узла, дети сохраняют модельные координаты.
+        // Без сохранения позиции группы undo/redo не может откатить перемещение.
+        const allNodes = cy.nodes();
         const positions = {};
         allNodes.forEach(node => {
             const pos = node.position();
@@ -50,7 +55,13 @@ export function initUndoRedo(cy, getMapId) {
                 }
             });
             cy.style().update();
-            cy.resize();
+
+            // Критично для compound-узлов (групп): после восстановления позиций
+            // детей нужно заставить Cytoscape пересчитать размеры/позицию родителя.
+            // Без этого группа визуально остаётся на новом месте.
+            updateAllGroups();
+            updateAllEdgeLabels();
+
             syncPositionsToServer(cy);
 
             currentIndex = index;
@@ -110,14 +121,22 @@ export function initUndoRedo(cy, getMapId) {
         // прилетит ПОЗЖЕ восстановления и перезапишет историю поверх того,
         // что пользователь только что отменил — с эффектом "работает через раз".
         // Поэтому сначала принудительно завершаем все такие сохранения.
-        await flushPendingDragSaves();
+        try {
+            await flushPendingDragSaves();
+        } catch (e) {
+            console.error('flushPendingDragSaves error:', e);
+        }
 
         if (currentIndex > 0) restoreState(currentIndex - 1);
         else if (typeof showToast === 'function') showToast('Нет действий для отмены', '', 'info');
     };
 
     window.redo = async () => {
-        await flushPendingDragSaves();
+        try {
+            await flushPendingDragSaves();
+        } catch (e) {
+            console.error('flushPendingDragSaves error:', e);
+        }
 
         if (currentIndex < history.length - 1) restoreState(currentIndex + 1);
         else if (typeof showToast === 'function') showToast('Нет действий для повтора', '', 'info');
