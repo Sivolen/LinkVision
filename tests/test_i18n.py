@@ -197,23 +197,63 @@ class TestBatch4MapView:
         assert "Добавить устройство" not in html
 
 
+class TestBatch5Admin:
+    """Батч 5: админ-страницы переведены через Babel."""
+
+    def test_admin_users_translated_en(self, app):
+        from flask import render_template
+        from flask_babel import force_locale
+
+        with app.test_request_context("/admin/users"):
+            with force_locale("en"):
+                html = render_template("admin/users.html", users=[])
+        assert 'lang="en"' in html
+        assert "User management" in html          # заголовок
+        assert "Add a new user" in html
+        assert "Registration date" in html        # шапка таблицы
+        assert "Управление пользователями" not in html
+
+    def test_admin_settings_translated_en(self, app):
+        from flask import render_template
+        from flask_babel import force_locale
+
+        with app.test_request_context("/admin/settings"):
+            with force_locale("en"):
+                html = render_template(
+                    "admin/settings.html", count=4, interval=10, db_size=0, db_mtime=None
+                )
+        assert "Monitoring settings" in html
+        assert "Unknown" in html                  # db_mtime=None → «Неизвестно»
+        assert "Reset limits" in html
+
+
 class TestCatalogIntegrity:
-    """Целостность каталога переводов — ловит именно тот класс багов, что был в
-    Фазе 3: pybabel update помечал строки fuzzy (неверная догадка), и они молча
-    игнорировались в рантайме, показывая русский в английском UI."""
+    """Целостность каталога переводов — ловит два класса багов, реально бывших в
+    Фазах 3–5:
+    1. fuzzy-переводы (pybabel угадал неверно) — gettext их игнорирует в рантайме;
+    2. многострочные msgid с пустым msgstr — прежний однострочный чек их пропускал,
+       и длинные строки (429, no_maps, восстановление БД) молча оставались русскими.
+    Парсер конкатенирует многострочные msgid/msgstr, поэтому ловит и их."""
 
     def _entries(self):
         import re
 
         po = "translations/en/LC_MESSAGES/messages.po"
         blocks = open(po, encoding="utf-8").read().split("\n\n")
+
+        def collect(block, keyword):
+            # msgid/msgstr может занимать несколько строк ("" + продолжения)
+            m = re.search(r'^' + keyword + r' ((?:"(?:[^"\\]|\\.)*"\n?)+)', block, re.M)
+            if not m:
+                return None
+            return "".join(re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(1)))
+
         out = []
         for b in blocks:
-            m = re.search(r'^msgid "((?:[^"\\]|\\.)*)"', b, re.M)
-            ms = re.search(r'^msgstr "((?:[^"\\]|\\.)*)"', b, re.M)
-            if not m or not m.group(1):  # пропускаем заголовок (msgid "")
+            mid = collect(b, "msgid")
+            if not mid:  # пропускаем заголовок (msgid "") и блоки без msgid
                 continue
-            out.append((m.group(1), ms.group(1) if ms else "", "fuzzy" in b))
+            out.append((mid, collect(b, "msgstr") or "", "fuzzy" in b))
         return out
 
     def test_no_untranslated_strings(self):
