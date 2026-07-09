@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: LinkVision 2.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-09 15:03+1100\n"
+"POT-Creation-Date: 2026-07-09 15:30+1100\n"
 "PO-Revision-Date: 2026-07-09 14:24+1100\n"
 "Last-Translator: LinkVision\n"
 "Language: en\n"
@@ -17,11 +17,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: forms.py:16 forms.py:22
+#: forms.py:16 forms.py:22 templates/admin/users.html:14
+#: templates/admin/users.html:42 templates/admin/users.html:97
 msgid "Имя пользователя"
 msgstr "Username"
 
-#: forms.py:17 forms.py:25
+#: forms.py:17 forms.py:25 templates/admin/users.html:18
 msgid "Пароль"
 msgstr "Password"
 
@@ -36,6 +37,124 @@ msgstr "Password confirmation"
 #: forms.py:37
 msgid "Пароли не совпадают"
 msgstr "Passwords do not match"
+
+#: blueprints/admin.py:31
+msgid "Доступ запрещен. Требуются права администратора."
+msgstr "Access denied. Administrator rights required."
+
+#: blueprints/admin.py:54
+msgid "Имя пользователя и пароль обязательны"
+msgstr "Username and password are required"
+
+#: blueprints/admin.py:58 blueprints/admin.py:108
+msgid "Пользователь с таким именем уже существует"
+msgstr "A user with this name already exists"
+
+#: blueprints/admin.py:63
+msgid "Пользователь создан"
+msgstr "User created"
+
+#: blueprints/admin.py:66
+msgid "Ошибка при создании пользователя"
+msgstr "Error creating user"
+
+#: blueprints/admin.py:74
+msgid "Пользователь не найден"
+msgstr "User not found"
+
+#: blueprints/admin.py:78
+msgid "Нельзя удалить самого себя"
+msgstr "You cannot delete yourself"
+
+#: blueprints/admin.py:83
+msgid "Пользователь удалён"
+msgstr "User deleted"
+
+#: blueprints/admin.py:86
+msgid "Ошибка при удалении пользователя"
+msgstr "Error deleting user"
+
+#: blueprints/admin.py:102
+msgid "Имя пользователя обязательно"
+msgstr "Username is required"
+
+#: blueprints/admin.py:115
+msgid "Пользователь обновлён"
+msgstr "User updated"
+
+#: blueprints/admin.py:119
+msgid "Ошибка при обновлении пользователя"
+msgstr "Error updating user"
+
+#: blueprints/admin.py:146
+msgid "Название типа обязательно"
+msgstr "Type name is required"
+
+#: blueprints/admin.py:152
+msgid "Тип устройства создан"
+msgstr "Device type created"
+
+#: blueprints/admin.py:155
+msgid "Ошибка при создании типа"
+msgstr "Error creating type"
+
+#: blueprints/admin.py:174
+msgid "Тип устройства обновлён"
+msgstr "Device type updated"
+
+#: blueprints/admin.py:178
+msgid "Ошибка при обновлении типа"
+msgstr "Error updating type"
+
+#: blueprints/admin.py:189
+msgid "Тип устройства удалён"
+msgstr "Device type deleted"
+
+#: blueprints/admin.py:192
+msgid "Ошибка при удалении типа"
+msgstr "Error deleting type"
+
+#: blueprints/admin.py:221
+msgid "Настройки сохранены"
+msgstr "Settings saved"
+
+#: blueprints/admin.py:224
+msgid "Ошибка при сохранении настроек"
+msgstr "Error saving settings"
+
+#: blueprints/admin.py:230
+msgid "Счётчики rate limit успешно сброшены"
+msgstr "Rate limit counters reset successfully"
+
+#: blueprints/admin.py:261
+msgid "Карта удалена"
+msgstr "Map deleted"
+
+#: blueprints/admin.py:264
+msgid "Ошибка при удалении карты"
+msgstr "Error deleting map"
+
+#: blueprints/admin.py:273
+msgid "Файл не выбран"
+msgstr "No file selected"
+
+#: blueprints/admin.py:278
+msgid "Пустой файл"
+msgstr "Empty file"
+
+#: blueprints/admin.py:282
+msgid "Допустимы только файлы .db"
+msgstr "Only .db files are allowed"
+
+#: blueprints/admin.py:297
+msgid ""
+"База данных восстановлена. Пожалуйста, перезапустите приложение для "
+"применения изменений."
+msgstr "Database restored. Please restart the application to apply the changes."
+
+#: blueprints/admin.py:301
+msgid "Ошибка при восстановлении базы данных"
+msgstr "Error restoring the database"
 
 #: blueprints/auth.py:53
 msgid "Неверный логин или пароль"
@@ -118,7 +237,7 @@ msgstr "Too many requests"
 msgid ""
 "Вы отправили слишком много запросов. Пожалуйста, подождите несколько "
 "минут перед повторной попыткой."
-msgstr ""
+msgstr "You have sent too many requests. Please wait a few minutes before trying again."
 
 #: templates/429.html:209
 #, python-format
@@ -157,7 +276,7 @@ msgstr "Administration"
 msgid "Пользователи"
 msgstr "Users"
 
-#: templates/base.html:104
+#: templates/admin/types.html:3 templates/base.html:104
 msgid "Типы устройств"
 msgstr "Device types"
 
@@ -177,8 +296,11 @@ msgstr "Map name"
 msgid "Например: Офис Москва"
 msgstr "For example: Moscow Office"
 
+#: templates/admin/types.html:46 templates/admin/users.html:124
 #: templates/base.html:170 templates/base.html:204 templates/base.html:223
-#: templates/dashboard.html:52
+#: templates/dashboard.html:52 templates/map_view.html:269
+#: templates/map_view.html:361 templates/map_view.html:557
+#: templates/map_view.html:638
 msgid "Отмена"
 msgstr "Cancel"
 
@@ -206,7 +328,9 @@ msgstr "Remove current background"
 msgid "Экспорт"
 msgstr "Export"
 
-#: templates/base.html:205
+#: templates/admin/users.html:125 templates/base.html:205
+#: templates/map_view.html:272 templates/map_view.html:365
+#: templates/map_view.html:641
 msgid "Сохранить"
 msgstr "Save"
 
@@ -218,7 +342,10 @@ msgstr "Confirmation"
 msgid "Вы уверены?"
 msgstr "Are you sure?"
 
-#: templates/base.html:224 templates/dashboard.html:22
+#: templates/admin/maps.html:29 templates/admin/types.html:91
+#: templates/admin/users.html:76 templates/base.html:224
+#: templates/dashboard.html:22 templates/map_view.html:277
+#: templates/map_view.html:363 templates/map_view.html:640
 msgid "Удалить"
 msgstr "Delete"
 
@@ -230,7 +357,8 @@ msgstr "Success"
 msgid "только что"
 msgstr "just now"
 
-#: templates/base.html:236
+#: templates/base.html:236 templates/map_view.html:386
+#: templates/map_view.html:517 templates/map_view.html:712
 msgid "Закрыть"
 msgstr "Close"
 
@@ -256,7 +384,7 @@ msgstr "Owner: %(name)s"
 msgid "Создана: %(date)s"
 msgstr "Created: %(date)s"
 
-#: templates/dashboard.html:20
+#: templates/admin/maps.html:24 templates/dashboard.html:20
 msgid "Открыть"
 msgstr "Open"
 
@@ -296,6 +424,581 @@ msgstr "Sign in"
 msgid "Нет аккаунта? Зарегистрироваться"
 msgstr "No account? Sign up"
 
+#: templates/map_view.html:14
+msgid "Добавить устройство"
+msgstr "Add device"
+
+#: templates/map_view.html:15 templates/map_view.html:254
+msgid "Устройство"
+msgstr "Device"
+
+#: templates/map_view.html:17
+msgid "Создать связь"
+msgstr "Create link"
+
+#: templates/map_view.html:18
+msgid "Связь"
+msgstr "Link"
+
+#: templates/map_view.html:24
+msgid "Перемещение карты"
+msgstr "Pan map"
+
+#: templates/map_view.html:24
+msgid "Режим перемещения карты"
+msgstr "Pan mode"
+
+#: templates/map_view.html:25
+msgid "Пан"
+msgstr "Pan"
+
+#: templates/map_view.html:27
+msgid "Выделение нескольких устройств"
+msgstr "Select multiple devices"
+
+#: templates/map_view.html:27
+msgid "Режим выделения устройств"
+msgstr "Selection mode"
+
+#: templates/map_view.html:28
+msgid "Выделение"
+msgstr "Select"
+
+#: templates/map_view.html:34
+msgid "Просмотр"
+msgstr "View"
+
+#: templates/map_view.html:39
+msgid "Массовое редактирование выбранных устройств"
+msgstr "Bulk edit selected devices"
+
+#: templates/map_view.html:40
+msgid "Редактировать выбранные"
+msgstr "Edit selected"
+
+#: templates/map_view.html:46
+msgid "Увеличить масштаб"
+msgstr "Zoom in"
+
+#: templates/map_view.html:49
+msgid "Уменьшить масштаб"
+msgstr "Zoom out"
+
+#: templates/map_view.html:52
+msgid "Сбросить масштаб"
+msgstr "Reset zoom"
+
+#: templates/map_view.html:59
+msgid "Управление группами устройств"
+msgstr "Manage device groups"
+
+#: templates/map_view.html:60
+msgid "Группы"
+msgstr "Groups"
+
+#: templates/map_view.html:62
+msgid "Создать фигуру"
+msgstr "Create shape"
+
+#: templates/map_view.html:63 templates/map_view.html:570
+msgid "Фигура"
+msgstr "Shape"
+
+#: templates/map_view.html:68
+msgid "Автораскладка карты"
+msgstr "Auto layout"
+
+#: templates/map_view.html:69
+msgid "Автораскладка"
+msgstr "Auto layout"
+
+#: templates/map_view.html:72
+msgid "Сетка (grid)"
+msgstr "Grid"
+
+#: templates/map_view.html:73
+msgid "Круг (circle)"
+msgstr "Circle"
+
+#: templates/map_view.html:74
+msgid "Концентрический (concentric)"
+msgstr "Concentric"
+
+#: templates/map_view.html:75
+msgid "Дерево (сверху → вниз)"
+msgstr "Tree (top → bottom)"
+
+#: templates/map_view.html:76
+msgid "Дерево (снизу → вверх)"
+msgstr "Tree (bottom → top)"
+
+#: templates/map_view.html:77
+msgid "Дерево (слева → направо)"
+msgstr "Tree (left → right)"
+
+#: templates/map_view.html:78
+msgid "Дерево (справа → налево)"
+msgstr "Tree (right → left)"
+
+#: templates/map_view.html:79
+msgid "Силовой (cose)"
+msgstr "Force-directed (cose)"
+
+#: templates/map_view.html:88
+msgid "Поиск по имени, IP или типу..."
+msgstr "Search by name, IP or type..."
+
+#: templates/map_view.html:89
+msgid "Фильтр"
+msgstr "Filter"
+
+#: templates/map_view.html:91
+msgid "Все устройства"
+msgstr "All devices"
+
+#: templates/map_view.html:92
+msgid "Только UP"
+msgstr "UP only"
+
+#: templates/map_view.html:93
+msgid "Только DOWN"
+msgstr "DOWN only"
+
+#: templates/map_view.html:95
+msgid "Сбросить поиск"
+msgstr "Clear search"
+
+#: templates/map_view.html:101
+msgid "Отменить (Ctrl+Z)"
+msgstr "Undo (Ctrl+Z)"
+
+#: templates/map_view.html:101
+msgid "Отменить последнее действие"
+msgstr "Undo last action"
+
+#: templates/map_view.html:104
+msgid "Повторить (Ctrl+Y)"
+msgstr "Redo (Ctrl+Y)"
+
+#: templates/map_view.html:104
+msgid "Повторить отменённое действие"
+msgstr "Redo the undone action"
+
+#: templates/map_view.html:111
+msgid "Заблокировать/разблокировать перемещение устройств"
+msgstr "Lock/unlock device dragging"
+
+#: templates/map_view.html:111
+msgid "Заблокировать или разблокировать перемещение устройств"
+msgstr "Lock or unlock device dragging"
+
+#: templates/map_view.html:118
+msgid "Управление правами доступа"
+msgstr "Manage access permissions"
+
+#: templates/map_view.html:118
+msgid "Управление правами доступа к карте"
+msgstr "Manage map access permissions"
+
+#: templates/map_view.html:119
+msgid "Права"
+msgstr "Permissions"
+
+#: templates/map_view.html:124
+msgid "Полноэкранный режим"
+msgstr "Fullscreen"
+
+#: templates/map_view.html:124
+msgid "Переключить полноэкранный режим"
+msgstr "Toggle fullscreen"
+
+#: templates/map_view.html:127
+msgid "Мини-карта (обзор)"
+msgstr "Minimap (overview)"
+
+#: templates/map_view.html:127
+msgid "Переключить мини-карту"
+msgstr "Toggle minimap"
+
+#: templates/map_view.html:151
+msgid "Обзор карты"
+msgstr "Map overview"
+
+#: templates/map_view.html:156
+msgid "Выйти из полноэкранного режима"
+msgstr "Exit fullscreen"
+
+#: templates/map_view.html:157
+msgid "Выйти"
+msgstr "Exit"
+
+#: templates/map_view.html:166
+msgid "Информация"
+msgstr "Information"
+
+#: templates/map_view.html:169
+msgid "История"
+msgstr "History"
+
+#: templates/map_view.html:172
+msgid "Соседи"
+msgstr "Neighbors"
+
+#: templates/map_view.html:183
+msgid "Имя"
+msgstr "Name"
+
+#: templates/map_view.html:187
+msgid "IP-адреса"
+msgstr "IP addresses"
+
+#: templates/map_view.html:191
+msgid "IPv4 или IPv6"
+msgstr "IPv4 or IPv6"
+
+#: templates/map_view.html:192
+msgid "Удалить IP"
+msgstr "Remove IP"
+
+#: templates/map_view.html:198
+msgid "Добавить IP"
+msgstr "Add IP"
+
+#: templates/map_view.html:201
+msgid "Нажмите Enter, чтобы добавить новый IP"
+msgstr "Press Enter to add a new IP"
+
+#: templates/map_view.html:204 templates/map_view.html:532
+msgid "Тип устройства"
+msgstr "Device type"
+
+#: templates/map_view.html:206
+msgid "-- Выберите тип --"
+msgstr "-- Select type --"
+
+#: templates/map_view.html:211 templates/map_view.html:546
+msgid "Группа"
+msgstr "Group"
+
+#: templates/map_view.html:213
+msgid "-- Без группы --"
+msgstr "-- No group --"
+
+#: templates/map_view.html:217 templates/map_view.html:447
+#: templates/map_view.html:629
+msgid "Размер шрифта (px)"
+msgstr "Font size (px)"
+
+#: templates/map_view.html:219
+msgid "Оставьте пустым для стандартного"
+msgstr "Leave empty for default"
+
+#: templates/map_view.html:224
+msgid "Мониторинг включён"
+msgstr "Monitoring enabled"
+
+#: templates/map_view.html:232
+msgid "Время"
+msgstr "Time"
+
+#: templates/map_view.html:233
+msgid "Старый статус"
+msgstr "Old status"
+
+#: templates/map_view.html:234
+msgid "Новый статус"
+msgstr "New status"
+
+#: templates/map_view.html:238 templates/map_view.html:262
+#: templates/map_view.html:661 templates/map_view.html:674
+msgid "Загрузка..."
+msgstr "Loading..."
+
+#: templates/map_view.html:244
+msgid "‹ Предыдущая"
+msgstr "‹ Previous"
+
+#: templates/map_view.html:245
+msgid "Страница 1 из 1"
+msgstr "Page 1 of 1"
+
+#: templates/map_view.html:246
+msgid "Следующая ›"
+msgstr "Next ›"
+
+#: templates/map_view.html:255
+msgid "Интерфейс"
+msgstr "Interface"
+
+#: templates/map_view.html:257
+msgid "Интерфейс соседа"
+msgstr "Neighbor interface"
+
+#: templates/map_view.html:258
+msgid "Тип линии"
+msgstr "Line type"
+
+#: templates/map_view.html:274 templates/map_view.html:367
+#: templates/map_view.html:457
+msgid "Сохранение..."
+msgstr "Saving..."
+
+#: templates/map_view.html:289
+msgid "Настройка связи"
+msgstr "Link settings"
+
+#: templates/map_view.html:300
+msgid "Интерфейс источника"
+msgstr "Source interface"
+
+#: templates/map_view.html:304
+msgid "Интерфейс назначения"
+msgstr "Target interface"
+
+#: templates/map_view.html:316
+msgid "Тип линии (предустановки)"
+msgstr "Line type (presets)"
+
+#: templates/map_view.html:318
+msgid "-- Ручная настройка --"
+msgstr "-- Manual --"
+
+#: templates/map_view.html:334
+msgid "Цвет линии"
+msgstr "Line color"
+
+#: templates/map_view.html:338
+msgid "Толщина (px)"
+msgstr "Thickness (px)"
+
+#: templates/map_view.html:342
+msgid "Стиль линии"
+msgstr "Line style"
+
+#: templates/map_view.html:344
+msgid "Сплошная"
+msgstr "Solid"
+
+#: templates/map_view.html:345
+msgid "Пунктирная"
+msgstr "Dashed"
+
+#: templates/map_view.html:346
+msgid "Точечная"
+msgstr "Dotted"
+
+#: templates/map_view.html:354
+msgid "Размер шрифта подписи (px)"
+msgstr "Label font size (px)"
+
+#: templates/map_view.html:356
+msgid "Оставьте пустым для использования стандартного размера (8px)"
+msgstr "Leave empty to use the default size (8px)"
+
+#: templates/map_view.html:383
+msgid "Группы устройств"
+msgstr "Device groups"
+
+#: templates/map_view.html:384
+msgid "Организуйте устройства по категориям"
+msgstr "Organize devices by category"
+
+#: templates/map_view.html:400
+msgid "Название группы"
+msgstr "Group name"
+
+#: templates/map_view.html:407
+msgid "Например: Серверная"
+msgstr "For example: Server room"
+
+#: templates/map_view.html:409
+msgid "От 2 до 50 символов"
+msgstr "From 2 to 50 characters"
+
+#: templates/map_view.html:412
+msgid "Введите название от 2 до 50 символов"
+msgstr "Enter a name of 2 to 50 characters"
+
+#: templates/map_view.html:417
+msgid "Цвет метки"
+msgstr "Label color"
+
+#: templates/map_view.html:441 templates/map_view.html:617
+msgid "Свой цвет"
+msgstr "Custom color"
+
+#: templates/map_view.html:453
+msgid "Сбросить"
+msgstr "Reset"
+
+#: templates/map_view.html:455
+msgid "Добавить группу"
+msgstr "Add group"
+
+#: templates/map_view.html:469
+msgid "Существующие группы"
+msgstr "Existing groups"
+
+#: templates/map_view.html:479
+msgid "Поиск по названию..."
+msgstr "Search by name..."
+
+#: templates/admin/maps.html:9 templates/admin/types.html:61
+#: templates/map_view.html:487
+msgid "Название"
+msgstr "Name"
+
+#: templates/map_view.html:488 templates/map_view.html:597
+msgid "Цвет"
+msgstr "Color"
+
+#: templates/admin/types.html:65 templates/map_view.html:489
+msgid "Устройств"
+msgstr "Devices"
+
+#: templates/admin/maps.html:12 templates/admin/types.html:66
+#: templates/admin/users.html:46 templates/map_view.html:490
+msgid "Действия"
+msgstr "Actions"
+
+#: templates/map_view.html:502
+msgid "Нет созданных групп"
+msgstr "No groups created"
+
+#: templates/map_view.html:503
+msgid "Создайте первую группу выше"
+msgstr "Create your first group above"
+
+#: templates/map_view.html:527
+msgid "Редактировать выбранные устройства"
+msgstr "Edit selected devices"
+
+#: templates/map_view.html:534 templates/map_view.html:540
+#: templates/map_view.html:548
+msgid "-- Не изменять --"
+msgstr "-- Keep unchanged --"
+
+#: templates/map_view.html:538
+msgid "Мониторинг"
+msgstr "Monitoring"
+
+#: templates/map_view.html:541
+msgid "Включено"
+msgstr "Enabled"
+
+#: templates/map_view.html:542
+msgid "Выключено"
+msgstr "Disabled"
+
+#: templates/map_view.html:553
+msgid "Переместить в центр видимой области"
+msgstr "Move to the center of the visible area"
+
+#: templates/map_view.html:559
+msgid "Применить"
+msgstr "Apply"
+
+#: templates/map_view.html:576
+msgid "Тип фигуры"
+msgstr "Shape type"
+
+#: templates/map_view.html:578
+msgid "Квадрат"
+msgstr "Square"
+
+#: templates/map_view.html:579
+msgid "Прямоугольник"
+msgstr "Rectangle"
+
+#: templates/map_view.html:580
+msgid "Треугольник"
+msgstr "Triangle"
+
+#: templates/map_view.html:581
+msgid "Ромб"
+msgstr "Diamond"
+
+#: templates/map_view.html:582
+msgid "Круг"
+msgstr "Circle"
+
+#: templates/admin/types.html:24 templates/map_view.html:587
+msgid "Ширина (px)"
+msgstr "Width (px)"
+
+#: templates/admin/types.html:28 templates/map_view.html:591
+msgid "Высота (px)"
+msgstr "Height (px)"
+
+#: templates/map_view.html:623
+msgid "Прозрачность"
+msgstr "Opacity"
+
+#: templates/map_view.html:633
+msgid "Описание (отображается по центру)"
+msgstr "Description (shown in the center)"
+
+#: templates/map_view.html:634
+msgid "Текст"
+msgstr "Text"
+
+#: templates/map_view.html:653
+msgid "Права доступа:"
+msgstr "Access permissions:"
+
+#: templates/map_view.html:659
+msgid "Текущие права доступа"
+msgstr "Current access permissions"
+
+#: templates/map_view.html:670
+msgid "Добавить право пользователю"
+msgstr "Grant permission to a user"
+
+#: templates/admin/users.html:24 templates/admin/users.html:111
+#: templates/map_view.html:672
+msgid "Пользователь"
+msgstr "User"
+
+#: templates/admin/users.html:108 templates/map_view.html:678
+msgid "Роль"
+msgstr "Role"
+
+#: templates/map_view.html:680 templates/map_view.html:700
+msgid "Выберите роль"
+msgstr "Select a role"
+
+#: templates/map_view.html:681 templates/map_view.html:701
+msgid "Просмотр (viewer)"
+msgstr "View (viewer)"
+
+#: templates/map_view.html:682 templates/map_view.html:702
+msgid "Редактор (editor)"
+msgstr "Editor (editor)"
+
+#: templates/map_view.html:683
+msgid "Админ (admin)"
+msgstr "Admin (admin)"
+
+#: templates/map_view.html:687
+msgid "Добавить право"
+msgstr "Grant permission"
+
+#: templates/map_view.html:692
+msgid "Добавить право для операторов"
+msgstr "Grant permission for operators"
+
+#: templates/map_view.html:695
+msgid "Эти права будут действовать для всех пользователей с ролью"
+msgstr "These permissions will apply to all users with the role"
+
+#: templates/map_view.html:698
+msgid "Роль для операторов"
+msgstr "Role for operators"
+
+#: templates/map_view.html:706
+msgid "Добавить для операторов"
+msgstr "Add for operators"
+
 #: templates/no_maps.html:4
 msgid "Нет доступных карт"
 msgstr "No maps available"
@@ -304,7 +1007,7 @@ msgstr "No maps available"
 msgid ""
 "В системе пока нет ни одной карты. Обратитесь к администратору для "
 "создания карты."
-msgstr ""
+msgstr "There are no maps in the system yet. Contact the administrator to create one."
 
 #: templates/no_maps.html:7
 msgid "Вы можете вернуться на главную страницу позже."
@@ -325,4 +1028,193 @@ msgstr "Sign up"
 #: templates/register.html:226
 msgid "Уже есть аккаунт? Войти"
 msgstr "Already have an account? Sign in"
+
+#: templates/admin/backups.html:4 templates/admin/settings.html:35
+msgid "Резервное копирование"
+msgstr "Backup"
+
+#: templates/admin/backups.html:8
+msgid "Текущая база данных"
+msgstr "Current database"
+
+#: templates/admin/backups.html:11 templates/admin/settings.html:38
+msgid "Размер:"
+msgstr "Size:"
+
+#: templates/admin/backups.html:12 templates/admin/settings.html:39
+msgid "Последнее изменение:"
+msgstr "Last modified:"
+
+#: templates/admin/backups.html:12 templates/admin/settings.html:39
+msgid "Неизвестно"
+msgstr "Unknown"
+
+#: templates/admin/backups.html:15 templates/admin/settings.html:42
+msgid "Скачать базу данных"
+msgstr "Download database"
+
+#: templates/admin/backups.html:23
+msgid "Восстановление из файла"
+msgstr "Restore from file"
+
+#: templates/admin/backups.html:26 templates/admin/settings.html:46
+msgid ""
+"Внимание! Восстановление заменит текущую базу данных. Все текущие данные "
+"будут потеряны. Рекомендуется предварительно сделать резервную копию."
+msgstr "Warning! Restoring will replace the current database. All current data will be lost. It is recommended to make a backup first."
+
+#: templates/admin/backups.html:29 templates/admin/settings.html:51
+msgid "Выберите файл базы данных (.db)"
+msgstr "Select a database file (.db)"
+
+#: templates/admin/backups.html:33 templates/admin/settings.html:55
+msgid "Восстановить"
+msgstr "Restore"
+
+#: templates/admin/maps.html:3
+msgid "Все карты системы"
+msgstr "All system maps"
+
+#: templates/admin/maps.html:10
+msgid "Владелец"
+msgstr "Owner"
+
+#: templates/admin/maps.html:11
+msgid "Дата создания"
+msgstr "Created date"
+
+#: templates/admin/settings.html:4
+msgid "Настройки мониторинга"
+msgstr "Monitoring settings"
+
+#: templates/admin/settings.html:8
+msgid "Параметры опроса устройств"
+msgstr "Device polling parameters"
+
+#: templates/admin/settings.html:14
+msgid "Количество пакетов (ping count)"
+msgstr "Packet count (ping count)"
+
+#: templates/admin/settings.html:16
+msgid "Сколько ICMP-пакетов отправлять при проверке"
+msgstr "How many ICMP packets to send per check"
+
+#: templates/admin/settings.html:19
+msgid "Интервал опроса (секунды)"
+msgstr "Polling interval (seconds)"
+
+#: templates/admin/settings.html:21
+msgid "Как часто проверять доступность устройств"
+msgstr "How often to check device availability"
+
+#: templates/admin/settings.html:25
+msgid "Сохранить настройки"
+msgstr "Save settings"
+
+#: templates/admin/settings.html:63
+msgid "Сброс ограничений"
+msgstr "Reset limits"
+
+#: templates/admin/settings.html:66
+msgid ""
+"Если пользователи жалуются на «Слишком много запросов» (ошибка 429), "
+"нажмите кнопку ниже для сброса счётчиков."
+msgstr "If users complain about "Too many requests" (error 429), click the button below to reset the counters."
+
+#: templates/admin/settings.html:71
+msgid "Сбросить счётчики"
+msgstr "Reset counters"
+
+#: templates/admin/types.html:9
+msgid "Редактировать тип"
+msgstr "Edit type"
+
+#: templates/admin/types.html:11
+msgid "Добавить новый тип"
+msgstr "Add new type"
+
+#: templates/admin/types.html:20
+msgid "Название типа"
+msgstr "Type name"
+
+#: templates/admin/types.html:34
+msgid "Текущая иконка:"
+msgstr "Current icon:"
+
+#: templates/admin/types.html:40
+msgid "Обновить"
+msgstr "Update"
+
+#: templates/admin/types.html:40 templates/admin/users.html:31
+msgid "Добавить"
+msgstr "Add"
+
+#: templates/admin/types.html:48
+msgid "Удалить тип? Все устройства этого типа потеряют иконку."
+msgstr "Delete type? All devices of this type will lose their icon."
+
+#: templates/admin/types.html:49
+msgid "Удалить тип"
+msgstr "Delete type"
+
+#: templates/admin/types.html:62
+msgid "Ширина"
+msgstr "Width"
+
+#: templates/admin/types.html:63
+msgid "Высота"
+msgstr "Height"
+
+#: templates/admin/types.html:64
+msgid "Иконка"
+msgstr "Icon"
+
+#: templates/admin/types.html:80
+msgid "нет"
+msgstr "none"
+
+#: templates/admin/types.html:86 templates/admin/users.html:71
+msgid "Редактировать"
+msgstr "Edit"
+
+#: templates/admin/types.html:91
+msgid "Удалить тип?"
+msgstr "Delete type?"
+
+#: templates/admin/users.html:3
+msgid "Управление пользователями"
+msgstr "User management"
+
+#: templates/admin/users.html:8
+msgid "Добавить нового пользователя"
+msgstr "Add a new user"
+
+#: templates/admin/users.html:25 templates/admin/users.html:44
+#: templates/admin/users.html:115
+msgid "Оператор"
+msgstr "Operator"
+
+#: templates/admin/users.html:26 templates/admin/users.html:119
+msgid "Администратор"
+msgstr "Administrator"
+
+#: templates/admin/users.html:43
+msgid "Админ"
+msgstr "Admin"
+
+#: templates/admin/users.html:45
+msgid "Дата регистрации"
+msgstr "Registration date"
+
+#: templates/admin/users.html:56 templates/admin/users.html:63
+msgid "Да"
+msgstr "Yes"
+
+#: templates/admin/users.html:58 templates/admin/users.html:65
+msgid "Нет"
+msgstr "No"
+
+#: templates/admin/users.html:101
+msgid "Новый пароль (оставьте пустым, чтобы не менять)"
+msgstr "New password (leave empty to keep unchanged)"
 

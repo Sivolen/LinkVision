@@ -1,34 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="page-title">👥 Управление пользователями</h2>
+<h2 class="page-title">👥 {{ _('Управление пользователями') }}</h2>
 
 <!-- Карточка создания нового пользователя -->
 <div class="admin-card">
     <div class="card-header">
-        <i class="fas fa-plus"></i> Добавить нового пользователя
+        <i class="fas fa-plus"></i> {{ _('Добавить нового пользователя') }}
     </div>
     <div class="card-body">
         <form method="POST" action="{{ url_for('admin.create_user') }}" class="row g-2" autocomplete="off">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
             <div class="col-md-4">
-                <input type="text" name="username" class="form-control" placeholder="Имя пользователя" required>
+                <input type="text" name="username" class="form-control" placeholder="{{ _('Имя пользователя') }}" required>
             </div>
             <div class="col-md-4">
                 <div class="password-field-wrapper">
-                    <input type="password" name="password" id="create_password" class="form-control" placeholder="Пароль" required autocomplete="new-password">
+                    <input type="password" name="password" id="create_password" class="form-control" placeholder="{{ _('Пароль') }}" required autocomplete="new-password">
                     <i class="fas fa-eye toggle-password" onclick="togglePassword('create_password')"></i>
                 </div>
             </div>
             <div class="col-md-3">
                 <select name="role" class="form-select">
-                    <option value="user" selected>Пользователь</option>
-                    <option value="operator">Оператор</option>
-                    <option value="admin">Администратор</option>
+                    <option value="user" selected>{{ _('Пользователь') }}</option>
+                    <option value="operator">{{ _('Оператор') }}</option>
+                    <option value="admin">{{ _('Администратор') }}</option>
                 </select>
             </div>
             <div class="col-md-1">
                 <button type="submit" class="btn btn-success w-100">
-                    <i class="fas fa-save"></i> Добавить
+                    <i class="fas fa-save"></i> {{ _('Добавить') }}
                 </button>
             </div>
         </form>
@@ -39,11 +39,11 @@
     <thead>
         <tr>
             <th>ID</th>
-            <th>Имя пользователя</th>
-            <th>Админ</th>
-            <th>Оператор</th>
-            <th>Дата регистрации</th>
-            <th>Действия</th>
+            <th>{{ _('Имя пользователя') }}</th>
+            <th>{{ _('Админ') }}</th>
+            <th>{{ _('Оператор') }}</th>
+            <th>{{ _('Дата регистрации') }}</th>
+            <th>{{ _('Действия') }}</th>
         </tr>
     </thead>
     <tbody>
@@ -53,27 +53,27 @@
             <td>{{ user.username }}</td>
             <td>
                 {% if user.is_admin %}
-                <span class="badge bg-success">Да</span>
+                <span class="badge bg-success">{{ _('Да') }}</span>
                 {% else %}
-                <span class="badge bg-secondary">Нет</span>
+                <span class="badge bg-secondary">{{ _('Нет') }}</span>
                 {% endif %}
             </td>
             <td>
                 {% if user.is_operator %}
-                <span class="badge bg-info">Да</span>
+                <span class="badge bg-info">{{ _('Да') }}</span>
                 {% else %}
-                <span class="badge bg-secondary">Нет</span>
+                <span class="badge bg-secondary">{{ _('Нет') }}</span>
                 {% endif %}
             </td>
             <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
             <td class="text-end">
                 <div class="table-actions">
-                    <button class="btn-action" onclick="openEditUserModal({{ user.id }}, '{{ user.username }}', '{% if user.is_admin %}admin{% elif user.is_operator %}operator{% else %}user{% endif %}')" title="Редактировать">
+                    <button class="btn-action" onclick="openEditUserModal({{ user.id }}, '{{ user.username }}', '{% if user.is_admin %}admin{% elif user.is_operator %}operator{% else %}user{% endif %}')" title="{{ _('Редактировать') }}">
                         <i class="fas fa-edit"></i>
                     </button>
                     <form method="POST" action="{{ url_for('admin.delete_user', id=user.id) }}" style="display: inline;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-action" data-confirm-delete="user" title="Удалить">
+                        <button type="submit" class="btn-action" data-confirm-delete="user" title="{{ _('Удалить') }}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </form>
@@ -94,35 +94,35 @@
                 <div class="modal-body">
                     <input type="hidden" name="user_id" id="edit_user_id">
                     <div class="mb-3">
-                        <label class="form-label">Имя пользователя</label>
+                        <label class="form-label">{{ _('Имя пользователя') }}</label>
                         <input type="text" name="username" id="edit_username" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Новый пароль (оставьте пустым, чтобы не менять)</label>
+                        <label class="form-label">{{ _('Новый пароль (оставьте пустым, чтобы не менять)') }}</label>
                         <div class="password-field-wrapper">
                             <input type="password" name="password" id="edit_password" class="form-control" autocomplete="off">
                             <i class="fas fa-eye toggle-password" onclick="togglePassword('edit_password')"></i>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Роль</label>
+                        <label class="form-label">{{ _('Роль') }}</label>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="role" id="edit_role_user" value="user">
-                            <label class="form-check-label" for="edit_role_user">Пользователь</label>
+                            <label class="form-check-label" for="edit_role_user">{{ _('Пользователь') }}</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="role" id="edit_role_operator" value="operator">
-                            <label class="form-check-label" for="edit_role_operator">Оператор</label>
+                            <label class="form-check-label" for="edit_role_operator">{{ _('Оператор') }}</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="role" id="edit_role_admin" value="admin">
-                            <label class="form-check-label" for="edit_role_admin">Администратор</label>
+                            <label class="form-check-label" for="edit_role_admin">{{ _('Администратор') }}</label>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('Сохранить') }}</button>
                 </div>
             </form>
         </div>

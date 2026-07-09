@@ -12,6 +12,7 @@ from flask import (
     abort,
     send_file,
 )
+from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from extensions import db
 from models import Map
@@ -27,7 +28,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 @admin_bp.before_request
 def check_admin():
     if not current_user.is_authenticated or not current_user.is_admin:
-        flash("Доступ запрещен. Требуются права администратора.")
+        flash(_("Доступ запрещен. Требуются права администратора."))
         return redirect(url_for("main.dashboard"))
     return None  # явное возвращение None для продолжения запроса
 
@@ -50,19 +51,19 @@ def create_user():
     role = request.form.get("role")  # 'user', 'operator', 'admin'
 
     if not username or not password:
-        flash("Имя пользователя и пароль обязательны")
+        flash(_("Имя пользователя и пароль обязательны"))
         return redirect(url_for("admin.users"))
 
     if user_service.get_user_by_username(username):
-        flash("Пользователь с таким именем уже существует")
+        flash(_("Пользователь с таким именем уже существует"))
         return redirect(url_for("admin.users"))
 
     try:
         user_service.create_user(username, password, role)
-        flash("Пользователь создан")
+        flash(_("Пользователь создан"))
     except Exception as e:
         admin_logger.error(f"Error creating user: {e}")
-        flash("Ошибка при создании пользователя")
+        flash(_("Ошибка при создании пользователя"))
     return redirect(url_for("admin.users"))
 
 
@@ -70,19 +71,19 @@ def create_user():
 def delete_user(id):
     user = user_service.get_user_by_id(id)
     if not user:
-        flash("Пользователь не найден")
+        flash(_("Пользователь не найден"))
         return redirect(url_for("admin.users"))
 
     if user.id == current_user.id:
-        flash("Нельзя удалить самого себя")
+        flash(_("Нельзя удалить самого себя"))
         return redirect(url_for("admin.users"))
 
     try:
         user_service.delete_user(id)
-        flash("Пользователь удалён")
+        flash(_("Пользователь удалён"))
     except Exception as e:
         admin_logger.error(f"Error deleting user: {e}")
-        flash("Ошибка при удалении пользователя")
+        flash(_("Ошибка при удалении пользователя"))
     return redirect(url_for("admin.users"))
 
 
@@ -98,24 +99,24 @@ def edit_user(id):
         role = request.form.get("role")
 
         if not username:
-            flash("Имя пользователя обязательно")
+            flash(_("Имя пользователя обязательно"))
             return redirect(url_for("admin.edit_user", id=id))
 
         # Проверка уникальности имени
         existing = user_service.get_user_by_username(username)
         if existing and existing.id != id:
-            flash("Пользователь с таким именем уже существует")
+            flash(_("Пользователь с таким именем уже существует"))
             return redirect(url_for("admin.edit_user", id=id))
 
         try:
             user_service.update_user(
                 id, username=username, password=password, role=role
             )
-            flash("Пользователь обновлён")
+            flash(_("Пользователь обновлён"))
             return redirect(url_for("admin.users"))
         except Exception as e:
             admin_logger.error(f"Error updating user: {e}")
-            flash("Ошибка при обновлении пользователя")
+            flash(_("Ошибка при обновлении пользователя"))
 
     # GET: показываем форму редактирования
     return render_template(
@@ -142,16 +143,16 @@ def create_type():
     icon = request.files.get("icon")
 
     if not name:
-        flash("Название типа обязательно")
+        flash(_("Название типа обязательно"))
         return redirect(url_for("admin.types"))
 
     try:
         device_type_service.create_device_type(name, width, height, icon)
         invalidate_types_cache()
-        flash("Тип устройства создан")
+        flash(_("Тип устройства создан"))
     except Exception as e:
         admin_logger.error(f"Error creating device type: {e}")
-        flash("Ошибка при создании типа")
+        flash(_("Ошибка при создании типа"))
     return redirect(url_for("admin.types"))
 
 
@@ -170,11 +171,11 @@ def edit_type(id):
         try:
             device_type_service.update_device_type(id, name, width, height, icon)
             invalidate_types_cache()
-            flash("Тип устройства обновлён")
+            flash(_("Тип устройства обновлён"))
             return redirect(url_for("admin.types"))
         except Exception as e:
             admin_logger.error(f"Error updating device type: {e}")
-            flash("Ошибка при обновлении типа")
+            flash(_("Ошибка при обновлении типа"))
 
     all_types = device_type_service.get_all_device_types()
     return render_template("admin/types.html", types=all_types, edit_type=dtype)
@@ -185,10 +186,10 @@ def delete_type(id):
     try:
         device_type_service.delete_device_type(id)
         invalidate_types_cache()
-        flash("Тип устройства удалён")
+        flash(_("Тип устройства удалён"))
     except Exception as e:
         admin_logger.error(f"Error deleting device type: {e}")
-        flash("Ошибка при удалении типа")
+        flash(_("Ошибка при удалении типа"))
     return redirect(url_for("admin.types"))
 
 
@@ -217,16 +218,16 @@ def settings():
             ping_interval = request.form.get("ping_interval")
             try:
                 settings_service.update_ping_settings(ping_count, ping_interval)
-                flash("Настройки сохранены")
+                flash(_("Настройки сохранены"))
             except Exception as e:
                 admin_logger.error(f"Error updating settings: {e}")
-                flash("Ошибка при сохранении настроек")
+                flash(_("Ошибка при сохранении настроек"))
             return redirect(url_for("admin.settings"))
         elif "restore_backup" in request.form:
             return restore_backup_action()
         elif "reset_rate_limit" in request.form:
             rate_limiter.reset_all()
-            flash("Счётчики rate limit успешно сброшены", "success")
+            flash(_("Счётчики rate limit успешно сброшены"), "success")
             return redirect(url_for("admin.settings"))
 
     ping_count, ping_interval = settings_service.get_ping_settings()
@@ -257,10 +258,10 @@ def delete_map(id):
         from services import map_service
         map_service.delete_map_and_cleanup(id, current_app)
         admin_logger.info(f"Map deleted: ID={id}")
-        flash("Карта удалена")
+        flash(_("Карта удалена"))
     except Exception as e:
         admin_logger.error(f"Error deleting map: {e}")
-        flash("Ошибка при удалении карты")
+        flash(_("Ошибка при удалении карты"))
     return redirect(url_for("admin.maps_list"))
 
 
@@ -269,16 +270,16 @@ def delete_map(id):
 # ============================================================================
 def restore_backup_action():
     if "backup_file" not in request.files:
-        flash("Файл не выбран")
+        flash(_("Файл не выбран"))
         return redirect(url_for("admin.settings"))
 
     file = request.files["backup_file"]
     if file.filename == "":
-        flash("Пустой файл")
+        flash(_("Пустой файл"))
         return redirect(url_for("admin.settings"))
 
     if not file.filename.endswith(".db"):
-        flash("Допустимы только файлы .db")
+        flash(_("Допустимы только файлы .db"))
         return redirect(url_for("admin.settings"))
 
     db_path = current_app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", "")
@@ -293,11 +294,11 @@ def restore_backup_action():
         file.save(db_path)
         admin_logger.info("Database restored from uploaded file")
         flash(
-            "База данных восстановлена. Пожалуйста, перезапустите приложение для применения изменений."
+            _("База данных восстановлена. Пожалуйста, перезапустите приложение для применения изменений.")
         )
     except Exception as e:
         admin_logger.error(f"Error restoring database: {e}")
-        flash("Ошибка при восстановлении базы данных")
+        flash(_("Ошибка при восстановлении базы данных"))
     return redirect(url_for("admin.settings"))
 
 
