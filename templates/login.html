@@ -179,6 +179,25 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
+    /* Переключатель языка в углу экрана логина */
+    .auth-lang-switcher {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 2;
+    }
+    .auth-lang-switcher .dropdown-toggle {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        border-radius: 0.6rem;
+        backdrop-filter: blur(8px);
+    }
+    [data-theme="dark"] .auth-lang-switcher .dropdown-toggle {
+        background: rgba(45, 45, 45, 0.9);
+        color: var(--text-primary);
+    }
+
     @media (max-width: 576px) {
         .auth-logo img { height: 90px; }
         .auth-card .card-body { padding: 1.2rem; }
@@ -189,23 +208,44 @@
 {% block content %}
 <div class="auth-page">
     <canvas id="networkCanvas"></canvas>
+
+    <!-- Переключатель языка (анонимный пользователь, сайдбара нет) -->
+    <div class="auth-lang-switcher dropdown">
+        <button class="btn btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-globe"></i> <span>{{ available_languages[current_locale] }}</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            {% for code, label in available_languages.items() %}
+            <li>
+                <form action="{{ url_for('i18n.set_language', lang_code=code) }}" method="POST" class="m-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button type="submit" class="dropdown-item {{ 'active' if code == current_locale else '' }}">
+                        {{ label }}
+                    </button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
     <div class="auth-container">
         <div class="auth-logo">
             <img src="{{ url_for('static', filename='images/logo.png') }}" alt="LinkVision">
         </div>
         <div class="auth-card">
-            <div class="card-header"><i class="fas fa-sign-in-alt"></i> Вход в систему</div>
+            <div class="card-header"><i class="fas fa-sign-in-alt"></i> {{ _('Вход в систему') }}</div>
             <div class="card-body">
                 <form method="POST">
                     {{ form.hidden_tag() }}
                     <div class="mb-3">
                         <label class="form-label">{{ form.username.label.text }}</label>
-                        {{ form.username(class="form-control", placeholder="Введите логин") }}
+                        {{ form.username(class="form-control", placeholder=_('Введите логин')) }}
                     </div>
                     <div class="mb-3">
                         <label class="form-label">{{ form.password.label.text }}</label>
                         <div class="password-field-wrapper">
-                            {{ form.password(class="form-control", placeholder="Введите пароль", id="passwordField") }}
+                            {{ form.password(class="form-control", placeholder=_('Введите пароль'), id="passwordField") }}
                             <button type="button" class="toggle-password" onclick="togglePassword('passwordField')">
                                 <i class="fas fa-eye" id="passwordToggleIcon"></i>
                             </button>
@@ -214,13 +254,13 @@
                     {% if form.confirm %}
                     <div class="mb-3">
                         <label class="form-label">{{ form.confirm.label.text }}</label>
-                        {{ form.confirm(class="form-control", placeholder="Повторите пароль") }}
+                        {{ form.confirm(class="form-control", placeholder=_('Повторите пароль')) }}
                     </div>
                     {% endif %}
-                    <button type="submit" class="btn btn-primary w-100">Войти</button>
+                    <button type="submit" class="btn btn-primary w-100">{{ _('Войти') }}</button>
                 </form>
                 <div class="auth-register-link">
-                    <a href="{{ url_for('auth.register') }}">Нет аккаунта? Зарегистрироваться</a>
+                    <a href="{{ url_for('auth.register') }}">{{ _('Нет аккаунта? Зарегистрироваться') }}</a>
                 </div>
             </div>
         </div>

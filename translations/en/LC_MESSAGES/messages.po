@@ -1,0 +1,62 @@
+# English translations for LinkVision.
+# Copyright (C) 2026 LinkVision
+# This file is distributed under the same license as the LinkVision project.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: LinkVision 2.0\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-07-09 14:23+1100\n"
+"PO-Revision-Date: 2026-07-09 14:24+1100\n"
+"Last-Translator: LinkVision\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: forms.py:16
+msgid "Имя пользователя"
+msgstr "Username"
+
+#: forms.py:17
+msgid "Пароль"
+msgstr "Password"
+
+#: blueprints/auth.py:53
+msgid "Неверный логин или пароль"
+msgstr "Invalid username or password"
+
+#: templates/base.html:71
+msgid "Тема"
+msgstr "Theme"
+
+#: templates/base.html:74
+msgid "Выход"
+msgstr "Log out"
+
+#: templates/login.html:237
+msgid "Вход в систему"
+msgstr "Sign in"
+
+#: templates/login.html:243
+msgid "Введите логин"
+msgstr "Enter username"
+
+#: templates/login.html:248
+msgid "Введите пароль"
+msgstr "Enter password"
+
+#: templates/login.html:257
+msgid "Повторите пароль"
+msgstr "Repeat password"
+
+#: templates/login.html:260
+msgid "Войти"
+msgstr "Sign in"
+
+#: templates/login.html:263
+msgid "Нет аккаунта? Зарегистрироваться"
+msgstr "No account? Sign up"
