@@ -179,3 +179,47 @@ class TestBatch3Templates:
         assert "My maps" in html                     # заголовок
         assert "You don't have any maps yet" in html  # пустое состояние
         assert "Мои карты" not in html
+
+
+class TestBatch4MapView:
+    """Батч 4: редактор карты map_view.html переведён."""
+
+    def test_map_view_translated_en(self, client, app):
+        from models import Map
+
+        _login(client, app, "testuser")  # владелец Own Map → can_edit
+        with app.app_context():
+            mid = Map.query.filter_by(name="Own Map").first().id
+        html = client.get(f"/map/{mid}?lang=en").get_data(as_text=True)
+        assert 'lang="en"' in html
+        assert "Add device" in html          # тулбар (edit-tools)
+        assert "Device groups" in html       # модалка групп
+        assert "Добавить устройство" not in html
+
+
+class TestCatalogIntegrity:
+    """Целостность каталога переводов — ловит именно тот класс багов, что был в
+    Фазе 3: pybabel update помечал строки fuzzy (неверная догадка), и они молча
+    игнорировались в рантайме, показывая русский в английском UI."""
+
+    def _entries(self):
+        import re
+
+        po = "translations/en/LC_MESSAGES/messages.po"
+        blocks = open(po, encoding="utf-8").read().split("\n\n")
+        out = []
+        for b in blocks:
+            m = re.search(r'^msgid "((?:[^"\\]|\\.)*)"', b, re.M)
+            ms = re.search(r'^msgstr "((?:[^"\\]|\\.)*)"', b, re.M)
+            if not m or not m.group(1):  # пропускаем заголовок (msgid "")
+                continue
+            out.append((m.group(1), ms.group(1) if ms else "", "fuzzy" in b))
+        return out
+
+    def test_no_untranslated_strings(self):
+        empty = [mid for mid, msgstr, _ in self._entries() if msgstr == ""]
+        assert not empty, f"Непереведённые строки в en: {empty}"
+
+    def test_no_fuzzy_translations(self):
+        fuzzy = [mid for mid, _, is_fuzzy in self._entries() if is_fuzzy]
+        assert not fuzzy, f"Fuzzy-переводы (игнорируются в рантайме): {fuzzy}"
