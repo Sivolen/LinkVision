@@ -281,22 +281,22 @@
                     </div>
                 </div>
             </div>
-            <h1 class="error-title">Упс! Узел не найден</h1>
+            <h1 class="error-title">{{ _('Упс! Узел не найден') }}</h1>
             <p class="error-message">
-                Похоже, этот узел сети потерялся в пространстве.<br>
-                Возможно, он был отключён или перемещён.
+                {{ _('Похоже, этот узел сети потерялся в пространстве.') }}<br>
+                {{ _('Возможно, он был отключён или перемещён.') }}
             </p>
             <div class="error-suggestions">
-                <div class="suggestion-item"><i class="fas fa-check-circle"></i><span>Проверьте адрес в строке</span></div>
-                <div class="suggestion-item"><i class="fas fa-check-circle"></i><span>Вернитесь на главную карту</span></div>
-                <div class="suggestion-item"><i class="fas fa-check-circle"></i><span>Обновите страницу</span></div>
+                <div class="suggestion-item"><i class="fas fa-check-circle"></i><span>{{ _('Проверьте адрес в строке') }}</span></div>
+                <div class="suggestion-item"><i class="fas fa-check-circle"></i><span>{{ _('Вернитесь на главную карту') }}</span></div>
+                <div class="suggestion-item"><i class="fas fa-check-circle"></i><span>{{ _('Обновите страницу') }}</span></div>
             </div>
             <div class="error-actions">
                 <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary btn-lg">
-                    <i class="fas fa-home me-2"></i>На главную карту
+                    <i class="fas fa-home me-2"></i>{{ _('На главную карту') }}
                 </a>
                 <button onclick="history.back()" class="btn btn-outline btn-lg">
-                    <i class="fas fa-arrow-left me-2"></i>Назад
+                    <i class="fas fa-arrow-left me-2"></i>{{ _('Назад') }}
                 </button>
             </div>
         </div>
