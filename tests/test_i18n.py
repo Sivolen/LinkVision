@@ -1,11 +1,15 @@
 """
-Регресс-тесты мультиязычности (i18n), Фаза 1: бэкенд + пилотный шаблон login.html.
+Регресс-тесты мультиязычности (i18n).
 
-Гарантируют, что:
+Фаза 1 (бэкенд + пилот login.html):
 - по умолчанию интерфейс на русском (msgid = русский текст);
 - ?lang=en реально переключает рендер на английские переводы из каталога Babel;
 - выбор языка сохраняется в сессии, а для авторизованного — в User.locale;
 - невалидный код языка откатывается на дефолт.
+
+Фаза 2 (JS-контур):
+- сервер синхронно инъектирует словарь фронтенда в window.__I18N__ по текущей
+  локали + ru как fallback (никакого fetch на клиенте).
 """
 
 
@@ -102,3 +106,46 @@ class TestUserLocalePersistence:
 
         html = client.get("/", follow_redirects=True).get_data(as_text=True)
         assert 'lang="en"' in html
+
+
+def _extract_i18n(html):
+    """Достаёт объект из строки `window.__I18N__ = {...};</script>` и парсит JSON.
+    tojson эскейпит кириллицу в \\uXXXX — json.loads возвращает её обратно."""
+    import json
+    import re
+
+    m = re.search(r"window\.__I18N__ = (.+?);</script>", html, re.S)
+    assert m, "window.__I18N__ не инъектирован"
+    return json.loads(m.group(1))
+
+
+class TestJsI18nInjection:
+    """Фаза 2: словарь фронтенда инъектируется в window.__I18N__ синхронно."""
+
+    def test_js_dict_injected_default_ru(self, client):
+        data = _extract_i18n(client.get("/auth/login").get_data(as_text=True))
+        assert data["locale"] == "ru"
+        assert data["messages"]["connection"]["serverUp"] == "Сервер доступен"
+        assert "fallback" not in data  # для ru fallback не нужен
+
+    def test_js_dict_injected_en_with_ru_fallback(self, client):
+        data = _extract_i18n(client.get("/auth/login?lang=en").get_data(as_text=True))
+        assert data["locale"] == "en"
+        assert data["messages"]["connection"]["serverUp"] == "Server is available"
+        # ru как fallback — для ключей, которых нет в en
+        assert data["fallback"]["connection"]["serverUp"] == "Сервер доступен"
+
+    def test_js_dict_keys_match_between_locales(self, app):
+        # ru и en должны иметь одинаковый набор ключей (иначе часть UI не
+        # переведётся). Читаем словари напрямую — без HTTP (кэш локали в
+        # держащемся app_context мешал бы двум запросам в одном тесте).
+        from services.js_i18n import load_js_dict
+
+        def flat(d, p=""):
+            out = set()
+            for k, v in d.items():
+                out |= flat(v, p + k + ".") if isinstance(v, dict) else {p + k}
+            return out
+
+        with app.app_context():
+            assert flat(load_js_dict("ru")) == flat(load_js_dict("en"))

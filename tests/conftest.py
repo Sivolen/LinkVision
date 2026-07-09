@@ -86,12 +86,15 @@ def app():
     @app.context_processor
     def _inject_i18n():
         from flask_babel import get_locale
+        from services.js_i18n import js_i18n_payload
 
+        locale = str(get_locale() or TestConfig.BABEL_DEFAULT_LOCALE)
         return {
-            "current_locale": str(get_locale() or TestConfig.BABEL_DEFAULT_LOCALE),
+            "current_locale": locale,
             "available_languages": TestConfig.LANGUAGES,
             "app_version": TestConfig.VERSION,
             "debug_mode": False,
+            "js_i18n": js_i18n_payload(locale),
         }
 
     # Настройка login_manager

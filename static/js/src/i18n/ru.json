@@ -1,0 +1,67 @@
+{
+  "common": {
+    "confirmTitle": "Подтверждение",
+    "areYouSure": "Вы уверены?",
+    "delete": "Удалить",
+    "cancel": "Отмена",
+    "running": "Выполняется...",
+    "justNow": "только что",
+    "element": "элемент",
+    "otherUser": "Другой пользователь"
+  },
+  "toast": {
+    "successTitle": "Успешно",
+    "errorTitle": "Ошибка",
+    "httpError": "Ошибка {status}: {statusText}"
+  },
+  "connection": {
+    "serverUp": "Сервер доступен",
+    "serverDown": "Сервер недоступен",
+    "checking": "Проверка...",
+    "restoredTitle": "Связь восстановлена",
+    "restoredMsg": "Соединение с сервером восстановлено",
+    "lostTitle": "Потеря связи",
+    "lostMsg": "Соединение с сервером потеряно, попытка восстановления..."
+  },
+  "map": {
+    "deleteTitle": "Удаление карты",
+    "deleteConfirm": "Удалить эту карту?",
+    "deleted": "Карта удалена",
+    "deleteFailed": "Не удалось удалить карту",
+    "updated": "Карта обновлена",
+    "saveError": "Ошибка при сохранении"
+  },
+  "importExport": {
+    "done": "Импорт выполнен",
+    "error": "Ошибка при импорте",
+    "badJson": "Некорректный JSON-файл"
+  },
+  "confirmDelete": {
+    "title": "Подтверждение удаления",
+    "message": "Вы уверены, что хотите удалить {label}?",
+    "labels": {
+      "map": "карту и все устройства",
+      "user": "пользователя",
+      "type": "тип устройств",
+      "backup": "текущую базу данных",
+      "rate_limit": "все счётчики rate limit"
+    }
+  },
+  "lock": {
+    "toggleError": "Не удалось изменить блокировку",
+    "lockedTitle": "Карта заблокирована",
+    "unlockedTitle": "Карта разблокирована",
+    "lockedBy": "{who} заблокировал изменения карты",
+    "unlockedBy": "{who} разблокировал изменения карты",
+    "btnUnlock": "Разблокировать перемещение",
+    "btnLock": "Заблокировать перемещение",
+    "btnLockedNoRights": "Карта заблокирована",
+    "btnNoRightsLock": "Нет прав для блокировки",
+    "btnNoRightsChange": "Нет прав для изменения блокировки"
+  },
+  "bulk": {
+    "operatorForbidden": "Оператор не может редактировать устройства",
+    "noneSelected": "Нет выбранных устройств",
+    "noChanges": "Нет изменений"
+  }
+}
