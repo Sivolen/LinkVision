@@ -1,3 +1,4 @@
+from flask_babel import lazy_gettext as _l
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField,
@@ -12,8 +13,8 @@ from wtforms.validators import Regexp
 
 
 class LoginForm(FlaskForm):
-    username = StringField("Имя пользователя", validators=[DataRequired()])
-    password = PasswordField("Пароль", validators=[DataRequired()])
+    username = StringField(_l("Имя пользователя"), validators=[DataRequired()])
+    password = PasswordField(_l("Пароль"), validators=[DataRequired()])
 
 
 class RegisterForm(FlaskForm):

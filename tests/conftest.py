@@ -10,6 +10,7 @@ from extensions import db, init_extensions, login_manager
 from models import User, Map, Device, DeviceType
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
 
 class TestConfig:
@@ -20,6 +21,12 @@ class TestConfig:
     WTF_CSRF_ENABLED = False
     SECRET_KEY = "test-secret-key"
     LOG_LEVEL = "WARNING"
+
+    # i18n — зеркалим прод-конфиг. Путь к каталогу абсолютный: у тестового
+    # приложения root_path указывает на tests/, а не на корень проекта.
+    LANGUAGES = {"ru": "Русский", "en": "English"}
+    BABEL_DEFAULT_LOCALE = "ru"
+    BABEL_TRANSLATION_DIRECTORIES = os.path.join(PROJECT_ROOT, "translations")
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
     }
@@ -47,6 +54,7 @@ def app():
     from blueprints.admin import admin_bp
     from blueprints.main import main_bp
     from blueprints.api import api_bp
+    from blueprints.i18n import i18n_bp
 
     # Указываем пути к шаблонам и статике от корня проекта
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -65,12 +73,26 @@ def app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(i18n_bp)
 
     # Отключаем CSRF для API endpoints
     from flask_wtf.csrf import CSRFProtect
 
     csrf = CSRFProtect(app)
     csrf.exempt(api_bp)
+
+    # Контекст-процессор i18n (в проде это inject_globals в app.py) — нужен
+    # шаблонам: <html lang>, data-locale, переключатель языка.
+    @app.context_processor
+    def _inject_i18n():
+        from flask_babel import get_locale
+
+        return {
+            "current_locale": str(get_locale() or TestConfig.BABEL_DEFAULT_LOCALE),
+            "available_languages": TestConfig.LANGUAGES,
+            "app_version": TestConfig.VERSION,
+            "debug_mode": False,
+        }
 
     # Настройка login_manager
     @login_manager.user_loader
@@ -151,6 +173,16 @@ def app():
         # Cleanup
         db.session.remove()
         db.drop_all()
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Rate-limiter — процессный синглтон с in-memory счётчиками; без сброса
+    состояние течёт между тестами и /auth/login начинает отдавать 429."""
+    from services.security_service import rate_limiter
+
+    rate_limiter.reset_all()
+    yield
 
 
 @pytest.fixture

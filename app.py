@@ -17,6 +17,7 @@ from blueprints.auth import auth_bp
 from blueprints.admin import admin_bp
 from blueprints.main import main_bp
 from blueprints.api import api_bp
+from blueprints.i18n import i18n_bp
 from services.monitor import init_monitor, start_monitor, stop_monitor
 from services.permissions import can_view_map
 from utils.logger import app_logger
@@ -64,6 +65,31 @@ def ensure_env_file():
 ensure_env_file()
 
 
+def _ensure_user_locale_column():
+    """Идемпотентно добавляет колонку user.locale, если её ещё нет.
+
+    Нужно, потому что db.create_all() в проекте отключён и папки migrations/ нет:
+    у существующих БД (SQLite/PostgreSQL) новой колонки не будет, а модель её уже
+    объявляет — без ALTER первый же SELECT по User упал бы. Вызывается один раз
+    при старте, внутри app_context.
+    """
+    from sqlalchemy import inspect as sa_inspect, text
+    from sqlalchemy.exc import NoSuchTableError
+
+    inspector = sa_inspect(db.engine)
+    try:
+        columns = {col["name"] for col in inspector.get_columns("user")}
+    except NoSuchTableError:
+        # Таблицы ещё нет (напр. чистая БД) — мигрировать нечего; когда таблица
+        # создастся из модели, колонка locale уже будет в ней.
+        return
+    if "locale" in columns:
+        return
+    db.session.execute(text('ALTER TABLE "user" ADD COLUMN locale VARCHAR(8)'))
+    db.session.commit()
+    app_logger.info("✅ Добавлена колонка user.locale (i18n)")
+
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -84,6 +110,7 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(i18n_bp)
 
     # CSRFProtect активен для всех endpoints.
     # GET-запросы не проверяются (безопасно, не меняют состояние).
@@ -103,6 +130,14 @@ def create_app():
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
+
+        # --- i18n: гарантируем колонку user.locale ---
+        # db.create_all() в проекте отключён, миграций (migrations/) нет, поэтому
+        # для существующих БД добавляем новую nullable-колонку разово и идемпотентно.
+        # ALTER TABLE ... ADD COLUMN работает и в SQLite, и в PostgreSQL; "user"
+        # закавычен, т.к. в PostgreSQL это зарезервированное слово. Должно идти ДО
+        # первого запроса к User (иначе SELECT по несуществующей колонке упадёт).
+        _ensure_user_locale_column()
 
         # --- Создание администратора, если ни одного нет ---
         if not User.query.filter_by(is_admin=True).first():
@@ -187,11 +222,14 @@ def create_app():
     def inject_globals():
         from config import Config
         from flask_wtf.csrf import generate_csrf
+        from flask_babel import get_locale  # выбранная локаль (не селектор!)
 
         return {
             "app_version": Config.VERSION,
             "debug_mode": app.debug,
             "csrf_token": lambda: generate_csrf(),
+            "current_locale": str(get_locale() or Config.BABEL_DEFAULT_LOCALE),
+            "available_languages": Config.LANGUAGES,
         }
 
     @app.errorhandler(404)
