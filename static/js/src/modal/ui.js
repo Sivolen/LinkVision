@@ -46,5 +46,5 @@ export function initToast() {
     if (toastEl && !toastEl.toastInstance) {
         toastEl.toastInstance = new bootstrap.Toast(toastEl, { delay: 3500 });
     }
-    Logger.info('✅ Toast инициализирован');
+    Logger.info('Toast инициализирован');
 }

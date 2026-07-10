@@ -115,7 +115,7 @@ function updateShapePositionFromNode(shapeNode) {
  * Сохранить фигуру
  */
 export async function saveShape() {
-    Logger.info('🚀 saveShape called');
+    Logger.info('saveShape called');
 
     const id = document.getElementById('shape_id').value;
     const shapeType = document.getElementById('shape_type').value;
@@ -126,7 +126,7 @@ export async function saveShape() {
     const description = document.getElementById('shape_description').value.trim();
     const fontSize = parseInt(document.getElementById('shape_font_size').value, 10) || 12;
 
-    Logger.info('📋 Form data:', { id, shapeType, width, height, color, opacity, description, fontSize });
+    Logger.info('Form data:', { id, shapeType, width, height, color, opacity, description, fontSize });
 
     if (!shapeType || !width || !height) {
         showToast(t('toast.errorTitle'), t('modal.shape.required'), 'error');
@@ -146,12 +146,12 @@ export async function saveShape() {
         font_size: fontSize
     };
 
-    Logger.info('📦 Sending data:', data);
+    Logger.info('Sending data:', data);
 
     const url = id ? `/api/shape/${id}` : '/api/shape';
     const method = id ? 'PUT' : 'POST';
 
-    Logger.info('📡 Request:', { method, url });
+    Logger.info('Request:', { method, url });
 
     const saveBtn = document.getElementById('saveShapeBtn');
     const btnText = saveBtn?.querySelector('.btn-text');
@@ -164,8 +164,8 @@ export async function saveShape() {
 
     try {
         const result = await (method === 'POST' ? http.post : http.put)(url, data);
-        Logger.info('✅ Shape saved successfully');
-        Logger.info('📝 Shape ID:', id);
+        Logger.info('Shape saved successfully');
+        Logger.info('Shape ID:', id);
 
         if (!id) {
             // Для новой фигуры добавляем её в граф сразу
@@ -184,11 +184,11 @@ export async function saveShape() {
             if (typeof window.addShapeToGraph === 'function') {
                 await window.addShapeToGraph(newShape);
             }
-            Logger.info('📢 Showing toast: Фигура создана');
+            Logger.info('Showing toast: Фигура создана');
             showToast(t('toast.successTitle'), t('modal.shape.created'), 'success');
         } else {
             // Для обновления - удаляем старую фигуру и добавляем новую
-            Logger.info('📢 Showing toast: Фигура обновлена');
+            Logger.info('Showing toast: Фигура обновлена');
             if (typeof window.removeShapeFromGraph === 'function') {
                 window.removeShapeFromGraph(id);
             }
@@ -213,7 +213,7 @@ export async function saveShape() {
 
         shapeModal.hide();
     } catch (err) {
-        Logger.error('❌ Ошибка сохранения фигуры:', err);
+        Logger.error('Ошибка сохранения фигуры:', err);
         showToast(t('toast.errorTitle'), err.message || t('modal.shape.saveFail'), 'error');
     } finally {
         if (btnText) btnText.classList.remove('d-none');
@@ -274,7 +274,7 @@ export function initShapeModal() {
     // Инициализация цветоселектора
     initShapeColorPicker();
 
-    Logger.info('✅ Shape modal инициализирован');
+    Logger.info('Shape modal инициализирован');
 }
 
 /**
@@ -288,7 +288,7 @@ function initShapeColorPicker() {
     const code = document.getElementById('shapeColorCode');
 
     if (!btn || !panel || !colorInput || !preview || !code) {
-        Logger.error('❌ Shape color picker: элементы не найдены');
+        Logger.error('Shape color picker: элементы не найдены');
         return;
     }
 

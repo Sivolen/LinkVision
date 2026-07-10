@@ -43,7 +43,7 @@ def create_link(
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
     invalidate_map_elements_cache(map_id)
-    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+    api_logger.info(f"Invalidated cache for map {map_id}")
 
     return link
 
@@ -88,6 +88,6 @@ def delete_link(link_id: int) -> int:
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
     invalidate_map_elements_cache(map_id)
-    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+    api_logger.info(f"Invalidated cache for map {map_id}")
 
     return link_id

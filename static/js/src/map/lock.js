@@ -24,7 +24,7 @@ export function initLock(instance) {
     cy = instance;
     currentMapId = window.currentMapId || null;
 
-    console.log('🔒 initLock called, mapId:', currentMapId);
+    console.log('initLock called, mapId:', currentMapId);
 
     // После (пере)загрузки элементов заново применяем passthrough к свежим
     // группам/фигурам: при открытии уже заблокированной карты они добавляются
@@ -45,10 +45,10 @@ export function initLock(instance) {
 
     // Загружаем состояние блокировки для текущей карты
     if (currentMapId) {
-        console.log('🔒 Loading lock state for map', currentMapId);
+        console.log('Loading lock state for map', currentMapId);
         loadMapLockState(currentMapId);
     } else {
-        console.warn('🔒 No mapId, skipping lock state load');
+        console.warn('No mapId, skipping lock state load');
     }
 
     // Глобальная функция для переключения (вызывается из UI)
@@ -72,7 +72,7 @@ export function initLock(instance) {
             applyDragLockToCanvas(data.is_locked);
             updateLockButton();
 
-            console.log(`🔒 Map ${currentMapId} lock: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
+            console.log(`Map ${currentMapId} lock: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
         } catch (err) {
             console.error('Error toggling lock:', err);
             showToast(t('toast.errorTitle'), t('lock.toggleError'), 'error');
@@ -141,7 +141,7 @@ async function loadMapLockState(mapId) {
             }
         }
 
-        console.log(`🔒 Map ${mapId} initial state: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
+        console.log(`Map ${mapId} initial state: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
     } catch (err) {
         console.error('Error loading map lock state:', err);
     }
@@ -186,14 +186,14 @@ function applyDragLockToCanvas(isLocked) {
 function updateLockButton() {
     const lockBtn = document.getElementById('lockMode');
     if (!lockBtn) {
-        console.warn('🔒 Lock button not found!');
+        console.warn('Lock button not found!');
         return;
     }
 
     const isLocked = mapLockStates.get(currentMapId) || false;
     const canEdit = !lockBtn.disabled;
 
-    console.log('🔒 updateLockButton:', { isLocked, canEdit, mapId: currentMapId });
+    console.log('updateLockButton:', { isLocked, canEdit, mapId: currentMapId });
 
     if (isLocked) {
         lockBtn.classList.add('active');

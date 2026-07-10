@@ -14,7 +14,7 @@ class Config:
         and SECRET_KEY == "dev-secret-key-change-me"
     ):
         print(
-            "⚠️  WARNING: Using default SECRET_KEY in production! Set SECRET_KEY environment variable."
+            "WARNING: Using default SECRET_KEY in production! Set SECRET_KEY environment variable."
         )
         print(
             "   Generate a new key: python -c 'import secrets; print(secrets.token_hex(32))'"

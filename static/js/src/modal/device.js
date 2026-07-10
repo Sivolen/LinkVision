@@ -262,12 +262,12 @@ export async function saveDevice() {
             if (typeof window.addDeviceToGraph === 'function') {
                 try {
                     await window.addDeviceToGraph(newDevice);
-                    console.log('✅ Device added to graph:', newDevice.id);
+                    console.log('Device added to graph:', newDevice.id);
                     // Обновить группы и метки рёбер
                     if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
                     if (typeof window.updateAllEdgeLabels === 'function') window.updateAllEdgeLabels();
                 } catch (e) {
-                    console.error('❌ addDeviceToGraph failed:', e);
+                    console.error('addDeviceToGraph failed:', e);
                     showToast(t('toast.errorTitle'), t('modal.device.renderFail'), 'error');
                     // Не прерываем выполнение – устройство уже создано на сервере
                 }
@@ -351,7 +351,7 @@ export function initDeviceModal() {
         if (paginationDiv) paginationDiv.style.display = 'none';
     });
 
-    Logger.info('✅ Device modal инициализирован');
+    Logger.info('Device modal инициализирован');
 }
 
 // Экспорт для глобального доступа
