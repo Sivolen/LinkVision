@@ -159,36 +159,46 @@ function createLinkWithInterfaces(sourceId, targetId, srcIface, tgtIface, linkTy
     })
     .then(data => {
         if (data.id && window.cy) {
-            const sourceNode = window.cy.getElementById(String(sourceId));
-            const targetNode = window.cy.getElementById(String(targetId));
-            const srcX = sourceNode.position().x;
-            const tgtX = targetNode.position().x;
+            const linkId = `link_${data.id}`;
 
-            let label;
-            if (srcX <= tgtX) {
-                label = `${srcIface} ↔ ${tgtIface}`;
-            } else {
-                label = `${tgtIface} ↔ ${srcIface}`;
-            }
+            // Защита от гонки: сервер рассылает 'link_created' всем клиентам
+            // комнаты, включая того, кто создал связь (без skip_sid). Если
+            // socket-эхо долетит раньше, чем разрешится этот же POST-запрос,
+            // ребро уже будет добавлено обработчиком в index.js
+            // (addLinkToGraph уже проверяет дубликаты) — тогда просто не
+            // добавляем его повторно здесь.
+            if (!window.cy.getElementById(linkId).length) {
+                const sourceNode = window.cy.getElementById(String(sourceId));
+                const targetNode = window.cy.getElementById(String(targetId));
+                const srcX = sourceNode.position().x;
+                const tgtX = targetNode.position().x;
 
-            window.cy.batch(() => {
-                window.cy.add({
-                    group: 'edges',
-                    data: {
-                        id: `link_${data.id}`,
-                        source: String(sourceId),
-                        target: String(targetId),
-                        label: label,
-                        srcIface: srcIface,
-                        tgtIface: tgtIface,
-                        link_type: linkType,
-                        color: lineColor,
-                        width: lineWidth,
-                        style: lineStyle,
-                        font_size: fontSize
-                    }
+                let label;
+                if (srcX <= tgtX) {
+                    label = `${srcIface} ↔ ${tgtIface}`;
+                } else {
+                    label = `${tgtIface} ↔ ${srcIface}`;
+                }
+
+                window.cy.batch(() => {
+                    window.cy.add({
+                        group: 'edges',
+                        data: {
+                            id: linkId,
+                            source: String(sourceId),
+                            target: String(targetId),
+                            label: label,
+                            srcIface: srcIface,
+                            tgtIface: tgtIface,
+                            link_type: linkType,
+                            color: lineColor,
+                            width: lineWidth,
+                            style: lineStyle,
+                            font_size: fontSize
+                        }
+                    });
                 });
-            });
+            }
 
             if (typeof window.resetLinkMode === 'function') window.resetLinkMode();
             showToast(t('toast.successTitle'), t('modal.link.created'), 'success');
