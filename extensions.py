@@ -62,7 +62,10 @@ def select_locale():
     if session.get("locale") in languages:
         return session["locale"]
 
-    if current_user.is_authenticated and getattr(current_user, "locale", None) in languages:
+    if (
+        current_user.is_authenticated
+        and getattr(current_user, "locale", None) in languages
+    ):
         return current_user.locale
 
     return request.accept_languages.best_match(

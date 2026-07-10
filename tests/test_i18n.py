@@ -189,7 +189,7 @@ class TestBatch3Templates:
 
     def test_register_page_translated_en(self, client):
         html = client.get("/auth/register?lang=en").get_data(as_text=True)
-        assert "Sign up" in html                       # заголовок «Регистрация»
+        assert "Sign up" in html  # заголовок «Регистрация»
         assert "Already have an account? Sign in" in html
         assert "Регистрация" not in html
 
@@ -209,7 +209,7 @@ class TestBatch3Templates:
             with force_locale("en"):
                 html = render_template("dashboard.html", maps=[])
         assert 'lang="en"' in html
-        assert "My maps" in html                     # заголовок
+        assert "My maps" in html  # заголовок
         assert "You don't have any maps yet" in html  # пустое состояние
         assert "Мои карты" not in html
 
@@ -225,8 +225,8 @@ class TestBatch4MapView:
             mid = Map.query.filter_by(name="Own Map").first().id
         html = client.get(f"/map/{mid}?lang=en").get_data(as_text=True)
         assert 'lang="en"' in html
-        assert "Add device" in html          # тулбар (edit-tools)
-        assert "Device groups" in html       # модалка групп
+        assert "Add device" in html  # тулбар (edit-tools)
+        assert "Device groups" in html  # модалка групп
         assert "Добавить устройство" not in html
 
 
@@ -241,9 +241,9 @@ class TestBatch5Admin:
             with force_locale("en"):
                 html = render_template("admin/users.html", users=[])
         assert 'lang="en"' in html
-        assert "User management" in html          # заголовок
+        assert "User management" in html  # заголовок
         assert "Add a new user" in html
-        assert "Registration date" in html        # шапка таблицы
+        assert "Registration date" in html  # шапка таблицы
         assert "Управление пользователями" not in html
 
     def test_admin_settings_translated_en(self, app):
@@ -253,10 +253,14 @@ class TestBatch5Admin:
         with app.test_request_context("/admin/settings"):
             with force_locale("en"):
                 html = render_template(
-                    "admin/settings.html", count=4, interval=10, db_size=0, db_mtime=None
+                    "admin/settings.html",
+                    count=4,
+                    interval=10,
+                    db_size=0,
+                    db_mtime=None,
                 )
         assert "Monitoring settings" in html
-        assert "Unknown" in html                  # db_mtime=None → «Неизвестно»
+        assert "Unknown" in html  # db_mtime=None → «Неизвестно»
         assert "Reset limits" in html
 
 
@@ -276,7 +280,7 @@ class TestCatalogIntegrity:
 
         def collect(block, keyword):
             # msgid/msgstr может занимать несколько строк ("" + продолжения)
-            m = re.search(r'^' + keyword + r' ((?:"(?:[^"\\]|\\.)*"\n?)+)', block, re.M)
+            m = re.search(r"^" + keyword + r' ((?:"(?:[^"\\]|\\.)*"\n?)+)', block, re.M)
             if not m:
                 return None
             return "".join(re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(1)))

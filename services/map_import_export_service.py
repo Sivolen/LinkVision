@@ -17,6 +17,7 @@ from utils.logger import api_logger
 def _check_map_edit_permission(map_id: int) -> None:
     """Проверить право редактирования карты. Вызывает ValueError если нет доступа."""
     from services.permissions import can_edit_map
+
     if not can_edit_map(map_id):
         raise PermissionError("Доступ запрещён")
 
@@ -33,13 +34,11 @@ def export_map_data(map_id: int) -> dict:
     """
     from sqlalchemy.orm import joinedload
 
-    map_obj = (
-        Map.query.options(
-            joinedload(Map.devices).joinedload(Device.ips),
-            joinedload(Map.devices).joinedload(Device.type),
-            joinedload(Map.links),
-        ).get_or_404(map_id)
-    )
+    map_obj = Map.query.options(
+        joinedload(Map.devices).joinedload(Device.ips),
+        joinedload(Map.devices).joinedload(Device.type),
+        joinedload(Map.links),
+    ).get_or_404(map_id)
 
     devices = [
         {

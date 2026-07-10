@@ -22,6 +22,7 @@ def create_group(
 
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
+
     invalidate_map_elements_cache(map_id)
     api_logger.info(f"Invalidated cache for map {map_id}")
 
@@ -49,6 +50,7 @@ def update_group(
 
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
+
     invalidate_map_elements_cache(group.map_id)
     api_logger.info(f"  🗑️ Invalidated cache for map {group.map_id}")
 
@@ -66,6 +68,7 @@ def delete_group(group_id: int) -> int:
 
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
+
     invalidate_map_elements_cache(map_id)
     api_logger.info(f"Invalidated cache for map {map_id}")
 

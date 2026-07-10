@@ -163,7 +163,9 @@ def add_indexes():
 
         if group_map_id_index_name not in indexes:
             print(f"Creating index {group_map_id_index_name} on groups.map_id...")
-            conn.execute(text(f"CREATE INDEX {group_map_id_index_name} ON groups (map_id)"))
+            conn.execute(
+                text(f"CREATE INDEX {group_map_id_index_name} ON groups (map_id)")
+            )
             conn.commit()
             print(f"Index {group_map_id_index_name} created.")
         else:

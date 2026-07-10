@@ -22,4 +22,3 @@ api_bp.register_blueprint(shapes.shapes_bp)
 api_bp.register_blueprint(maps.maps_bp)
 api_bp.register_blueprint(permissions.permissions_bp)
 api_bp.register_blueprint(audit.audit_bp)
-

@@ -97,4 +97,3 @@ def change_user_password(user_id: int, new_password: str) -> User:
     db.session.commit()
     auth_logger.info(f"Password changed for user: {user.username}")
     return user
-

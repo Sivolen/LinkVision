@@ -256,6 +256,7 @@ def delete_map(id):
     try:
         # Используем сервис для удаления карты с очисткой
         from services import map_service
+
         map_service.delete_map_and_cleanup(id, current_app)
         admin_logger.info(f"Map deleted: ID={id}")
         flash(_("Карта удалена"))
@@ -294,7 +295,9 @@ def restore_backup_action():
         file.save(db_path)
         admin_logger.info("Database restored from uploaded file")
         flash(
-            _("База данных восстановлена. Пожалуйста, перезапустите приложение для применения изменений.")
+            _(
+                "База данных восстановлена. Пожалуйста, перезапустите приложение для применения изменений."
+            )
         )
     except Exception as e:
         admin_logger.error(f"Error restoring database: {e}")

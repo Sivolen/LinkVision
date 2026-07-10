@@ -36,9 +36,15 @@ class TestGranularPayloads:
     @pytest.mark.parametrize(
         "call, event",
         [
-            (lambda: notifications.notify_device_updated(7, {"id": 1}), "device_updated"),
+            (
+                lambda: notifications.notify_device_updated(7, {"id": 1}),
+                "device_updated",
+            ),
             (lambda: notifications.notify_device_deleted(7, 1), "device_deleted"),
-            (lambda: notifications.notify_bulk_position_updated(7, [1, 2]), "bulk_position_updated"),
+            (
+                lambda: notifications.notify_bulk_position_updated(7, [1, 2]),
+                "bulk_position_updated",
+            ),
             (lambda: notifications.notify_link_created(7, {"id": 1}), "link_created"),
             (lambda: notifications.notify_link_updated(7, {"id": 1}), "link_updated"),
             (lambda: notifications.notify_link_deleted(7, 1), "link_deleted"),

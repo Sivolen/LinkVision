@@ -41,6 +41,7 @@ def create_shape(
 
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
+
     invalidate_map_elements_cache(map_id)
     api_logger.info(f"Invalidated cache for map {map_id}")
 
@@ -69,6 +70,7 @@ def update_shape(shape_id: int, **kwargs) -> MapShape:
 
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
+
     invalidate_map_elements_cache(shape.map_id)
     api_logger.info(f"  🗑️ Invalidated cache for map {shape.map_id}")
 
@@ -84,5 +86,6 @@ def delete_shape(shape_id: int) -> None:
 
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
+
     invalidate_map_elements_cache(map_id)
     api_logger.info(f"Invalidated cache for map {map_id}")

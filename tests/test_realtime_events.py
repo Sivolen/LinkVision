@@ -43,7 +43,13 @@ class TestDeviceUpdatedEvent:
     def _create(self, client, map_id, type_id):
         r = client.post(
             "/api/device",
-            json={"map_id": map_id, "type_id": type_id, "name": "Base", "x": 10, "y": 20},
+            json={
+                "map_id": map_id,
+                "type_id": type_id,
+                "name": "Base",
+                "x": 10,
+                "y": 20,
+            },
         )
         assert r.status_code == 201
         return r.get_json()["id"]
@@ -68,7 +74,9 @@ class TestDeviceUpdatedEvent:
         # Регресс: смена IP/типа должна отражаться в реалтайме → эти поля в payload
         assert dev["ips"] == ["8.8.8.8"]
         for key in ("iconUrl", "width", "height"):
-            assert key in dev, f"нет поля {key} в device_updated (смена типа не отразится)"
+            assert (
+                key in dev
+            ), f"нет поля {key} в device_updated (смена типа не отразится)"
 
 
 class TestDevicePositionEvent:
@@ -78,7 +86,13 @@ class TestDevicePositionEvent:
         login("testuser")
         r = client.post(
             "/api/device",
-            json={"map_id": map_ids["Own Map"], "type_id": router_type_id, "name": "Pos", "x": 1, "y": 2},
+            json={
+                "map_id": map_ids["Own Map"],
+                "type_id": router_type_id,
+                "name": "Pos",
+                "x": 1,
+                "y": 2,
+            },
         )
         assert r.status_code == 201
         dev_id = r.get_json()["id"]

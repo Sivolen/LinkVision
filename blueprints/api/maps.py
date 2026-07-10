@@ -72,6 +72,7 @@ def get_groups(map_id):
 def get_types():
     """Получить типы устройств."""
     from services import get_cached_types
+
     return jsonify(get_cached_types())
 
 
@@ -224,9 +225,7 @@ def toggle_map_lock(map_id):
 
     # Синхронизируем блокировку между клиентами (без полного reload карты —
     # элементы не менялись).
-    notify_map_lock(
-        map_id, map_obj.is_locked, current_user.id, current_user.username
-    )
+    notify_map_lock(map_id, map_obj.is_locked, current_user.id, current_user.username)
 
     # Аудит
     log_map_action(

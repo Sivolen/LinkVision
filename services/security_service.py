@@ -358,4 +358,3 @@ def get_client_ip() -> str:
         return request.headers.get("X-Real-IP")
     else:
         return request.remote_addr or "unknown"
-
