@@ -23,9 +23,7 @@ def load_js_dict(locale):
     процесса не нужен. Без этого долгоживущий процесс мог отдавать УСТАРЕВШИЙ
     словарь (напр. без секции modal), и t() на клиенте показывал сырые ключи.
     """
-    path = os.path.join(
-        BASE_DIR, "static", "js", "src", "i18n", f"{locale}.json"
-    )
+    path = os.path.join(BASE_DIR, "static", "js", "src", "i18n", f"{locale}.json")
     try:
         mtime = os.path.getmtime(path)
     except OSError:

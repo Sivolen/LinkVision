@@ -76,7 +76,9 @@ def change_password():
             flash(_("Неверный текущий пароль"), "error")
             return redirect(url_for("auth.change_password"))
 
-        is_valid, error = validate_password_full(form.new_password.data, current_user.username)
+        is_valid, error = validate_password_full(
+            form.new_password.data, current_user.username
+        )
         if not is_valid:
             flash(_("Слабый пароль: %(error)s", error=error), "error")
             return redirect(url_for("auth.change_password"))
@@ -136,4 +138,3 @@ def reset_rate_limit():
     rate_limiter.reset_all()
     flash(_("Rate limit счётчики сброшены"), "success")
     return redirect(request.referrer or url_for("main.dashboard"))
-

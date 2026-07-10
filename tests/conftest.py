@@ -145,18 +145,23 @@ def app():
 
         # Shared Viewer Map (admin даёт testuser роль viewer)
         from models import MapPermission
+
         shared_viewer = Map(name="Shared Viewer Map", owner_id=admin.id)
         db.session.add(shared_viewer)
         db.session.commit()
         db.session.refresh(shared_viewer)
-        db.session.add(MapPermission(map_id=shared_viewer.id, user_id=testuser.id, role="viewer"))
+        db.session.add(
+            MapPermission(map_id=shared_viewer.id, user_id=testuser.id, role="viewer")
+        )
 
         # Shared Editor Map (admin даёт testuser роль editor)
         shared_editor = Map(name="Shared Editor Map", owner_id=admin.id)
         db.session.add(shared_editor)
         db.session.commit()
         db.session.refresh(shared_editor)
-        db.session.add(MapPermission(map_id=shared_editor.id, user_id=testuser.id, role="editor"))
+        db.session.add(
+            MapPermission(map_id=shared_editor.id, user_id=testuser.id, role="editor")
+        )
 
         # Operator Shared Map (admin даёт роль editor всем операторам)
         operator_shared = Map(name="Operator Shared Map", owner_id=admin.id)
@@ -167,7 +172,9 @@ def app():
 
         # Devices
         db.session.add(Device(map_id=own_map.id, type_id=dtype.id, name="Own Device"))
-        db.session.add(Device(map_id=foreign_map.id, type_id=dtype.id, name="Foreign Device"))
+        db.session.add(
+            Device(map_id=foreign_map.id, type_id=dtype.id, name="Foreign Device")
+        )
 
         db.session.commit()
 
@@ -197,6 +204,7 @@ def client(app):
 @pytest.fixture
 def login(client, app):
     """Залогинить пользователя по имени через сессию (без формы логина)."""
+
     def _login(username):
         with app.app_context():
             u = User.query.filter_by(username=username).first()
@@ -206,6 +214,7 @@ def login(client, app):
             sess["_user_id"] = str(uid)
             sess["_fresh"] = True
         return uid
+
     return _login
 
 
@@ -228,6 +237,7 @@ def emit_recorder(app, monkeypatch):
     """Перехватывает socketio.emit → список [{event, payload, room, skip_sid}]
     для проверки реалтайм-событий без реального веб-сокета."""
     from services import notifications
+
     calls = []
 
     def _rec(event, payload=None, **kwargs):
@@ -242,5 +252,3 @@ def emit_recorder(app, monkeypatch):
 
     monkeypatch.setattr(notifications.socketio, "emit", _rec)
     return calls
-
-

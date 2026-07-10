@@ -165,9 +165,7 @@ def update_map_permission(map_id, perm_id):
     )
 
 
-@permissions_bp.route(
-    "/map/<int:map_id>/permissions/<int:perm_id>", methods=["DELETE"]
-)
+@permissions_bp.route("/map/<int:map_id>/permissions/<int:perm_id>", methods=["DELETE"])
 @login_required
 @require_map_owner_or_admin
 def delete_map_permission(map_id, perm_id):

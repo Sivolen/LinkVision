@@ -14,7 +14,9 @@ def _create_device_payload(map_id, type_id, name="Test Device"):
 class TestLockEnforcement:
     """Заблокированная карта не принимает изменения (кроме админа)."""
 
-    def test_locked_map_blocks_device_create(self, client, login, map_ids, router_type_id):
+    def test_locked_map_blocks_device_create(
+        self, client, login, map_ids, router_type_id
+    ):
         login("testuser")  # владелец Locked Map
         r = client.post(
             "/api/device",
@@ -22,7 +24,9 @@ class TestLockEnforcement:
         )
         assert r.status_code == 403
 
-    def test_unlocked_own_map_allows_device_create(self, client, login, map_ids, router_type_id):
+    def test_unlocked_own_map_allows_device_create(
+        self, client, login, map_ids, router_type_id
+    ):
         login("testuser")
         r = client.post(
             "/api/device",
@@ -30,7 +34,9 @@ class TestLockEnforcement:
         )
         assert r.status_code == 201
 
-    def test_admin_can_create_on_locked_map(self, client, login, map_ids, router_type_id):
+    def test_admin_can_create_on_locked_map(
+        self, client, login, map_ids, router_type_id
+    ):
         login("admin")  # админ обходит блокировку
         r = client.post(
             "/api/device",
@@ -50,7 +56,9 @@ class TestAccessControl:
         )
         assert r.status_code == 403
 
-    def test_editor_permission_allows_create(self, client, login, map_ids, router_type_id):
+    def test_editor_permission_allows_create(
+        self, client, login, map_ids, router_type_id
+    ):
         login("testuser")  # роль editor на Shared Editor Map
         r = client.post(
             "/api/device",
@@ -58,7 +66,9 @@ class TestAccessControl:
         )
         assert r.status_code == 201
 
-    def test_viewer_permission_forbids_create(self, client, login, map_ids, router_type_id):
+    def test_viewer_permission_forbids_create(
+        self, client, login, map_ids, router_type_id
+    ):
         login("testuser")  # роль viewer на Shared Viewer Map
         r = client.post(
             "/api/device",
@@ -66,7 +76,9 @@ class TestAccessControl:
         )
         assert r.status_code == 403
 
-    def test_operator_cannot_create_device(self, client, login, map_ids, router_type_id):
+    def test_operator_cannot_create_device(
+        self, client, login, map_ids, router_type_id
+    ):
         login("operator")  # оператору запрещено создавать (require_not_operator)
         r = client.post(
             "/api/device",

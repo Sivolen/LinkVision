@@ -31,6 +31,7 @@ def notify_map_lock(map_id, is_locked, user_id=None, username=None):
 
 # ─── Точечные уведомления ──────────────────────────────────────────────────────
 
+
 def _notify(map_id, event, payload, skip_sid=None):
     """Отправить точечное событие в комнату карты."""
     # map_id обязателен в payload: клиентские обработчики отфильтровывают
@@ -57,16 +58,17 @@ def notify_device_deleted(map_id, device_id, skip_sid=None):
 
 def notify_device_position_updated(map_id, device_id, x, y, skip_sid=None):
     """Уведомление об изменении позиции устройства."""
-    _notify(map_id, "device_position_updated", {
-        "device_id": device_id, "x": x, "y": y
-    }, skip_sid)
+    _notify(
+        map_id,
+        "device_position_updated",
+        {"device_id": device_id, "x": x, "y": y},
+        skip_sid,
+    )
 
 
 def notify_bulk_position_updated(map_id, device_ids, skip_sid=None):
     """Уведомление о массовом изменении позиций."""
-    _notify(map_id, "bulk_position_updated", {
-        "device_ids": device_ids
-    }, skip_sid)
+    _notify(map_id, "bulk_position_updated", {"device_ids": device_ids}, skip_sid)
 
 
 def notify_link_created(map_id, link_data, skip_sid=None):
@@ -112,4 +114,3 @@ def notify_shape_updated(map_id, shape_data, skip_sid=None):
 def notify_shape_deleted(map_id, shape_id, skip_sid=None):
     """Уведомление об удалении фигуры."""
     _notify(map_id, "shape_deleted", {"shape_id": shape_id}, skip_sid)
-

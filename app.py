@@ -149,9 +149,13 @@ def create_app():
             db.session.commit()
 
             # В лог — без пароля
-            app_logger.warning("Создан администратор admin. Пароль выведен в консоль при первом запуске.")
+            app_logger.warning(
+                "Создан администратор admin. Пароль выведен в консоль при первом запуске."
+            )
             # В консоль — печатаем напрямую, не через ротируемый файловый логгер
-            print(f"\n{'='*60}\n  Temporary admin password: {default_password}\n{'='*60}\n")
+            print(
+                f"\n{'='*60}\n  Temporary admin password: {default_password}\n{'='*60}\n"
+            )
 
         # --- Настройки мониторинга, если ещё не заданы ---
         if not db.session.get(Settings, "ping_count"):
@@ -243,6 +247,7 @@ def create_app():
     @app.errorhandler(Exception)
     def handle_unexpected(e):
         from werkzeug.exceptions import HTTPException
+
         if isinstance(e, HTTPException):
             return e
         app_logger.exception("Unhandled exception")

@@ -28,16 +28,16 @@ def grant_map_permission(map_id: int, user_id: int, role: str) -> MapPermission:
         ValueError: Если разрешение уже существует
     """
     # Проверка на дубликат
-    existing = MapPermission.query.filter_by(
-        map_id=map_id, user_id=user_id
-    ).first()
+    existing = MapPermission.query.filter_by(map_id=map_id, user_id=user_id).first()
     if existing:
         raise ValueError("Permission already exists for this user")
 
     perm = MapPermission(map_id=map_id, user_id=user_id, role=role)
     db.session.add(perm)
     db.session.commit()
-    api_logger.info(f"Permission granted: map_id={map_id}, user_id={user_id}, role={role}")
+    api_logger.info(
+        f"Permission granted: map_id={map_id}, user_id={user_id}, role={role}"
+    )
     return perm
 
 

@@ -34,7 +34,10 @@ class RegisterForm(FlaskForm):
     )
     confirm = PasswordField(
         _l("Подтверждение пароля"),
-        validators=[DataRequired(), EqualTo("password", message=_l("Пароли не совпадают"))],
+        validators=[
+            DataRequired(),
+            EqualTo("password", message=_l("Пароли не совпадают")),
+        ],
     )
 
 
@@ -97,6 +100,8 @@ class ChangePasswordForm(FlaskForm):
     )
     confirm = PasswordField(
         "Подтверждение пароля",
-        validators=[DataRequired(), EqualTo("new_password", message="Пароли не совпадают")],
+        validators=[
+            DataRequired(),
+            EqualTo("new_password", message="Пароли не совпадают"),
+        ],
     )
-

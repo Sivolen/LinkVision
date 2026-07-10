@@ -29,7 +29,12 @@ from models import (
 from utils.logger import api_logger, main_logger
 from services.db.map_repository import map_repo
 from services.validators import validate_name
-from services import link_service, group_service, shape_service, map_import_export_service
+from services import (
+    link_service,
+    group_service,
+    shape_service,
+    map_import_export_service,
+)
 
 # Кэши
 groups_cache: TTLCache = TTLCache(maxsize=100, ttl=60)
@@ -81,6 +86,7 @@ def create_new_map(
 def get_shape_by_id(shape_id: int):
     """Получить фигуру по ID."""
     from models import MapShape
+
     return db.session.get(MapShape, shape_id)
 
 
@@ -117,6 +123,7 @@ def validate_link(link_id: int):
         ValueError: Если связь не найдена
     """
     from models import Link
+
     link = db.session.get(Link, link_id)
     if not link:
         raise ValueError(f"Link with id {link_id} not found")
@@ -548,5 +555,3 @@ def toggle_map_lock(map_id: int, locked: Optional[bool] = None) -> Map:
     db.session.commit()
     api_logger.info(f"Map lock toggled: map_id={map_id}, locked={map_obj.is_locked}")
     return map_obj
-
-

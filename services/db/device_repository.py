@@ -38,9 +38,15 @@ class DeviceRepository:
         Returns:
             Optional[Device]: Устройство с relations или None
         """
-        return db.session.get(Device, device_id, options=[
-            joinedload(Device.type), joinedload(Device.ips), joinedload(Device.group)
-        ])
+        return db.session.get(
+            Device,
+            device_id,
+            options=[
+                joinedload(Device.type),
+                joinedload(Device.ips),
+                joinedload(Device.group),
+            ],
+        )
 
     @staticmethod
     def get_by_map(map_id: int) -> List[Device]:

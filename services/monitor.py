@@ -239,7 +239,8 @@ def monitor_loop():
             with _lock, app_instance.app_context():
                 # Одним запросом тянем все затронутые устройства
                 changed_ids = [
-                    dev_id for dev_id, _ in results
+                    dev_id
+                    for dev_id, _ in results
                     if current_time - last_emit_time.get(dev_id, 0) >= 0.5
                 ]
                 if changed_ids:
@@ -269,7 +270,11 @@ def monitor_loop():
 
                         room = f"map_{device.map_id}"
                         emits_by_room.setdefault(room, []).append(
-                            {"id": device.id, "status": new_status, "map_id": device.map_id}
+                            {
+                                "id": device.id,
+                                "status": new_status,
+                                "map_id": device.map_id,
+                            }
                         )
                         monitor_logger.info(
                             f"Device {dev_id} status change -> {new_status}"
