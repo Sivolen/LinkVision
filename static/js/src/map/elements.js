@@ -133,7 +133,7 @@ export function loadElements(mapId, force = false) {
             // Проверка загруженных фигур
             if (cy) {
                 const shapeNodes = cy.nodes('[isShape]');
-                console.log(`✅ Loaded ${shapeNodes.length} shapes into graph`);
+                console.log(`Loaded ${shapeNodes.length} shapes into graph`);
                 shapeNodes.forEach(n => {
                     const pos = n.position();
                     console.log(`  Shape ${n.id()}: x=${pos.x}, y=${pos.y}`);
@@ -264,7 +264,7 @@ export async function addDeviceToGraph(device) {
         else if (device.status === 'partial') addPulsingNode(cy, added, 'partial');
     }
 
-    console.log('✅ Device added to graph:', device.id);
+    console.log('Device added to graph:', device.id);
 }
 
 export function removeDeviceFromGraph(deviceId) {

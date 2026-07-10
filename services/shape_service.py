@@ -42,7 +42,7 @@ def create_shape(
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
     invalidate_map_elements_cache(map_id)
-    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+    api_logger.info(f"Invalidated cache for map {map_id}")
 
     return shape
 
@@ -51,7 +51,7 @@ def update_shape(shape_id: int, **kwargs) -> MapShape:
     """Обновить фигуру."""
     shape = MapShape.query.get_or_404(shape_id)
 
-    api_logger.info(f"🔷 update_shape called: shape_id={shape_id}, kwargs={kwargs}")
+    api_logger.info(f"update_shape called: shape_id={shape_id}, kwargs={kwargs}")
 
     if "font_size" in kwargs:
         shape.font_size = kwargs["font_size"]
@@ -61,11 +61,11 @@ def update_shape(shape_id: int, **kwargs) -> MapShape:
             old_value = getattr(shape, key)
             setattr(shape, key, value)
             if key in ["x", "y"]:
-                api_logger.info(f"  🔶 Updating {key}: {old_value} -> {value}")
+                api_logger.info(f"  Updating {key}: {old_value} -> {value}")
 
     db.session.commit()
 
-    api_logger.info(f"  ✅ Shape saved: x={shape.x}, y={shape.y}")
+    api_logger.info(f"Shape saved: x={shape.x}, y={shape.y}")
 
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
@@ -85,4 +85,4 @@ def delete_shape(shape_id: int) -> None:
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
     invalidate_map_elements_cache(map_id)
-    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+    api_logger.info(f"Invalidated cache for map {map_id}")

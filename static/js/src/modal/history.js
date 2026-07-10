@@ -119,7 +119,7 @@ export function loadHistoryPage(newPage) {
  * Инициализация модуля истории
  */
 export function initHistoryModal() {
-    Logger.info('✅ History modal инициализирован');
+    Logger.info('History modal инициализирован');
 }
 
 // Экспорт для глобального доступа

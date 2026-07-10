@@ -68,5 +68,5 @@ export function getCsrfToken() {
 export function initUtils() {
     window.escapeHtml = escapeHtml;
     window.getCsrfToken = getCsrfToken;
-    Logger.info('✅ Utils инициализированы');
+    Logger.info('Utils инициализированы');
 }

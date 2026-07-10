@@ -83,5 +83,5 @@ export function initMapIntegration() {
     window.saveViewport = saveViewport;
     window.restoreViewport = restoreViewport;
     window.withViewportRestore = withViewportRestore;
-    Logger.info('✅ Map integration инициализирован');
+    Logger.info('Map integration инициализирован');
 }

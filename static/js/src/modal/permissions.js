@@ -125,7 +125,7 @@ async function loadUsersForPermission(mapId) {
         const rows = doc.querySelectorAll('table tbody tr');
         const users = [];
         
-        console.log('🔍 Parsing users table, rows:', rows.length);
+        console.log('Parsing users table, rows:', rows.length);
 
         rows.forEach((row, idx) => {
             const cells = row.querySelectorAll('td');
@@ -161,7 +161,7 @@ async function loadUsersForPermission(mapId) {
             }
         });
         
-        console.log(`👥 Total non-admin users: ${users.length}`);
+        console.log(`Total non-admin users: ${users.length}`);
 
         // Заполняем select
         selectEl.innerHTML = '<option value="">' + t('modal.permissions.selectUser') + '</option>';

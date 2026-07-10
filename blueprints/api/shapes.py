@@ -95,7 +95,7 @@ def update_shape(shape_id):
             "description": data.get("description", shape.description),
         }
         notify_shape_updated(shape.map_id, shape_data)
-        api_logger.info(f"  ✅ shape_updated notified for map {shape.map_id}")
+        api_logger.info(f"shape_updated notified for map {shape.map_id}")
         return jsonify(
             {"id": shape_id, "status": "updated", "x": shape.x, "y": shape.y}
         )

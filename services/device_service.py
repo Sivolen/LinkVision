@@ -244,7 +244,7 @@ def create_device(
         # Инвалидируем кэш элементов карты
         from .map_service import invalidate_map_elements_cache
         invalidate_map_elements_cache(map_id)
-        api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+        api_logger.info(f"Invalidated cache for map {map_id}")
 
         return device
 
@@ -339,7 +339,7 @@ def delete_device(device_id: int) -> None:
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
     invalidate_map_elements_cache(map_id)
-    api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+    api_logger.info(f"Invalidated cache for map {map_id}")
 
 
 def update_device_position(device_id: int, x: float, y: float) -> Device:
@@ -380,7 +380,7 @@ def update_devices_positions(updates: List[Dict[str, Any]]) -> int:
     # Инвалидируем кэш для всех затронутых карт
     for map_id in map_ids:
         invalidate_map_elements_cache(map_id)
-        api_logger.info(f"  🗑️ Invalidated cache for map {map_id}")
+        api_logger.info(f"Invalidated cache for map {map_id}")
 
     return len(updates)
 

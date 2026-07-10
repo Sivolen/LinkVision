@@ -87,5 +87,5 @@ export function setIpsInForm(ips) {
  * Инициализация управления IP
  */
 export function initIpManagement() {
-    Logger.info('✅ IP manager инициализирован');
+    Logger.info('IP manager инициализирован');
 }

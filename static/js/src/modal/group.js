@@ -25,7 +25,7 @@ function initColorPicker() {
     const code = document.getElementById('colorCode');
 
     if (!btn || !panel || !input || !preview || !code) {
-        Logger.error('❌ Color picker: элементы не найдены');
+        Logger.error('Color picker: элементы не найдены');
         return;
     }
 
@@ -201,16 +201,16 @@ async function loadGroupsList() {
     const countBadge = document.getElementById('groupsCount');
 
     if (!tbody) {
-        Logger.error('❌ groupListBody not found!');
+        Logger.error('groupListBody not found!');
         return;
     }
 
     if (!window.currentMapId) {
-        Logger.error('❌ currentMapId not set!');
+        Logger.error('currentMapId not set!');
         return;
     }
 
-    Logger.info('🔄 Loading groups for map:', window.currentMapId);
+    Logger.info('Loading groups for map:', window.currentMapId);
 
     skeleton?.classList.remove('d-none');
     tbody.closest('.table-responsive')?.classList.add('d-none');
@@ -220,7 +220,7 @@ async function loadGroupsList() {
         // Добавляем timestamp чтобы обойти кэш браузера
         const timestamp = Date.now();
         const groups = await http.get(`/api/map/${window.currentMapId}/groups?t=${timestamp}`);
-        Logger.info('📦 Groups loaded:', groups);
+        Logger.info('Groups loaded:', groups);
 
         if (countBadge) countBadge.textContent = groups.length;
 
@@ -229,7 +229,7 @@ async function loadGroupsList() {
             tbody.closest('.table-responsive')?.classList.add('d-none');
             emptyState?.classList.remove('d-none');
             tbody.innerHTML = '';
-            Logger.warn('⚠️ No groups found');
+            Logger.warn('No groups found');
             return;
         }
 
@@ -251,7 +251,7 @@ async function loadGroupsList() {
             </tr>
         `).join('');
 
-        Logger.info('✅ Groups rendered:', groups.length);
+        Logger.info('Groups rendered:', groups.length);
 
     } catch (err) {
         Logger.error('Load groups error:', err);
@@ -353,34 +353,34 @@ export async function deleteGroup(id, name) {
  * Открыть менеджер групп
  */
 export function openGroupManager() {
-    Logger.info('🚀 openGroupManager called');
+    Logger.info('openGroupManager called');
 
     if (!window.isAdmin) {
-        Logger.warn('❌ Not admin');
+        Logger.warn('Not admin');
         showToast(t('common.accessDenied'), t('modal.group.adminOnly'), 'error');
         return;
     }
     if (window.isOperator) {
-        Logger.warn('❌ Is operator');
+        Logger.warn('Is operator');
         showToast(t('common.accessDenied'), t('modal.group.operatorNo'), 'error');
         return;
     }
 
-    Logger.info('📋 Admin check passed');
+    Logger.info('Admin check passed');
 
     const modalEl = document.getElementById('groupModal');
     if (!modalEl) {
-        Logger.error('❌ Modal #groupModal not found');
+        Logger.error('Modal #groupModal not found');
         return;
     }
 
     if (!window.groupModal) {
-        Logger.info('🔨 Creating modal instance with event listener');
+        Logger.info('Creating modal instance with event listener');
         window.groupModal = new bootstrap.Modal(modalEl);
 
         // Добавляем listener ПРЯМО ПОСЛЕ создания
         modalEl.addEventListener('shown.bs.modal', function onShown() {
-            Logger.info('🎉 shown.bs.modal event fired!');
+            Logger.info('shown.bs.modal event fired!');
             // Удаляем listener после первого срабатывания
             modalEl.removeEventListener('shown.bs.modal', onShown);
 
@@ -391,16 +391,16 @@ export function openGroupManager() {
             }, 100);
         });
 
-        Logger.info('✅ Modal instance created with listener');
+        Logger.info('Modal instance created with listener');
     } else {
-        Logger.info('✅ Using existing modal instance');
+        Logger.info('Using existing modal instance');
     }
 
     resetGroupForm();
     const fontSizeInput = document.getElementById('group_font_size');
     if (fontSizeInput) fontSizeInput.value = 11;
 
-    Logger.info('📺 Calling modal.show()');
+    Logger.info('Calling modal.show()');
     window.groupModal.show();
 }
 
@@ -408,7 +408,7 @@ export function openGroupManager() {
  * Инициализация модального окна групп
  */
 export function initGroupModal() {
-    Logger.info('🔧 initGroupModal called');
+    Logger.info('initGroupModal called');
 
     initFormHandler();
     initTableActions();
@@ -416,7 +416,7 @@ export function initGroupModal() {
     // Не создаём modal сразу - создадим при первом открытии
     // Это гарантирует, что DOM элемент существует
 
-    Logger.info('✅ Group modal инициализирован (lazy initialization)');
+    Logger.info('Group modal инициализирован (lazy initialization)');
 }
 
 // Экспорт для глобального доступа

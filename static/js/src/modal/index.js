@@ -108,7 +108,7 @@ window.exportMap = exportMap;
  */
 export function initModals() {
     try {
-        Logger.info('🚀 initModals called');
+        Logger.info('initModals called');
 
         // Инициализация утилит
         initUtils();
@@ -120,27 +120,27 @@ export function initModals() {
         initIpManagement();
         
         // Инициализация модальных окон
-        Logger.info('📦 Initializing device modal...');
+        Logger.info('Initializing device modal...');
         initDeviceModal();
 
-        Logger.info('📦 Initializing group modal...');
+        Logger.info('Initializing group modal...');
         initGroupModal();
 
-        Logger.info('📦 Initializing shape modal...');
+        Logger.info('Initializing shape modal...');
         initShapeModal();
 
-        Logger.info('📦 Initializing history modal...');
+        Logger.info('Initializing history modal...');
         initHistoryModal();
 
-        Logger.info('📦 Initializing link modal...');
+        Logger.info('Initializing link modal...');
         initLinkModal();
 
         // Инициализация UI компонентов
         initToast();
         
-        Logger.info('✅ Modal manager инициализирован');
+        Logger.info('Modal manager инициализирован');
     } catch (error) {
-        Logger.error('❌ Ошибка инициализации modal manager:', error);
+        Logger.error('Ошибка инициализации modal manager:', error);
     }
 }
 
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Инициализация всех модальных окон при загрузке страницы
-    Logger.info('📄 DOMContentLoaded - initializing modals');
+    Logger.info('DOMContentLoaded - initializing modals');
     initModals();
 });
 

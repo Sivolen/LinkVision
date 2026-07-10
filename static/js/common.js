@@ -49,7 +49,7 @@ async function fetchWithRetry(url, options = {}, retries = 3, delay = 500) {
         } catch (error) {
             const isLastAttempt = i === retries - 1;
             if (isLastAttempt) throw error;
-            Logger.warn(`⚠️ fetch failed (attempt ${i+1}/${retries}), retrying in ${delay}ms...`, error);
+            Logger.warn(`fetch failed (attempt ${i+1}/${retries}), retrying in ${delay}ms...`, error);
             await new Promise(resolve => setTimeout(resolve, delay));
             delay *= 2;
         }

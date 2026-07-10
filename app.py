@@ -87,7 +87,7 @@ def _ensure_user_locale_column():
         return
     db.session.execute(text('ALTER TABLE "user" ADD COLUMN locale VARCHAR(8)'))
     db.session.commit()
-    app_logger.info("✅ Добавлена колонка user.locale (i18n)")
+    app_logger.info("Добавлена колонка user.locale (i18n)")
 
 
 def create_app():
@@ -149,7 +149,7 @@ def create_app():
             db.session.commit()
 
             # В лог — без пароля
-            app_logger.warning("✅ Создан администратор admin. Пароль выведен в консоль при первом запуске.")
+            app_logger.warning("Создан администратор admin. Пароль выведен в консоль при первом запуске.")
             # В консоль — печатаем напрямую, не через ротируемый файловый логгер
             print(f"\n{'='*60}\n  Temporary admin password: {default_password}\n{'='*60}\n")
 
@@ -164,7 +164,7 @@ def create_app():
             default_types = ["Router", "Switch", "Server", "PC"]
             for name in default_types:
                 db.session.add(DeviceType(name=name, icon_filename=""))
-            app_logger.info("✅ Добавлены стандартные типы устройств")
+            app_logger.info("Добавлены стандартные типы устройств")
 
         db.session.commit()
 
@@ -189,15 +189,15 @@ def create_app():
             return
 
         join_room(room)
-        app_logger.info(f"✅ Клиент присоединился к комнате {room}")
+        app_logger.info(f"Клиент присоединился к комнате {room}")
 
     @socketio.on("connect")
     def handle_connect():
-        app_logger.info(f"✅ Клиент подключился: {request.sid}")  # type: ignore
+        app_logger.info(f"Клиент подключился: {request.sid}")  # type: ignore
 
     @socketio.on("disconnect")
     def handle_disconnect():
-        app_logger.info(f"❌ Клиент отключился: {request.sid}")  # type: ignore
+        app_logger.info(f"Клиент отключился: {request.sid}")  # type: ignore
 
     start_monitor()
     atexit.register(stop_monitor)

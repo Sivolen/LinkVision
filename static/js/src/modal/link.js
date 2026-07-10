@@ -359,7 +359,7 @@ export function applyLinkTypePreset(type) {
  * Инициализация модального окна связей
  */
 export function initLinkModal() {
-    Logger.info('✅ Link modal инициализирован');
+    Logger.info('Link modal инициализирован');
 }
 
 // Экспорт для глобального доступа
