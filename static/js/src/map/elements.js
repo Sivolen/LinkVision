@@ -1,10 +1,11 @@
 import { getCy } from './core.js';
 import { boundNodePosition, setElementsLoaded, getBgImageSize } from './background.js';
-import { addPulsingNode } from './pulse.js';
+import { addPulsingNode, removePulsingNode } from './pulse.js';
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
 import { refreshZoomEmphasis } from './zoomEmphasis.js';
 import { updateAllGroups } from './groupResize.js';
+import { updateSidebarCounter, setSidebarCounter } from './sidebar.js';
 import { http } from '../utils/http.js';
 
 const wrapText = window.wrapText || ((text) => text);
@@ -146,6 +147,19 @@ export function loadElements(mapId, force = false) {
             updateAllGroups();
             refreshZoomEmphasis();
 
+            // Пересчитываем счётчик проблемных устройств в сайдбаре "от истины"
+            // (по факту загруженных данных), а не полагаемся на накопленную
+            // историю +1/-1 из socket-событий — так после force-перезагрузки
+            // (например, после реконнекта сокета) счётчик гарантированно
+            // корректен, даже если какие-то события были пропущены, пока
+            // клиент был отключён.
+            const problemCount = cy.nodes().filter(n =>
+                !n.data('isGroup') && !n.data('isShape') &&
+                (n.data('monitoring_enabled') === true || n.data('monitoring_enabled') === 'true') &&
+                (n.data('status') === 'down' || n.data('status') === 'partial')
+            ).length;
+            setSidebarCounter(mapId, problemCount);
+
             setElementsLoaded(true);
             cy.resize();
             window.dispatchEvent(new CustomEvent('elements:loaded'));
@@ -272,10 +286,16 @@ export function removeDeviceFromGraph(deviceId) {
     if (!cy) return;
     const node = cy.getElementById(String(deviceId));
     if (node.length) {
-        // Останавливаем пульсацию, если она была
-        if (typeof window.removePulsingNode === 'function') {
-            window.removePulsingNode(cy, node);
+        const status = node.data('status');
+        const monitoringOn = node.data('monitoring_enabled') === true || node.data('monitoring_enabled') === 'true';
+        // Если удаляемое устройство прямо сейчас числилось алярмом в сайдбаре —
+        // декрементируем счётчик, иначе он останется завышенным до перезагрузки
+        // страницы (тот же класс бага, что и в updateDevice() выше).
+        if (monitoringOn && (status === 'down' || status === 'partial')) {
+            updateSidebarCounter(window.currentMapId, false);
         }
+        // Останавливаем пульсацию, если она была
+        removePulsingNode(cy, node);
         node.remove();
     }
 }
@@ -289,6 +309,9 @@ export function updateDevice(device) {
     const has = (k) => Object.prototype.hasOwnProperty.call(device, k);
     const monitoringOn = device.monitoring_enabled === true || device.monitoring_enabled === 'true';
     const ipLabel = (device.ips && device.ips.length) ? device.ips.join(', ') : '';
+
+    const wasMonitoringOn = node.data('monitoring_enabled') === true || node.data('monitoring_enabled') === 'true';
+    const previousStatus = node.data('status');
 
     node.data({
         name: device.name,
@@ -304,6 +327,22 @@ export function updateDevice(device) {
         ...(has('height') ? { height: device.height ?? null } : {}),
     });
 
+    // Мониторинг только что ВЫКЛЮЧИЛИ — status в data узла мог остаться
+    // старым ('down'/'partial') от последнего пинга ДО отключения, потому
+    // что раньше эта функция его не трогала вовсе. Из-за этого устройство,
+    // явно выключенное из мониторинга через модалку, продолжало считаться
+    // "алярмом" везде, где код проверяет просто node.data('status') —
+    // в усилении при отдалении (zoomEmphasis.js) и в счётчике сайдбара,
+    // хотя визуально узел уже показывался серым как отключённый.
+    if (wasMonitoringOn && !monitoringOn) {
+        const wasAlarm = previousStatus === 'down' || previousStatus === 'partial';
+        node.data('status', 'up');
+        removePulsingNode(cy, node);
+        if (wasAlarm) {
+            updateSidebarCounter(window.currentMapId, false);
+        }
+    }
+
     let groupParent = undefined;
     if (device.group_id) {
         const groupNode = cy.getElementById(`group_${device.group_id}`);
@@ -315,6 +354,7 @@ export function updateDevice(device) {
     // node[monitoring_enabled="false"] в styles.js), поэтому достаточно обновить
     // data + пересчитать стиль: селектор сам наложит/снимет серый.
     cy.style().update();
+    refreshZoomEmphasis();
 }
 
 export function addShapeToGraph(shape) {
