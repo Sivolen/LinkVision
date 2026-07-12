@@ -38,32 +38,15 @@ export function restoreViewport(viewport) {
 
 /**
  * Выполнить действие с восстановлением viewport
- * @param {Function} action
+ * Переиспользует каноническую событийную реализацию из map/viewport.js.
+ * Раньше здесь была собственная "грубая" версия с setTimeout-гаданием,
+ * которая дублировала window.withViewportRestore и конфликтовала с
+ * правильной реализацией — какая из них реально работала, зависело от
+ * порядка загрузки бандлов. Модалки всегда импортировали именно эту
+ * версию напрямую, игнорируя глобальную переменную.
  */
-export async function withViewportRestore(action) {
-    const savedViewport = saveViewport();
-    
-    if (typeof window.setSkipAutoFit === 'function') {
-        window.setSkipAutoFit(true);
-    }
-    
-    try {
-        if (typeof action === 'function') {
-            await action();
-        }
-    } finally {
-        if (savedViewport) {
-            setTimeout(() => restoreViewport(savedViewport), 200);
-            setTimeout(() => restoreViewport(savedViewport), 500);
-        }
-        
-        setTimeout(() => {
-            if (typeof window.setSkipAutoFit === 'function') {
-                window.setSkipAutoFit(false);
-            }
-        }, 600);
-    }
-}
+import { withViewportRestore as canonicalWithViewportRestore } from '../map/viewport.js';
+export const withViewportRestore = canonicalWithViewportRestore;
 
 /**
  * Перезагрузить элементы карты с восстановлением viewport

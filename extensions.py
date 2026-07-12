@@ -9,10 +9,14 @@ login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 socketio = SocketIO(
     cors_allowed_origins="*",
-    async_mode="threading",
+    # async_mode не указан — Flask-SocketIO определит eventlet сам,
+    # т.к. пакет установлен и процесс при запуске (gunicorn -k eventlet)
+    # монки-патчит глобальные I/O-функции под кооперативную модель.
+    # Явное "threading" ломало эту магию: heartbeat, фоновые задачи
+    # и отслеживание разрывов шли через чужой шедулер, что приводило
+    # к "иногда события не долетают" — ровно тому, что чинил fixalarm.
     ping_interval=30,
     ping_timeout=100,
-    # max_http_buffer_size=1e8
     max_http_buffer_size=100_000_000,
 )
 migrate = Migrate()

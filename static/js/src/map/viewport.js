@@ -58,11 +58,22 @@ export function withViewportRestore(callback, skipAutoFit = true) {
         };
 
         // Ждём событие загрузки элементов или таймаут
+        // Важно: слушатель и fallback-таймаут не должны срабатывать
+        // дважды — второй вызов restore() мог бы откатить ручное
+        // перемещение карты, сделанное пользователем между событиями.
         if (window.elementsLoaded === true) {
             applyAfterRender();
         } else {
-            window.addEventListener('elements:loaded', applyAfterRender, { once: true });
-            setTimeout(applyAfterRender, 1500);
+            let settled = false;
+            const runOnce = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(fallbackTimer);
+                window.removeEventListener('elements:loaded', runOnce);
+                applyAfterRender();
+            };
+            window.addEventListener('elements:loaded', runOnce);
+            const fallbackTimer = setTimeout(runOnce, 1500);
         }
     } else {
         if (skipAutoFit && typeof window.setSkipAutoFit === 'function') {
