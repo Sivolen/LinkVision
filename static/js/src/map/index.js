@@ -59,8 +59,30 @@ export function initMap(id) {
     }
 
     if (window.socket) {
-        if (window.socket.connected) window.socket.emit('join_room', `map_${mapId}`);
-        else window.socket.once('connect', () => window.socket.emit('join_room', `map_${mapId}`));
+        const joinMapRoom = () => window.socket.emit('join_room', `map_${mapId}`);
+
+        if (window.socket.connected) joinMapRoom();
+
+        // ВАЖНО: было socket.once('connect', ...) — сработало бы только на
+        // самое первое подключение. Socket.IO настроен с reconnection: true
+        // (static/js/base.js) и переподключается сам после любого сетевого
+        // сбоя (потеря wifi, сон ноутбука, рестарт бэкенда/прокси) — но при
+        // .once() повторный 'connect' после реконнекта никогда не обрабатывался,
+        // join_room не переотправлялся, и клиент молча переставал получать
+        // ЛЮБЫЕ real-time события по этой карте (статусы, позиции, связи) до
+        // ручной перезагрузки страницы. Именно это стояло за жалобами
+        // "иногда нужно обновить страницу, чтобы всё обновилось".
+        window.socket.on('connect', () => {
+            joinMapRoom();
+            // Событий, которые сервер разослал, пока мы были отключены, мы не
+            // получим (Socket.IO их не буферизует после разрыва соединения) —
+            // поэтому после (пере)подключения принудительно перечитываем
+            // состояние карты с сервера, чтобы гарантированно не остаться со
+            // старыми статусами/позициями после сетевого сбоя.
+            if (window.__mapLoadedOnce) {
+                loadElements(mapId, true);
+            }
+        });
     }
 
     const cy = initCy(mapId);
@@ -103,6 +125,7 @@ export function initMap(id) {
     window.saveState = saveState;
 
     loadElements(mapId);
+    window.__mapLoadedOnce = true;
     if (typeof window.saveState === 'function') {
         setTimeout(() => window.saveState('initial'), 500);
     }
@@ -162,7 +185,23 @@ export function initMap(id) {
         cy.batch(() => {
             statuses.forEach(item => {
                 const node = cy.getElementById(String(item.id));
-                if (node.length && node.data('status') !== item.status) {
+                if (!node.length) return;
+
+                // Устройство с выключенным мониторингом никогда не должно
+                // считаться алярмом, даже если бэкенд по какой-то причине
+                // включит его в пакет статусов (обычный цикл мониторинга
+                // такие устройства уже не пингует, но полагаться только на
+                // это со стороны фронтенда — хрупко). Та же логика уже есть
+                // в одиночном обработчике 'device_status' выше.
+                const monitoringRaw = node.data('monitoring_enabled');
+                const monitoringEnabled = (monitoringRaw === true || monitoringRaw === 'true');
+                if (!monitoringEnabled) {
+                    if (node.data('status') !== 'up') node.data('status', 'up');
+                    removePulsingNode(cy, node);
+                    return;
+                }
+
+                if (node.data('status') !== item.status) {
                     const oldStatus = node.data('status');
                     node.data('status', item.status);
                     // Остановить старую пульсацию, если была
