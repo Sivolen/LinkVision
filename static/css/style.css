@@ -17,6 +17,9 @@ LinkVision - Современный дизайн (финальная верси�
   --cy-grid: #cbd5e1;
   --sidebar-blur: blur(12px);
   --sidebar-width: 280px;
+  /* Единая высота всех контролов тулбара карты (кнопки, индикатор режима,
+     поиск) — чтобы группы кнопок были одинаковой высоты. */
+  --toolbar-control-h: 30px;
 }
 
 /* ============================================================================
@@ -1032,12 +1035,15 @@ body.map-locked .edit-tools {
   background: transparent;
   border: none;
   color: var(--text-primary);
-  padding: 6px 14px;
+  height: var(--toolbar-control-h);
+  box-sizing: border-box;
+  padding: 0 14px;
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   font-size: 0.85rem;
   font-weight: 500;
@@ -1057,7 +1063,9 @@ body.map-locked .edit-tools {
 .mode-badge {
   display: inline-flex;
   align-items: center;
-  padding: 6px 14px;
+  height: var(--toolbar-control-h);
+  box-sizing: border-box;
+  padding: 0 14px;
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -1158,6 +1166,14 @@ body.map-locked .edit-tools {
   align-items: stretch;
 }
 
+/* Единая высота контролов поиска — как у остальных кнопок тулбара */
+.search-filter-bar .input-group-text,
+.search-filter-bar .form-control,
+.search-filter-bar .btn-outline-secondary {
+  height: var(--toolbar-control-h);
+  box-sizing: border-box;
+}
+
 .search-filter-bar .input-group-text {
   background: var(--bg-secondary);
   border: 2px solid var(--border-color);
@@ -1172,13 +1188,14 @@ body.map-locked .edit-tools {
 
 .search-filter-bar .form-control {
   width: 220px;
-  padding: 6px 12px;
+  padding: 0 12px;
   border-radius: 0 !important;
   border-left: none;
   border-right: none;
   border: 2px solid var(--border-color);
   background: var(--bg-secondary);
   font-size: 0.85rem;
+  line-height: 1;
 }
 
 .search-filter-bar .form-control:focus {
@@ -1462,7 +1479,7 @@ modal-header,
   }
 
   .toolbar-btn {
-    padding: 8px 10px;
+    padding: 0 10px;
     gap: 0;
   }
 
