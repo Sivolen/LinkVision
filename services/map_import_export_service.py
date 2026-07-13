@@ -32,13 +32,7 @@ def export_map_data(map_id: int) -> dict:
     Returns:
         Dict с данными карты
     """
-    from sqlalchemy.orm import joinedload
-
-    map_obj = Map.query.options(
-        joinedload(Map.devices).joinedload(Device.ips),
-        joinedload(Map.devices).joinedload(Device.type),
-        joinedload(Map.links),
-    ).get_or_404(map_id)
+    map_obj = Map.query.get_or_404(map_id)
 
     devices = [
         {
