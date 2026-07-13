@@ -15,20 +15,15 @@ import { getCy } from './core.js';
 let updateTimeout = null;
 const UPDATE_DELAY = 150; // задержка для пакетного обновления (как в edgeLabels.js)
 
-const ANGLE_BUCKET_DEG = 12; // рёбра с разницей курса меньше этого считаются "почти параллельными"
-const CURVE_SPACING = 28;    // px между соседними изогнутыми рёбрами в пучке
-
-function angleBucket(dx, dy) {
-    const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
-    // Направление "туда" и "обратно" по факту одна и та же визуальная линия — нормализуем в [0, 180)
-    const norm = ((deg % 180) + 180) % 180;
-    return Math.round(norm / ANGLE_BUCKET_DEG);
-}
+const ANGLE_BUCKET_DEG = 10; // рёбра с разницей курса меньше этого считаем "почти параллельными"
+const CURVE_SPACING = 26;    // перпендикулярный шаг между соседними рёбрами пучка, px
+// Две контрольные точки на одном перпендикулярном смещении: ребро идёт не одним
+// "горбом" в середине, а смещённой почти параллельной дугой — так пучок читается
+// как набор параллельных линий, а не как пересекающиеся мешки.
+const CP_WEIGHTS = '0.2 0.8';
 
 function recompute(cy) {
     cy.batch(() => {
-        const assigned = new Set(); // id рёбер, которым уже назначили изгиб на этом проходе
-
         // Сбрасываем прошлый ручной изгиб — при каждом пересчёте решаем заново,
         // т.к. узлы могли переместиться и расклад "кто с кем параллелен" изменился.
         cy.edges().forEach(edge => {
@@ -38,42 +33,59 @@ function recompute(cy) {
             }
         });
 
+        const assigned = new Set(); // id рёбер, которым уже назначили изгиб на этом проходе
+
         cy.nodes().forEach(node => {
             if (node.data('isGroup')) return;
-            const edges = node.connectedEdges();
+            const nid = node.id();
+
+            // Настоящие мульти-рёбра одной пары Cytoscape разводит сам (bezier в
+            // styles.js) — их не трогаем.
+            const edges = node.connectedEdges().filter(e => e.parallelEdges().length <= 1);
             if (edges.length < 2) return;
 
-            // Группируем рёбра этого узла по "курсу" (направлению ко второму концу)
+            // Группируем по НАПРАВЛЕННОМУ курсу [0, 360). Это ключевое отличие от
+            // прежней версии: раньше курс нормализовался в [0,180), из-за чего
+            // "сквозной" узел цепи (ребро слева + ребро справа образуют прямую)
+            // считался пучком и его рёбра изгибались — цепь "волнилась". С
+            // направленным курсом такие рёбра попадают в РАЗНЫЕ корзины и цепь
+            // остаётся прямой; разводятся только рёбра, реально идущие в одну сторону.
             const groups = {};
             edges.forEach(edge => {
-                // Настоящие мульти-рёбра между одной и той же парой узлов Cytoscape
-                // уже красиво разводит сам (см. styles.js) — не вмешиваемся.
-                if (edge.parallelEdges().length > 1) return;
-
-                const other = edge.source().id() === node.id() ? edge.target() : edge.source();
+                const other = edge.source().id() === nid ? edge.target() : edge.source();
                 if (!other.length) return;
-
                 const dx = other.position().x - node.position().x;
                 const dy = other.position().y - node.position().y;
-                const bucket = angleBucket(dx, dy);
-                (groups[bucket] = groups[bucket] || []).push(edge);
+                const deg = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
+                const bucket = Math.round(deg / ANGLE_BUCKET_DEG);
+                (groups[bucket] = groups[bucket] || []).push({ edge, deg });
             });
 
             Object.values(groups).forEach(group => {
-                if (group.length < 2) return;
+                // Нужно ≥2 ещё не разведённых ребра, иначе разводить нечего.
+                if (group.filter(g => !assigned.has(g.edge.id())).length < 2) return;
 
-                group.forEach((edge, i) => {
-                    if (assigned.has(edge.id())) return; // уже развели с другого конца этого ребра
-                    assigned.add(edge.id());
+                // Порядок по точному курсу — веер раскрывается без самопересечений.
+                group.sort((a, b) => a.deg - b.deg);
+                const m = group.length;
 
-                    const offsetIndex = i - (group.length - 1) / 2;
-                    const distance = Math.round(offsetIndex * CURVE_SPACING);
+                group.forEach((g, i) => {
+                    if (assigned.has(g.edge.id())) return; // уже развели с другого конца
+                    assigned.add(g.edge.id());
 
-                    edge.data('_manualCurve', true);
-                    edge.style({
+                    const offset = (i - (m - 1) / 2) * CURVE_SPACING;
+                    // control-point-distances отсчитывается перпендикулярно вектору
+                    // source→target. Если наш узел — источник ребра, знак прямой;
+                    // если цель — инвертируем, иначе половина пучка изогнётся в
+                    // другую сторону (та самая "кривизна").
+                    const sign = g.edge.source().id() === nid ? 1 : -1;
+                    const distance = Math.round(offset * sign);
+
+                    g.edge.data('_manualCurve', true);
+                    g.edge.style({
                         'curve-style': 'unbundled-bezier',
-                        'control-point-distances': String(distance),
-                        'control-point-weights': '0.5',
+                        'control-point-distances': `${distance} ${distance}`,
+                        'control-point-weights': CP_WEIGHTS,
                     });
                 });
             });
