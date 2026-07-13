@@ -143,7 +143,7 @@ function initFormHandler() {
                 : { map_id: window.currentMapId, name, color, font_size: fontSize };
             
             beginSelfUpdate();
-            const result = await http.post(url, body);
+            const result = await http[method.toLowerCase()](url, body);
 
             showToast(isEdit ? t('modal.group.updated') : t('modal.group.created'), t('modal.group.nameLabel', { name }), 'success');
             resetGroupForm();
