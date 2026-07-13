@@ -28,24 +28,42 @@ function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
 }
 
+// Устройство с ВЫКЛЮЧЕННЫМ мониторингом (серое) не подсвечиваем, даже если у
+// него status="down": оно "выключено", а не "упало". monitoring_enabled может
+// прийти строкой 'false' или булевым false — учитываем оба (как в elements.js).
+function isMonitoringOff(n) {
+    const m = n.data('monitoring_enabled');
+    return m === 'false' || m === false;
+}
+
+function isEmphasisTarget(n) {
+    const s = n.data('status');
+    return (s === 'down' || s === 'partial') && !isMonitoringOff(n);
+}
+
+function clearEmphasis(n) {
+    n.removeStyle('border-width overlay-padding overlay-opacity');
+    n.removeData('_zoomEmphasis');
+}
+
 function recompute() {
     const cy = getCy();
     if (!cy) return;
 
     const zoom = cy.zoom();
-    const problemNodes = cy.nodes('[status="down"], [status="partial"]');
-    if (!problemNodes.length) return;
+    const problemNodes = cy.nodes().filter(isEmphasisTarget);
 
-    if (zoom >= ZOOM_THRESHOLD) {
-        // Достаточно крупно и так — снимаем компенсацию там, где она была применена
-        problemNodes.forEach(n => {
-            if (n.data('_zoomEmphasis')) {
-                n.removeStyle('border-width overlay-padding overlay-opacity');
-                n.removeData('_zoomEmphasis');
-            }
-        });
-        return;
-    }
+    // Снимаем усиление с узлов, которым оно больше НЕ полагается: zoom вырос выше
+    // порога, статус стал up, или мониторинг выключили (узел ушёл из problemNodes).
+    // Иначе inline-стиль "залипает" — в т.ч. остаётся подсветка на устройстве,
+    // которому только что выключили мониторинг.
+    cy.nodes().forEach(n => {
+        if (n.data('_zoomEmphasis') && (zoom >= ZOOM_THRESHOLD || !problemNodes.contains(n))) {
+            clearEmphasis(n);
+        }
+    });
+
+    if (zoom >= ZOOM_THRESHOLD || !problemNodes.length) return;
 
     const borderWidth = clamp(MIN_BORDER_PX / zoom, BASE_BORDER, MAX_BORDER_GRAPH_UNITS);
     const overlayPadding = clamp(MIN_OVERLAY_PADDING_PX / zoom, BASE_OVERLAY_PADDING, MAX_OVERLAY_PADDING_GRAPH_UNITS);
