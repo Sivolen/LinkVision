@@ -288,10 +288,20 @@ def update_device(device_id: int, **kwargs: Any) -> Device:
         if key in allowed_fields:
             setattr(device, key, value)
 
-    # Если мониторинг был выключен, а теперь включён – сбрасываем статус на 'up'
+    # Мониторинг был выключен, а теперь включён — сбрасываем статус на 'up'
     if "monitoring_enabled" in kwargs and kwargs["monitoring_enabled"] is True:
         device.status = "up"
         device.last_check = datetime.datetime.now()
+
+    # Мониторинг только что ВЫКЛЮЧИЛИ — тоже сбрасываем статус на 'up'.
+    # Раньше это не делалось, и в БД навсегда оставался последний статус
+    # ДО отключения (например 'down'): цикл мониторинга больше не трогает
+    # устройство с monitoring_enabled=False, поэтому строка в БД никогда
+    # сама не обновится. При следующей загрузке страницы (или у другого
+    # пользователя) устройство продолжало считаться алярмом везде, где
+    # проверяется просто status, хотя оно явно отключено из мониторинга.
+    if "monitoring_enabled" in kwargs and kwargs["monitoring_enabled"] is False:
+        device.status = "up"
 
     if "ips" in kwargs:
         new_ips = kwargs["ips"]
