@@ -2,6 +2,7 @@
 import { http } from '../utils/http.js';
 import { showToast } from '../utils/toast.js';
 import { t } from '../i18n/i18n.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 let cy = null;
 let currentMapId = null;
@@ -216,3 +217,6 @@ export function updateLockPermissions(canEdit) {
         updateLockButton();
     }
 }
+
+// Саморегистрация в общем реестре очистки (см. moduleRegistry.js)
+registerCleanup(cleanup);

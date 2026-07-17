@@ -1,5 +1,6 @@
 // groupResize.js
 import { getCy } from './core.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 let groupUpdateTimeout = null;
 const GROUP_UPDATE_DELAY = 100;
@@ -44,3 +45,6 @@ export function cleanup() {
 }
 
 window.updateAllGroups = updateAllGroups;
+
+// Саморегистрация в общем реестре очистки (см. moduleRegistry.js)
+registerCleanup(cleanup);

@@ -9,6 +9,7 @@
 // минимума в px, независимо от того, насколько отдалена карта. Здоровые (up)
 // узлы не трогаем — их не обязательно "видеть" издалека.
 import { getCy } from './core.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 const ZOOM_THRESHOLD = 0.5;   // выше этого зума компенсация не нужна — рамка и так видна
 
@@ -106,3 +107,7 @@ export function cleanup() {
         debounceTimer = null;
     }
 }
+
+// Саморегистрация в общем реестре очистки (см. moduleRegistry.js)
+registerCleanup(cleanup);
+

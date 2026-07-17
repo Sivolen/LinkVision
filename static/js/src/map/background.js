@@ -21,6 +21,7 @@ export function setPendingFit(value) { pendingFit = value; }
 
 export function getBgDimensions() { return { width: bgImageWidth, height: bgImageHeight }; }
 export function getBgImageSize() { return { width: bgImageWidth, height: bgImageHeight }; } // для элементов
+export function isElementsLoaded() { return elementsLoaded; }
 
 export function loadBackground(bgUrl) {
     if (!bgUrl) {
