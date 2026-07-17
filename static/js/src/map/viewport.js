@@ -1,6 +1,6 @@
 // viewport.js – сохранение/восстановление панорамирования и зума
 import { getCy } from './core.js';
-import { updateBackgroundTransform, enforcePanBounds } from './background.js';
+import { updateBackgroundTransform, enforcePanBounds, isElementsLoaded } from './background.js';
 import { http } from '../utils/http.js';
 
 let viewportTimeout = null;
@@ -61,7 +61,7 @@ export function withViewportRestore(callback, skipAutoFit = true) {
         // Важно: слушатель и fallback-таймаут не должны срабатывать
         // дважды — второй вызов restore() мог бы откатить ручное
         // перемещение карты, сделанное пользователем между событиями.
-        if (window.elementsLoaded === true) {
+        if (isElementsLoaded()) {
             applyAfterRender();
         } else {
             let settled = false;

@@ -11,6 +11,7 @@
 // (по общему узлу + близкому направлению) и веерно разводит их вручную
 // через unbundled-bezier.
 import { getCy } from './core.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 let updateTimeout = null;
 const UPDATE_DELAY = 150; // задержка для пакетного обновления (как в edgeLabels.js)
@@ -117,3 +118,7 @@ export function cleanup() {
         updateTimeout = null;
     }
 }
+
+// Саморегистрация в общем реестре очистки (см. moduleRegistry.js)
+registerCleanup(cleanup);
+

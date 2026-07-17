@@ -1,5 +1,6 @@
 // edgeLabels.js – обновление подписей рёбер в зависимости от позиций узлов
 import { getCy } from './core.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 let updateTimeout = null;
 const UPDATE_DELAY = 100; // задержка для пакетного обновления
@@ -59,3 +60,7 @@ export function cleanup() {
         updateTimeout = null;
     }
 }
+
+// Саморегистрация в общем реестре очистки (см. moduleRegistry.js)
+registerCleanup(cleanup);
+
