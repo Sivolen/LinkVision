@@ -5,7 +5,7 @@ from extensions import db
 from urllib.parse import urlsplit
 
 from forms import LoginForm, RegisterForm, ChangePasswordForm
-from services import user_service, rate_limit, log_auth_action, validate_password_full
+from services import user_service, rate_limit, log_auth_action, validate_password_full, change_user_password
 from services.security_service import rate_limiter
 from utils.logger import auth_logger
 
@@ -68,8 +68,6 @@ def logout():
 @login_required
 def change_password():
     """Смена пароля при первом входе или по требованию."""
-    from services import change_user_password
-
     form = ChangePasswordForm()
     if form.validate_on_submit():
         if not current_user.check_password(form.current_password.data):

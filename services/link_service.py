@@ -40,7 +40,14 @@ def create_link(
     db.session.commit()
     api_logger.info(f"Link created: ID={link.id}")
 
-    # Инвалидируем кэш элементов карты
+    # Инвалидируем кэш элементов карты.
+    # Импорт ЗДЕСЬ, а не наверху файла — это настоящий, необходимый обход
+    # циклического импорта: map_service.py сам импортирует этот модуль
+    # (через "from services import (..., link_service, group_service,
+    # shape_service, ...)" — см. map_service.py) для построения общего
+    # фасада services.*. Если поднять этот импорт на верхний уровень файла,
+    # получится ImportError: cannot import name ... from partially
+    # initialized module 'services.map_service' — проверено, воспроизводится.
     from .map_service import invalidate_map_elements_cache
 
     invalidate_map_elements_cache(map_id)
@@ -70,7 +77,14 @@ def update_link(link_id: int, **kwargs) -> Link:
     db.session.commit()
     api_logger.info(f"Link updated: ID={link_id}")
 
-    # Инвалидируем кэш элементов карты
+    # Инвалидируем кэш элементов карты.
+    # Импорт ЗДЕСЬ, а не наверху файла — это настоящий, необходимый обход
+    # циклического импорта: map_service.py сам импортирует этот модуль
+    # (через "from services import (..., link_service, group_service,
+    # shape_service, ...)" — см. map_service.py) для построения общего
+    # фасада services.*. Если поднять этот импорт на верхний уровень файла,
+    # получится ImportError: cannot import name ... from partially
+    # initialized module 'services.map_service' — проверено, воспроизводится.
     from .map_service import invalidate_map_elements_cache
 
     invalidate_map_elements_cache(link.map_id)
@@ -87,7 +101,14 @@ def delete_link(link_id: int) -> int:
     db.session.commit()
     api_logger.info(f"Link deleted: ID={link_id}")
 
-    # Инвалидируем кэш элементов карты
+    # Инвалидируем кэш элементов карты.
+    # Импорт ЗДЕСЬ, а не наверху файла — это настоящий, необходимый обход
+    # циклического импорта: map_service.py сам импортирует этот модуль
+    # (через "from services import (..., link_service, group_service,
+    # shape_service, ...)" — см. map_service.py) для построения общего
+    # фасада services.*. Если поднять этот импорт на верхний уровень файла,
+    # получится ImportError: cannot import name ... from partially
+    # initialized module 'services.map_service' — проверено, воспроизводится.
     from .map_service import invalidate_map_elements_cache
 
     invalidate_map_elements_cache(map_id)

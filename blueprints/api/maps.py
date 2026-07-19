@@ -14,6 +14,8 @@ from services import (
     require_not_operator,
     validate_name,
     log_map_action,
+    get_cached_types,
+    toggle_map_lock as toggle_map_lock_service,
 )
 from services.permissions import can_edit_map
 
@@ -71,8 +73,6 @@ def get_groups(map_id):
 @login_required
 def get_types():
     """Получить типы устройств."""
-    from services import get_cached_types
-
     return jsonify(get_cached_types())
 
 
@@ -209,9 +209,6 @@ def toggle_map_lock(map_id):
 
     Требует права редактирования карты.
     """
-    from services.permissions import can_edit_map
-    from services import toggle_map_lock as toggle_map_lock_service
-
     map_obj = Map.query.get_or_404(map_id)
     data = request.json or {}
 
@@ -250,9 +247,6 @@ def toggle_map_lock(map_id):
 @require_map_access
 def get_map_lock_status(map_id):
     """Получить статус блокировки карты."""
-    from models import Map
-    from services.permissions import can_edit_map
-
     map_obj = Map.query.get_or_404(map_id)
     return jsonify(
         {"id": map_id, "is_locked": map_obj.is_locked, "can_edit": can_edit_map(map_id)}

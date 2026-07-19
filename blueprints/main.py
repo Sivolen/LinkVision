@@ -13,7 +13,8 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from extensions import db
 from models import User, Map, Device
-from services import map_service
+from services import map_service, update_last_map_id
+from services.permissions import can_view_map, can_edit_map, can_delete_map
 from utils.logger import main_logger
 
 main_bp = Blueprint("main", __name__)
@@ -58,8 +59,6 @@ def health_check():
 @main_bp.route("/")
 @login_required
 def dashboard():
-    from services.permissions import can_view_map
-
     available_maps = map_service.get_available_maps(current_user)
 
     # Если есть last_map_id и карта существует и доступна, идём на неё
@@ -108,9 +107,6 @@ def create_map():
 @main_bp.route("/map/<int:map_id>")
 @login_required
 def map_view(map_id):
-    from services.permissions import can_view_map, can_edit_map
-    from services import update_last_map_id
-
     map_obj = map_service.get_map_by_id(map_id)
     if not map_obj:
         abort(404)
@@ -149,8 +145,6 @@ def get_sidebar_maps():
 @main_bp.route("/api/map/<int:map_id>", methods=["DELETE"])
 @login_required
 def delete_map(map_id):
-    from services.permissions import can_delete_map
-
     if not can_delete_map(map_id):
         return jsonify({"error": "Доступ запрещён"}), 403
 

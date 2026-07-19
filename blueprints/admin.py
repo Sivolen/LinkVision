@@ -16,9 +16,8 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from extensions import db
 from models import Map
-from services import user_service, device_type_service, settings_service
+from services import user_service, device_type_service, settings_service, map_service
 from services.security_service import rate_limiter
-from services.device_type_service import invalidate_types_cache
 from services.device_type_service import invalidate_types_cache
 from utils.logger import admin_logger
 
@@ -254,9 +253,6 @@ def maps_list():
 @admin_bp.route("/maps/delete/<int:id>", methods=["POST"])
 def delete_map(id):
     try:
-        # Используем сервис для удаления карты с очисткой
-        from services import map_service
-
         map_service.delete_map_and_cleanup(id, current_app)
         admin_logger.info(f"Map deleted: ID={id}")
         flash(_("Карта удалена"))
