@@ -85,8 +85,6 @@ def create_new_map(
 
 def get_shape_by_id(shape_id: int):
     """Получить фигуру по ID."""
-    from models import MapShape
-
     return db.session.get(MapShape, shape_id)
 
 
@@ -122,8 +120,6 @@ def validate_link(link_id: int):
     Raises:
         ValueError: Если связь не найдена
     """
-    from models import Link
-
     link = db.session.get(Link, link_id)
     if not link:
         raise ValueError(f"Link with id {link_id} not found")

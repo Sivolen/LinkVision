@@ -39,7 +39,14 @@ def create_shape(
     db.session.add(shape)
     db.session.commit()
 
-    # Инвалидируем кэш элементов карты
+    # Инвалидируем кэш элементов карты.
+    # Импорт ЗДЕСЬ, а не наверху файла — это настоящий, необходимый обход
+    # циклического импорта: map_service.py сам импортирует этот модуль
+    # (через "from services import (..., link_service, group_service,
+    # shape_service, ...)" — см. map_service.py) для построения общего
+    # фасада services.*. Если поднять этот импорт на верхний уровень файла,
+    # получится ImportError: cannot import name ... from partially
+    # initialized module 'services.map_service' — проверено, воспроизводится.
     from .map_service import invalidate_map_elements_cache
 
     invalidate_map_elements_cache(map_id)
@@ -68,7 +75,14 @@ def update_shape(shape_id: int, **kwargs) -> MapShape:
 
     api_logger.info(f"Shape saved: x={shape.x}, y={shape.y}")
 
-    # Инвалидируем кэш элементов карты
+    # Инвалидируем кэш элементов карты.
+    # Импорт ЗДЕСЬ, а не наверху файла — это настоящий, необходимый обход
+    # циклического импорта: map_service.py сам импортирует этот модуль
+    # (через "from services import (..., link_service, group_service,
+    # shape_service, ...)" — см. map_service.py) для построения общего
+    # фасада services.*. Если поднять этот импорт на верхний уровень файла,
+    # получится ImportError: cannot import name ... from partially
+    # initialized module 'services.map_service' — проверено, воспроизводится.
     from .map_service import invalidate_map_elements_cache
 
     invalidate_map_elements_cache(shape.map_id)
@@ -84,7 +98,14 @@ def delete_shape(shape_id: int) -> None:
     db.session.delete(shape)
     db.session.commit()
 
-    # Инвалидируем кэш элементов карты
+    # Инвалидируем кэш элементов карты.
+    # Импорт ЗДЕСЬ, а не наверху файла — это настоящий, необходимый обход
+    # циклического импорта: map_service.py сам импортирует этот модуль
+    # (через "from services import (..., link_service, group_service,
+    # shape_service, ...)" — см. map_service.py) для построения общего
+    # фасада services.*. Если поднять этот импорт на верхний уровень файла,
+    # получится ImportError: cannot import name ... from partially
+    # initialized module 'services.map_service' — проверено, воспроизводится.
     from .map_service import invalidate_map_elements_cache
 
     invalidate_map_elements_cache(map_id)
