@@ -3,7 +3,7 @@ API роуты для фигур (Shapes).
 """
 
 from flask import Blueprint, request, jsonify
-from flask_login import login_required, current_user
+from flask_login import login_required
 
 from services import map_service
 from services import shape_service

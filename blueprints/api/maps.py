@@ -12,7 +12,6 @@ from services import (
     require_map_access,
     require_map_edit,
     require_not_operator,
-    validate_name,
     log_map_action,
     get_cached_types,
     toggle_map_lock as toggle_map_lock_service,

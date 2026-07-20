@@ -7,7 +7,7 @@
 - Работа с пользовательскими и ролевыми разрешениями
 """
 
-from models import MapPermission, User
+from models import MapPermission
 from extensions import db
 from utils.logger import api_logger
 

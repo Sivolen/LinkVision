@@ -5,10 +5,8 @@
 """
 
 from typing import List, Optional
-from sqlalchemy.orm import joinedload
-from sqlalchemy import or_
 from extensions import db
-from models import Map, User, MapPermission
+from models import Map, MapPermission
 
 
 class MapRepository:

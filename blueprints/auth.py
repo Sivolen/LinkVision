@@ -1,11 +1,16 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_babel import gettext as _
 from flask_login import login_user, logout_user, login_required, current_user
-from extensions import db
 from urllib.parse import urlsplit
 
 from forms import LoginForm, RegisterForm, ChangePasswordForm
-from services import user_service, rate_limit, log_auth_action, validate_password_full, change_user_password
+from services import (
+    user_service,
+    rate_limit,
+    log_auth_action,
+    validate_password_full,
+    change_user_password,
+)
 from services.security_service import rate_limiter
 from utils.logger import auth_logger
 

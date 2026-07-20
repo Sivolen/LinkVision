@@ -14,7 +14,6 @@ from flask import (
 )
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
-from extensions import db
 from models import Map
 from services import user_service, device_type_service, settings_service, map_service
 from services.security_service import rate_limiter

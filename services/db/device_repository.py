@@ -8,7 +8,7 @@ from typing import List, Optional, Dict, Any
 import datetime
 from sqlalchemy.orm import joinedload
 from extensions import db
-from models import Device, DeviceIP, DeviceHistory
+from models import Device
 
 
 class DeviceRepository:

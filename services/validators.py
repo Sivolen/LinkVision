@@ -10,7 +10,6 @@
 
 import ipaddress
 from typing import List, Optional, Tuple, Any
-from utils.logger import api_logger
 
 
 def validate_ip_address(ip: Any) -> Tuple[bool, Optional[str]]:

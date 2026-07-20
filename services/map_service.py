@@ -22,13 +22,11 @@ from models import (
     User,
     UserMapSettings,
     db,
-    DeviceIP,
     Link,
     MapShape,
 )
 from utils.logger import api_logger, main_logger
 from services.db.map_repository import map_repo
-from services.validators import validate_name
 from services import (
     link_service,
     group_service,
