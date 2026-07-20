@@ -17,7 +17,6 @@ from services.security_service import (
     validate_password_full,
 )
 
-
 # ============================================================================
 # RateLimiter — ограничение частоты запросов
 # ============================================================================
@@ -29,13 +28,19 @@ class TestRateLimiter:
     def test_initial_state_not_limited(self):
         """Новый rate limiter не должен блокировать запросы."""
         limiter = RateLimiter()
-        assert limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60) is False
+        assert (
+            limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60)
+            is False
+        )
 
     def test_requests_within_limit(self):
         """Запросы в пределах лимита должны проходить."""
         limiter = RateLimiter()
         for i in range(5):
-            assert limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60) is False
+            assert (
+                limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60)
+                is False
+            )
 
     def test_request_exceeding_limit(self):
         """Превышение лимита должно возвращать True."""
@@ -43,7 +48,10 @@ class TestRateLimiter:
         for i in range(5):
             limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60)
 
-        assert limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60) is True
+        assert (
+            limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60)
+            is True
+        )
 
     def test_different_keys_independent(self):
         """Разные ключи должны иметь независимые лимиты."""
@@ -51,8 +59,12 @@ class TestRateLimiter:
         for i in range(5):
             limiter.is_rate_limited("key1", max_requests=5, window_seconds=60)
 
-        assert limiter.is_rate_limited("key1", max_requests=5, window_seconds=60) is True
-        assert limiter.is_rate_limited("key2", max_requests=5, window_seconds=60) is False
+        assert (
+            limiter.is_rate_limited("key1", max_requests=5, window_seconds=60) is True
+        )
+        assert (
+            limiter.is_rate_limited("key2", max_requests=5, window_seconds=60) is False
+        )
 
     def test_reset_clears_limit(self):
         """Сброс лимита должен освободить ключ."""
@@ -60,10 +72,16 @@ class TestRateLimiter:
         for i in range(5):
             limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60)
 
-        assert limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60) is True
+        assert (
+            limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60)
+            is True
+        )
 
         limiter.reset("test_key")
-        assert limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60) is False
+        assert (
+            limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60)
+            is False
+        )
 
     def test_reset_all_clears_all(self):
         """Сброс всех лимитов должен очистить все ключи."""
@@ -74,19 +92,27 @@ class TestRateLimiter:
 
         limiter.reset_all()
 
-        assert limiter.is_rate_limited("key1", max_requests=5, window_seconds=60) is False
-        assert limiter.is_rate_limited("key2", max_requests=5, window_seconds=60) is False
+        assert (
+            limiter.is_rate_limited("key1", max_requests=5, window_seconds=60) is False
+        )
+        assert (
+            limiter.is_rate_limited("key2", max_requests=5, window_seconds=60) is False
+        )
 
     def test_get_remaining_requests(self):
         """Получение оставшихся запросов."""
         limiter = RateLimiter()
-        remaining = limiter.get_remaining_requests("test_key", max_requests=5, window_seconds=60)
+        remaining = limiter.get_remaining_requests(
+            "test_key", max_requests=5, window_seconds=60
+        )
         assert remaining == 5
 
         for i in range(3):
             limiter.is_rate_limited("test_key", max_requests=5, window_seconds=60)
 
-        remaining = limiter.get_remaining_requests("test_key", max_requests=5, window_seconds=60)
+        remaining = limiter.get_remaining_requests(
+            "test_key", max_requests=5, window_seconds=60
+        )
         assert remaining == 2
 
     def test_account_lock_after_max_attempts(self):
@@ -268,4 +294,7 @@ class TestSecurityIntegration:
         is_valid, error = validate_password_full("Str0ng!Pass")
         assert is_valid is True
 
-        assert limiter.is_rate_limited("test_user", max_requests=5, window_seconds=60) is False
+        assert (
+            limiter.is_rate_limited("test_user", max_requests=5, window_seconds=60)
+            is False
+        )

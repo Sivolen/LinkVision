@@ -194,7 +194,7 @@ class TestUpdateMapPermissionRole:
                 stored = db.session.get(MapPermission, perm_id)
                 assert stored.role == "editor"
             finally:
-                _cleanup_permission(perm_id if 'perm_id' in dir() else 0)
+                _cleanup_permission(perm_id if "perm_id" in dir() else 0)
                 db.session.delete(new_user)
                 db.session.delete(new_map)
                 db.session.commit()

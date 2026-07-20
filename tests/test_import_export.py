@@ -18,7 +18,6 @@ from services.map_import_export_service import (
     import_map,
 )
 
-
 # ============================================================================
 # Фикстуры
 # ============================================================================
@@ -29,7 +28,9 @@ def sample_map_with_devices(app):
     """Создать карту с устройствами, связями и группами для экспорта."""
     with app.app_context():
         # Создать тип устройства
-        dtype = DeviceType(name="Router", width=32, height=32, icon_filename="router.png")
+        dtype = DeviceType(
+            name="Router", width=32, height=32, icon_filename="router.png"
+        )
         db.session.add(dtype)
         db.session.flush()
 
@@ -253,15 +254,13 @@ class TestImportMap:
         with app.app_context():
             # Нет обязательного поля name
             data = {
-                "devices": [
-                    {"id": "dev1", "type_name": "Router"}  # нет "name"
-                ],
+                "devices": [{"id": "dev1", "type_name": "Router"}],  # нет "name"
                 "links": [],
                 "groups": [],
             }
 
             mock_user = type("MockUser", (), {"id": 1})()
-            
+
             # Должна быть ошибка KeyError при отсутствии name
             with pytest.raises((KeyError, ValueError)):
                 import_map(data, mock_user)
@@ -306,7 +305,11 @@ class TestImportMap:
                         "id": "dev1",
                         "name": "Test Device",
                         "type_name": "Router",
-                        "ips": ["192.168.1.1", "192.168.1.1", "192.168.1.1"],  # дубликаты
+                        "ips": [
+                            "192.168.1.1",
+                            "192.168.1.1",
+                            "192.168.1.1",
+                        ],  # дубликаты
                         "pos_x": 100,
                         "pos_y": 100,
                     }
