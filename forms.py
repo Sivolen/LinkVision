@@ -4,12 +4,10 @@ from wtforms import (
     StringField,
     PasswordField,
     SelectField,
-    BooleanField,
     IntegerField,
     FileField,
 )
-from wtforms.validators import DataRequired, Length, Optional, EqualTo, ValidationError
-from wtforms.validators import Regexp
+from wtforms.validators import DataRequired, Length, Optional, EqualTo, Regexp
 
 
 class LoginForm(FlaskForm):

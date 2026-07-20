@@ -8,12 +8,12 @@
 - Вход/выход пользователей
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from datetime import datetime
 from flask import request
 from flask_login import current_user
 from extensions import db
-from models import AuditLog, User
+from models import AuditLog
 from utils.logger import main_logger
 
 

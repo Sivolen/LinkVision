@@ -3,7 +3,7 @@ API роуты для устройств (Devices).
 """
 
 from flask import Blueprint, request, jsonify, url_for
-from flask_login import login_required, current_user
+from flask_login import login_required
 
 from services import (
     device_service,

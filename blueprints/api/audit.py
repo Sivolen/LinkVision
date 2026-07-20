@@ -4,7 +4,7 @@ API роуты для аудита (Audit).
 
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-from flask_login import login_required, current_user
+from flask_login import login_required
 
 from services import require_admin, get_audit_logs, get_user_activity_summary
 from utils.logger import api_logger
