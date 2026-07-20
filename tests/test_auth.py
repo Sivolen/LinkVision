@@ -16,7 +16,6 @@ from models import User
 from extensions import db
 from services.user_service import authenticate_user, change_user_password
 
-
 # ============================================================================
 # Тесты аутентификации (login)
 # ============================================================================
