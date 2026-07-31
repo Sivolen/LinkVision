@@ -364,24 +364,13 @@ export function initInteractions(cy) {
         if (window.copyTimer) clearTimeout(window.copyTimer);
         const node = evt.target;
         if (node.data('isGroup')) {
-            // Сворачивание/разворачивание группы по двойному клику
-            console.log('dbltap on group:', node.id(), 'collapsed:', node.data('collapsed'));
-            // Проверяем, есть ли у группы потомки
-            const children = node.children();
-            if (children.length === 0) {
-                console.log('Group has no children, ignoring');
-                return;
-            }
-            if (typeof window.collapseGroup === 'function' && typeof window.expandGroup === 'function') {
-                if (node.data('collapsed')) {
-                    console.log('Expanding group:', node.id());
-                    window.expandGroup(node);
-                } else {
-                    console.log('Collapsing group:', node.id());
-                    window.collapseGroup(node);
-                }
-            } else {
-                console.warn('collapseGroup/expandGroup not defined');
+            // Сворачивание/разворачивание группы по двойному клику.
+            // У свёрнутой группы children() пуст (потомки скрыты), поэтому
+            // проверку «есть ли что сворачивать» делаем только для развёрнутой,
+            // иначе пузырёк нельзя было бы развернуть обратно.
+            if (!node.data('collapsed') && node.children().length === 0) return;
+            if (typeof window.toggleGroupCollapse === 'function') {
+                window.toggleGroupCollapse(node);
             }
             return;
         }
@@ -576,13 +565,21 @@ export function initInteractions(cy) {
             const isCollapsed = node.data('collapsed');
             const items = [
                 { icon: 'fa-edit', label: t('contextMenu.editGroup'), action: () => {
-                    const id = node.data('group_id');
-                    const name = node.data('name');
-                    const color = node.data('color');
-                    const fontSize = node.data('fontSize');
-                    if (typeof window.editGroup === 'function') {
-                        window.editGroup(id, name, color, fontSize);
-                        if (typeof window.openGroupManager === 'function') window.openGroupManager();
+                    // Раньше здесь звался editGroup(), а затем openGroupManager(),
+                    // который в конце делает resetGroupForm() и затирал только что
+                    // заполненную форму — модалка открывалась пустой, и режим
+                    // редактирования приходилось включать кнопкой вручную.
+                    // Теперь контекст редактирования передаётся В модалку и
+                    // применяется уже после её открытия и загрузки списка групп.
+                    if (typeof window.openGroupManager === 'function') {
+                        window.openGroupManager({
+                            editGroup: {
+                                id: node.data('group_id'),
+                                name: node.data('name'),
+                                color: node.data('color'),
+                                fontSize: node.data('fontSize'),
+                            },
+                        });
                     }
                 }},
                 { icon: isCollapsed ? 'fa-expand' : 'fa-compress', label: isCollapsed ? t('contextMenu.expandGroup') : t('contextMenu.collapseGroup'), action: () => {
