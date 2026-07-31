@@ -447,6 +447,12 @@
                             <label class="form-label">{{ _('Размер шрифта (px)') }}</label>
                             <input type="number" id="group_font_size" class="form-control" value="11" min="8" max="48" step="1">
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">{{ _('Родительская группа') }}</label>
+                            <select id="group_parent_id" class="form-select">
+                                <option value="">{{ _('-- Без родителя --') }}</option>
+                            </select>
+                        </div>
                     </div>
                     <!-- Кнопки формы -->
                     <div class="form-actions">

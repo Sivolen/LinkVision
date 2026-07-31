@@ -150,8 +150,9 @@
       "deleted": "Group deleted",
       "deletedMsg": "Group \"{name}\" deleted",
       "deleteFail": "Failed to delete the group",
-      "adminOnly": "Only an administrator can manage groups",
-      "operatorNo": "Operator cannot manage groups"
+    "adminOnly": "Only an administrator can manage groups",
+    "operatorNo": "Operator cannot manage groups",
+    "noParent": "-- No parent --"
     },
     "shape": {
       "required": "Type, width and height are required",
@@ -226,7 +227,10 @@
     "deleteLink": "Delete link",
     "menuAria": "Context menu",
     "copied": "Copied",
-    "copiedFallback": "IP {ip} (fallback)"
+    "copiedFallback": "IP {ip} (fallback)",
+    "collapseGroup": "Collapse",
+    "expandGroup": "Expand",
+    "createSubgroup": "Create subgroup"
   },
   "loading": {
     "mapLoading": "Loading map..."

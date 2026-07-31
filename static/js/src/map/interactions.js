@@ -363,7 +363,28 @@ export function initInteractions(cy) {
     cy.on('dbltap', 'node', function(evt) {
         if (window.copyTimer) clearTimeout(window.copyTimer);
         const node = evt.target;
-        if (node.data('isGroup')) return;
+        if (node.data('isGroup')) {
+            // Сворачивание/разворачивание группы по двойному клику
+            console.log('dbltap on group:', node.id(), 'collapsed:', node.data('collapsed'));
+            // Проверяем, есть ли у группы потомки
+            const children = node.children();
+            if (children.length === 0) {
+                console.log('Group has no children, ignoring');
+                return;
+            }
+            if (typeof window.collapseGroup === 'function' && typeof window.expandGroup === 'function') {
+                if (node.data('collapsed')) {
+                    console.log('Expanding group:', node.id());
+                    window.expandGroup(node);
+                } else {
+                    console.log('Collapsing group:', node.id());
+                    window.collapseGroup(node);
+                }
+            } else {
+                console.warn('collapseGroup/expandGroup not defined');
+            }
+            return;
+        }
         if (node.data('isShape')) {
             if (typeof window.openShapeModal === 'function') window.openShapeModal(node);
         } else {
@@ -552,7 +573,8 @@ export function initInteractions(cy) {
         const { x, y } = getAbsoluteMousePosition(evt);
 
         if (node.data('isGroup')) {
-            showContextMenu([
+            const isCollapsed = node.data('collapsed');
+            const items = [
                 { icon: 'fa-edit', label: t('contextMenu.editGroup'), action: () => {
                     const id = node.data('group_id');
                     const name = node.data('name');
@@ -563,12 +585,26 @@ export function initInteractions(cy) {
                         if (typeof window.openGroupManager === 'function') window.openGroupManager();
                     }
                 }},
+                { icon: isCollapsed ? 'fa-expand' : 'fa-compress', label: isCollapsed ? t('contextMenu.expandGroup') : t('contextMenu.collapseGroup'), action: () => {
+                    if (isCollapsed) {
+                        if (typeof window.expandGroup === 'function') window.expandGroup(node);
+                    } else {
+                        if (typeof window.collapseGroup === 'function') window.collapseGroup(node);
+                    }
+                }},
+                { icon: 'fa-folder-plus', label: t('contextMenu.createSubgroup'), action: () => {
+                    const id = node.data('group_id');
+                    if (typeof window.openGroupManager === 'function') {
+                        window.openGroupManager({ parentGroupId: id });
+                    }
+                }},
                 { icon: 'fa-trash', label: t('contextMenu.deleteGroup'), action: () => {
                     if (typeof window.deleteGroup === 'function') {
                         window.deleteGroup(node.data('group_id'), node.data('name'));
                     }
                 }}
-            ], x, y);
+            ];
+            showContextMenu(items, x, y);
             return;
         }
 

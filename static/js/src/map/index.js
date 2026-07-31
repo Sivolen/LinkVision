@@ -14,6 +14,7 @@ import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
 import { initMinimap } from './minimap.js';
 import { initUndoRedo } from './undoRedo.js';
 import { beginSelfUpdate, endSelfUpdate, isSelfUpdating, getPendingCount } from '../utils/state.js';
+import { restoreCollapseState, refreshAllCollapsedStatuses, collapseGroup, expandGroup } from './groupCollapse.js';
 
 // Импорт функций для инкрементальных обновлений
 import {
@@ -129,6 +130,11 @@ export function initMap(id) {
     if (typeof window.saveState === 'function') {
         setTimeout(() => window.saveState('initial'), 500);
     }
+    
+    // Восстанавливаем состояние сворачивания групп из localStorage
+    if (typeof restoreCollapseState === 'function') {
+        restoreCollapseState();
+    }
 
     // Оптимизированный batch для обновлений статусов
     let statusBatch = [];
@@ -176,6 +182,7 @@ export function initMap(id) {
             });
             cy.style().update();
             refreshZoomEmphasis();
+            if (typeof refreshAllCollapsedStatuses === 'function') refreshAllCollapsedStatuses();
             statusBatch = [];
             statusBatchTimeout = null;
         }, STATUS_BATCH_DELAY);
@@ -232,6 +239,7 @@ export function initMap(id) {
         // Принудительно обновляем стили (для применения селекторов статусов)
         cy.style().update();
         refreshZoomEmphasis();
+        if (typeof refreshAllCollapsedStatuses === 'function') refreshAllCollapsedStatuses();
     });
 
     // ─── Точечные события ─────────────────────────────────────────────────────────
@@ -383,3 +391,6 @@ window.updateEdgeCurves = updateEdgeCurves;
 window.addPulsingNode = addPulsingNode;
 window.removePulsingNode = removePulsingNode;
 window.withViewportRestore = withViewportRestore;
+window.collapseGroup = collapseGroup;
+window.expandGroup = expandGroup;
+window.restoreCollapseState = restoreCollapseState;

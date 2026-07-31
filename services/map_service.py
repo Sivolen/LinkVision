@@ -365,6 +365,30 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
     )
     group_ids_with_devices = {gid for gid, _ in group_device_counts}
 
+    # Рекурсивная проверка видимости групп (с устройствами у потомков)
+    def group_visible_recursive(g_id, memo=None):
+        if memo is None:
+            memo = {}
+        if g_id in memo:
+            return memo[g_id]
+        
+        if g_id in group_ids_with_devices:
+            memo[g_id] = True
+            return True
+            
+        children = Group.query.filter_by(parent_group_id=g_id).all()
+        has_visible_child = any(group_visible_recursive(c.id, memo) for c in children)
+        memo[g_id] = has_visible_child
+        return has_visible_child
+
+    visible_group_memo = {}
+    visible_groups = {gid for gid in group_ids_with_devices}
+    for g in groups:
+        if g.id not in visible_group_memo:
+            group_visible_recursive(g.id, visible_group_memo)
+        if visible_group_memo.get(g.id, False):
+            visible_groups.add(g.id)
+
     # Формирование узлов
     nodes = []
     for dev in devices:
@@ -456,11 +480,11 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
         for sh in shapes
     ]
 
-    # Формирование групп (только с устройствами)
+    # Формирование групп (только видимые + parent_group_id)
     groups_out = [
-        {"id": g.id, "name": g.name, "color": g.color, "font_size": g.font_size}
+        {"id": g.id, "name": g.name, "color": g.color, "font_size": g.font_size, "parent_group_id": g.parent_group_id}
         for g in groups
-        if g.id in group_ids_with_devices
+        if g.id in visible_groups
     ]
 
     result = {
@@ -498,6 +522,7 @@ def get_map_groups(map_id: int) -> List[Dict[str, Any]]:
             "color": g.color,
             "font_size": g.font_size,
             "device_count": counts.get(g.id, 0),
+            "parent_group_id": g.parent_group_id,
         }
         for g in groups
     ]
