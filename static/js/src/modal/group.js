@@ -170,11 +170,15 @@ function initFormHandler() {
                     if (parentId) {
                         const parentNode = window.cy.getElementById(`group_${parentId}`);
                         if (parentNode.length) {
-                            console.log(`📦 Moving group ${id} to parent ${parentId}`);
-                            groupNode.move({ parent: parentNode });
+                            groupNode.move({ parent: parentNode.id() });
                         }
                     } else {
-                        groupNode.move({ parent: undefined });
+                        // ВАЖНО: именно null отвязывает узел от родителя.
+                        // move({parent: undefined}) в Cytoscape — no-op, поэтому
+                        // при снятии родителя группа оставалась вложенной и на
+                        // карте это было видно только после перезагрузки (сервер
+                        // уже отдавал parent_group_id=null, а граф — нет).
+                        groupNode.move({ parent: null });
                     }
                     
                     // Принудительно обновляем размеры
@@ -298,13 +302,16 @@ async function loadGroupsList() {
             const parent = byId.get(group.parent_group_id);
             const indent = depth ? `padding-left:${depth * 18}px;` : '';
             const branch = depth ? '<span class="text-muted me-1">└</span>' : '';
-            const parentCell = parent
-                ? `<span class="badge bg-light text-dark">${escapeHtml(parent.name)}</span>`
-                : '<span class="text-muted">—</span>';
+            // Родителя показываем подписью ПОД названием, а не отдельной
+            // колонкой: пятая колонка расширяла таблицу шире модалки, и колонка
+            // «Действия» с кнопкой редактирования уезжала в горизонтальный
+            // overflow — визуально кнопка «пропадала».
+            const parentHint = parent
+                ? `<div class="text-muted small" style="${indent}"><i class="fas fa-level-up-alt fa-rotate-90 me-1"></i>${escapeHtml(parent.name)}</div>`
+                : '';
             return `
             <tr style="animation: rowFadeIn 0.25s ease ${idx * 50}ms forwards; opacity: 0">
-                <td><span class="fw-medium" style="${indent}">${branch}${escapeHtml(group.name)}</span></td>
-                <td>${parentCell}</td>
+                <td><span class="fw-medium" style="${indent}">${branch}${escapeHtml(group.name)}</span>${parentHint}</td>
                 <td><span class="color-preview" style="background:${group.color}" title="${group.color}"></span></td>
                 <td class="text-center"><span class="badge bg-light text-dark">${group.device_count || 0}</span></td>
                 <td class="text-end">
@@ -326,7 +333,7 @@ async function loadGroupsList() {
 
     } catch (err) {
         Logger.error('Load groups error:', err);
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">${t('modal.group.loadError', { msg: err.message })}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">${t('modal.group.loadError', { msg: err.message })}</td></tr>`;
         showToast(t('toast.errorTitle'), t('modal.group.loadFail'), 'error');
     } finally {
         skeleton?.classList.add('d-none');
