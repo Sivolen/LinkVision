@@ -15,8 +15,12 @@ def get_group_by_id(group_id: int):
 
 def would_create_cycle(group_id: int, new_parent_id: int) -> bool:
     """Проверяет, создаст ли назначение new_parent_id для group_id цикл."""
-    if not new_parent_id or new_parent_id == group_id:
+    if not new_parent_id:
         return False
+    # Группа, назначенная родителем самой себе, — это цикл длиной 1. Раньше
+    # такой случай возвращал False, и группа могла стать собственным родителем.
+    if new_parent_id == group_id:
+        return True
     visited = set()
     current = new_parent_id
     while current:
@@ -40,8 +44,9 @@ def create_group(
         parent = db.session.get(Group, parent_group_id)
         if not parent or parent.map_id != map_id:
             raise ValueError("Родительская группа не найдена или не принадлежит этой карте")
-        if would_create_cycle(parent_group_id, parent_group_id):
-            raise ValueError("Нельзя создать цикл вложенности")
+        # Проверка цикла при СОЗДАНИИ не нужна: у новой группы ещё нет id и
+        # потомков, поэтому замкнуть дерево она не может. Прежний вызов
+        # would_create_cycle(parent_group_id, parent_group_id) был бессмысленным.
 
     group = Group(name=name, color=color, map_id=map_id, font_size=font_size, parent_group_id=parent_group_id)
     db.session.add(group)
@@ -84,21 +89,21 @@ def update_group(
         group.font_size = font_size
         
     if parent_group_id is not _UNSET:
-        # Сохраняем старый map_id до изменения родителя
-        old_map_id = group.map_id
-        group.parent_group_id = parent_group_id
-        
+        # ВСЕ проверки — ДО присвоения. Раньше parent_group_id присваивался
+        # первым, а проверки шли следом и «откатывали» значение в None. Но
+        # проверки сами ходят в БД (db.session.get внутри would_create_cycle), а
+        # autoflush успевал записать ещё не проверенное значение: API отдавал
+        # 400 «Нельзя создать цикл», при этом цикл уже оказывался в базе.
         if parent_group_id is not None:
             parent = db.session.get(Group, parent_group_id)
             if not parent:
-                group.parent_group_id = None # Откат в случае ошибки
                 raise ValueError("Родительская группа не найдена")
-            if parent.map_id != old_map_id:
-                group.parent_group_id = None # Откат
+            if parent.map_id != group.map_id:
                 raise ValueError("Родительская группа принадлежит другой карте")
             if would_create_cycle(group_id, parent_group_id):
-                group.parent_group_id = None # Откат
                 raise ValueError("Нельзя создать цикл вложенности")
+
+        group.parent_group_id = parent_group_id
 
     db.session.commit()
     api_logger.info(f"Group updated: ID={group_id}")
