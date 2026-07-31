@@ -182,6 +182,10 @@ class Group(db.Model):
     map_id = db.Column(db.Integer, db.ForeignKey("map.id"), index=True)
     map = db.relationship("Map", backref="groups")
     devices = db.relationship("Device", backref="group", lazy="dynamic")
+    
+    # Вложенные группы
+    parent_group_id = db.Column(db.Integer, db.ForeignKey("group.id"), nullable=True, index=True)
+    children = db.relationship("Group", backref=db.backref("parent", remote_side=[id]), lazy="dynamic")
 
 
 class UserMapSettings(db.Model):

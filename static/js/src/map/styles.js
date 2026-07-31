@@ -228,6 +228,55 @@ export const CY_STYLE = [
         }
     },
     {
+        selector: 'node[isGroup][collapsed]',
+        style: {
+            'shape': 'round-rectangle',
+            'width': 150,
+            'height': 60,
+            'border-width': 3,
+            'border-color': '#28a745',
+            'border-style': 'solid',
+            'label': 'data(name)',
+            'font-size': '12px',
+            'font-weight': 'bold',
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'background-color': 'data(color)',
+            'background-opacity': 0.2
+        }
+    },
+    {
+        selector: 'node[isGroup][collapsed][bubbleStatus="down"]',
+        style: {
+            'border-color': '#dc3545'
+        }
+    },
+    {
+        selector: 'node[isGroup][collapsed][bubbleStatus="partial"]',
+        style: {
+            'border-color': '#ffc107'
+        }
+    },
+    {
+        selector: 'node[isGroup][collapsed][bubbleStatus="up"]',
+        style: {
+            'border-color': '#28a745'
+        }
+    },
+    {
+        selector: 'edge[isCollapseProxy]',
+        style: {
+            'line-style': 'dashed',
+            'width': 2,
+            'label': 'data(label)',
+            'font-size': '8px',
+            'color': '#6c757d',
+            'text-background-color': '#fff',
+            'text-background-opacity': 0.8,
+            'text-background-padding': '2px'
+        }
+    },
+    {
         selector: 'node[isGroup]:selected',
         style: {
             'overlay-color': '#007bff',

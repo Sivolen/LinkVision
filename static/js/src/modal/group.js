@@ -13,6 +13,7 @@ import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 // Переменные модуля
 let currentGroupId = null;
 let _formHandlerAttached = false;
+let pendingParentGroupId = null;
 
 /**
  * Инициализировать цветовой пикер
@@ -120,6 +121,8 @@ function initFormHandler() {
         const name = document.getElementById('group_name')?.value.trim();
         const color = document.getElementById('group_color')?.value;
         const fontSize = parseInt(document.getElementById('group_font_size').value, 10) || 11;
+        const parentIdRaw = document.getElementById('group_parent_id')?.value;
+        const parentId = parentIdRaw ? parseInt(parentIdRaw, 10) : null;
 
         if (!name) {
             showToast(t('toast.errorTitle'), t('modal.group.enterName'), 'error');
@@ -134,13 +137,15 @@ function initFormHandler() {
         if (btnLoader) btnLoader.classList.remove('d-none');
         if (submitBtn) submitBtn.disabled = true;
 
+        console.log('📝 Form submit: id=', id, 'parentId=', parentId);
+
         try {
             const isEdit = !!id;
             const url = isEdit ? `/api/group/${id}` : '/api/group';
             const method = isEdit ? 'PUT' : 'POST';
             const body = isEdit
-                ? { name, color, font_size: fontSize }
-                : { map_id: window.currentMapId, name, color, font_size: fontSize };
+                ? { name, color, font_size: fontSize, parent_group_id: parentId }
+                : { map_id: window.currentMapId, name, color, font_size: fontSize, parent_group_id: parentId };
             
             beginSelfUpdate();
             const result = await http[method.toLowerCase()](url, body);
@@ -148,7 +153,42 @@ function initFormHandler() {
             showToast(isEdit ? t('modal.group.updated') : t('modal.group.created'), t('modal.group.nameLabel', { name }), 'success');
             resetGroupForm();
             loadGroupsList();
-            await reloadMapWithViewportRestore();
+
+            // ★★★ НЕ ПЕРЕЗАГРУЖАЕМ ВСЮ КАРТУ ★★★
+            // Обновляем группу напрямую в графе
+            if (window.cy) {
+                const groupId = isEdit ? `group_${id}` : `group_${result.id}`;
+                const groupNode = window.cy.getElementById(groupId);
+                if (groupNode.length) {
+                    // Обновляем данные
+                    groupNode.data({ name, color, fontSize });
+                    
+                    // Если менялся родитель — перемещаем
+                    if (parentId) {
+                        const parentNode = window.cy.getElementById(`group_${parentId}`);
+                        if (parentNode.length) {
+                            console.log(`📦 Moving group ${id} to parent ${parentId}`);
+                            groupNode.move({ parent: parentNode });
+                        }
+                    } else {
+                        groupNode.move({ parent: undefined });
+                    }
+                    
+                    // Принудительно обновляем размеры
+                    if (typeof window.forceUpdateAllGroups === 'function') {
+                        setTimeout(() => window.forceUpdateAllGroups(), 50);
+                    }
+                } else {
+                    // Группа ещё не на карте — добавляем
+                    if (typeof window.addGroupToGraph === 'function') {
+                        window.addGroupToGraph({
+                            id: isEdit ? id : result.id,
+                            name, color, font_size: fontSize,
+                            parent_group_id: parentId
+                        });
+                    }
+                }
+            }
 
         } catch (err) {
             Logger.error('Submit error:', err);
@@ -252,6 +292,7 @@ async function loadGroupsList() {
         `).join('');
 
         Logger.info('Groups rendered:', groups.length);
+        populateParentDropdown();
 
     } catch (err) {
         Logger.error('Load groups error:', err);
@@ -261,6 +302,45 @@ async function loadGroupsList() {
         skeleton?.classList.add('d-none');
         tbody.closest('.table-responsive')?.classList.remove('d-none');
     }
+}
+
+/**
+ * Заполнить дропдаун родительской группы
+ */
+function populateParentDropdown(excludeGroupId = null, selectedId = pendingParentGroupId) {
+    const select = document.getElementById('group_parent_id');
+    if (!select) return;
+    
+    // Получаем актуальный список групп
+    http.get(`/api/map/${window.currentMapId}/groups`)
+        .then(groups => {
+            select.innerHTML = `<option value="">${t('modal.group.noParent', { defaultValue: '-- Без родителя --' })}</option>`;
+            
+            // Исключаем саму группу и всех её потомков
+            const excludeIds = new Set(excludeGroupId ? [excludeGroupId] : []);
+            if (excludeGroupId) {
+                // Рекурсивно собираем всех потомков
+                function collectChildren(parentId) {
+                    groups.filter(g => g.parent_group_id === parentId).forEach(child => {
+                        excludeIds.add(child.id);
+                        collectChildren(child.id);
+                    });
+                }
+                collectChildren(excludeGroupId);
+            }
+            
+            groups.filter(g => !excludeIds.has(g.id)).forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.name;
+                if (g.id == selectedId) opt.selected = true;
+                select.appendChild(opt);
+            });
+            
+            // Сбрасываем pending
+            pendingParentGroupId = null;
+        })
+        .catch(err => Logger.error('Failed to populate parent dropdown:', err));
 }
 
 /**
@@ -305,6 +385,7 @@ export function editGroup(id, name, color, fontSize) {
     const idField = document.getElementById('group_id');
     const nameField = document.getElementById('group_name');
     const fontSizeInput = document.getElementById('group_font_size');
+    const parentSelect = document.getElementById('group_parent_id');
 
     if (idField) idField.value = id;
     if (nameField) {
@@ -314,6 +395,25 @@ export function editGroup(id, name, color, fontSize) {
     }
     if (window.setColor) window.setColor(color);
     if (fontSizeInput) fontSizeInput.value = fontSize || 11;
+
+    // ★★★ ЗАГРУЖАЕМ ТЕКУЩЕГО РОДИТЕЛЯ ★★★
+    if (parentSelect && window.cy) {
+        const groupNode = window.cy.getElementById(`group_${id}`);
+        if (groupNode.length) {
+            const parent = groupNode.parent();
+            if (parent.length) {
+                const parentId = parseInt(parent.id().replace('group_', ''), 10);
+                for (let i = 0; i < parentSelect.options.length; i++) {
+                    if (parseInt(parentSelect.options[i].value, 10) === parentId) {
+                        parentSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            } else {
+                parentSelect.value = '';
+            }
+        }
+    }
 
     const btnText = document.querySelector('#submitBtn .btn-text');
     if (btnText) btnText.textContent = t('common.save');
@@ -352,7 +452,7 @@ export async function deleteGroup(id, name) {
 /**
  * Открыть менеджер групп
  */
-export function openGroupManager() {
+export function openGroupManager(options = {}) {
     Logger.info('openGroupManager called');
 
     if (!window.isAdmin) {
@@ -386,6 +486,7 @@ export function openGroupManager() {
 
             initColorPicker();
             loadGroupsList();
+            populateParentDropdown();
             setTimeout(() => {
                 document.getElementById('group_name')?.focus();
             }, 100);
@@ -394,6 +495,11 @@ export function openGroupManager() {
         Logger.info('Modal instance created with listener');
     } else {
         Logger.info('Using existing modal instance');
+    }
+    
+    // Предвыбираем родителя, если передан
+    if (options.parentGroupId) {
+        pendingParentGroupId = options.parentGroupId;
     }
 
     resetGroupForm();

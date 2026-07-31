@@ -46,12 +46,19 @@ export function loadElements(mapId, force = false) {
             const allElements = [];
             const groupMap = {};
 
-            // ГРУППЫ - только с устройствами
+            // ГРУППЫ - создаем с parent СРАЗУ
             if (data.groups && data.groups.length) {
+                console.log('📦 Groups with parents:', data.groups.filter(g => g.parent_group_id).map(g => `${g.id}->${g.parent_group_id}`));
+                
+                // Строим карту групп для быстрого доступа
                 data.groups.forEach(g => {
-                    if (g.device_count === 0) return;
+                    groupMap[g.id] = `group_${g.id}`;
+                });
+                
+                // Создаем все группы С parent, если есть
+                data.groups.forEach(g => {
                     const groupId = `group_${g.id}`;
-                    allElements.push({
+                    const groupData = {
                         group: 'nodes',
                         data: {
                             id: groupId,
@@ -59,10 +66,17 @@ export function loadElements(mapId, force = false) {
                             color: g.color,
                             isGroup: true,
                             group_id: g.id,
-                            fontSize: g.font_size || 11
+                            fontSize: g.font_size || 11,
                         }
-                    });
-                    groupMap[g.id] = groupId;
+                    };
+                    
+                    // ★★★ КРИТИЧЕСКИ ВАЖНО: устанавливаем parent СРАЗУ при создании ★★★
+                    if (g.parent_group_id && groupMap[g.parent_group_id]) {
+                        groupData.data.parent = groupMap[g.parent_group_id];
+                        console.log(`Creating group ${g.id} with parent ${g.parent_group_id}`);
+                    }
+                    
+                    allElements.push(groupData);
                 });
             }
 
@@ -98,7 +112,8 @@ export function loadElements(mapId, force = false) {
                     if (!n.data || !n.data.id) return;
                     n.data.id = String(n.data.id);
                     if (n.data.group_id && groupMap[n.data.group_id]) {
-                        n.data.parent = groupMap[n.data.group_id];
+                        // ВАЖНО: parent должен быть строкой ID родительского узла
+                        n.data.parent = String(groupMap[n.data.group_id]);
                     } else {
                         delete n.data.parent;
                     }
@@ -130,6 +145,11 @@ export function loadElements(mapId, force = false) {
             cy.batch(() => {
                 cy.add(allElements);
             });
+
+            // ★★★ Принудительно обновляем размеры групп после загрузки ★★★
+            if (typeof window.forceUpdateAllGroups === 'function') {
+                setTimeout(() => window.forceUpdateAllGroups(), 100);
+            }
 
             // Проверка загруженных фигур
             if (cy) {
@@ -233,12 +253,14 @@ export async function addDeviceToGraph(device) {
                 }
             } catch (err) { console.error(err); }
         }
-        if (groupNode && groupNode.length) groupParent = `group_${device.group_id}`;
+        if (groupNode && groupNode.length) {
+            // ВАЖНО: parent должен быть строкой
+            groupParent = String(`group_${device.group_id}`);
+        }
     }
 
     const ipLabel = (device.ips && device.ips.length) ? device.ips.join(', ') : '';
 
-    // Добавляем узел внутри batch
     cy.batch(() => {
         cy.add({
             group: 'nodes',
@@ -249,7 +271,7 @@ export async function addDeviceToGraph(device) {
                 ips: device.ips || [],
                 type_id: device.type_id,
                 group_id: device.group_id,
-                parent: groupParent,
+                parent: groupParent, // Теперь это строка или undefined
                 monitoring_enabled: device.monitoring_enabled ? 'true' : 'false',
                 status: device.status || 'up',
                 iconUrl: device.iconUrl || '',
@@ -257,9 +279,6 @@ export async function addDeviceToGraph(device) {
                 height: device.height || null,
                 fontSize: device.font_size || null
             },
-            // Позиция: из модалки приходит x/y, из сокет-события device_created —
-            // pos_x/pos_y. Принимаем оба, иначе устройство «уезжает» в (100,100)
-            // и на чужом экране кажется, что оно не появилось.
             position: {
                 x: device.x ?? device.pos_x ?? 100,
                 y: device.y ?? device.pos_y ?? 100
@@ -346,7 +365,10 @@ export function updateDevice(device) {
     let groupParent = undefined;
     if (device.group_id) {
         const groupNode = cy.getElementById(`group_${device.group_id}`);
-        if (groupNode.length) groupParent = `group_${device.group_id}`;
+        if (groupNode.length) {
+            // parent должен быть строкой
+            groupParent = String(`group_${device.group_id}`);
+        }
     }
     node.data('parent', groupParent);
 
@@ -483,7 +505,39 @@ export function updateGroupInGraph(groupData) {
         color: groupData.color,
         fontSize: groupData.font_size || groupNode.data('fontSize'),
     });
-    if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
+    
+    // Обработка смены родителя
+    if (groupData.parent_group_id !== undefined) {
+        const newParentId = groupData.parent_group_id ? `group_${groupData.parent_group_id}` : undefined;
+        const currentParent = groupNode.parent();
+        const currentParentId = currentParent.length ? currentParent.id() : undefined;
+        
+        if (currentParentId !== newParentId) {
+            if (newParentId) {
+                const parentNode = cy.getElementById(newParentId);
+                if (parentNode.length) {
+                    console.log(`Moving group ${groupData.id} to parent ${groupData.parent_group_id}`);
+                    groupNode.move({ parent: parentNode });
+                    // НЕМЕДЛЕННО обновляем размеры родителя
+                    if (typeof window.forceUpdateAllGroups === 'function') {
+                        setTimeout(() => window.forceUpdateAllGroups(), 50);
+                    }
+                } else {
+                    console.warn(`Parent group ${groupData.parent_group_id} not found`);
+                }
+            } else {
+                console.log(`Moving group ${groupData.id} to root`);
+                groupNode.move({ parent: undefined });
+                if (typeof window.forceUpdateAllGroups === 'function') {
+                    setTimeout(() => window.forceUpdateAllGroups(), 50);
+                }
+            }
+        }
+    }
+    
+    if (typeof window.updateAllGroups === 'function') {
+        window.updateAllGroups();
+    }
     cy.style().update();
 }
 
@@ -494,20 +548,39 @@ export function addGroupToGraph(groupData) {
     const groupId = `group_${groupData.id}`;
     if (cy.getElementById(groupId).length) return;
 
+    // Создаём группу
+    const groupEl = {
+        group: 'nodes',
+        data: {
+            id: groupId,
+            name: groupData.name,
+            color: groupData.color,
+            isGroup: true,
+            group_id: groupData.id,
+            fontSize: groupData.font_size || 11,
+        }
+    };
+    
+    // ★★★ Устанавливаем parent СРАЗУ при создании ★★★
+    if (groupData.parent_group_id) {
+        const parentId = `group_${groupData.parent_group_id}`;
+        const parentNode = cy.getElementById(parentId);
+        if (parentNode.length) {
+            groupEl.data.parent = parentId;
+            console.log(`Creating group ${groupData.id} with parent ${groupData.parent_group_id}`);
+        } else {
+            console.warn(`Parent group ${groupData.parent_group_id} not found when adding group ${groupData.id}`);
+        }
+    }
+
     cy.batch(() => {
-        cy.add({
-            group: 'nodes',
-            data: {
-                id: groupId,
-                name: groupData.name,
-                color: groupData.color,
-                isGroup: true,
-                group_id: groupData.id,
-                fontSize: groupData.font_size || 11,
-            }
-        });
+        cy.add(groupEl);
     });
     cy.style().update();
+    
+    if (typeof window.updateAllGroups === 'function') {
+        window.updateAllGroups();
+    }
 }
 
 export function removeGroupFromGraph(groupId) {
@@ -517,7 +590,13 @@ export function removeGroupFromGraph(groupId) {
     const groupIdStr = `group_${groupId}`;
     const groupNode = cy.getElementById(groupIdStr);
     if (groupNode.length) {
-        // Удалим группу, но не детей — они останутся без родителя
+        // При удалении вложенной группы поднимаем её детей к ЕЁ родителю (а не на самый верх)
+        const currentParent = groupNode.parent();
+        // Получаем прямых детей (не потомков) — если группа свёрнута, children() вернёт пустой массив
+        const children = groupNode.children();
+        children.forEach(child => {
+            child.move({ parent: currentParent.length ? currentParent : undefined });
+        });
         groupNode.unwrap();
         groupNode.remove();
         if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
@@ -532,3 +611,15 @@ export function reloadMapElements(force = false) {
 // Экспорт для глобального доступа
 window.addShapeToGraph = addShapeToGraph;
 window.removeShapeFromGraph = removeShapeFromGraph;
+
+/** Отладка: показать все группы с их родителями в консоли */
+window.debugGroups = function() {
+    const cy = getCy();
+    if (!cy) { console.error('cy not available'); return; }
+    console.log('🔍 === Debug Groups ===');
+    cy.nodes('[isGroup]').forEach(g => {
+        const parent = g.parent();
+        console.log(`${g.id()} "${g.data('name')}" parent: ${parent.length ? parent.id() : 'none'}`);
+    });
+    console.log('=== End Debug ===');
+};

@@ -42,8 +42,9 @@ def create_group():
         map_service.validate_map(map_id)
 
         font_size = data.get("font_size", 11)
+        parent_group_id = data.get("parent_group_id")
         group = map_service.create_group(
-            map_id, data["name"], data.get("color", "#3498db"), font_size
+            map_id, data["name"], data.get("color", "#3498db"), font_size, parent_group_id
         )
 
         invalidate_groups_cache(map_id)
@@ -52,6 +53,7 @@ def create_group():
             "name": group.name,
             "color": group.color,
             "font_size": group.font_size,
+            "parent_group_id": group.parent_group_id,
         }
         notify_group_created(map_id, group_data)
         return jsonify({"id": group.id}), 201
@@ -86,11 +88,13 @@ def update_group(group_id):
         # Сохраняем map_id до обновления
         map_id = group.map_id
 
+        parent_group_id = data.get("parent_group_id")
         map_service.update_group(
             group_id,
             name=data.get("name"),
             color=data.get("color"),
             font_size=data.get("font_size"),
+            parent_group_id=parent_group_id,
         )
 
         invalidate_groups_cache(map_id)
@@ -99,6 +103,7 @@ def update_group(group_id):
             "name": data.get("name"),
             "color": data.get("color"),
             "font_size": data.get("font_size"),
+            "parent_group_id": group.parent_group_id,
         }
         notify_group_updated(map_id, group_data)
         return jsonify({"status": "updated"})

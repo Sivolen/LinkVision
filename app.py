@@ -244,6 +244,25 @@ def create_app():
     def page_not_found(e):
         return render_template("404.html", hide_sidebar=True), 404
 
+    # ─── Security headers ───────────────────────────────────────────────────
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "img-src 'self' data: blob:; "
+            "font-src 'self' https://cdnjs.cloudflare.com; "
+            "connect-src 'self' ws: wss:; "
+            "frame-ancestors 'self';"
+        )
+        if app.config.get('SESSION_COOKIE_SECURE'):
+            response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains'
+        return response
+
     @app.errorhandler(Exception)
     def handle_unexpected(e):
         from werkzeug.exceptions import HTTPException
