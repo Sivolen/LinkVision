@@ -125,15 +125,18 @@ export function initMap(id) {
     const { saveState } = initUndoRedo(cy, () => mapId);
     window.saveState = saveState;
 
+    // Состояние свёрнутых групп восстанавливаем ПОСЛЕ того, как элементы реально
+    // добавлены в граф: loadElements() ходит на сервер асинхронно, и вызов сразу
+    // после него отрабатывал по пустому графу — из-за этого после F5 все группы
+    // оказывались развёрнутыми. 'elements:loaded' диспатчится в elements.js.
+    window.addEventListener('elements:loaded', () => {
+        if (typeof restoreCollapseState === 'function') restoreCollapseState();
+    });
+
     loadElements(mapId);
     window.__mapLoadedOnce = true;
     if (typeof window.saveState === 'function') {
         setTimeout(() => window.saveState('initial'), 500);
-    }
-    
-    // Восстанавливаем состояние сворачивания групп из localStorage
-    if (typeof restoreCollapseState === 'function') {
-        restoreCollapseState();
     }
 
     // Оптимизированный batch для обновлений статусов

@@ -228,7 +228,7 @@ export const CY_STYLE = [
         }
     },
     {
-        selector: 'node[isGroup][collapsed]',
+        selector: 'node[isGroup][?collapsed]',
         style: {
             'shape': 'round-rectangle',
             'width': 150,
@@ -246,25 +246,25 @@ export const CY_STYLE = [
         }
     },
     {
-        selector: 'node[isGroup][collapsed][bubbleStatus="down"]',
+        selector: 'node[isGroup][?collapsed][bubbleStatus="down"]',
         style: {
             'border-color': '#dc3545'
         }
     },
     {
-        selector: 'node[isGroup][collapsed][bubbleStatus="partial"]',
+        selector: 'node[isGroup][?collapsed][bubbleStatus="partial"]',
         style: {
             'border-color': '#ffc107'
         }
     },
     {
-        selector: 'node[isGroup][collapsed][bubbleStatus="up"]',
+        selector: 'node[isGroup][?collapsed][bubbleStatus="up"]',
         style: {
             'border-color': '#28a745'
         }
     },
     {
-        selector: 'edge[isCollapseProxy]',
+        selector: 'edge[?isCollapseProxy]',
         style: {
             'line-style': 'dashed',
             'width': 2,

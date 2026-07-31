@@ -14,6 +14,9 @@ import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 let currentGroupId = null;
 let _formHandlerAttached = false;
 let pendingParentGroupId = null;
+// Группа, которую нужно открыть сразу в режиме редактирования (из контекстного
+// меню карты). Применяется в обработчике shown.bs.modal — см. openGroupManager().
+let pendingEditGroup = null;
 
 /**
  * Инициализировать цветовой пикер
@@ -273,9 +276,35 @@ async function loadGroupsList() {
             return;
         }
 
-        tbody.innerHTML = groups.map((group, idx) => `
+        // Раскладываем плоский список в дерево и печатаем его в порядке обхода:
+        // так сразу видно, какая группа кому дочерняя (раньше список был плоским
+        // и родителя было не определить).
+        const byId = new Map(groups.map(g => [g.id, g]));
+        const ordered = [];
+        const childrenOf = new Map();
+        groups.forEach(g => {
+            const parentId = byId.has(g.parent_group_id) ? g.parent_group_id : null;
+            if (!childrenOf.has(parentId)) childrenOf.set(parentId, []);
+            childrenOf.get(parentId).push(g);
+        });
+        (function walk(parentId, depth) {
+            (childrenOf.get(parentId) || []).forEach(g => {
+                ordered.push({ group: g, depth });
+                walk(g.id, depth + 1);
+            });
+        })(null, 0);
+
+        tbody.innerHTML = ordered.map(({ group, depth }, idx) => {
+            const parent = byId.get(group.parent_group_id);
+            const indent = depth ? `padding-left:${depth * 18}px;` : '';
+            const branch = depth ? '<span class="text-muted me-1">└</span>' : '';
+            const parentCell = parent
+                ? `<span class="badge bg-light text-dark">${escapeHtml(parent.name)}</span>`
+                : '<span class="text-muted">—</span>';
+            return `
             <tr style="animation: rowFadeIn 0.25s ease ${idx * 50}ms forwards; opacity: 0">
-                <td><span class="fw-medium">${escapeHtml(group.name)}</span></td>
+                <td><span class="fw-medium" style="${indent}">${branch}${escapeHtml(group.name)}</span></td>
+                <td>${parentCell}</td>
                 <td><span class="color-preview" style="background:${group.color}" title="${group.color}"></span></td>
                 <td class="text-center"><span class="badge bg-light text-dark">${group.device_count || 0}</span></td>
                 <td class="text-end">
@@ -288,15 +317,16 @@ async function loadGroupsList() {
                         </button>
                     </div>
                 </td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
 
-        Logger.info('Groups rendered:', groups.length);
-        populateParentDropdown();
+        // await — чтобы вызывающий код (открытие модалки в режиме
+        // редактирования) не применял выбор родителя до заполнения <select>.
+        await populateParentDropdown();
 
     } catch (err) {
         Logger.error('Load groups error:', err);
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">${t('modal.group.loadError', { msg: err.message })}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">${t('modal.group.loadError', { msg: err.message })}</td></tr>`;
         showToast(t('toast.errorTitle'), t('modal.group.loadFail'), 'error');
     } finally {
         skeleton?.classList.add('d-none');
@@ -307,12 +337,12 @@ async function loadGroupsList() {
 /**
  * Заполнить дропдаун родительской группы
  */
-function populateParentDropdown(excludeGroupId = null, selectedId = pendingParentGroupId) {
+async function populateParentDropdown(excludeGroupId = null, selectedId = pendingParentGroupId) {
     const select = document.getElementById('group_parent_id');
     if (!select) return;
-    
+
     // Получаем актуальный список групп
-    http.get(`/api/map/${window.currentMapId}/groups`)
+    return http.get(`/api/map/${window.currentMapId}/groups`)
         .then(groups => {
             select.innerHTML = `<option value="">${t('modal.group.noParent', { defaultValue: '-- Без родителя --' })}</option>`;
             
@@ -396,23 +426,19 @@ export function editGroup(id, name, color, fontSize) {
     if (window.setColor) window.setColor(color);
     if (fontSizeInput) fontSizeInput.value = fontSize || 11;
 
-    // ★★★ ЗАГРУЖАЕМ ТЕКУЩЕГО РОДИТЕЛЯ ★★★
-    if (parentSelect && window.cy) {
-        const groupNode = window.cy.getElementById(`group_${id}`);
-        if (groupNode.length) {
-            const parent = groupNode.parent();
-            if (parent.length) {
-                const parentId = parseInt(parent.id().replace('group_', ''), 10);
-                for (let i = 0; i < parentSelect.options.length; i++) {
-                    if (parseInt(parentSelect.options[i].value, 10) === parentId) {
-                        parentSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-            } else {
-                parentSelect.value = '';
+    // Текущий родитель + защита от циклов: перезаполняем дропдаун, исключая саму
+    // группу и всех её потомков (иначе можно выбрать собственного потомка
+    // родителем и получить 400 от сервера).
+    if (parentSelect) {
+        let parentId = null;
+        if (window.cy) {
+            const groupNode = window.cy.getElementById(`group_${id}`);
+            const parent = groupNode.length ? groupNode.parent() : null;
+            if (parent && parent.length) {
+                parentId = parseInt(parent.id().replace('group_', ''), 10);
             }
         }
+        populateParentDropdown(id, parentId);
     }
 
     const btnText = document.querySelector('#submitBtn .btn-text');
@@ -475,38 +501,37 @@ export function openGroupManager(options = {}) {
     }
 
     if (!window.groupModal) {
-        Logger.info('Creating modal instance with event listener');
         window.groupModal = new bootstrap.Modal(modalEl);
 
-        // Добавляем listener ПРЯМО ПОСЛЕ создания
-        modalEl.addEventListener('shown.bs.modal', function onShown() {
-            Logger.info('shown.bs.modal event fired!');
-            // Удаляем listener после первого срабатывания
-            modalEl.removeEventListener('shown.bs.modal', onShown);
-
+        // Слушатель НЕ снимаем после первого показа: раньше он удалял сам себя,
+        // и при повторном открытии список групп и дропдаун родителя больше не
+        // перезагружались (в модалке висели устаревшие данные).
+        modalEl.addEventListener('shown.bs.modal', async () => {
             initColorPicker();
-            loadGroupsList();
-            populateParentDropdown();
-            setTimeout(() => {
-                document.getElementById('group_name')?.focus();
-            }, 100);
-        });
+            await loadGroupsList();
 
-        Logger.info('Modal instance created with listener');
-    } else {
-        Logger.info('Using existing modal instance');
+            // Контекст редактирования применяем ПОСЛЕ загрузки списка и
+            // дропдауна родителей — иначе выбранный родитель затирается
+            // перерисовкой <select>.
+            if (pendingEditGroup) {
+                const { id, name, color, fontSize } = pendingEditGroup;
+                pendingEditGroup = null;
+                editGroup(id, name, color, fontSize);
+            } else {
+                document.getElementById('group_name')?.focus();
+            }
+        });
     }
-    
-    // Предвыбираем родителя, если передан
-    if (options.parentGroupId) {
-        pendingParentGroupId = options.parentGroupId;
-    }
+
+    // Предвыбираем родителя (пункт «создать подгруппу») либо открываем сразу в
+    // режиме редактирования (пункт «редактировать группу» в контекстном меню).
+    if (options.parentGroupId) pendingParentGroupId = options.parentGroupId;
+    pendingEditGroup = options.editGroup || null;
 
     resetGroupForm();
     const fontSizeInput = document.getElementById('group_font_size');
     if (fontSizeInput) fontSizeInput.value = 11;
 
-    Logger.info('Calling modal.show()');
     window.groupModal.show();
 }
 
