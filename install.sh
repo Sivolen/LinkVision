@@ -103,24 +103,23 @@ else
     pip install -r requirements.txt
 fi
 
-# Generate secret key if not present
+# Проверка наличия config.py (реальный файл репозитория со всей
+# конфигурацией — CSP, i18n, CSRF и т.д.; подменять его урезанным
+# шаблоном при отсутствии небезопасно и неверно по смыслу)
 echo -e "
 ${GREEN}Checking configuration...${NC}"
 if [ ! -f "config.py" ]; then
-    echo -e "${YELLOW}config.py not found. Creating from template...${NC}"
-    cat > config.py <<EOF
-import os
-class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or '$(openssl rand -base64 32)'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///webnetmap.db'
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static/uploads')
-    VERSION = '2.0.0'
-EOF
-    echo -e "${GREEN}config.py created with random secret key.${NC}"
-else
-    echo -e "${GREEN}config.py already exists.${NC}"
+    echo -e "${RED}config.py not found in $SCRIPT_DIR.${NC}"
+    echo -e "${RED}This file is part of the repository and should not be missing —${NC}"
+    echo -e "${RED}check that the clone/checkout completed successfully.${NC}"
+    exit 1
 fi
+echo -e "${GREEN}config.py found.${NC}"
+
+# .env с SECRET_KEY и остальными переменными безопасности создаётся и
+# дополняется автоматически при первом запуске приложения (см.
+# ensure_env_file() в app.py) — здесь ничего вручную генерировать не нужно.
+
 
 # Initialize database
 echo -e "
@@ -208,29 +207,14 @@ echo -e "  cd $SCRIPT_DIR"
 echo -e "  source venv/bin/activate"
 echo -e "  python app.py"
 echo -e ""
-echo -e "Or if you installed systemd service, it's already running."
+echo -e "Or if you installed systemd service, it's already running —"
+echo -e "check the very first startup log for the admin password:"
+echo -e "  sudo journalctl -u linkvision.service -n 50 | grep -A2 'Temporary admin password'"
+echo -e ""
 echo -e "Access the web interface at: http://localhost:5000"
 echo -e ""
-echo -e "Default admin credentials:"
-echo -e "  Username: admin"
-echo -e "  Password: Admin"
-echo -e "${YELLOW}Please change the admin password after first login!${NC}"
-# Create default admin user if not exists
-echo -e "\n${GREEN}Creating default admin user...${NC}"
-python3 -c "
-import sys; sys.path.insert(0, '.')
-from app import create_app
-from extensions import db
-from models import User
-app = create_app()
-with app.app_context():
-    admin = User.query.filter_by(username='admin').first()
-    if not admin:
-        admin = User(username='admin', is_admin=True)
-        admin.set_password('Admin')
-        db.session.add(admin)
-        db.session.commit()
-        print('✅ Admin user created: admin / Admin')
-    else:
-        print('⏭️  Admin user already exists')
-" || echo -e "${YELLOW}Failed to create admin user.${NC}"
+echo -e "${YELLOW}IMPORTANT: this installer does NOT create the admin user itself.${NC}"
+echo -e "${YELLOW}On its very first real startup the application creates the admin${NC}"
+echo -e "${YELLOW}account automatically, with a random temporary password printed${NC}"
+echo -e "${YELLOW}ONCE to the console/log (never stored in plain text anywhere else).${NC}"
+echo -e "${YELLOW}You will be forced to set a new password on first login.${NC}"
