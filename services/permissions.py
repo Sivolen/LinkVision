@@ -17,7 +17,16 @@ from models import Map, Device, MapPermission, db
 
 def _get_user_map_permission(map_id: int) -> Optional[MapPermission]:
     """
-    Получить явное разрешение пользователя на карту (1 запрос).
+    Получить эффективное разрешение текущего пользователя на карту.
+
+    Для обычного пользователя учитывается только персональное разрешение.
+    Для оператора сначала проверяется его персональное разрешение, чтобы
+    персональный admin/editor не был случайно перекрыт ролевым разрешением
+    для всех операторов. Если персонального разрешения нет, оператору
+    разрешается использовать ролевое viewer/editor.
+
+    Важно: ролевые разрешения viewer/editor относятся ко всем операторам,
+    поэтому они намеренно не содержат user_id.
 
     Args:
         map_id: ID карты
@@ -25,21 +34,25 @@ def _get_user_map_permission(map_id: int) -> Optional[MapPermission]:
     Returns:
         MapPermission или None
     """
-    # Один запрос с OR условием: персональное ИЛИ ролевое для операторов
+    # Сначала всегда ищем персональное разрешение текущего пользователя.
+    # Это особенно важно для оператора с персональной ролью admin.
+    perm = MapPermission.query.filter_by(
+        map_id=map_id,
+        user_id=current_user.id,
+    ).first()
+
+    if perm:
+        return perm
+
+    # Ролевые разрешения действуют только для операторов.
     if current_user.is_operator:
-        perm = MapPermission.query.filter(
+        return MapPermission.query.filter(
             MapPermission.map_id == map_id,
-            (
-                (MapPermission.user_id == current_user.id)
-                | (MapPermission.role.in_(["viewer", "editor"]))
-            ),
-        ).first()
-    else:
-        perm = MapPermission.query.filter_by(
-            map_id=map_id, user_id=current_user.id
+            MapPermission.user_id.is_(None),
+            MapPermission.role.in_(["viewer", "editor"]),
         ).first()
 
-    return perm
+    return None
 
 
 def can_view_map(map_id: int) -> bool:
@@ -112,24 +125,28 @@ def can_edit_map(map_id: int) -> bool:
     if not map_obj:
         return False
 
-    # Владелец карты может редактировать (если не заблокирована)
+    # Владелец карты может редактировать только незаблокированную карту.
     if map_obj.owner_id == current_user.id:
         return not map_obj.is_locked
 
-    # Проверяем карту на блокировку
+    # Получаем именно эффективное разрешение текущего пользователя.
+    # Для оператора персональный admin должен иметь приоритет над
+    # ролевым editor/viewer.
+    perm = _get_user_map_permission(map_id)
+
+    # Администратор конкретной карты имеет полный контроль в рамках
+    # этой карты и может снять блокировку. Это устраняет асимметрию:
+    # map-admin может заблокировать карту, значит он должен иметь
+    # возможность её разблокировать.
+    if perm and perm.role == "admin":
+        return True
+
+    # Блокировка не может быть обойдена обычным editor.
     if map_obj.is_locked:
         return False
 
-    # Оператор может редактировать только с разрешением editor
-    if current_user.is_operator:
-        perm = MapPermission.query.filter_by(map_id=map_id, role="editor").first()
-        if perm:
-            return True
-        return False
-
-    # Проверяем явные разрешения для обычных пользователей
-    perm = _get_user_map_permission(map_id)
-    if perm and perm.role in ["editor", "admin"]:
+    # Editor может редактировать незаблокированную карту.
+    if perm and perm.role == "editor":
         return True
 
     return False
@@ -424,16 +441,31 @@ def get_user_editable_map_ids() -> list[int]:
     own_maps = Map.query.filter_by(owner_id=current_user.id, is_locked=False).all()
     editable_ids.extend([m.id for m in own_maps])
 
-    # Персональные разрешения editor/admin
-    perms = MapPermission.query.filter_by(user_id=current_user.id, role="editor").all()
+    # Персональные разрешения editor.
+    perms = MapPermission.query.filter_by(
+        user_id=current_user.id,
+        role="editor",
+    ).all()
     for perm in perms:
         map_obj = db.session.get(Map, perm.map_id)
         if map_obj and not map_obj.is_locked:
             editable_ids.append(perm.map_id)
 
-    # Оператор с ролью editor
+    # Персональная роль admin имеет полный контроль над картой,
+    # включая возможность разблокировки.
+    admin_perms = MapPermission.query.filter_by(
+        user_id=current_user.id,
+        role="admin",
+    ).all()
+    editable_ids.extend(perm.map_id for perm in admin_perms)
+
+    # Ролевое editor-разрешение распространяется на всех операторов.
     if current_user.is_operator:
-        perms = MapPermission.query.filter_by(role="editor").all()
+        perms = MapPermission.query.filter(
+            MapPermission.map_id.isnot(None),
+            MapPermission.user_id.is_(None),
+            MapPermission.role == "editor",
+        ).all()
         for perm in perms:
             map_obj = db.session.get(Map, perm.map_id)
             if map_obj and not map_obj.is_locked:
