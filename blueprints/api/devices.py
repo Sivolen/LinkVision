@@ -8,7 +8,6 @@ from flask_login import login_required
 from services import (
     device_service,
     map_service,
-    require_not_operator,
     require_device_access,
     require_device_edit,
     validate_ip_list,
@@ -84,7 +83,6 @@ def get_device_details(device_id):
 
 @devices_bp.route("/device", methods=["POST"])
 @login_required
-@require_not_operator
 def create_device():
     """Создать новое устройство."""
     data = request.json
@@ -343,7 +341,6 @@ def update_position(device_id):
 
 @devices_bp.route("/devices/positions", methods=["PUT"])
 @login_required
-@require_not_operator
 def update_devices_positions():
     """Массовое обновление позиций устройств."""
     data = request.json

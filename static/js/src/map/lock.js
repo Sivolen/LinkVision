@@ -71,7 +71,12 @@ export function initLock(instance) {
             mapLockStates.set(currentMapId, data.is_locked);
             window.dragLocked = data.is_locked;
             applyDragLockToCanvas(data.is_locked);
-            updateLockButton();
+            // ВАЖНО: PUT-ответ уже содержит can_edit, пересчитанный СЕРВЕРОМ для
+            // нового состояния лока. Раньше это значение здесь не применялось,
+            // из-за чего window.canEditMap оставался «замороженным» с момента
+            // открытия страницы — модалки и режимы карты продолжали считать
+            // карту недоступной для редактирования до перезагрузки страницы.
+            applyEditPermission(data.can_edit); // обновляет и window.canEditMap, и кнопку лока
 
             console.log(`Map ${currentMapId} lock: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
         } catch (err) {
@@ -83,13 +88,26 @@ export function initLock(instance) {
     // Подписка на обновления блокировки от других клиентов
     if (window.socket) {
         window.socket.off('map_lock_updated'); // Очищаем старый слушатель перед новым
-        window.socket.on('map_lock_updated', (data) => {
+        window.socket.on('map_lock_updated', async (data) => {
             if (Number(data.map_id) !== Number(currentMapId)) return;
 
             mapLockStates.set(currentMapId, data.is_locked);
             window.dragLocked = data.is_locked;
             applyDragLockToCanvas(data.is_locked);
             updateLockButton();
+
+            // Событие лока рассылается ВСЕМ одинаково и не содержит can_edit —
+            // это индивидуальное для каждого пользователя значение, сервер не
+            // может посчитать его один раз для всех подписчиков комнаты.
+            // Поэтому у ДРУГИХ вкладок/пользователей после смены лока
+            // подтягиваем актуальные права отдельным запросом (как при
+            // обычной загрузке страницы).
+            try {
+                const perm = await http.get(`/api/map/${currentMapId}/lock`);
+                applyEditPermission(perm.can_edit);
+            } catch (err) {
+                console.error('Error refreshing edit permission after lock update:', err);
+            }
 
             // Тост НЕ показываем только той вкладке, которая сама переключила лок
             // (у неё уже всё отражено в toggleLock). Любая другая вкладка — в т.ч.
@@ -133,14 +151,8 @@ async function loadMapLockState(mapId) {
         updateLockButton();
 
         // Обновляем UI с учётом прав
-        const canEdit = data.can_edit;
-        const lockBtn = document.getElementById('lockMode');
-        if (lockBtn) {
-            lockBtn.disabled = !canEdit;
-            if (!canEdit) {
-                lockBtn.title = t('lock.btnNoRightsChange');
-            }
-        }
+        window.canToggleMapLock = data.can_toggle_lock !== false;
+        applyEditPermission(data.can_edit);
 
         console.log(`Map ${mapId} initial state: ${data.is_locked ? 'LOCKED' : 'UNLOCKED'}`);
     } catch (err) {
@@ -208,13 +220,33 @@ function updateLockButton() {
 }
 
 /**
+ * Применить актуальное право редактирования карты (window.canEditMap) и
+ * привести кнопку блокировки в соответствие с ним.
+ *
+ * Единая точка обновления canEditMap: вызывается и при первой загрузке
+ * страницы, и после переключения лока текущим пользователем, и после
+ * прихода события лока от других клиентов — раньше это делалось только
+ * при первой загрузке, из-за чего право на редактирование «зависало» до
+ * перезагрузки страницы.
+ */
+function applyEditPermission(canEdit) {
+    window.canEditMap = canEdit;
+    updateLockPermissions(canEdit);
+}
+
+/**
  * Обновить состояние кнопки при изменении прав
  */
 export function updateLockPermissions(canEdit) {
     const lockBtn = document.getElementById('lockMode');
     if (lockBtn) {
-        lockBtn.disabled = !canEdit;
+        lockBtn.disabled = !window.canToggleMapLock;
         updateLockButton();
+        // updateLockButton() расставляет title по состоянию лока; если прав
+        // на редактирование нет вовсе — переопределяем отдельным текстом.
+        if (!canEdit) {
+            lockBtn.title = t('lock.btnNoRightsChange');
+        }
     }
 }
 

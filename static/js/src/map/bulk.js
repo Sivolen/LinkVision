@@ -20,8 +20,8 @@ export function updateBulkEditButton() {
 }
 
 async function openBulkEditModal() {
-    if (window.isOperator) {
-        alert(t('bulk.operatorForbidden'));
+    if (window.canEditMap !== true) {
+        alert(t('common.accessDenied'));
         return;
     }
     const selected = cy.nodes(':selected').filter(n => !n.data('isGroup'));

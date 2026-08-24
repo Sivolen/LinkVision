@@ -139,7 +139,7 @@ export function initInteractions(cy) {
     cy.on('dragfree', 'node', function(evt) {
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
-        if (window.isOperator || isDragLocked()) return;
+        if (window.canEditMap === false || isDragLocked()) return;
         // Если тащили группу — дети уже обработаны в node[isGroup], пропускаем
         if (draggingGroup) return;
 
@@ -174,7 +174,7 @@ export function initInteractions(cy) {
     });
     // Групповое перетаскивание (несколько выделенных узлов сразу)
     cy.on('dragfree', 'node:selected', function(evt) {
-        if (window.isOperator || isDragLocked()) return;
+        if (window.canEditMap === false || isDragLocked()) return;
         const draggedNode = evt.target;
         // Пропускаем группы – они не будут сохраняться в историю
         if (draggedNode.data('isGroup')) return;
@@ -231,7 +231,7 @@ export function initInteractions(cy) {
     });
     // Перетаскивание одиночной фигуры
     cy.on('dragfree', 'node[isShape]', function(evt) {
-        if (window.isOperator || isDragLocked()) return;
+        if (window.canEditMap === false || isDragLocked()) return;
         const node = evt.target;
         let pos = node.position();
         const { width, height } = getBgDimensions();
@@ -270,7 +270,7 @@ export function initInteractions(cy) {
     });
     // Перетаскивание группы
     cy.on('dragfree', 'node[isGroup]', function(evt) {
-        if (window.isOperator || isDragLocked()) return;
+        if (window.canEditMap === false || isDragLocked()) return;
         const groupNode = evt.target;
         // Фильтруем: только устройства, не вложенные группы
         const children = groupNode.children().filter(child => !child.data('isGroup'));

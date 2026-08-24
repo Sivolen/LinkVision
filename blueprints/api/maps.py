@@ -11,12 +11,13 @@ from services import (
     map_service,
     require_map_access,
     require_map_edit,
+    require_map_lock,
     require_not_operator,
     log_map_action,
     get_cached_types,
     toggle_map_lock as toggle_map_lock_service,
 )
-from services.permissions import can_edit_map
+from services.permissions import can_edit_map, can_toggle_map_lock
 
 from services.notifications import notify_map_updated, notify_map_lock
 from utils.file_validation import safe_save_upload
@@ -201,7 +202,7 @@ def update_viewport(map_id):
 
 @maps_bp.route("/map/<int:map_id>/lock", methods=["PUT"])
 @login_required
-@require_map_edit
+@require_map_lock
 def toggle_map_lock(map_id):
     """
     Заблокировать/разблокировать карту.
@@ -237,7 +238,7 @@ def toggle_map_lock(map_id):
     )
 
     return jsonify(
-        {"id": map_id, "is_locked": map_obj.is_locked, "can_edit": can_edit_map(map_id)}
+        {"can_toggle_lock": can_toggle_map_lock(map_id), "id": map_id, "is_locked": map_obj.is_locked, "can_edit": can_edit_map(map_id)}
     )
 
 
@@ -248,5 +249,5 @@ def get_map_lock_status(map_id):
     """Получить статус блокировки карты."""
     map_obj = Map.query.get_or_404(map_id)
     return jsonify(
-        {"id": map_id, "is_locked": map_obj.is_locked, "can_edit": can_edit_map(map_id)}
+        {"id": map_id, "is_locked": map_obj.is_locked, "can_edit": can_edit_map(map_id), "can_toggle_lock": can_toggle_map_lock(map_id)}
     )

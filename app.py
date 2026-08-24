@@ -1,68 +1,6 @@
-import os
+import atexit
 import secrets
 from pathlib import Path
-from dotenv import load_dotenv
-
-
-def ensure_env_file():
-    """
-    Создаёт или дополняет .env необходимыми переменными (продакшен-конфигурация).
-
-    ВАЖНО: эта функция обязана выполниться (и завершить load_dotenv()) ДО
-    первого импорта config.py — как напрямую, так и транзитивно через
-    utils.logger (тот тоже делает `from config import Config` на своём
-    верхнем уровне). config.Config.SECRET_KEY — обычный атрибут класса,
-    он вычисляется ОДИН РАЗ в момент импорта модуля; если .env создать и
-    load_dotenv() выполнить ПОСЛЕ этого импорта, os.environ обновится, но
-    уже зафиксированный Config.SECRET_KEY — нет. Раньше эта функция стояла
-    ниже остальных import'ов (включая `from config import Config` и
-    `from utils.logger import app_logger`) — .env исправно создавался с
-    настоящим случайным ключом на диске, но реально запущенное приложение
-    все равно продолжало использовать захардкоженный дефолт
-    'dev-secret-key-change-me' для подписи сессий и CSRF-токенов, потому
-    что Config к этому моменту уже был импортирован раньше. Поэтому здесь
-    используется print(), а не app_logger — логер тоже зависит от Config
-    и на этом этапе ещё недоступен.
-    """
-    env_path = Path(".env")
-    required_vars = {
-        "SECRET_KEY": secrets.token_hex(32),
-        "SESSION_COOKIE_SECURE": "True",  # Безопасность: только HTTPS
-        "BEHIND_PROXY": "True",  # Приложение работает за прокси (nginx)
-        "LOG_LEVEL": "INFO",
-    }
-
-    if not env_path.exists():
-        with open(env_path, "w") as f:
-            for key, value in required_vars.items():
-                f.write(f"{key}={value}\n")
-        print(
-            f"[startup] Файл .env создан с переменными для продакшена: "
-            f"{', '.join(required_vars.keys())}"
-        )
-        load_dotenv(env_path)
-        return
-
-    load_dotenv(env_path)
-
-    missing = []
-    for key, default in required_vars.items():
-        if os.environ.get(key) is None:
-            missing.append((key, default))
-
-    if missing:
-        with open(env_path, "a") as f:
-            for key, default in missing:
-                f.write(f"{key}={default}\n")
-        load_dotenv(env_path, override=True)
-        print(f"[startup] В .env добавлены переменные: {', '.join(k for k, _ in missing)}")
-
-
-# Выполняется ДО импорта config/utils.logger/extensions/blueprints и т.д. —
-# см. подробное объяснение в докстринге ensure_env_file() выше.
-ensure_env_file()
-
-import atexit
 
 from flask import Flask, request, render_template, jsonify
 from flask_login import current_user, login_required
@@ -83,7 +21,48 @@ from blueprints.i18n import i18n_bp
 from services.monitor import init_monitor, start_monitor, stop_monitor
 from services.permissions import can_view_map
 from utils.logger import app_logger
+from dotenv import load_dotenv
+import os
 
+
+def ensure_env_file():
+    """Создаёт или дополняет .env необходимыми переменными (продакшен-конфигурация)."""
+    env_path = Path(".env")
+    required_vars = {
+        "SECRET_KEY": secrets.token_hex(32),
+        "SESSION_COOKIE_SECURE": "True",  # Безопасность: только HTTPS
+        "BEHIND_PROXY": "True",  # Приложение работает за прокси (nginx)
+        "LOG_LEVEL": "INFO",
+    }
+
+    if not env_path.exists():
+        with open(env_path, "w") as f:
+            for key, value in required_vars.items():
+                f.write(f"{key}={value}\n")
+        app_logger.info(
+            f"Файл .env создан с переменными для продакшена: {', '.join(required_vars.keys())}"
+        )
+        load_dotenv(env_path)
+        return
+
+    load_dotenv(env_path)
+
+    missing = []
+    for key, default in required_vars.items():
+        if os.environ.get(key) is None:
+            missing.append((key, default))
+
+    if missing:
+        with open(env_path, "a") as f:
+            for key, default in missing:
+                f.write(f"{key}={default}\n")
+        load_dotenv(env_path, override=True)
+        app_logger.info(
+            f"В .env добавлены переменные: {', '.join(k for k, _ in missing)}"
+        )
+
+
+ensure_env_file()
 
 
 def _ensure_user_locale_column():

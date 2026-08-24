@@ -14,7 +14,7 @@ from flask_login import login_required, current_user
 from extensions import db
 from models import User, Map, Device
 from services import map_service, update_last_map_id
-from services.permissions import can_view_map, can_edit_map, can_delete_map
+from services.permissions import can_view_map, can_edit_map, can_delete_map, can_toggle_map_lock
 from utils.logger import main_logger
 
 main_bp = Blueprint("main", __name__)
@@ -129,6 +129,7 @@ def map_view(map_id):
         map=map_obj,
         is_operator=current_user.is_operator,
         can_edit=can_edit_map(map_id),
+        can_toggle_lock=can_toggle_map_lock(map_id),
         user_pan_x=settings.pan_x,
         user_pan_y=settings.pan_y,
         user_zoom=settings.zoom,
