@@ -232,6 +232,35 @@ function updateLockButton() {
 function applyEditPermission(canEdit) {
     window.canEditMap = canEdit;
     updateLockPermissions(canEdit);
+    updateEditToolsDisabledState(canEdit);
+}
+
+/**
+ * Проставить disabled всем кнопкам редактирования в тулбаре по текущему
+ * window.canEditMap.
+ *
+ * Кнопки (Устройство/Связь/Группы/Фигура/Автораскладка/Массовое
+ * редактирование) теперь ВСЕГДА присутствуют в DOM, если у пользователя
+ * вообще есть редакторская связь с картой (шаблон рендерит их по
+ * can_toggle_lock, который не зависит от текущего лока) — прятать их
+ * больше нельзя, поэтому единственный способ отразить "сейчас редактировать
+ * нельзя" — это disabled, и обновлять его нужно при каждом изменении прав,
+ * а не только при загрузке страницы.
+ *
+ * Undo/Redo сознательно исключены: их disabled отдельно считает
+ * undoRedo.js по наличию истории (см. updateButtons() там) — если тронуть
+ * их здесь без учёта истории, можно ошибочно включить кнопку при пустой
+ * истории отмены. Синхронизация с правами для них сделана отдельно через
+ * window.refreshUndoRedoButtons (см. undoRedo.js).
+ */
+function updateEditToolsDisabledState(canEdit) {
+    document.querySelectorAll('.toolbar .edit-tools button').forEach((btn) => {
+        if (btn.id === 'undoBtn' || btn.id === 'redoBtn') return;
+        btn.disabled = !canEdit;
+    });
+    if (typeof window.refreshUndoRedoButtons === 'function') {
+        window.refreshUndoRedoButtons();
+    }
 }
 
 /**
