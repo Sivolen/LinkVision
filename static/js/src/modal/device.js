@@ -159,16 +159,29 @@ export function openDeviceModal(node) {
         infoTab.show();
     }
 
-    if (window.isOperator) {
-        devName.disabled = true;
-        document.querySelectorAll('#ips-container .ip-input').forEach(inp => inp.disabled = true);
-        document.getElementById('add-ip-btn')?.setAttribute('disabled', 'disabled');
-        devType.disabled = true;
-        devGroup.disabled = true;
-        if (monitoringCheck) monitoringCheck.disabled = true;
-        const saveBtn = document.querySelector('#deviceModal .btn-primary');
-        if (saveBtn) saveBtn.style.display = 'none';
-        if (deleteBtn) deleteBtn.style.display = 'none';
+    // Права считаем каждый раз заново и выставляем ОБЕ ветки явно (а не только
+    // "запрещено"), иначе disabled/скрытое состояние, выставленное при прошлом
+    // открытии модалки без прав на редактирование, остаётся навсегда — даже
+    // после того как карту разблокировали, ведь ничего не возвращает элементы
+    // обратно во "включено". Кнопки теперь только отключаются, не скрываются —
+    // видимость Save/Delete зависит от того, новое это устройство или нет
+    // (см. выше), а не от прав редактирования.
+    const canEdit = window.canEditMap === true;
+    devName.disabled = !canEdit;
+    document.querySelectorAll('#ips-container .ip-input').forEach(inp => inp.disabled = !canEdit);
+    const addIpBtn = document.getElementById('add-ip-btn');
+    if (addIpBtn) addIpBtn.disabled = !canEdit;
+    devType.disabled = !canEdit;
+    devGroup.disabled = !canEdit;
+    if (monitoringCheck) monitoringCheck.disabled = !canEdit;
+    const saveBtn = document.querySelector('#deviceModal .btn-primary');
+    if (saveBtn) {
+        saveBtn.disabled = !canEdit;
+        saveBtn.title = canEdit ? '' : t('common.accessDenied');
+    }
+    if (deleteBtn) {
+        deleteBtn.disabled = !canEdit;
+        deleteBtn.title = canEdit ? '' : t('common.accessDenied');
     }
 
     deviceModal.show();

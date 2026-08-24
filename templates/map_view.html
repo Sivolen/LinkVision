@@ -6,10 +6,13 @@
 <script>
     // Устанавливаем data-map-id на body (body находится в base.html)
     document.body.dataset.mapId = {{ map.id if map else 'null' }};
+    window.currentMapId = {{ map.id if map else 'null' }};
+    window.canViewMap = true;
+    window.canEditMap = {{ 'true' if can_edit else 'false' }};
 </script>
 
 <div class="toolbar">
-    {% if can_edit %}
+    {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group edit-tools">
         <button class="toolbar-btn" onclick="openDeviceModal()" aria-label="{{ _('Добавить устройство') }}">
             <i class="fas fa-plus" aria-hidden="true"></i> <span class="btn-label">{{ _('Устройство') }}</span>
@@ -34,7 +37,7 @@
         <span id="modeIndicator" class="mode-badge" role="status" aria-live="polite">{{ _('Просмотр') }}</span>
     </div>
 
-    {% if can_edit %}
+    {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group edit-tools" id="bulkEditGroup" style="display:none;">
         <button class="toolbar-btn toolbar-btn-icon-only" onclick="openBulkEditModal()" aria-label="{{ _('Массовое редактирование выбранных устройств') }}">
             <i class="fas fa-edit" aria-hidden="true"></i> <span class="btn-label">{{ _('Редактировать выбранные') }}</span>
@@ -54,7 +57,7 @@
         </button>
     </div>
 
-    {% if can_edit %}
+    {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group edit-tools">
         <button class="toolbar-btn" onclick="openGroupManager()" aria-label="{{ _('Управление группами устройств') }}">
             <i class="fas fa-layer-group" aria-hidden="true"></i> <span class="btn-label">{{ _('Группы') }}</span>
@@ -96,7 +99,7 @@
             </ul>
         </div>
     </div>
-    {% if can_edit %}
+    {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group edit-tools">
         <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="{{ _('Отменить (Ctrl+Z)') }}" aria-label="{{ _('Отменить последнее действие') }}" disabled>
             <i class="fas fa-undo-alt" aria-hidden="true"></i>
@@ -106,7 +109,7 @@
         </button>
     </div>
     {% endif %}
-    {% if can_edit %}
+    {% if can_toggle_lock %}
     <div class="toolbar-group">
         <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="{{ _('Заблокировать/разблокировать перемещение устройств') }}" aria-label="{{ _('Заблокировать или разблокировать перемещение устройств') }}">
             <i class="fas fa-lock-open" aria-hidden="true"></i>
@@ -267,7 +270,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
-                {% if can_edit %}
+                {% if can_toggle_lock or can_edit %}
                 <button type="button" class="btn btn-primary" onclick="saveDevice()" id="saveDeviceBtn">
                     <span class="btn-text">{{ _('Сохранить') }}</span>
                     <span class="btn-loader d-none">
@@ -359,7 +362,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
-                {% if can_edit %}
+                {% if can_toggle_lock or can_edit %}
                 <button type="button" class="btn btn-danger btn-sm" id="linkDeleteBtn" style="display:none;" onclick="deleteLink()">{{ _('Удалить') }}</button>
                 <button type="button" class="btn btn-primary btn-sm" onclick="confirmCreateLink()" id="saveLinkBtn">
                     <span class="btn-text">{{ _('Сохранить') }}</span>
@@ -561,7 +564,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
-                {% if can_edit %}
+                {% if can_toggle_lock or can_edit %}
                 <button type="button" class="btn btn-primary" onclick="applyBulkEdit()">{{ _('Применить') }}</button>
                 {% endif %}
             </div>
@@ -642,7 +645,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
-                {% if can_edit %}
+                {% if can_toggle_lock or can_edit %}
                 <button type="button" class="btn btn-danger" id="deleteShapeBtn" style="display:none;">{{ _('Удалить') }}</button>
                 <button type="button" class="btn btn-primary" onclick="saveShape()">{{ _('Сохранить') }}</button>
                 {% endif %}

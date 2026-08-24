@@ -44,6 +44,27 @@ class TestLockEnforcement:
         )
         assert r.status_code == 201
 
+    def test_map_admin_can_lock_and_unlock_map(self, client, login, map_ids):
+        # Создаём персонального map-admin для обычного пользователя.
+        from models import MapPermission, User, Map
+        from extensions import db
+
+        admin_map = Map.query.filter_by(name="Foreign Map").first()
+        user = User.query.filter_by(username="testuser").first()
+        db.session.add(MapPermission(map_id=admin_map.id, user_id=user.id, role="admin"))
+        db.session.commit()
+
+        login("testuser")
+        mid = admin_map.id
+
+        r = client.put(f"/api/map/{mid}/lock", json={"locked": True})
+        assert r.status_code == 200
+        assert r.get_json()["is_locked"] is True
+
+        r = client.put(f"/api/map/{mid}/lock", json={"locked": False})
+        assert r.status_code == 200
+        assert r.get_json()["is_locked"] is False
+
 
 class TestAccessControl:
     """Кто может редактировать какую карту."""
@@ -66,6 +87,17 @@ class TestAccessControl:
         )
         assert r.status_code == 201
 
+    def test_operator_without_map_permission_cannot_create_device(
+        self, client, login, map_ids, router_type_id
+    ):
+        login("operator")
+        r = client.post(
+            "/api/device",
+            json=_create_device_payload(map_ids["Shared Editor Map"], router_type_id),
+        )
+        assert r.status_code == 403
+
+
     def test_viewer_permission_forbids_create(
         self, client, login, map_ids, router_type_id
     ):
@@ -76,15 +108,15 @@ class TestAccessControl:
         )
         assert r.status_code == 403
 
-    def test_operator_cannot_create_device(
+    def test_operator_with_editor_role_can_create_device(
         self, client, login, map_ids, router_type_id
     ):
-        login("operator")  # оператору запрещено создавать (require_not_operator)
+        login("operator")
         r = client.post(
             "/api/device",
             json=_create_device_payload(map_ids["Operator Shared Map"], router_type_id),
         )
-        assert r.status_code == 403
+        assert r.status_code == 201
 
     def test_anonymous_forbidden(self, client, map_ids, router_type_id):
         r = client.post(

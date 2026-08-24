@@ -488,18 +488,13 @@ export async function deleteGroup(id, name) {
 export function openGroupManager(options = {}) {
     Logger.info('openGroupManager called');
 
-    if (!window.isAdmin) {
-        Logger.warn('Not admin');
-        showToast(t('common.accessDenied'), t('modal.group.adminOnly'), 'error');
-        return;
-    }
-    if (window.isOperator) {
-        Logger.warn('Is operator');
-        showToast(t('common.accessDenied'), t('modal.group.operatorNo'), 'error');
+    if (window.canEditMap !== true) {
+        Logger.warn('Map is not editable');
+        showToast(t('common.accessDenied'), t('common.accessDenied'), 'error');
         return;
     }
 
-    Logger.info('Admin check passed');
+    Logger.info('Map edit permission passed');
 
     const modalEl = document.getElementById('groupModal');
     if (!modalEl) {

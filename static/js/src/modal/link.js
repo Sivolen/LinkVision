@@ -46,13 +46,7 @@ export function openLinkModal(sourceId, targetId) {
     document.getElementById('link_font_size').value = 8;
     updateLinkPreview();
 
-    if (window.isOperator) {
-        document.querySelectorAll('#linkModal input, #linkModal select').forEach(el => el.disabled = true);
-        const saveBtn = document.querySelector('#linkModal .btn-primary');
-        const deleteBtn = document.querySelector('#linkModal .btn-danger');
-        if (saveBtn) saveBtn.style.display = 'none';
-        if (deleteBtn) deleteBtn.style.display = 'none';
-    }
+    applyLinkModalEditPermission();
     linkModal.show();
 }
 
@@ -90,15 +84,34 @@ export function openLinkModalForEdit(edge) {
     document.getElementById('linkDeleteBtn').onclick = () => deleteLink(data.id);
     document.getElementById('link_font_size').value = data.font_size || 8;
     updateLinkPreview();
-
-    if (window.isOperator) {
-        document.querySelectorAll('#linkModal input, #linkModal select').forEach(el => el.disabled = true);
-        const saveBtn = document.querySelector('#linkModal .btn-primary');
-        const deleteBtn = document.querySelector('#linkModal .btn-danger');
-        if (saveBtn) saveBtn.style.display = 'none';
-        if (deleteBtn) deleteBtn.style.display = 'none';
-    }
+    applyLinkModalEditPermission();
     linkModal.show();
+}
+
+/**
+ * Привести поля/кнопки модалки связи в соответствие с текущим правом
+ * редактирования карты. Вызывается при КАЖДОМ открытии модалки и всегда
+ * выставляет обе ветки (можно/нельзя) явно — иначе disabled, оставленный от
+ * прошлого открытия в заблокированном состоянии карты, не снимается сам
+ * после разблокировки, пока страница не будет перезагружена. Кнопки теперь
+ * только отключаются (disabled), а не скрываются — видимость Delete
+ * по-прежнему зависит от того, новая это связь или существующая (см. выше).
+ */
+function applyLinkModalEditPermission() {
+    const canEdit = window.canEditMap === true;
+    document.querySelectorAll('#linkModal input, #linkModal select').forEach(el => {
+        el.disabled = !canEdit;
+    });
+    const saveBtn = document.querySelector('#linkModal .btn-primary');
+    if (saveBtn) {
+        saveBtn.disabled = !canEdit;
+        saveBtn.title = canEdit ? '' : t('common.accessDenied');
+    }
+    const deleteBtn = document.querySelector('#linkModal .btn-danger');
+    if (deleteBtn) {
+        deleteBtn.disabled = !canEdit;
+        deleteBtn.title = canEdit ? '' : t('common.accessDenied');
+    }
 }
 
 /**

@@ -58,8 +58,8 @@ function updateModeIndicator(mode) {
 }
 
 export function startLinkMode(clickedNode = null) {
-    if (window.isOperator) {
-        alert(t('modes.operatorNoLinks'));
+    if (window.canEditMap !== true) {
+        alert(t('common.accessDenied'));
         return;
     }
     resetLinkMode();

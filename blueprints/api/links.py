@@ -8,7 +8,6 @@ from flask_login import login_required
 from services import (
     map_service,
     device_service,
-    require_not_operator,
     can_edit_map,
     log_map_action,
 )
@@ -24,7 +23,6 @@ links_bp = Blueprint("links", __name__)
 
 @links_bp.route("/link", methods=["POST"])
 @login_required
-@require_not_operator
 def create_link():
     """Создать связь между устройствами."""
     data = request.get_json()
