@@ -99,6 +99,25 @@ export function openShapeModal(shapeNode = null) {
         opacitySpan.textContent = `${percent}%`;
     }
 
+    // Права проверяем при КАЖДОМ открытии и выставляем обе ветки явно —
+    // кнопки теперь всегда в DOM (шаблон рендерит их для любого, у кого
+    // вообще есть редакторская связь с картой), поэтому только отключаем
+    // их при отсутствии прав редактирования именно сейчас (карта
+    // заблокирована), а не прячем.
+    const canEdit = window.canEditMap === true;
+    [typeSelect, widthInput, heightInput, colorInput, opacityInput, descriptionInput, fontSizeInput].forEach((el) => {
+        if (el) el.disabled = !canEdit;
+    });
+    const saveBtn = document.querySelector('#shapeModal .btn-primary');
+    if (saveBtn) {
+        saveBtn.disabled = !canEdit;
+        saveBtn.title = canEdit ? '' : t('common.accessDenied');
+    }
+    if (deleteBtn) {
+        deleteBtn.disabled = !canEdit;
+        deleteBtn.title = canEdit ? '' : t('common.accessDenied');
+    }
+
     shapeModal.show();
 }
 
