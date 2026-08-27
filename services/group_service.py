@@ -37,18 +37,30 @@ def would_create_cycle(group_id: int, new_parent_id: int) -> bool:
 
 
 def create_group(
-    map_id: int, name: str, color: str = "#3498db", font_size: int = 11, parent_group_id: int = None
+    map_id: int,
+    name: str,
+    color: str = "#3498db",
+    font_size: int = 11,
+    parent_group_id: int = None,
 ) -> Group:
     """Создать группу."""
     if parent_group_id is not None:
         parent = db.session.get(Group, parent_group_id)
         if not parent or parent.map_id != map_id:
-            raise ValueError("Родительская группа не найдена или не принадлежит этой карте")
+            raise ValueError(
+                "Родительская группа не найдена или не принадлежит этой карте"
+            )
         # Проверка цикла при СОЗДАНИИ не нужна: у новой группы ещё нет id и
         # потомков, поэтому замкнуть дерево она не может. Прежний вызов
         # would_create_cycle(parent_group_id, parent_group_id) был бессмысленным.
 
-    group = Group(name=name, color=color, map_id=map_id, font_size=font_size, parent_group_id=parent_group_id)
+    group = Group(
+        name=name,
+        color=color,
+        map_id=map_id,
+        font_size=font_size,
+        parent_group_id=parent_group_id,
+    )
     db.session.add(group)
     db.session.commit()
     api_logger.info(f"Group created: ID={group.id}, name={group.name}, map={map_id}")
@@ -87,7 +99,7 @@ def update_group(
         group.color = color
     if font_size is not None:
         group.font_size = font_size
-        
+
     if parent_group_id is not _UNSET:
         # ВСЕ проверки — ДО присвоения. Раньше parent_group_id присваивался
         # первым, а проверки шли следом и «откатывали» значение в None. Но
@@ -129,17 +141,17 @@ def delete_group(group_id: int) -> int:
     group = db.session.get(Group, group_id)
     if not group:
         raise ValueError("Группа не найдена")
-        
+
     map_id = group.map_id
-    
+
     # Реродительство дочерних групп на уровень выше
     children = Group.query.filter_by(parent_group_id=group_id).all()
     for child in children:
         child.parent_group_id = group.parent_group_id
-        
+
     # Освобождаем устройства от группы
     Device.query.filter_by(group_id=group_id).update({"group_id": None})
-    
+
     db.session.delete(group)
     db.session.commit()
     api_logger.info(f"Group deleted: ID={group_id}")

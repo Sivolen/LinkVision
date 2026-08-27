@@ -371,11 +371,11 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
             memo = {}
         if g_id in memo:
             return memo[g_id]
-        
+
         if g_id in group_ids_with_devices:
             memo[g_id] = True
             return True
-            
+
         children = Group.query.filter_by(parent_group_id=g_id).all()
         has_visible_child = any(group_visible_recursive(c.id, memo) for c in children)
         memo[g_id] = has_visible_child
@@ -482,7 +482,13 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
 
     # Формирование групп (только видимые + parent_group_id)
     groups_out = [
-        {"id": g.id, "name": g.name, "color": g.color, "font_size": g.font_size, "parent_group_id": g.parent_group_id}
+        {
+            "id": g.id,
+            "name": g.name,
+            "color": g.color,
+            "font_size": g.font_size,
+            "parent_group_id": g.parent_group_id,
+        }
         for g in groups
         if g.id in visible_groups
     ]

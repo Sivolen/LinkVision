@@ -55,7 +55,9 @@ class TestCreateNestedGroups:
         assert foreign.status_code == 201
         foreign_id = foreign.get_json()["id"]
 
-        resp = _create_group(client, map_ids["Own Map"], "Своя", parent_group_id=foreign_id)
+        resp = _create_group(
+            client, map_ids["Own Map"], "Своя", parent_group_id=foreign_id
+        )
         assert resp.status_code == 400
 
 
@@ -86,12 +88,18 @@ class TestCycleProtection:
         resp = client.put(f"/api/group/{group_id}", json={"parent_group_id": group_id})
         assert resp.status_code == 400
 
-    def test_group_cannot_become_child_of_its_descendant(self, client, login, own_map_id, app):
+    def test_group_cannot_become_child_of_its_descendant(
+        self, client, login, own_map_id, app
+    ):
         """A → B → C; попытка сделать A потомком C замкнула бы дерево в цикл."""
         login("testuser")
         a_id = _create_group(client, own_map_id, "A").get_json()["id"]
-        b_id = _create_group(client, own_map_id, "B", parent_group_id=a_id).get_json()["id"]
-        c_id = _create_group(client, own_map_id, "C", parent_group_id=b_id).get_json()["id"]
+        b_id = _create_group(client, own_map_id, "B", parent_group_id=a_id).get_json()[
+            "id"
+        ]
+        c_id = _create_group(client, own_map_id, "C", parent_group_id=b_id).get_json()[
+            "id"
+        ]
 
         resp = client.put(f"/api/group/{a_id}", json={"parent_group_id": c_id})
         assert resp.status_code == 400
@@ -117,7 +125,9 @@ class TestReparenting:
         login("testuser")
         first = _create_group(client, own_map_id, "Первый").get_json()["id"]
         second = _create_group(client, own_map_id, "Второй").get_json()["id"]
-        child = _create_group(client, own_map_id, "Дочерняя", parent_group_id=first).get_json()["id"]
+        child = _create_group(
+            client, own_map_id, "Дочерняя", parent_group_id=first
+        ).get_json()["id"]
 
         resp = client.put(f"/api/group/{child}", json={"parent_group_id": second})
         assert resp.status_code == 200
@@ -128,7 +138,9 @@ class TestReparenting:
     def test_detach_group_to_root(self, client, login, own_map_id, app):
         login("testuser")
         parent_id = _create_group(client, own_map_id, "Родитель").get_json()["id"]
-        child_id = _create_group(client, own_map_id, "Дочерняя", parent_group_id=parent_id).get_json()["id"]
+        child_id = _create_group(
+            client, own_map_id, "Дочерняя", parent_group_id=parent_id
+        ).get_json()["id"]
 
         resp = client.put(f"/api/group/{child_id}", json={"parent_group_id": None})
         assert resp.status_code == 200

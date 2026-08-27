@@ -1,27 +1,19 @@
-// zoomEmphasis.js – усиление видимости статуса down/partial при отдалении карты.
+// zoomEmphasis.js – усиление видимости статуса down/partial, а также
+// результатов поиска, при отдалении карты.
 //
 // Проблема: border-width/overlay-padding в styles.js заданы в единицах графа,
 // а не в экранных пикселях — при zoom "вписать всю карту" на 200+ устройствах
 // (zoom ~0.1–0.2) 3-единичная рамка превращается в доли пикселя на экране и
 // физически неразличима. Этот модуль на каждое изменение zoom пересчитывает
-// border-width/overlay-padding/overlay-opacity ТОЛЬКО для узлов со статусом
-// down/partial так, чтобы на экране они не становились тоньше заданного
-// минимума в px, независимо от того, насколько отдалена карта. Здоровые (up)
-// узлы не трогаем — их не обязательно "видеть" издалека.
+// border-width/overlay-padding/overlay-opacity для двух независимых групп
+// узлов — авария (status down/partial) и подсветка поиска (.cy-node-highlight) —
+// так, чтобы на экране они не становились тоньше заданного минимума в px,
+// независимо от того, насколько отдалена карта. Здоровые/неподсвеченные узлы
+// не трогаем — их не обязательно "видеть" издалека.
 import { getCy } from './core.js';
 import { registerCleanup } from './moduleRegistry.js';
 
 const ZOOM_THRESHOLD = 0.5;   // выше этого зума компенсация не нужна — рамка и так видна
-
-const MIN_BORDER_PX = 5;             // минимальная толщина рамки НА ЭКРАНЕ, px
-const BASE_BORDER = 3;               // базовое значение из styles.js (единицы графа)
-const MAX_BORDER_GRAPH_UNITS = 16;   // потолок в единицах графа — чтобы рамка не "взрывалась" на экстремальном отдалении
-
-const MIN_OVERLAY_PADDING_PX = 10;   // минимальная толщина гало НА ЭКРАНЕ, px
-const BASE_OVERLAY_PADDING = 4;      // базовое значение из styles.js (единицы графа)
-const MAX_OVERLAY_PADDING_GRAPH_UNITS = 40;
-
-const MAX_OVERLAY_OPACITY = 0.55;    // насколько плотным становится гало на максимальном отдалении
 
 let debounceTimer = null;
 
@@ -37,14 +29,52 @@ function isMonitoringOff(n) {
     return m === 'false' || m === false;
 }
 
-function isEmphasisTarget(n) {
+function isStatusTarget(n) {
     const s = n.data('status');
     return (s === 'down' || s === 'partial') && !isMonitoringOff(n);
 }
 
-function clearEmphasis(n) {
+function isSearchTarget(n) {
+    return n.hasClass('cy-node-highlight');
+}
+
+// Две независимые группы усиления — свой data-флаг на группу, чтобы статус-
+// авария и подсветка поиска не затирали состояние друг друга на одном и том
+// же узле (узел вполне может быть одновременно "down" и найден поиском).
+const EMPHASIS_GROUPS = [
+    {
+        dataKey: '_zoomEmphasisStatus',
+        isTarget: isStatusTarget,
+        minBorderPx: 5,          // минимальная толщина рамки НА ЭКРАНЕ, px
+        baseBorder: 3,           // базовое значение из styles.js (единицы графа)
+        maxBorderGraphUnits: 16, // потолок в единицах графа — чтобы рамка не "взрывалась" на экстремальном отдалении
+        minOverlayPaddingPx: 10, // минимальная толщина гало НА ЭКРАНЕ, px
+        baseOverlayPadding: 4,   // базовое значение из styles.js (единицы графа)
+        maxOverlayPaddingGraphUnits: 40,
+        minOverlayOpacity: 0.2,
+        maxOverlayOpacity: 0.55, // насколько плотным становится гало на максимальном отдалении
+    },
+    {
+        // Подсветка результатов поиска (.cy-node-highlight в styles.js) — та же
+        // идея, что и для аварий: на сильном отдалении фиксированные border-width:4
+        // /overlay-padding:6px из styles.js тоже вырождаются в доли пикселя, и
+        // найденное поиском устройство физически не видно на большой карте.
+        dataKey: '_zoomEmphasisSearch',
+        isTarget: isSearchTarget,
+        minBorderPx: 5,
+        baseBorder: 4,
+        maxBorderGraphUnits: 18,
+        minOverlayPaddingPx: 12,
+        baseOverlayPadding: 6,
+        maxOverlayPaddingGraphUnits: 44,
+        minOverlayOpacity: 0.3,
+        maxOverlayOpacity: 0.6,
+    },
+];
+
+function clearEmphasis(n, group) {
     n.removeStyle('border-width overlay-padding overlay-opacity');
-    n.removeData('_zoomEmphasis');
+    n.removeData(group.dataKey);
 }
 
 function recompute() {
@@ -52,33 +82,36 @@ function recompute() {
     if (!cy) return;
 
     const zoom = cy.zoom();
-    const problemNodes = cy.nodes().filter(isEmphasisTarget);
 
-    // Снимаем усиление с узлов, которым оно больше НЕ полагается: zoom вырос выше
-    // порога, статус стал up, или мониторинг выключили (узел ушёл из problemNodes).
-    // Иначе inline-стиль "залипает" — в т.ч. остаётся подсветка на устройстве,
-    // которому только что выключили мониторинг.
-    cy.nodes().forEach(n => {
-        if (n.data('_zoomEmphasis') && (zoom >= ZOOM_THRESHOLD || !problemNodes.contains(n))) {
-            clearEmphasis(n);
-        }
-    });
+    EMPHASIS_GROUPS.forEach((group) => {
+        const targetNodes = cy.nodes().filter(group.isTarget);
 
-    if (zoom >= ZOOM_THRESHOLD || !problemNodes.length) return;
+        // Снимаем усиление с узлов, которым оно больше НЕ полагается: zoom вырос
+        // выше порога, или узел вышел из целевой группы (статус стал up,
+        // мониторинг выключили, узел больше не совпадает с поиском). Иначе
+        // inline-стиль "залипает" на узле, переставшем быть аварийным/найденным.
+        cy.nodes().forEach(n => {
+            if (n.data(group.dataKey) && (zoom >= ZOOM_THRESHOLD || !targetNodes.contains(n))) {
+                clearEmphasis(n, group);
+            }
+        });
 
-    const borderWidth = clamp(MIN_BORDER_PX / zoom, BASE_BORDER, MAX_BORDER_GRAPH_UNITS);
-    const overlayPadding = clamp(MIN_OVERLAY_PADDING_PX / zoom, BASE_OVERLAY_PADDING, MAX_OVERLAY_PADDING_GRAPH_UNITS);
-    // Чем дальше отдалились от порога — тем плотнее гало (линейно от 0.2 до MAX_OVERLAY_OPACITY)
-    const t = clamp(1 - zoom / ZOOM_THRESHOLD, 0, 1);
-    const overlayOpacity = 0.2 + t * (MAX_OVERLAY_OPACITY - 0.2);
+        if (zoom >= ZOOM_THRESHOLD || !targetNodes.length) return;
 
-    cy.batch(() => {
-        problemNodes.forEach(n => {
-            n.data('_zoomEmphasis', true);
-            n.style({
-                'border-width': borderWidth,
-                'overlay-padding': `${overlayPadding}px`,
-                'overlay-opacity': overlayOpacity,
+        const borderWidth = clamp(group.minBorderPx / zoom, group.baseBorder, group.maxBorderGraphUnits);
+        const overlayPadding = clamp(group.minOverlayPaddingPx / zoom, group.baseOverlayPadding, group.maxOverlayPaddingGraphUnits);
+        // Чем дальше отдалились от порога — тем плотнее гало (линейно от min до max)
+        const t = clamp(1 - zoom / ZOOM_THRESHOLD, 0, 1);
+        const overlayOpacity = group.minOverlayOpacity + t * (group.maxOverlayOpacity - group.minOverlayOpacity);
+
+        cy.batch(() => {
+            targetNodes.forEach(n => {
+                n.data(group.dataKey, true);
+                n.style({
+                    'border-width': borderWidth,
+                    'overlay-padding': `${overlayPadding}px`,
+                    'overlay-opacity': overlayOpacity,
+                });
             });
         });
     });
@@ -93,9 +126,10 @@ export function initZoomEmphasis(cy) {
 }
 
 /**
- * Вызывать сразу при смене статуса устройства (device_status/device_status_batch)
- * и при первичной загрузке карты — чтобы новый "красный"/"жёлтый" узел получил
- * усиление немедленно, не дожидаясь следующего события zoom.
+ * Вызывать сразу при смене статуса устройства (device_status/device_status_batch),
+ * при первичной загрузке карты и при каждом обновлении подсветки поиска —
+ * чтобы новый "красный"/"жёлтый"/найденный узел получил усиление немедленно,
+ * не дожидаясь следующего события zoom.
  */
 export function refreshZoomEmphasis() {
     recompute();
@@ -110,4 +144,3 @@ export function cleanup() {
 
 // Саморегистрация в общем реестре очистки (см. moduleRegistry.js)
 registerCleanup(cleanup);
-

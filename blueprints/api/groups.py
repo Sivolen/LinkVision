@@ -44,7 +44,11 @@ def create_group():
         font_size = data.get("font_size", 11)
         parent_group_id = data.get("parent_group_id")
         group = map_service.create_group(
-            map_id, data["name"], data.get("color", "#3498db"), font_size, parent_group_id
+            map_id,
+            data["name"],
+            data.get("color", "#3498db"),
+            font_size,
+            parent_group_id,
         )
 
         invalidate_groups_cache(map_id)

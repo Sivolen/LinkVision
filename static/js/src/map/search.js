@@ -1,4 +1,5 @@
 import { t } from '../i18n/i18n.js';
+import { refreshZoomEmphasis } from './zoomEmphasis.js';
 // search.js – поиск по имени/IP и фильтр по статусу
 let cy = null;
 let currentFilter = 'all';
@@ -101,4 +102,10 @@ function applyFilterAndSearch() {
     } else {
         lastSearchCount = -1; // сброс при очистке поиска
     }
+
+    // Ореол подсветки (как у аварийных устройств) должен масштабироваться под
+    // текущий zoom сразу, а не ждать следующего события zoom — иначе на
+    // отдалённой карте только что найденный узел останется с чуть заметной
+    // фиксированной рамкой из styles.js до первого скролла колёсиком.
+    refreshZoomEmphasis();
 }

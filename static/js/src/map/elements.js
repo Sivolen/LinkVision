@@ -362,7 +362,7 @@ export function updateDevice(device) {
         }
     }
 
-    let groupParent = undefined;
+    let groupParent = null;
     if (device.group_id) {
         const groupNode = cy.getElementById(`group_${device.group_id}`);
         if (groupNode.length) {
@@ -370,7 +370,17 @@ export function updateDevice(device) {
             groupParent = String(`group_${device.group_id}`);
         }
     }
-    node.data('parent', groupParent);
+    // ВАЖНО: смена parent на уже существующем узле через node.data('parent', …)
+    // молча не работает в Cytoscape — это лишь меняет поле данных, но не
+    // переносит узел в новый compound-родитель на холсте. Именно поэтому
+    // после назначения группы в модалке узел визуально оставался снаружи
+    // группы до перезагрузки страницы (при перезагрузке узел создаётся
+    // заново уже СРАЗУ с нужным parent, а создание — единственный случай,
+    // когда прямое присваивание data сработало бы). Правильный API для
+    // изменения родителя существующего элемента — eles.move().
+    if ((node.data('parent') || null) !== groupParent) {
+        node.move({ parent: groupParent });
+    }
 
     // Серый стиль мониторинга в ver2 — чисто data-driven (селектор
     // node[monitoring_enabled="false"] в styles.js), поэтому достаточно обновить
