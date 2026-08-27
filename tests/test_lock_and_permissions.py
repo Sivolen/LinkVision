@@ -51,7 +51,9 @@ class TestLockEnforcement:
 
         admin_map = Map.query.filter_by(name="Foreign Map").first()
         user = User.query.filter_by(username="testuser").first()
-        db.session.add(MapPermission(map_id=admin_map.id, user_id=user.id, role="admin"))
+        db.session.add(
+            MapPermission(map_id=admin_map.id, user_id=user.id, role="admin")
+        )
         db.session.commit()
 
         login("testuser")
@@ -96,7 +98,6 @@ class TestAccessControl:
             json=_create_device_payload(map_ids["Shared Editor Map"], router_type_id),
         )
         assert r.status_code == 403
-
 
     def test_viewer_permission_forbids_create(
         self, client, login, map_ids, router_type_id

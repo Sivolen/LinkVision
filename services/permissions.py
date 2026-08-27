@@ -259,6 +259,7 @@ def require_map_lock(f: Callable) -> Callable:
     Проверка права блокировать/разблокировать карту.
     Отдельно от права редактирования содержимого карты.
     """
+
     @wraps(f)
     def decorated_function(map_id: int, *args: Any, **kwargs: Any) -> Any:
         if not can_toggle_map_lock(map_id):
@@ -422,9 +423,7 @@ def get_user_editable_map_ids() -> list[int]:
     editable_ids.update(m.id for m in own_maps)
 
     # Персональный editor — только незаблокированные карты.
-    perms = MapPermission.query.filter_by(
-        user_id=current_user.id, role="editor"
-    ).all()
+    perms = MapPermission.query.filter_by(user_id=current_user.id, role="editor").all()
     for perm in perms:
         map_obj = db.session.get(Map, perm.map_id)
         if map_obj and not map_obj.is_locked:

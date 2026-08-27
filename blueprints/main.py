@@ -14,7 +14,12 @@ from flask_login import login_required, current_user
 from extensions import db
 from models import User, Map, Device
 from services import map_service, update_last_map_id
-from services.permissions import can_view_map, can_edit_map, can_delete_map, can_toggle_map_lock
+from services.permissions import (
+    can_view_map,
+    can_edit_map,
+    can_delete_map,
+    can_toggle_map_lock,
+)
 from utils.logger import main_logger
 
 main_bp = Blueprint("main", __name__)

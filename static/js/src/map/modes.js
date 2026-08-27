@@ -16,7 +16,10 @@ const MODE_CLASSES = {
     link: 'mode-link'
 };
 
-export function initModes(instance) { cy = instance; }
+export function initModes(instance) {
+    cy = instance;
+    setMode('pan');
+}
 
 export function isLinkMode() { return linkModeActive; }
 export function getSourceNode() { return sourceNode; }
