@@ -26,6 +26,75 @@ def get_sidebar_tree():
     return jsonify(data)
 
 
+def _can_reorder_in_folder(folder_id) -> bool:
+    """
+    Право переставлять порядок элементов НА ДАННОМ уровне дерева.
+
+    folder_id=None (корень) — своих прав достаточно: корень у каждого
+    пользователя свой набор видимых элементов (см. get_sidebar_tree_data),
+    поэтому там нечего защищать сверх обычной видимости.
+
+    Для содержимого папки — та же планка, что и на перенос карты В эту папку:
+    владелец папки, глобальный админ, либо editor/admin через FolderPermission
+    (свой или унаследованный от родительских папок).
+    """
+    if folder_id is None:
+        return True
+    if current_user.is_admin:
+        return True
+    folder = db.session.get(MapFolder, folder_id)
+    if not folder:
+        return False
+    if folder.owner_id == current_user.id:
+        return True
+    return _get_user_folder_role(folder_id) in ("editor", "admin")
+
+
+@folders_bp.route("/sidebar/reorder", methods=["PUT"])
+@login_required
+def reorder_sidebar():
+    """
+    Сохранить новый порядок элементов ОДНОГО уровня дерева (drag-and-drop).
+
+    Body: {"parent_folder_id": int | null, "items": [{"type": "map"|"folder", "id": int}, ...]}
+    Индекс элемента в массиве items становится его новым position.
+
+    Папки и карты — вперемешку в одном массиве: так карту можно поставить
+    выше папки на том же уровне (и наоборот), см. get_sidebar_tree_data.
+
+    Защита от чужого уровня: элемент из items, чей реальный folder_id/parent_id
+    не совпадает с заявленным parent_folder_id, молча пропускается — этот
+    роут только переставляет порядок, а не переносит элементы между папками
+    (для переноса — PUT /api/map/<id>/folder и PUT /api/folder/<id>).
+    """
+    data = request.json or {}
+    parent_folder_id = data.get("parent_folder_id")
+    items = data.get("items", [])
+
+    if not isinstance(items, list):
+        return jsonify({"error": "items должен быть списком"}), 400
+
+    if not _can_reorder_in_folder(parent_folder_id):
+        return jsonify({"error": "Доступ запрещён"}), 403
+
+    for index, item in enumerate(items):
+        item_type = item.get("type")
+        item_id = item.get("id")
+
+        if item_type == "map":
+            m = db.session.get(Map, item_id)
+            if m and m.folder_id == parent_folder_id:
+                m.position = index
+        elif item_type == "folder":
+            f = db.session.get(MapFolder, item_id)
+            if f and f.parent_id == parent_folder_id:
+                f.position = index
+
+    db.session.commit()
+    map_service.invalidate_all_sidebar_caches()
+    return jsonify({"status": "ok"})
+
+
 @folders_bp.route("/folder", methods=["POST"])
 @login_required
 def create_folder():
