@@ -234,18 +234,183 @@ let wasDisconnected = false;
     }
 
     // Плоский индекс папок последнего загруженного дерева — используется для
-    // заполнения select'а "переместить в папку", чтобы не делать отдельный
-    // запрос ради одного списка имён.
+    // заполнения select'а "переместить в папку" и для вычисления нового
+    // порядка при drag-and-drop, чтобы не гонять лишние запросы.
     let lastSidebarTree = null;
 
     function flattenFolders(node, depth, out) {
-        (node.folders || []).forEach(folder => {
-            out.push({ id: folder.id, name: folder.name, depth });
-            flattenFolders(folder, depth + 1, out);
+        (node.children || []).forEach(item => {
+            if (item.type === 'folder') {
+                out.push({ id: item.id, name: item.name, depth });
+                flattenFolders(item, depth + 1, out);
+            }
         });
     }
 
-    function buildMapElement(map, depth) {
+    // ─── Drag-and-drop в дереве сайдбара ───────────────────────────────────
+    //
+    // Один и тот же жест обслуживает два разных действия, различаемых по
+    // тому, В КАКУЮ ТРЕТЬ строки отпустили курсор:
+    // - верхняя/нижняя треть любой строки (карта или папка) → переставить
+    //   элемент до/после неё в СПИСКЕ ТОГО ЖЕ уровня (reorder);
+    // - средняя треть строки ПАПКИ → переместить перетаскиваемый элемент
+    //   ВНУТРЬ этой папки (move).
+    // При переносе между разными уровнями (не reorder, а drop в незнакомый
+    // список) сначала физически переносим элемент (те же API, что и у кнопки
+    // "переместить в папку"/модалки папки), и только потом сохраняем порядок
+    // на новом уровне — иначе сервер отклонит reorder как несоответствующий
+    // заявленному уровню (это защита от обхода прав через reorder-эндпоинт).
+    let dragState = null; // { type: 'map'|'folder', id, parentFolderId }
+
+    function clearDragIndicators() {
+        document.querySelectorAll('.drag-over-top, .drag-over-bottom, .drag-over-folder').forEach(el => {
+            el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-folder');
+        });
+    }
+
+    function attachDragHandlers(rowEl, type, id, parentFolderId) {
+        rowEl.draggable = true;
+        rowEl.addEventListener('dragstart', (e) => {
+            e.stopPropagation();
+            dragState = { type, id, parentFolderId };
+            rowEl.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', `${type}:${id}`); // Firefox требует непустой setData
+        });
+        rowEl.addEventListener('dragend', () => {
+            rowEl.classList.remove('dragging');
+            clearDragIndicators();
+            dragState = null;
+        });
+    }
+
+    function attachDropZone(rowEl, type, id, parentFolderId, isFolder) {
+        rowEl.addEventListener('dragover', (e) => {
+            if (!dragState) return;
+            if (dragState.type === 'folder' && dragState.id === id) return; // папка не может принять сама себя
+
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            const rect = rowEl.getBoundingClientRect();
+            const ratio = (e.clientY - rect.top) / rect.height;
+
+            clearDragIndicators();
+            if (isFolder && ratio > 0.25 && ratio < 0.75) {
+                rowEl.classList.add('drag-over-folder');
+                rowEl.dataset.dropMode = 'into';
+            } else if (ratio <= 0.5) {
+                rowEl.classList.add('drag-over-top');
+                rowEl.dataset.dropMode = 'before';
+            } else {
+                rowEl.classList.add('drag-over-bottom');
+                rowEl.dataset.dropMode = 'after';
+            }
+        });
+
+        rowEl.addEventListener('dragleave', () => {
+            rowEl.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-folder');
+        });
+
+        rowEl.addEventListener('drop', (e) => {
+            if (!dragState) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const mode = rowEl.dataset.dropMode;
+            const source = dragState;
+            clearDragIndicators();
+            dragState = null;
+            handleSidebarDrop(source, { type, id, parentFolderId }, mode);
+        });
+    }
+
+    function findContainerChildren(parentFolderId) {
+        if (parentFolderId === null || parentFolderId === undefined) {
+            return lastSidebarTree ? (lastSidebarTree.children || []) : [];
+        }
+        function search(node) {
+            if (!node || !node.children) return null;
+            for (const child of node.children) {
+                if (child.type === 'folder') {
+                    if (child.id === parentFolderId) return child.children || [];
+                    const found = search(child);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+        return search(lastSidebarTree) || [];
+    }
+
+    async function moveItemToFolder(item, newParentId) {
+        const url = item.type === 'map' ? `/api/map/${item.id}/folder` : `/api/folder/${item.id}`;
+        const body = item.type === 'map' ? { folder_id: newParentId } : { parent_id: newParentId };
+        try {
+            const res = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) throw new Error(await window.getErrorMessage(res));
+            return true;
+        } catch (err) {
+            showToast(t('toast.errorTitle'), err.message, 'error');
+            return false;
+        }
+    }
+
+    async function saveSidebarOrder(parentFolderId, items) {
+        try {
+            const res = await fetch('/api/sidebar/reorder', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ parent_folder_id: parentFolderId, items }),
+            });
+            if (!res.ok) throw new Error(await window.getErrorMessage(res));
+            return true;
+        } catch (err) {
+            showToast(t('toast.errorTitle'), err.message, 'error');
+            return false;
+        }
+    }
+
+    async function handleSidebarDrop(source, target, mode) {
+        if (source.type === target.type && source.id === target.id) return; // бросили на себя же
+
+        if (mode === 'into') {
+            const ok = await moveItemToFolder(source, target.id);
+            if (ok) {
+                const expanded = getExpandedFolderIds();
+                expanded.add(target.id);
+                setExpandedFolderIds(expanded);
+                window.loadSidebarMaps();
+            }
+            return;
+        }
+
+        const sameLevel = source.parentFolderId === target.parentFolderId;
+        const siblings = findContainerChildren(target.parentFolderId).map(c => ({ type: c.type, id: c.id }));
+
+        if (sameLevel) {
+            const idx = siblings.findIndex(s => s.type === source.type && s.id === source.id);
+            if (idx !== -1) siblings.splice(idx, 1);
+        } else {
+            // Перетащили из другого уровня — сперва физически переносим, потом
+            // вставляем в локальный снимок целевого уровня (в siblings его
+            // ещё нет, поэтому просто вставляем без предварительного удаления).
+            const ok = await moveItemToFolder(source, target.parentFolderId);
+            if (!ok) return;
+        }
+
+        const targetIdx = siblings.findIndex(s => s.type === target.type && s.id === target.id);
+        const insertAt = mode === 'before' ? targetIdx : targetIdx + 1;
+        siblings.splice(insertAt < 0 ? siblings.length : insertAt, 0, { type: source.type, id: source.id });
+
+        await saveSidebarOrder(target.parentFolderId, siblings);
+        window.loadSidebarMaps();
+    }
+
+    function buildMapElement(map, depth, parentFolderId) {
         const isActive = window.currentMapId && window.currentMapId == map.id;
         const currentUserId = window.currentUserId || 0;
         const isAdmin = window.isAdmin || false;
@@ -268,7 +433,7 @@ let wasDisconnected = false;
         const badgeHtml = map.down_count > 0 ? `<span class="badge bg-danger">${map.down_count}</span>` : '';
         const li = document.createElement('li');
         li.innerHTML = `
-            <a href="/map/${map.id}" class="map-item ${isActive ? 'active' : ''}" style="padding-left: ${12 + depth * 16}px">
+            <a href="/map/${map.id}" class="map-item ${isActive ? 'active' : ''}" style="padding-left: ${12 + depth * 20}px">
                 <span class="map-item-icon"><i class="fas fa-map-marked-alt"></i></span>
                 <span class="map-item-name">${escapeHtml(map.name)}</span>
                 <div class="map-item-right">
@@ -277,10 +442,13 @@ let wasDisconnected = false;
                 </div>
             </a>
         `;
+        const rowEl = li.querySelector('a');
+        attachDragHandlers(rowEl, 'map', map.id, parentFolderId);
+        attachDropZone(rowEl, 'map', map.id, parentFolderId, false);
         return li;
     }
 
-    function buildFolderElement(folder, depth, expandedIds) {
+    function buildFolderElement(folder, depth, expandedIds, parentFolderId) {
         const currentUserId = window.currentUserId || 0;
         const isAdmin = window.isAdmin || false;
         const canManage = folder.owner_id == currentUserId || isAdmin;
@@ -291,7 +459,7 @@ let wasDisconnected = false;
 
         const row = document.createElement('div');
         row.className = 'map-item folder-item';
-        row.style.paddingLeft = `${12 + depth * 16}px`;
+        row.style.paddingLeft = `${12 + depth * 20}px`;
 
         let actionsHtml = '';
         if (canManage) {
@@ -320,6 +488,8 @@ let wasDisconnected = false;
             </div>
         `;
         row.addEventListener('click', () => window.toggleSidebarFolder(folder.id));
+        attachDragHandlers(row, 'folder', folder.id, parentFolderId);
+        attachDropZone(row, 'folder', folder.id, parentFolderId, true);
         li.appendChild(row);
 
         const childrenUl = document.createElement('ul');
@@ -332,11 +502,12 @@ let wasDisconnected = false;
     }
 
     function renderSidebarNode(container, node, depth, expandedIds) {
-        (node.folders || []).forEach(folder => {
-            container.appendChild(buildFolderElement(folder, depth, expandedIds));
-        });
-        (node.maps || []).forEach(map => {
-            container.appendChild(buildMapElement(map, depth));
+        (node.children || []).forEach(item => {
+            if (item.type === 'folder') {
+                container.appendChild(buildFolderElement(item, depth, expandedIds, node.id));
+            } else {
+                container.appendChild(buildMapElement(item, depth, node.id));
+            }
         });
     }
 
@@ -353,7 +524,7 @@ let wasDisconnected = false;
 
     window.loadSidebarMaps = function() {
         fetch('/api/sidebar-tree', { cache: 'no-store' })
-            .then(res => res.ok ? res.json() : { folders: [], maps: [] })
+            .then(res => res.ok ? res.json() : { id: null, children: [] })
             .then(tree => {
                 lastSidebarTree = tree;
                 const list = document.getElementById('sidebarMapList');

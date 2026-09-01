@@ -250,11 +250,19 @@ def get_sidebar_maps_data(user) -> List[Dict[str, Any]]:
     return result
 
 
+def _sort_key(item: Dict[str, Any]):
+    # (position, id) — ties по id сохраняют порядок создания для нетронутых
+    # drag-and-drop'ом элементов (у всех position=0 по умолчанию).
+    return (item.get("position", 0), item["id"])
+
+
 def _folder_map_dict(m: Map, stat_dict: Dict[int, int]) -> Dict[str, Any]:
     return {
         "id": m.id,
+        "type": "map",
         "name": m.name,
         "owner_id": m.owner_id,
+        "position": m.position,
         "down_count": stat_dict.get(m.id, 0),
     }
 
@@ -283,34 +291,38 @@ def _build_folder_node(
     """
     fully_granted_here = ancestor_fully_granted or folder.id in fully_granted_ids
 
-    child_nodes = []
+    child_folder_nodes = []
     for child in folder.children:
         node = _build_folder_node(
             child, visible_map_ids, fully_granted_ids, stat_dict, fully_granted_here
         )
         if node is not None:
-            child_nodes.append(node)
+            child_folder_nodes.append(node)
 
     if fully_granted_here:
         child_maps = folder.maps.all()
     else:
         child_maps = [m for m in folder.maps.all() if m.id in visible_map_ids]
 
-    if not fully_granted_here and not child_nodes and not child_maps:
+    if not fully_granted_here and not child_folder_nodes and not child_maps:
         return None  # ветка полностью не видна этому пользователю
 
     map_dicts = [_folder_map_dict(m, stat_dict) for m in child_maps]
     down_count = sum(m["down_count"] for m in map_dicts) + sum(
-        f["down_count"] for f in child_nodes
+        f["down_count"] for f in child_folder_nodes
     )
+    # Единый список: папки и карты вперемешку, в порядке (position, id) —
+    # так карта может оказаться выше папки на том же уровне (и наоборот),
+    # если пользователь перетащил её туда через drag-and-drop.
+    children = sorted(child_folder_nodes + map_dicts, key=_sort_key)
 
     return {
         "id": folder.id,
         "name": folder.name,
         "type": "folder",
         "owner_id": folder.owner_id,
-        "folders": child_nodes,
-        "maps": map_dicts,
+        "position": folder.position,
+        "children": children,
         "down_count": down_count,
     }
 
@@ -330,8 +342,15 @@ def get_sidebar_tree_data(user) -> Dict[str, Any]:
     цепочку папок в этом случае можно, но это усложнило бы навигацию сильнее,
     чем оправдывает утечка одних только НАЗВАНИЙ папок.
 
+    Порядок элементов (position) — общий на всех, кто видит данный уровень
+    дерева, а не персональный на пользователя: как и is_locked/группы, это
+    глобальное состояние карты/папки, а не привязанная к пользователю
+    настройка. Если два человека с правами на одну и ту же папку оба таскают
+    её содержимое — они видят порядок друг друга.
+
     Returns:
-        Dict: {"folders": [...верхнеуровневые узлы...], "maps": [...карты вне папок...]}
+        Dict: {"id": None, "children": [...карты и папки верхнего уровня,
+               в едином порядке...]}
     """
     cache_key = f"sidebar_tree_{user.id}"
     if cache_key in sidebar_cache:
@@ -375,7 +394,9 @@ def get_sidebar_tree_data(user) -> Dict[str, Any]:
 
     root_maps = [_folder_map_dict(m, stat_dict) for m in visible_maps if m.folder_id is None]
 
-    result = {"folders": folder_nodes, "maps": root_maps}
+    children = sorted(folder_nodes + root_maps, key=_sort_key)
+
+    result = {"id": None, "children": children}
     sidebar_cache[cache_key] = result
     return result
 

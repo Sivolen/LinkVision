@@ -124,6 +124,8 @@ class Map(db.Model):
     folder_id = db.Column(
         db.Integer, db.ForeignKey("map_folder.id", use_alter=True), nullable=True, index=True
     )
+    # Порядок среди "соседей" в дереве сайдбара — задаётся drag-and-drop'ом.
+    position = db.Column(db.Integer, default=0, nullable=False)
     devices = db.relationship(
         "Device", backref="map", cascade="all, delete-orphan", lazy="dynamic"
     )
@@ -150,6 +152,8 @@ class MapFolder(db.Model):
     )
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
+    # Порядок среди "соседей" на том же уровне дерева — см. Map.position.
+    position = db.Column(db.Integer, default=0, nullable=False)
 
     # remote_side=[id] — self-referential relationship (родитель/подпапки).
     # cascade НЕ ставим "all, delete-orphan" на children: удаление папки с

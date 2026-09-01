@@ -648,6 +648,29 @@ body.resizing-sidebar .main-content {
   font-weight: 600;
 }
 
+/* Drag-and-drop в дереве сайдбара (карты/папки) */
+.map-item.dragging,
+.folder-item.dragging {
+  opacity: 0.4;
+}
+
+.map-item.drag-over-top,
+.folder-item.drag-over-top {
+  box-shadow: inset 0 2px 0 0 var(--accent-color);
+}
+
+.map-item.drag-over-bottom,
+.folder-item.drag-over-bottom {
+  box-shadow: inset 0 -2px 0 0 var(--accent-color);
+}
+
+.folder-item.drag-over-folder {
+  outline: 2px dashed var(--accent-color);
+  outline-offset: -2px;
+  background: rgba(70, 130, 180, 0.15); /* фоллбэк для браузеров без color-mix() */
+  background: color-mix(in srgb, var(--accent-color) 15%, transparent);
+}
+
 /* Кнопки в сайдбаре (Новая карта, Импорт) */
 .sidebar-maps .btn-outline-light {
   background: rgba(255, 255, 255, 0.1);
