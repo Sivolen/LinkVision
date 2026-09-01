@@ -120,11 +120,80 @@ class Map(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     background_image = db.Column(db.String(256), nullable=True)
     is_locked = db.Column(db.Boolean, default=False, nullable=False)  # Блокировка карты
+    # NULL = карта лежит в корне сайдбара, вне какой-либо папки.
+    folder_id = db.Column(
+        db.Integer, db.ForeignKey("map_folder.id", use_alter=True), nullable=True, index=True
+    )
     devices = db.relationship(
         "Device", backref="map", cascade="all, delete-orphan", lazy="dynamic"
     )
     links = db.relationship(
         "Link", backref="map", cascade="all, delete-orphan", lazy="dynamic"
+    )
+
+
+class MapFolder(db.Model):
+    """
+    Папка сайдбара для группировки карт (дерево папок/подпапок).
+
+    Права на папку (FolderPermission) действуют на ВСЕ карты внутри неё и во
+    всех вложенных подпапках — это позволяет выдавать доступ сразу на группу
+    карт, а не на каждую по отдельности.
+    """
+
+    __tablename__ = "map_folder"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    # NULL = папка верхнего уровня.
+    parent_id = db.Column(
+        db.Integer, db.ForeignKey("map_folder.id", use_alter=True), nullable=True, index=True
+    )
+    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+    # remote_side=[id] — self-referential relationship (родитель/подпапки).
+    # cascade НЕ ставим "all, delete-orphan" на children: удаление папки с
+    # подпапками — осознанное действие, которое явно проверяется в сервисе
+    # (см. services/folder_service.py), а не побочный эффект ORM-каскада.
+    children = db.relationship(
+        "MapFolder",
+        backref=db.backref("parent", remote_side=[id]),
+        lazy="select",
+    )
+    maps = db.relationship("Map", backref="folder", lazy="dynamic")
+
+
+class FolderPermission(db.Model):
+    """
+    Разрешение на папку карт для пользователя или роли — тот же принцип, что
+    и MapPermission, но действует на всю папку (и её подпапки) целиком.
+    """
+
+    __tablename__ = "folder_permission"
+    id = db.Column(db.Integer, primary_key=True)
+    folder_id = db.Column(
+        db.Integer, db.ForeignKey("map_folder.id", use_alter=True), nullable=False, index=True
+    )
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    role = db.Column(db.String(20), nullable=True)  # 'viewer', 'editor', 'admin'
+
+    folder = db.relationship("MapFolder", backref="permissions", lazy="select")
+    user = db.relationship("User", backref="folder_permissions", lazy="select")
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "(user_id IS NOT NULL) OR (role IS NOT NULL)", name="check_folder_user_or_role"
+        ),
+        # Только (folder_id, user_id) — умышленно БЕЗ аналога uq_map_role из
+        # MapPermission: тот UniqueConstraint(map_id, role) без user_id стоит
+        # на паре (map_id, role) целиком, из-за чего ДВУМ разным пользователям
+        # нельзя выдать одну и ту же персональную роль на одну карту — второй
+        # INSERT падает по уникальности, хотя user_id у записей разный. Здесь
+        # не повторяем эту ловушку; защита от дублей персональных разрешений —
+        # через (folder_id, user_id), а дубли ролевых (user_id IS NULL)
+        # разрешений проверяются в сервисе перед INSERT (см. grant_map_role_permission
+        # для карт — тот же паттерн применён в folder_service.py).
+        db.UniqueConstraint("folder_id", "user_id", name="uq_folder_user"),
     )
 
 

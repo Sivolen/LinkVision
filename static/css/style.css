@@ -2366,6 +2366,27 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   border-radius: 14px;
 }
 
+/* ============================================================================
+МОДАЛКА ПРАВ ПАПКИ
+============================================================================ */
+#folderPermissionsModal .btn-sm.btn-primary {
+  height: 42px !important;
+  padding: 0 1.25rem !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  border-radius: 14px !important;
+  background: var(--accent-color) !important;
+  border: none !important;
+  width: auto !important;
+  transition: all 0.2s;
+}
+
+#folderPermissionsModal .btn-sm.btn-primary:hover {
+  background: var(--accent-hover) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(70, 130, 180, 0.3);
+}
+
 .spinner {
   display: inline-block;
   width: 1rem;

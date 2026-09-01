@@ -101,7 +101,7 @@ def create_map():
     name = request.form.get("name")
     if name:
         new_map = map_service.create_new_map(name, current_user.id)
-        map_service.invalidate_sidebar_cache(current_user.id)  # <-- добавлено
+        map_service.invalidate_all_sidebar_caches()  # <-- дерево сайдбара изменилось
         main_logger.info(
             f"Map created: {name}, ID={new_map.id}, owner={current_user.username}"
         )
@@ -161,7 +161,7 @@ def delete_map(map_id):
     try:
         owner_id = map_obj.owner_id
         map_service.delete_map_and_cleanup(map_id, current_app)
-        map_service.invalidate_sidebar_cache(owner_id)
+        map_service.invalidate_all_sidebar_caches()
         return jsonify({"status": "deleted"})
     except Exception:
         main_logger.exception(f"Error deleting map {map_id}")

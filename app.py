@@ -139,6 +139,9 @@ def create_app():
         # первого запроса к User (иначе SELECT по несуществующей колонке упадёт).
         _ensure_user_locale_column()
 
+        # --- Создание таблиц, если их нет ---
+        db.create_all()
+        
         # --- Создание администратора, если ни одного нет ---
         if not User.query.filter_by(is_admin=True).first():
             admin = User(username="admin", is_admin=True)

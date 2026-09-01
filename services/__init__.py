@@ -20,6 +20,7 @@ from . import settings_service
 from . import monitor
 from . import audit_service
 from . import security_service
+from . import folder_service
 
 from . import permission_service
 
@@ -56,6 +57,7 @@ from .permissions import (
     require_admin,
     require_not_operator,
     require_map_owner_or_admin,
+    require_folder_owner_or_admin,
     get_user_map_ids,
     get_user_editable_map_ids,
 )
@@ -91,6 +93,7 @@ __all__ = [
     # Сервисы
     "device_service",
     "map_service",
+    "folder_service",
     "user_service",
     "device_type_service",
     "settings_service",
@@ -121,6 +124,7 @@ __all__ = [
     "require_admin",
     "require_not_operator",
     "require_map_owner_or_admin",
+    "require_folder_owner_or_admin",
     "get_user_map_ids",
     "get_user_editable_map_ids",
     # Аудит

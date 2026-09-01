@@ -234,5 +234,17 @@
   },
   "loading": {
     "mapLoading": "Загрузка карты..."
+  },
+  "sidebar": {
+    "moveToFolder": "Переместить в папку",
+    "newSubfolder": "Новая подпапка",
+    "folderPermissions": "Права на папку",
+    "deleteFolderTitle": "Удалить папку",
+    "deleteFolderConfirm": "Удалить папку «{name}»?",
+    "deleteFolderCascadeConfirm": "Папка «{name}» не пуста. Всё равно удалить? Карты внутри переместятся в корень, подпапки будут удалены как узлы дерева (карты в них тоже просто переместятся в корень, а не удалятся).",
+    "rootNoFolder": "— Корень (без папки) —",
+    "newFolderTitle": "Новая папка",
+    "renameFolderTitle": "Переименовать папку",
+    "folderNameRequired": "Введите название папки"
   }
 }

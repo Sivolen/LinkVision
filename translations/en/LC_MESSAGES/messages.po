@@ -1218,3 +1218,58 @@ msgstr "No"
 msgid "Новый пароль (оставьте пустым, чтобы не менять)"
 msgstr "New password (leave empty to keep unchanged)"
 
+#: templates/base.html
+msgid "Переместить карту"
+msgstr "Move map"
+
+#: templates/base.html
+msgid "Переместить"
+msgstr "Move"
+
+#: templates/base.html
+msgid "Права на папку"
+msgstr "Folder permissions"
+
+#: templates/base.html
+msgid "Добавить право пользователю"
+msgstr "Add permission to user"
+
+#: templates/base.html
+msgid "Загрузка..."
+msgstr "Loading..."
+
+#: templates/base.html
+msgid "Просмотр"
+msgstr "View"
+
+#: templates/base.html
+msgid "Редактор"
+msgstr "Editor"
+
+#: templates/base.html
+msgid "Админ папки"
+msgstr "Folder admin"
+
+#: templates/base.html
+msgid "Всем операторам"
+msgstr "All operators"
+
+#: templates/base.html
+msgid "OK"
+msgstr "OK"
+
+#: templates/base.html
+msgid "Отмена"
+msgstr "Cancel"
+
+#: templates/base.html
+msgid "Новая папка"
+msgstr "New folder"
+
+#: templates/base.html
+msgid "— Корень (без папки) —"
+msgstr "— Root (no folder) —"
+#: templates/base.html
+msgid "Название папки"
+msgstr "Folder name"
+

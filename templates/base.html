@@ -62,6 +62,12 @@
                 <i class="fas fa-file-import"></i> <span>{{ _('Импорт карты') }}</span>
             </button>
             {% endif %}
+            {# Папку может создать любой авторизованный пользователь — это чисто
+               навигационная группировка карт, к которым у него УЖЕ есть доступ,
+               а не отдельная привилегия уровня "создать карту". #}
+            <button class="btn btn-sm btn-outline-light w-100 mt-2" onclick="createFolderPrompt(null)">
+                <i class="fas fa-folder-plus"></i> <span>{{ _('Новая папка') }}</span>
+            </button>
         </div>
 
         <!-- Футер сайдбара с админ-меню и кнопками -->
@@ -148,6 +154,86 @@
         {% endwith %}
 
         {% block content %}{% endblock %}
+    </div>
+
+    <!-- Модальные окна для папок и карты -->
+    <!-- Модальное окно "Имя папки" (создание и переименование) -->
+    <div class="modal fade" id="folderNameModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="folderNameModalTitle">{{ _('Новая папка') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" class="form-control" id="folderNameInput" maxlength="128" placeholder="{{ _('Название папки') }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="folderNameModalConfirmBtn" onclick="confirmFolderNameModal()">{{ _('Сохранить') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно "Переместить карту в папку" -->
+    <div class="modal fade" id="moveMapModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ _('Переместить карту') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label" id="moveMapLabel"></label>
+                    <select class="form-select form-select-sm" id="moveMapFolderSelect">
+                        <option value="">{{ _('— Корень (без папки) —') }}</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="confirmMoveMap()">{{ _('Переместить') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно управления правами на папку -->
+    <div class="modal fade" id="folderPermissionsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ _('Права на папку') }}: <span id="folderPermissionsFolderName"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="folderPermissionsList">
+                        <div class="text-center"><div class="spinner-border spinner-border-sm"></div> {{ _('Загрузка...') }}</div>
+                    </div>
+                    <hr>
+                    <label class="form-label small mb-1">{{ _('Добавить право пользователю') }}</label>
+                    <div class="d-flex gap-2 mb-3">
+                        <select class="form-select form-select-sm flex-grow-1" id="folderPermissionUserSelect" style="min-width: 0;">
+                            <option value="">{{ _('Загрузка...') }}</option>
+                        </select>
+                        <select class="form-select form-select-sm flex-shrink-0" id="folderPermissionRoleSelect" style="width: 140px;">
+                            <option value="viewer">{{ _('Просмотр') }}</option>
+                            <option value="editor">{{ _('Редактор') }}</option>
+                            <option value="admin">{{ _('Админ папки') }}</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary flex-shrink-0" style="width: 60px;" onclick="addFolderPermission()">{{ _('Добавить') }}</button>
+                    </div>
+                    <label class="form-label small mb-1">{{ _('Всем операторам') }}</label>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm flex-grow-1" id="folderOperatorRoleSelect" style="min-width: 0;">
+                            <option value="viewer">{{ _('Просмотр') }}</option>
+                            <option value="editor">{{ _('Редактор') }}</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary flex-shrink-0" style="width: 60px;" onclick="addFolderRolePermission()">{{ _('Добавить') }}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Модальные окна -->
