@@ -82,7 +82,9 @@ def _get_user_folder_role(folder_id: Optional[int]) -> Optional[str]:
 
     best_role = None
     for fid in _get_folder_chain_ids(folder_id):
-        perm = FolderPermission.query.filter_by(folder_id=fid, user_id=current_user.id).first()
+        perm = FolderPermission.query.filter_by(
+            folder_id=fid, user_id=current_user.id
+        ).first()
         if not perm and current_user.is_operator:
             perm = FolderPermission.query.filter(
                 FolderPermission.folder_id == fid,
@@ -90,7 +92,10 @@ def _get_user_folder_role(folder_id: Optional[int]) -> Optional[str]:
                 FolderPermission.role.in_(["viewer", "editor"]),
             ).first()
         if perm and perm.role in _FOLDER_ROLE_WEIGHT:
-            if best_role is None or _FOLDER_ROLE_WEIGHT[perm.role] > _FOLDER_ROLE_WEIGHT[best_role]:
+            if (
+                best_role is None
+                or _FOLDER_ROLE_WEIGHT[perm.role] > _FOLDER_ROLE_WEIGHT[best_role]
+            ):
                 best_role = perm.role
     return best_role
 

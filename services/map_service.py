@@ -383,16 +383,22 @@ def get_sidebar_tree_data(user) -> Dict[str, Any]:
         permitted_ids = {
             p.folder_id for p in FolderPermission.query.filter_by(user_id=user.id).all()
         }
-        fully_granted_ids = map_repo.expand_with_descendant_folders(owned_ids | permitted_ids)
+        fully_granted_ids = map_repo.expand_with_descendant_folders(
+            owned_ids | permitted_ids
+        )
 
     root_folders = MapFolder.query.filter_by(parent_id=None).all()
     folder_nodes = []
     for f in root_folders:
-        node = _build_folder_node(f, visible_map_ids, fully_granted_ids, stat_dict, False)
+        node = _build_folder_node(
+            f, visible_map_ids, fully_granted_ids, stat_dict, False
+        )
         if node is not None:
             folder_nodes.append(node)
 
-    root_maps = [_folder_map_dict(m, stat_dict) for m in visible_maps if m.folder_id is None]
+    root_maps = [
+        _folder_map_dict(m, stat_dict) for m in visible_maps if m.folder_id is None
+    ]
 
     children = sorted(folder_nodes + root_maps, key=_sort_key)
 

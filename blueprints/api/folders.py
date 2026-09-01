@@ -122,7 +122,10 @@ def create_folder():
         if not parent:
             return jsonify({"error": "Родительская папка не найдена"}), 404
         is_owner_or_admin = current_user.is_admin or parent.owner_id == current_user.id
-        if not is_owner_or_admin and _get_user_folder_role(parent_id) not in ("editor", "admin"):
+        if not is_owner_or_admin and _get_user_folder_role(parent_id) not in (
+            "editor",
+            "admin",
+        ):
             return jsonify({"error": "Нет прав на создание подпапки здесь"}), 403
 
     try:
@@ -180,7 +183,9 @@ def update_folder(folder_id):
         new_values={"name": folder.name, "parent_id": folder.parent_id},
     )
 
-    return jsonify({"id": folder.id, "name": folder.name, "parent_id": folder.parent_id})
+    return jsonify(
+        {"id": folder.id, "name": folder.name, "parent_id": folder.parent_id}
+    )
 
 
 @folders_bp.route("/folder/<int:folder_id>", methods=["DELETE"])
@@ -301,7 +306,10 @@ def add_folder_permission(folder_id):
     role = data.get("role")
 
     if not role or role not in ["viewer", "editor", "admin"]:
-        return jsonify({"error": "Invalid role. Must be 'viewer', 'editor', or 'admin'"}), 400
+        return (
+            jsonify({"error": "Invalid role. Must be 'viewer', 'editor', or 'admin'"}),
+            400,
+        )
 
     try:
         if user_id:
@@ -312,7 +320,10 @@ def add_folder_permission(folder_id):
             username = user.username
         else:
             if role == "admin":
-                return jsonify({"error": "Ролевое разрешение admin не поддерживается"}), 400
+                return (
+                    jsonify({"error": "Ролевое разрешение admin не поддерживается"}),
+                    400,
+                )
             perm = folder_service.grant_folder_role_permission(folder_id, role)
             username = None
     except ValueError as e:
@@ -371,11 +382,18 @@ def update_folder_permission(folder_id, perm_id):
     )
 
     return jsonify(
-        {"id": perm.id, "folder_id": folder_id, "user_id": perm.user_id, "role": perm.role}
+        {
+            "id": perm.id,
+            "folder_id": folder_id,
+            "user_id": perm.user_id,
+            "role": perm.role,
+        }
     )
 
 
-@folders_bp.route("/folder/<int:folder_id>/permissions/<int:perm_id>", methods=["DELETE"])
+@folders_bp.route(
+    "/folder/<int:folder_id>/permissions/<int:perm_id>", methods=["DELETE"]
+)
 @login_required
 @require_folder_owner_or_admin
 def delete_folder_permission(folder_id, perm_id):
