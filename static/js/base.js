@@ -212,44 +212,476 @@ let wasDisconnected = false;
         }
     };
 
+    // ─── Дерево сайдбара (папки + карты) ───────────────────────────────────
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str == null ? '' : String(str);
+        return div.innerHTML;
+    }
+
+    function getExpandedFolderIds() {
+        try {
+            const raw = localStorage.getItem('sidebarExpandedFolders');
+            return new Set(raw ? JSON.parse(raw) : []);
+        } catch (e) {
+            return new Set();
+        }
+    }
+
+    function setExpandedFolderIds(set) {
+        localStorage.setItem('sidebarExpandedFolders', JSON.stringify(Array.from(set)));
+    }
+
+    // Плоский индекс папок последнего загруженного дерева — используется для
+    // заполнения select'а "переместить в папку", чтобы не делать отдельный
+    // запрос ради одного списка имён.
+    let lastSidebarTree = null;
+
+    function flattenFolders(node, depth, out) {
+        (node.folders || []).forEach(folder => {
+            out.push({ id: folder.id, name: folder.name, depth });
+            flattenFolders(folder, depth + 1, out);
+        });
+    }
+
+    function buildMapElement(map, depth) {
+        const isActive = window.currentMapId && window.currentMapId == map.id;
+        const currentUserId = window.currentUserId || 0;
+        const isAdmin = window.isAdmin || false;
+        const canManage = map.owner_id == currentUserId || isAdmin;
+        let actionsHtml = '';
+        if (canManage) {
+            const safeName = escapeHtml(map.name).replace(/'/g, "\'");
+            actionsHtml = `
+                <button class="btn-map-action" onclick="editMap(event, ${map.id}, '${safeName}')" title="${escapeHtml(t('contextMenu.edit') || 'Edit')}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-map-action" onclick="moveMapPrompt(event, ${map.id}, '${safeName}')" title="${escapeHtml(t('sidebar.moveToFolder') || 'Move')}">
+                    <i class="fas fa-folder-open"></i>
+                </button>
+                <button class="btn-map-action" onclick="deleteMap(event, ${map.id})" title="${escapeHtml(t('common.delete') || 'Delete')}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+        }
+        const badgeHtml = map.down_count > 0 ? `<span class="badge bg-danger">${map.down_count}</span>` : '';
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <a href="/map/${map.id}" class="map-item ${isActive ? 'active' : ''}" style="padding-left: ${12 + depth * 16}px">
+                <span class="map-item-icon"><i class="fas fa-map-marked-alt"></i></span>
+                <span class="map-item-name">${escapeHtml(map.name)}</span>
+                <div class="map-item-right">
+                    <div class="map-item-actions">${actionsHtml}</div>
+                    ${badgeHtml}
+                </div>
+            </a>
+        `;
+        return li;
+    }
+
+    function buildFolderElement(folder, depth, expandedIds) {
+        const currentUserId = window.currentUserId || 0;
+        const isAdmin = window.isAdmin || false;
+        const canManage = folder.owner_id == currentUserId || isAdmin;
+        const isExpanded = expandedIds.has(folder.id);
+
+        const li = document.createElement('li');
+        li.className = 'folder-item-wrapper';
+
+        const row = document.createElement('div');
+        row.className = 'map-item folder-item';
+        row.style.paddingLeft = `${12 + depth * 16}px`;
+
+        let actionsHtml = '';
+        if (canManage) {
+            const safeName = escapeHtml(folder.name).replace(/'/g, "\'");
+            actionsHtml = `
+                <button class="btn-map-action" onclick="renameFolderPrompt(event, ${folder.id}, '${safeName}')" title="${escapeHtml(t('contextMenu.edit') || 'Rename')}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-map-action" onclick="openFolderPermissionsModal(event, ${folder.id}, '${safeName}')" title="${escapeHtml(t('sidebar.folderPermissions') || 'Permissions')}">
+                    <i class="fas fa-user-shield"></i>
+                </button>
+                <button class="btn-map-action" onclick="deleteFolderPrompt(event, ${folder.id}, '${safeName}')" title="${escapeHtml(t('common.delete') || 'Delete')}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+        }
+        const badgeHtml = folder.down_count > 0 ? `<span class="badge bg-danger">${folder.down_count}</span>` : '';
+
+        row.innerHTML = `
+            <span class="map-item-icon folder-toggle-icon"><i class="fas fa-chevron-${isExpanded ? 'down' : 'right'}"></i></span>
+            <span class="map-item-icon"><i class="fas fa-folder${isExpanded ? '-open' : ''}"></i></span>
+            <span class="map-item-name">${escapeHtml(folder.name)}</span>
+            <div class="map-item-right">
+                <div class="map-item-actions">${actionsHtml}</div>
+                ${badgeHtml}
+            </div>
+        `;
+        row.addEventListener('click', () => window.toggleSidebarFolder(folder.id));
+        li.appendChild(row);
+
+        const childrenUl = document.createElement('ul');
+        childrenUl.className = 'map-list folder-children';
+        if (!isExpanded) childrenUl.style.display = 'none';
+        renderSidebarNode(childrenUl, folder, depth + 1, expandedIds);
+        li.appendChild(childrenUl);
+
+        return li;
+    }
+
+    function renderSidebarNode(container, node, depth, expandedIds) {
+        (node.folders || []).forEach(folder => {
+            container.appendChild(buildFolderElement(folder, depth, expandedIds));
+        });
+        (node.maps || []).forEach(map => {
+            container.appendChild(buildMapElement(map, depth));
+        });
+    }
+
+    window.toggleSidebarFolder = function(folderId) {
+        const expanded = getExpandedFolderIds();
+        if (expanded.has(folderId)) {
+            expanded.delete(folderId);
+        } else {
+            expanded.add(folderId);
+        }
+        setExpandedFolderIds(expanded);
+        window.loadSidebarMaps();
+    };
+
     window.loadSidebarMaps = function() {
-        fetch('/api/sidebar-maps', { cache: 'no-store' })
-            .then(res => res.ok ? res.json() : [])
-            .then(maps => {
+        fetch('/api/sidebar-tree', { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : { folders: [], maps: [] })
+            .then(tree => {
+                lastSidebarTree = tree;
                 const list = document.getElementById('sidebarMapList');
                 if (!list) return;
-                const currentUserId = window.currentUserId || 0;
-                const isAdmin = window.isAdmin || false;
                 list.innerHTML = '';
-                maps.forEach(map => {
-                    const isActive = window.currentMapId && window.currentMapId == map.id;
-                    let actionsHtml = '';
-                    if (map.owner_id == currentUserId || isAdmin) {
-                        actionsHtml = `
-                            <button class="btn-map-action" onclick="editMap(event, ${map.id}, '${map.name.replace(/'/g, "\\'")}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn-map-action" onclick="deleteMap(event, ${map.id})">
+                renderSidebarNode(list, tree, 0, getExpandedFolderIds());
+            })
+            .catch(err => Logger.error('Error loading sidebar tree:', err));
+    };
+
+    // ─── CRUD папок ─────────────────────────────────────────────────────────
+
+    // Одна модалка на создание И переименование — отличаются только заголовком
+    // и тем, какой запрос уходит по подтверждению (см. confirmFolderNameModal).
+    let folderNameModalMode = null;     // 'create' | 'rename'
+    let folderNameModalContext = null;  // parentId для create, folderId для rename
+
+    function openFolderNameModal(mode, context, titleKey, titleFallback, initialValue) {
+        folderNameModalMode = mode;
+        folderNameModalContext = context;
+
+        const titleEl = document.getElementById('folderNameModalTitle');
+        if (titleEl) titleEl.textContent = t(titleKey) || titleFallback;
+
+        const input = document.getElementById('folderNameInput');
+        if (input) input.value = initialValue || '';
+
+        const modalEl = document.getElementById('folderNameModal');
+        if (!modalEl) return;
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        modalEl.addEventListener('shown.bs.modal', () => {
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }, { once: true });
+    }
+
+    window.createFolderPrompt = function(parentId) {
+        openFolderNameModal('create', parentId, 'sidebar.newFolderTitle', 'New folder', '');
+    };
+
+    window.renameFolderPrompt = function(event, folderId, currentName) {
+        event.stopPropagation();
+        openFolderNameModal('rename', folderId, 'sidebar.renameFolderTitle', 'Rename folder', currentName);
+    };
+
+    window.confirmFolderNameModal = function() {
+        const input = document.getElementById('folderNameInput');
+        const name = input ? input.value.trim() : '';
+        if (!name) {
+            showToast(t('toast.errorTitle'), t('sidebar.folderNameRequired') || 'Folder name is required', 'warning');
+            return;
+        }
+
+        const modalEl = document.getElementById('folderNameModal');
+        const closeModal = () => {
+            const inst = modalEl && bootstrap.Modal.getInstance(modalEl);
+            if (inst) inst.hide();
+        };
+
+        if (folderNameModalMode === 'create') {
+            const parentId = folderNameModalContext;
+            fetch('/api/folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ name, parent_id: parentId }),
+            })
+                .then(async res => {
+                    if (!res.ok) throw new Error(await window.getErrorMessage(res));
+                    closeModal();
+                    if (parentId) {
+                        const expanded = getExpandedFolderIds();
+                        expanded.add(parentId);
+                        setExpandedFolderIds(expanded);
+                    }
+                    window.loadSidebarMaps();
+                })
+                .catch(err => showToast(t('toast.errorTitle'), err.message, 'error'));
+        } else if (folderNameModalMode === 'rename') {
+            fetch(`/api/folder/${folderNameModalContext}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ name }),
+            })
+                .then(async res => {
+                    if (!res.ok) throw new Error(await window.getErrorMessage(res));
+                    closeModal();
+                    window.loadSidebarMaps();
+                })
+                .catch(err => showToast(t('toast.errorTitle'), err.message, 'error'));
+        }
+    };
+
+    // Enter в поле ввода = подтвердить, как обычно ждут от диалога с одним полем
+    document.addEventListener('DOMContentLoaded', () => {
+        const input = document.getElementById('folderNameInput');
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    window.confirmFolderNameModal();
+                }
+            });
+        }
+    });
+
+    window.deleteFolderPrompt = function(event, folderId, folderName) {
+        event.stopPropagation();
+        confirmAction(
+            t('sidebar.deleteFolderTitle') || 'Delete folder',
+            t('sidebar.deleteFolderConfirm', { name: folderName }) || `Delete folder "${folderName}"?`,
+            () => {
+                fetch(`/api/folder/${folderId}`, { method: 'DELETE', headers: { 'X-CSRFToken': getCsrfToken() } })
+                    .then(async res => {
+                        if (res.status === 409) {
+                            // Папка не пуста — уточняем, действительно ли переносить
+                            // содержимое в корень, а не молча отказывать.
+                            confirmAction(
+                                t('sidebar.deleteFolderTitle') || 'Delete folder',
+                                t('sidebar.deleteFolderCascadeConfirm', { name: folderName })
+                                    || `Folder "${folderName}" is not empty. Delete it anyway? Maps inside will be moved to the root, subfolders will be removed as well (maps in them are also just moved to root, not deleted).`,
+                                () => {
+                                    fetch(`/api/folder/${folderId}?cascade=true`, { method: 'DELETE', headers: { 'X-CSRFToken': getCsrfToken() } })
+                                        .then(async res2 => {
+                                            if (!res2.ok) throw new Error(await window.getErrorMessage(res2));
+                                            window.loadSidebarMaps();
+                                        })
+                                        .catch(err => showToast(t('toast.errorTitle'), err.message, 'error'));
+                                }
+                            );
+                            return;
+                        }
+                        if (!res.ok) throw new Error(await window.getErrorMessage(res));
+                        window.loadSidebarMaps();
+                    })
+                    .catch(err => showToast(t('toast.errorTitle'), err.message, 'error'));
+            }
+        );
+    };
+
+    // ─── Перемещение карты между папками ───────────────────────────────────
+
+    let moveMapTargetId = null;
+
+    window.moveMapPrompt = function(event, mapId, mapName) {
+        event.preventDefault();
+        event.stopPropagation();
+        moveMapTargetId = mapId;
+
+        const label = document.getElementById('moveMapLabel');
+        if (label) label.textContent = mapName;
+
+        const select = document.getElementById('moveMapFolderSelect');
+        if (select && lastSidebarTree) {
+            select.innerHTML = '<option value="">' + (t('sidebar.rootNoFolder') || '— Root (no folder) —') + '</option>';
+            const flat = [];
+            flattenFolders(lastSidebarTree, 0, flat);
+            flat.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.textContent = '\u00A0\u00A0'.repeat(f.depth) + f.name;
+                select.appendChild(opt);
+            });
+        }
+
+        const modalEl = document.getElementById('moveMapModal');
+        if (modalEl) new bootstrap.Modal(modalEl).show();
+    };
+
+    window.confirmMoveMap = function() {
+        if (!moveMapTargetId) return;
+        const select = document.getElementById('moveMapFolderSelect');
+        const folderId = select && select.value ? parseInt(select.value) : null;
+
+        fetch(`/api/map/${moveMapTargetId}/folder`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ folder_id: folderId }) })
+            .then(async res => {
+                if (!res.ok) throw new Error(await window.getErrorMessage(res));
+                const modalEl = document.getElementById('moveMapModal');
+                if (modalEl) {
+                    const inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                }
+                if (folderId) {
+                    const expanded = getExpandedFolderIds();
+                    expanded.add(folderId);
+                    setExpandedFolderIds(expanded);
+                }
+                window.loadSidebarMaps();
+            })
+            .catch(err => showToast(t('toast.errorTitle'), err.message, 'error'));
+    };
+
+    // ─── Права на папку ─────────────────────────────────────────────────────
+
+    let currentFolderPermissionsId = null;
+
+    window.openFolderPermissionsModal = function(event, folderId, folderName) {
+        event.stopPropagation();
+        currentFolderPermissionsId = folderId;
+
+        const nameEl = document.getElementById('folderPermissionsFolderName');
+        if (nameEl) nameEl.textContent = folderName;
+
+        loadFolderPermissions(folderId);
+        loadUsersForFolderPermission();
+
+        const modalEl = document.getElementById('folderPermissionsModal');
+        if (modalEl) new bootstrap.Modal(modalEl).show();
+    };
+
+    function getRoleBadge(role) {
+        const badges = {
+            viewer: '<span class="badge bg-info">' + (t('modal.permissions.badgeViewer') || 'Viewer') + '</span>',
+            editor: '<span class="badge bg-primary">' + (t('modal.permissions.badgeEditor') || 'Editor') + '</span>',
+            admin: '<span class="badge bg-danger">' + (t('modal.permissions.badgeAdmin') || 'Admin') + '</span>',
+        };
+        return badges[role] || `<span class="badge bg-secondary">${escapeHtml(role)}</span>`;
+    }
+
+    function loadFolderPermissions(folderId) {
+        const container = document.getElementById('folderPermissionsList');
+        if (!container) return;
+        container.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div></div>';
+
+        fetch(`/api/folder/${folderId}/permissions`)
+            .then(res => res.ok ? res.json() : [])
+            .then(permissions => {
+                if (!permissions.length) {
+                    container.innerHTML = '<p class="text-muted">' + (t('modal.permissions.noPerms') || 'No permissions yet') + '</p>';
+                    return;
+                }
+                let html = '<div class="table-responsive"><table class="table table-sm"><tbody>';
+                permissions.forEach(perm => {
+                    const nameLabel = perm.username || (perm.role === 'editor'
+                        ? (t('modal.permissions.allOperatorsEditor') || 'All operators (editor)')
+                        : (t('modal.permissions.allOperatorsViewer') || 'All operators (viewer)'));
+                    html += `<tr>
+                        <td>${escapeHtml(nameLabel)}</td>
+                        <td>${getRoleBadge(perm.role)}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteFolderPermission(${perm.id})">
                                 <i class="fas fa-trash"></i>
                             </button>
-                        `;
-                    }
-                    const badgeHtml = map.down_count > 0 ? `<span class="badge bg-danger">${map.down_count}</span>` : '';
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <a href="/map/${map.id}" class="map-item ${isActive ? 'active' : ''}">
-                            <span class="map-item-icon"><i class="fas fa-map-marked-alt"></i></span>
-                            <span class="map-item-name">${map.name}</span>
-                            <div class="map-item-right">
-                                <div class="map-item-actions">${actionsHtml}</div>
-                                ${badgeHtml}
-                            </div>
-                        </a>
-                    `;
-                    list.appendChild(li);
+                        </td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            })
+            .catch(err => {
+                container.innerHTML = '<div class="alert alert-danger">' + err.message + '</div>';
+            });
+    }
+
+    function loadUsersForFolderPermission() {
+        const select = document.getElementById('folderPermissionUserSelect');
+        if (!select) return;
+        select.innerHTML = '<option value="">' + t('common.loading') + '</option>';
+
+        // Тот же приём, что и в permissions.js для карт: страница /admin/users
+        // рендерит обычную HTML-таблицу пользователей, парсим её вместо
+        // отдельного JSON API (которого для списка пользователей сейчас нет).
+        fetch('/admin/users')
+            .then(res => res.text())
+            .then(html => {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const rows = doc.querySelectorAll('table tbody tr');
+                select.innerHTML = '<option value="">' + (t('modal.permissions.selectUser') || 'Select user') + '</option>';
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length < 6) return;
+                    const isAdminCell = cells[2];
+                    if (isAdminCell.querySelector('.bg-success')) return; // пропускаем админов
+                    const userId = parseInt(cells[0].textContent.replace('#', '').trim());
+                    const username = cells[1].textContent.trim();
+                    const isOperator = cells[3].querySelector('.bg-info') !== null;
+                    const option = document.createElement('option');
+                    option.value = userId;
+                    option.textContent = username + (isOperator ? ' (Operator)' : '');
+                    select.appendChild(option);
                 });
             })
-            .catch(err => Logger.error('Error loading maps:', err));
+            .catch(() => {
+                select.innerHTML = '<option value="">' + t('common.loadError') + '</option>';
+            });
+    }
+
+    window.addFolderPermission = function() {
+        if (!currentFolderPermissionsId) return;
+        const userId = document.getElementById('folderPermissionUserSelect').value;
+        const role = document.getElementById('folderPermissionRoleSelect').value;
+        if (!userId) {
+            showToast(t('toast.errorTitle'), t('modal.permissions.selectUser'), 'warning');
+            return;
+        }
+        fetch(`/api/folder/${currentFolderPermissionsId}/permissions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ user_id: parseInt(userId), role }) })
+            .then(async res => {
+                if (!res.ok) throw new Error(await window.getErrorMessage(res));
+                loadFolderPermissions(currentFolderPermissionsId);
+                loadUsersForFolderPermission();
+                window.loadSidebarMaps();
+            })
+            .catch(err => showToast(t('toast.errorTitle'), err.message, 'error'));
+    };
+
+    window.addFolderRolePermission = function() {
+        if (!currentFolderPermissionsId) return;
+        const role = document.getElementById('folderOperatorRoleSelect').value;
+        fetch(`/api/folder/${currentFolderPermissionsId}/permissions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ role }) })
+            .then(async res => {
+                if (!res.ok) throw new Error(await window.getErrorMessage(res));
+                loadFolderPermissions(currentFolderPermissionsId);
+                window.loadSidebarMaps();
+            })
+            .catch(err => showToast(t('toast.errorTitle'), err.message, 'error'));
+    };
+
+    window.deleteFolderPermission = function(permId) {
+        if (!currentFolderPermissionsId) return;
+        fetch(`/api/folder/${currentFolderPermissionsId}/permissions/${permId}`, { method: 'DELETE', headers: { 'X-CSRFToken': getCsrfToken() } })
+            .then(async res => {
+                if (!res.ok) throw new Error(await window.getErrorMessage(res));
+                loadFolderPermissions(currentFolderPermissionsId);
+                window.loadSidebarMaps();
+            })
+            .catch(err => showToast(t('toast.errorTitle'), err.message, 'error'));
     };
 
     window.deleteMap = function(event, mapId) {

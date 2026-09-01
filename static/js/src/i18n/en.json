@@ -234,5 +234,17 @@
   },
   "loading": {
     "mapLoading": "Loading map..."
+  },
+  "sidebar": {
+    "moveToFolder": "Move to folder",
+    "newSubfolder": "New subfolder",
+    "folderPermissions": "Folder permissions",
+    "deleteFolderTitle": "Delete folder",
+    "deleteFolderConfirm": "Delete folder \"{name}\"?",
+    "deleteFolderCascadeConfirm": "Folder \"{name}\" is not empty. Delete anyway? Maps inside will be moved to the root; subfolders will be removed as tree nodes (maps inside them are also just moved to the root, not deleted).",
+    "rootNoFolder": "— Root (no folder) —",
+    "newFolderTitle": "New folder",
+    "renameFolderTitle": "Rename folder",
+    "folderNameRequired": "Folder name is required"
   }
 }

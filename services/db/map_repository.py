@@ -6,7 +6,7 @@
 
 from typing import List, Optional
 from extensions import db
-from models import Map, MapPermission
+from models import Map, MapPermission, MapFolder, FolderPermission
 
 
 class MapRepository:
@@ -79,13 +79,48 @@ class MapRepository:
         perms = MapPermission.query.filter_by(user_id=user.id).all()
         perm_map_ids = {p.map_id for p in perms}
 
+        # Карты, доступные через папку: разрешение на папку действует на все
+        # карты внутри неё И во всех вложенных подпапках — поэтому набор ID
+        # папок расширяем потомками, прежде чем искать карты.
+        folder_perms = FolderPermission.query.filter_by(user_id=user.id).all()
+        granted_folder_ids = {p.folder_id for p in folder_perms}
+        folder_map_ids: set = set()
+        if granted_folder_ids:
+            all_folder_ids = MapRepository.expand_with_descendant_folders(granted_folder_ids)
+            folder_map_ids = {
+                m.id for m in Map.query.filter(Map.folder_id.in_(all_folder_ids)).all()
+            }
+
         # Собираем все уникальные ID
-        all_map_ids = user_map_ids.union(perm_map_ids)
+        all_map_ids = user_map_ids.union(perm_map_ids).union(folder_map_ids)
 
         if not all_map_ids:
             return []
 
         return Map.query.filter(Map.id.in_(list(all_map_ids))).all()
+
+    @staticmethod
+    def expand_with_descendant_folders(folder_ids) -> set:
+        """
+        Дополнить множество ID папок ID-ами ВСЕХ их вложенных подпапок
+        (рекурсивно, произвольная глубина дерева).
+
+        Обход через ORM-relationship (children), а не рекурсивный SQL CTE —
+        проще и переносимо между SQLite/Postgres, а глубина дерева папок на
+        практике невелика (это сайдбар навигации, не миллион строк).
+        """
+        result = set(folder_ids)
+        queue = list(folder_ids)
+        while queue:
+            fid = queue.pop()
+            folder = db.session.get(MapFolder, fid)
+            if not folder:
+                continue
+            for child in folder.children:
+                if child.id not in result:
+                    result.add(child.id)
+                    queue.append(child.id)
+        return result
 
     @staticmethod
     def create(name: str, owner_id: int, background_image: Optional[str] = None) -> Map:

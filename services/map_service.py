@@ -17,6 +17,8 @@ from sqlalchemy import func
 
 from models import (
     Map,
+    MapFolder,
+    FolderPermission,
     Group,
     Device,
     User,
@@ -125,11 +127,27 @@ def validate_link(link_id: int):
 
 
 def invalidate_sidebar_cache(user_id: int) -> None:
-    """Удалить кэшированные данные сайдбара для пользователя."""
-    cache_key = f"sidebar_{user_id}"
-    if cache_key in sidebar_cache:
-        del sidebar_cache[cache_key]
-        main_logger.debug(f"Sidebar cache invalidated for user {user_id}")
+    """Удалить кэшированные данные сайдбара (плоский список и дерево папок) для пользователя."""
+    for cache_key in (f"sidebar_{user_id}", f"sidebar_tree_{user_id}"):
+        if cache_key in sidebar_cache:
+            del sidebar_cache[cache_key]
+    main_logger.debug(f"Sidebar cache invalidated for user {user_id}")
+
+
+def invalidate_all_sidebar_caches() -> None:
+    """
+    Сбросить кэш сайдбара сразу для ВСЕХ пользователей.
+
+    Используется для операций над папками (создание/переименование/
+    перемещение/удаление, выдача/отзыв прав на папку) — такая операция может
+    затронуть видимость дерева сразу у нескольких пользователей одновременно
+    (не только у владельца папки), а точечная инвалидация по user_id для
+    этого не годится. TTL кэша и так всего 10 секунд, поэтому полный сброс
+    здесь дешевле и надёжнее, чем вычислять точный список задетых
+    пользователей.
+    """
+    sidebar_cache.clear()
+    main_logger.debug("Sidebar cache fully invalidated (folder tree change)")
 
 
 def invalidate_groups_cache(map_id: int) -> None:
@@ -228,6 +246,136 @@ def get_sidebar_maps_data(user) -> List[Dict[str, Any]]:
             }
         )
 
+    sidebar_cache[cache_key] = result
+    return result
+
+
+def _folder_map_dict(m: Map, stat_dict: Dict[int, int]) -> Dict[str, Any]:
+    return {
+        "id": m.id,
+        "name": m.name,
+        "owner_id": m.owner_id,
+        "down_count": stat_dict.get(m.id, 0),
+    }
+
+
+def _build_folder_node(
+    folder: MapFolder,
+    visible_map_ids: set,
+    fully_granted_ids: set,
+    stat_dict: Dict[int, int],
+    ancestor_fully_granted: bool,
+) -> Optional[Dict[str, Any]]:
+    """
+    Рекурсивно собрать узел дерева для одной папки.
+
+    fully_granted_ids — папки, на которые у пользователя есть ПРЯМОЕ право
+    (владелец/личное разрешение) или которые видны целиком по другой причине
+    (админ/оператор — см. get_sidebar_tree_data). Право на папку
+    распространяется на ВСЁ её содержимое, включая подпапки, поэтому
+    ancestor_fully_granted "протаскивается" вниз по рекурсии: если хотя бы
+    один из предков этой папки полностью открыт, вся ветка ниже — тоже.
+
+    Если папка НЕ полностью открыта (доступ появился только благодаря
+    персональному разрешению на какую-то карту глубоко внутри), показываем
+    только те карты/подпапки, что реально видны — а не всё содержимое.
+    Пустые (для этого пользователя) ветки не рендерим вовсе.
+    """
+    fully_granted_here = ancestor_fully_granted or folder.id in fully_granted_ids
+
+    child_nodes = []
+    for child in folder.children:
+        node = _build_folder_node(
+            child, visible_map_ids, fully_granted_ids, stat_dict, fully_granted_here
+        )
+        if node is not None:
+            child_nodes.append(node)
+
+    if fully_granted_here:
+        child_maps = folder.maps.all()
+    else:
+        child_maps = [m for m in folder.maps.all() if m.id in visible_map_ids]
+
+    if not fully_granted_here and not child_nodes and not child_maps:
+        return None  # ветка полностью не видна этому пользователю
+
+    map_dicts = [_folder_map_dict(m, stat_dict) for m in child_maps]
+    down_count = sum(m["down_count"] for m in map_dicts) + sum(
+        f["down_count"] for f in child_nodes
+    )
+
+    return {
+        "id": folder.id,
+        "name": folder.name,
+        "type": "folder",
+        "owner_id": folder.owner_id,
+        "folders": child_nodes,
+        "maps": map_dicts,
+        "down_count": down_count,
+    }
+
+
+def get_sidebar_tree_data(user) -> Dict[str, Any]:
+    """
+    Собрать дерево папок/карт для сайдбара, отфильтрованное по видимости для
+    пользователя.
+
+    Права распространяются на всё содержимое папки (в т.ч. вложенные
+    подпапки) — см. FolderPermission и services/permissions.py. Дизайн-
+    решение: если у пользователя есть доступ ТОЛЬКО к отдельной карте
+    глубоко внутри чужой папки (через персональный MapPermission, а не через
+    право на саму папку), в дереве всё равно показывается полный путь папок
+    до неё (имена родительских папок), просто без доступа к их прочему
+    содержимому — как «путь к файлу» в файловом менеджере. Полностью скрыть
+    цепочку папок в этом случае можно, но это усложнило бы навигацию сильнее,
+    чем оправдывает утечка одних только НАЗВАНИЙ папок.
+
+    Returns:
+        Dict: {"folders": [...верхнеуровневые узлы...], "maps": [...карты вне папок...]}
+    """
+    cache_key = f"sidebar_tree_{user.id}"
+    if cache_key in sidebar_cache:
+        main_logger.debug(f"Sidebar tree cache hit for user {user.id}")
+        return sidebar_cache[cache_key]
+
+    visible_maps = get_available_maps(user)
+    visible_map_ids = {m.id for m in visible_maps}
+
+    if visible_maps:
+        stats = (
+            db.session.query(Device.map_id, func.count(Device.id).label("down_count"))
+            .filter(
+                Device.map_id.in_(list(visible_map_ids)),
+                Device.monitoring_enabled,
+                Device.status != "up",
+            )
+            .group_by(Device.map_id)
+            .all()
+        )
+        stat_dict = {stat[0]: stat[1] for stat in stats}
+    else:
+        stat_dict = {}
+
+    if user.is_admin or user.is_operator:
+        # Админ/оператор видят дерево целиком — как и в get_available_maps().
+        fully_granted_ids = {f.id for f in MapFolder.query.all()}
+    else:
+        owned_ids = {f.id for f in MapFolder.query.filter_by(owner_id=user.id).all()}
+        permitted_ids = {
+            p.folder_id for p in FolderPermission.query.filter_by(user_id=user.id).all()
+        }
+        fully_granted_ids = map_repo.expand_with_descendant_folders(owned_ids | permitted_ids)
+
+    root_folders = MapFolder.query.filter_by(parent_id=None).all()
+    folder_nodes = []
+    for f in root_folders:
+        node = _build_folder_node(f, visible_map_ids, fully_granted_ids, stat_dict, False)
+        if node is not None:
+            folder_nodes.append(node)
+
+    root_maps = [_folder_map_dict(m, stat_dict) for m in visible_maps if m.folder_id is None]
+
+    result = {"folders": folder_nodes, "maps": root_maps}
     sidebar_cache[cache_key] = result
     return result
 
