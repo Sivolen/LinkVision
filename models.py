@@ -122,7 +122,10 @@ class Map(db.Model):
     is_locked = db.Column(db.Boolean, default=False, nullable=False)  # Блокировка карты
     # NULL = карта лежит в корне сайдбара, вне какой-либо папки.
     folder_id = db.Column(
-        db.Integer, db.ForeignKey("map_folder.id", use_alter=True), nullable=True, index=True
+        db.Integer,
+        db.ForeignKey("map_folder.id", use_alter=True),
+        nullable=True,
+        index=True,
     )
     # Порядок среди "соседей" в дереве сайдбара — задаётся drag-and-drop'ом.
     position = db.Column(db.Integer, default=0, nullable=False)
@@ -148,7 +151,10 @@ class MapFolder(db.Model):
     name = db.Column(db.String(128), nullable=False)
     # NULL = папка верхнего уровня.
     parent_id = db.Column(
-        db.Integer, db.ForeignKey("map_folder.id", use_alter=True), nullable=True, index=True
+        db.Integer,
+        db.ForeignKey("map_folder.id", use_alter=True),
+        nullable=True,
+        index=True,
     )
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -176,7 +182,10 @@ class FolderPermission(db.Model):
     __tablename__ = "folder_permission"
     id = db.Column(db.Integer, primary_key=True)
     folder_id = db.Column(
-        db.Integer, db.ForeignKey("map_folder.id", use_alter=True), nullable=False, index=True
+        db.Integer,
+        db.ForeignKey("map_folder.id", use_alter=True),
+        nullable=False,
+        index=True,
     )
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     role = db.Column(db.String(20), nullable=True)  # 'viewer', 'editor', 'admin'
@@ -186,7 +195,8 @@ class FolderPermission(db.Model):
 
     __table_args__ = (
         db.CheckConstraint(
-            "(user_id IS NOT NULL) OR (role IS NOT NULL)", name="check_folder_user_or_role"
+            "(user_id IS NOT NULL) OR (role IS NOT NULL)",
+            name="check_folder_user_or_role",
         ),
         # Только (folder_id, user_id) — умышленно БЕЗ аналога uq_map_role из
         # MapPermission: тот UniqueConstraint(map_id, role) без user_id стоит

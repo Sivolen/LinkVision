@@ -21,7 +21,9 @@ def run_migration():
             columns = [c["name"] for c in inspector.get_columns(table)]
             if "position" not in columns:
                 print(f"Adding column {table}.position...")
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN position INTEGER DEFAULT 0"))
+                conn.execute(
+                    text(f"ALTER TABLE {table} ADD COLUMN position INTEGER DEFAULT 0")
+                )
                 conn.commit()
                 print(f"Column {table}.position added.")
             else:

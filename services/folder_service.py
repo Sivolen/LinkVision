@@ -27,11 +27,15 @@ def _is_descendant(folder_id: int, maybe_ancestor_id: int) -> bool:
         if current.id == maybe_ancestor_id:
             return True
         seen.add(current.id)
-        current = db.session.get(MapFolder, current.parent_id) if current.parent_id else None
+        current = (
+            db.session.get(MapFolder, current.parent_id) if current.parent_id else None
+        )
     return False
 
 
-def create_folder(name: str, owner_id: int, parent_id: Optional[int] = None) -> MapFolder:
+def create_folder(
+    name: str, owner_id: int, parent_id: Optional[int] = None
+) -> MapFolder:
     """Создать папку. parent_id=None — папка верхнего уровня."""
     name = (name or "").strip()
     if not name:
@@ -76,7 +80,9 @@ def move_folder(folder_id: int, new_parent_id: Optional[int]) -> MapFolder:
         if not db.session.get(MapFolder, new_parent_id):
             raise ValueError("Целевая папка не найдена")
         if _is_descendant(new_parent_id, folder_id):
-            raise ValueError("Нельзя переместить папку в одну из её собственных подпапок")
+            raise ValueError(
+                "Нельзя переместить папку в одну из её собственных подпапок"
+            )
 
     folder.parent_id = new_parent_id
     db.session.commit()
@@ -125,8 +131,12 @@ def move_map_to_folder(map_id: int, folder_id: Optional[int]) -> Map:
     return map_obj
 
 
-def grant_folder_permission(folder_id: int, user_id: int, role: str) -> FolderPermission:
-    existing = FolderPermission.query.filter_by(folder_id=folder_id, user_id=user_id).first()
+def grant_folder_permission(
+    folder_id: int, user_id: int, role: str
+) -> FolderPermission:
+    existing = FolderPermission.query.filter_by(
+        folder_id=folder_id, user_id=user_id
+    ).first()
     if existing:
         raise ValueError("Permission already exists for this user")
 
@@ -134,7 +144,9 @@ def grant_folder_permission(folder_id: int, user_id: int, role: str) -> FolderPe
     db.session.add(perm)
     db.session.commit()
     invalidate_all_sidebar_caches()
-    api_logger.info(f"Folder permission granted: folder_id={folder_id}, user_id={user_id}, role={role}")
+    api_logger.info(
+        f"Folder permission granted: folder_id={folder_id}, user_id={user_id}, role={role}"
+    )
     return perm
 
 
@@ -149,7 +161,9 @@ def grant_folder_role_permission(folder_id: int, role: str) -> FolderPermission:
     db.session.add(perm)
     db.session.commit()
     invalidate_all_sidebar_caches()
-    api_logger.info(f"Folder role permission granted: folder_id={folder_id}, role={role}")
+    api_logger.info(
+        f"Folder role permission granted: folder_id={folder_id}, role={role}"
+    )
     return perm
 
 

@@ -86,7 +86,9 @@ class MapRepository:
         granted_folder_ids = {p.folder_id for p in folder_perms}
         folder_map_ids: set = set()
         if granted_folder_ids:
-            all_folder_ids = MapRepository.expand_with_descendant_folders(granted_folder_ids)
+            all_folder_ids = MapRepository.expand_with_descendant_folders(
+                granted_folder_ids
+            )
             folder_map_ids = {
                 m.id for m in Map.query.filter(Map.folder_id.in_(all_folder_ids)).all()
             }
