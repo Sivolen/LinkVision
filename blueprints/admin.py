@@ -16,7 +16,7 @@ from flask import (
 )
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
-from models import Map
+from models import Map, db
 from services import user_service, device_type_service, settings_service, map_service
 from services.security_service import rate_limiter
 from services.device_type_service import invalidate_types_cache
@@ -266,67 +266,55 @@ def delete_map(id):
 # ============================================================================
 # Вспомогательная функция для восстановления БД
 # ============================================================================
-def _upgrade_restored_sqlite_database(db_path):
-    """Подтянуть схему загруженного SQLite-бэкапа до текущей версии приложения.
+def _validate_sqlite_backup(backup_path):
+    """Проверяет резервную копию SQLite до замены рабочей БД.
 
-    Восстановление старого .db не должно оставлять приложение с БД, которая
-    валидна для SQLite, но несовместима с текущими ORM-моделями.
+    В проекте пока нет надёжного общего номера схемы для старых БД, поэтому
+    сначала проверяем целостность SQLite и наличие всех таблиц/колонок,
+    которые требуются текущей ORM-модели. Лишние колонки допустимы.
     """
-    conn = sqlite3.connect(db_path)
-    try:
-        conn.execute("PRAGMA foreign_keys=ON")
-        integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
-        if integrity != "ok":
-            raise ValueError(f"integrity_check: {integrity}")
+    required_tables = {}
+    for table in db.metadata.sorted_tables:
+        required_tables[table.name] = {column.name for column in table.columns}
 
-        tables = {
+    conn = sqlite3.connect(backup_path)
+    try:
+        integrity = conn.execute("PRAGMA integrity_check").fetchone()
+        if not integrity or str(integrity[0]).lower() != "ok":
+            return False, _("Файл базы данных повреждён или не является корректной SQLite-базой.")
+
+        existing_tables = {
             row[0]
             for row in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            )
         }
-        if "map" not in tables or "user" not in tables:
-            raise ValueError("Файл не является совместимой базой LinkVision")
 
-        def columns(table):
-            return {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
+        missing_tables = sorted(set(required_tables) - existing_tables)
+        if missing_tables:
+            return False, _(
+                "Резервная копия несовместима с текущей версией LinkVision: отсутствуют таблицы ({tables}). Текущая база данных не изменена."
+            ).format(tables=", ".join(missing_tables))
 
-        def add_column(table, definition):
-            if table in tables and definition[0] not in columns(table):
-                conn.execute(
-                    f'ALTER TABLE "{table}" ADD COLUMN {definition[0]} {definition[1]}'
-                )
-                admin_logger.info(
-                    "Database restore migration: %s.%s", table, definition[0]
-                )
+        missing_columns = []
+        for table_name, required_columns in required_tables.items():
+            columns = {
+                row[1]
+                for row in conn.execute(f'PRAGMA table_info("{table_name}")')
+            }
+            missing = sorted(required_columns - columns)
+            if missing:
+                missing_columns.append(f"{table_name}: {', '.join(missing)}")
 
-        # Колонки, появившиеся в версиях после старых бэкапов.
-        add_column("map", ("is_locked", "BOOLEAN DEFAULT 0 NOT NULL"))
-        add_column("map", ("folder_id", "INTEGER"))
-        add_column("map", ("position", "INTEGER DEFAULT 0 NOT NULL"))
-        add_column("user", ("must_change_password", "BOOLEAN DEFAULT 0 NOT NULL"))
-        add_column("user", ("locale", "VARCHAR(8)"))
+        if missing_columns:
+            return False, _(
+                "Резервная копия создана в несовместимой версии LinkVision. Отсутствуют поля: {fields}. Текущая база данных не изменена."
+            ).format(fields="; ".join(missing_columns))
 
-        # Таблица папок и её порядок нужны текущему sidebar. Если таблицы не
-        # было в старом бэкапе, создаём её; затем добавляем недостающую position.
-        if "map_folder" not in tables:
-            conn.execute("""
-                CREATE TABLE map_folder (
-                    id INTEGER PRIMARY KEY,
-                    name VARCHAR(128) NOT NULL,
-                    parent_id INTEGER,
-                    owner_id INTEGER NOT NULL,
-                    created_at DATETIME,
-                    position INTEGER DEFAULT 0 NOT NULL,
-                    FOREIGN KEY(parent_id) REFERENCES map_folder(id),
-                    FOREIGN KEY(owner_id) REFERENCES user(id)
-                )
-            """)
-            tables.add("map_folder")
-        else:
-            add_column("map_folder", ("position", "INTEGER DEFAULT 0 NOT NULL"))
-
-        conn.commit()
+        return True, None
+    except sqlite3.DatabaseError as exc:
+        admin_logger.error(f"SQLite backup validation failed: {exc}")
+        return False, _("Не удалось проверить файл базы данных. Текущая база данных не изменена.")
     finally:
         conn.close()
 
@@ -345,44 +333,52 @@ def restore_backup_action():
         flash(_("Допустимы только файлы .db"))
         return redirect(url_for("admin.settings"))
 
-    db_path = current_app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", "")
-    if not db_path.startswith("/"):
+    db_uri = current_app.config["SQLALCHEMY_DATABASE_URI"]
+    if not db_uri.startswith("sqlite:///"):
+        flash(_("Восстановление файла .db доступно только для SQLite."))
+        return redirect(url_for("admin.settings"))
+
+    db_path = db_uri.replace("sqlite:///", "", 1)
+    if not os.path.isabs(db_path):
         db_path = os.path.join(current_app.root_path, db_path)
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-    os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
-    backup_path = db_path + ".bak"
     temp_path = None
-
     try:
-        # Работаем с временным файлом: повреждённый/несовместимый бэкап не
-        # должен уничтожить рабочую БД.
-        fd, temp_path = tempfile.mkstemp(
-            prefix="linkvision_restore_",
-            suffix=".db",
-            dir=os.path.dirname(db_path) or ".",
-        )
+        # Сначала сохраняем загруженный файл во временный путь. Рабочая БД
+        # вообще не трогается, пока файл не прошёл все проверки.
+        fd, temp_path = tempfile.mkstemp(prefix="linkvision_restore_", suffix=".db", dir=os.path.dirname(db_path))
         os.close(fd)
         file.save(temp_path)
-        _upgrade_restored_sqlite_database(temp_path)
 
-        # SQLAlchemy/SQLite может держать старый файл открытым. Сбрасываем
-        # session и pool до атомарной замены. После этого приложение само
-        # подключится к новому файлу при следующем запросе.
-        from extensions import db
+        valid, error_message = _validate_sqlite_backup(temp_path)
+        if not valid:
+            admin_logger.warning(f"Rejected incompatible database backup: {file.filename}")
+            flash(error_message, "error")
+            return redirect(url_for("admin.settings"))
 
-        db.session.remove()
-        db.engine.dispose()
-
+        backup_path = db_path + ".bak"
         if os.path.exists(db_path):
             shutil.copy2(db_path, backup_path)
+
+        # Закрываем старые SQLite-соединения до замены файла. После os.replace
+        # SQLAlchemy получит новое соединение уже к восстановленной БД.
+        db.session.remove()
+        db.engine.dispose()
         os.replace(temp_path, db_path)
         temp_path = None
+        db.engine.dispose()
 
-        admin_logger.info("Database restored from uploaded file and upgraded")
-        flash(_("База данных восстановлена и приведена к текущей схеме."))
+        admin_logger.info("Database restored from uploaded file after schema validation")
+        flash(
+            _(
+                "База данных успешно восстановлена. Резервная копия предыдущей БД сохранена как .bak."
+            ),
+            "success",
+        )
     except Exception as e:
-        admin_logger.exception(f"Error restoring database: {e}")
-        flash(_(f"Ошибка при восстановлении базы данных: {e}"))
+        admin_logger.error(f"Error restoring database: {e}", exc_info=True)
+        flash(_("Ошибка при восстановлении базы данных. Текущая база данных не изменена."), "error")
     finally:
         if temp_path and os.path.exists(temp_path):
             try:

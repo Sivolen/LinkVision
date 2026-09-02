@@ -903,49 +903,70 @@ let wasDisconnected = false;
     window.importMapNew = function() {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.json,application/json';
+        input.accept = '.json,application/json,text/json';
         input.onchange = function(e) {
             const file = e.target.files[0];
             if (!file) return;
+
             const reader = new FileReader();
-            reader.onload = function(ev) {
+            reader.onload = async function(ev) {
                 try {
-                    const data = JSON.parse(ev.target.result);
-                    data.id = null;
+                    // JSON files exported by some editors/older versions may start
+                    // with an UTF-8 BOM. JSON.parse() rejects it, so remove it first.
+                    const text = String(ev.target.result || '').replace(/^\uFEFF/, '').trim();
+                    if (!text) {
+                        throw new Error(t('importExport.emptyFile'));
+                    }
+
+                    const data = JSON.parse(text);
+                    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+                        throw new Error(t('importExport.invalidStructure'));
+                    }
+                    if (data.devices !== undefined && !Array.isArray(data.devices) ||
+                        data.links !== undefined && !Array.isArray(data.links) ||
+                        data.groups !== undefined && !Array.isArray(data.groups)) {
+                        throw new Error(t('importExport.invalidStructure'));
+                    }
+
+                    // ID is local to the source DB. For "Import map" we always
+                    // create a new map; the backend also supports an unknown ID.
+                    delete data.id;
+
                     window.setSkipNextMapUpdate();
-                    fetch('/api/map/import', {
+                    const response = await fetch('/api/map/import', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRFToken': getCsrfToken()
                         },
                         body: JSON.stringify(data)
-                    })
-                    .then(async res => {
-                        if (!res.ok) {
-                            const errorMsg = await getErrorMessage(res);
-                            throw new Error(errorMsg);
-                        }
-                        return res.json();
-                    })
-                    .then(result => {
-                        alert(t('importExport.done'));
-                        if (result.id) {
-                            window.location.href = `/map/${result.id}`;
-                        } else {
-                            location.reload();
-                        }
-                    })
-                    .catch(err => {
-                        Logger.error(err);
-                        alert(err.message || t('importExport.error'));
-                    })
-                    .finally(() => window.clearSkipNextMapUpdate());
+                    });
+
+                    if (!response.ok) {
+                        const errorMsg = await getErrorMessage(response);
+                        throw new Error(errorMsg);
+                    }
+
+                    const result = await response.json();
+                    alert(t('importExport.done'));
+                    if (result.id) {
+                        window.location.href = `/map/${result.id}`;
+                    } else {
+                        location.reload();
+                    }
                 } catch (ex) {
-                    alert(t('importExport.badJson'));
+                    Logger.error('Error importing map:', ex);
+                    alert(ex instanceof SyntaxError
+                        ? t('importExport.badJson')
+                        : (ex.message || t('importExport.error')));
+                } finally {
+                    window.clearSkipNextMapUpdate();
                 }
             };
-            reader.readAsText(file);
+            reader.onerror = function() {
+                alert(t('importExport.readError'));
+            };
+            reader.readAsText(file, 'UTF-8');
         };
         input.click();
     };

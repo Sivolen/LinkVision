@@ -99,14 +99,27 @@ def export_map(map_id):
 @require_not_operator
 def import_map_route():
     """Импортировать карту из JSON."""
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "No data provided"}), 400
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "Некорректный формат карты: ожидался JSON-объект."}), 400
 
-    # Если импорт затрагивает существующую карту — проверяем право редактирования
+    # ID карты локален для конкретной БД. Если такой ID существует в текущей
+    # БД, импорт заменяет эту карту и требует права редактирования. Если ID
+    # отсутствует — импорт создаёт новую карту.
     map_id = data.get("id")
-    if map_id and not can_edit_map(map_id):
-        return jsonify({"error": "Доступ запрещён"}), 403
+    if map_id:
+        try:
+            map_id = int(map_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Некорректный формат карты: ID карты должен быть числом."}), 400
+        if Map.query.get(map_id) is not None and not can_edit_map(map_id):
+            return jsonify({"error": "Доступ запрещён"}), 403
+
+    # Минимальная проверка структуры выполняется до сервисного импорта, чтобы
+    # повреждённый/чужой JSON не превращался в 500.
+    for field in ("devices", "links", "groups"):
+        if field in data and not isinstance(data[field], list):
+            return jsonify({"error": f"Некорректный формат карты: поле '{field}' должно быть массивом."}), 400
 
     try:
         map_obj = map_service.import_map(data, current_user)
