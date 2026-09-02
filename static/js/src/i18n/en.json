@@ -40,7 +40,10 @@
   "importExport": {
     "done": "Import complete",
     "error": "Error while importing",
-    "badJson": "Invalid JSON file"
+    "badJson": "Invalid JSON file",
+    "emptyFile": "The file is empty",
+    "invalidStructure": "Invalid map format: expected a LinkVision map structure.",
+    "readError": "Could not read the file"
   },
   "confirmDelete": {
     "title": "Confirm deletion",
@@ -150,9 +153,9 @@
       "deleted": "Group deleted",
       "deletedMsg": "Group \"{name}\" deleted",
       "deleteFail": "Failed to delete the group",
-    "adminOnly": "Only an administrator can manage groups",
-    "operatorNo": "Operator cannot manage groups",
-    "noParent": "-- No parent --"
+      "adminOnly": "Only an administrator can manage groups",
+      "operatorNo": "Operator cannot manage groups",
+      "noParent": "-- No parent --"
     },
     "shape": {
       "required": "Type, width and height are required",

@@ -1273,3 +1273,31 @@ msgstr "— Root (no folder) —"
 msgid "Название папки"
 msgstr "Folder name"
 
+
+#: blueprints/admin.py
+msgid "Файл базы данных повреждён или не является корректной SQLite-базой."
+msgstr "The database file is corrupted or is not a valid SQLite database."
+
+#: blueprints/admin.py
+msgid "Резервная копия несовместима с текущей версией LinkVision: отсутствуют таблицы ({tables}). Текущая база данных не изменена."
+msgstr "The backup is incompatible with the current LinkVision version: missing tables ({tables}). The current database was not changed."
+
+#: blueprints/admin.py
+msgid "Резервная копия создана в несовместимой версии LinkVision. Отсутствуют поля: {fields}. Текущая база данных не изменена."
+msgstr "The backup was created by an incompatible LinkVision version. Missing fields: {fields}. The current database was not changed."
+
+#: blueprints/admin.py
+msgid "Не удалось проверить файл базы данных. Текущая база данных не изменена."
+msgstr "The database file could not be validated. The current database was not changed."
+
+#: blueprints/admin.py
+msgid "Восстановление файла .db доступно только для SQLite."
+msgstr "Restoring .db files is available only for SQLite."
+
+#: blueprints/admin.py
+msgid "База данных успешно восстановлена. Резервная копия предыдущей БД сохранена как .bak."
+msgstr "The database was restored successfully. A backup of the previous database was saved as .bak."
+
+#: blueprints/admin.py
+msgid "Ошибка при восстановлении базы данных. Текущая база данных не изменена."
+msgstr "Database restore failed. The current database was not changed."

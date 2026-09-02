@@ -95,22 +95,20 @@ def import_map(data: dict, current_user) -> Map:
 
     if map_id:
         map_obj = db.session.get(Map, map_id)
-
         if map_obj:
-            # Если карта с таким ID уже есть в текущей БД, импорт работает как
-            # обновление существующей карты. Право редактирования проверяем
-            # только для этой ветки.
+            # If the exported ID belongs to a map in this database, this is an
+            # explicit replacement of that map and therefore requires edit access.
             _check_map_edit_permission(map_id)
             Link.query.filter_by(map_id=map_id).delete()
             Device.query.filter_by(map_id=map_id).delete()
             Group.query.filter_by(map_id=map_id).delete()
             db.session.flush()
         else:
-            # ID из экспортированного JSON относится к исходной БД и вполне
-            # может отсутствовать в БД назначения (особенно при импорте в
-            # полностью пустую БД). Нельзя считать это ошибкой формата.
+            # IDs are local to a database. An imported map may legitimately carry
+            # an ID that does not exist in the destination DB, so it must be treated
+            # as a new map rather than as an invalid import.
             map_obj = Map(
-                name=data.get("name", "Imported Map"),
+                name=data.get("name") or "Imported Map",
                 owner_id=current_user.id,
             )
             db.session.add(map_obj)
