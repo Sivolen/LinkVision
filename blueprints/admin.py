@@ -1,5 +1,7 @@
 import os
 import shutil
+import sqlite3
+import tempfile
 from datetime import datetime
 from flask import (
     Blueprint,
@@ -264,6 +266,71 @@ def delete_map(id):
 # ============================================================================
 # Вспомогательная функция для восстановления БД
 # ============================================================================
+def _upgrade_restored_sqlite_database(db_path):
+    """Подтянуть схему загруженного SQLite-бэкапа до текущей версии приложения.
+
+    Восстановление старого .db не должно оставлять приложение с БД, которая
+    валидна для SQLite, но несовместима с текущими ORM-моделями.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("PRAGMA foreign_keys=ON")
+        integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
+        if integrity != "ok":
+            raise ValueError(f"integrity_check: {integrity}")
+
+        tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        if "map" not in tables or "user" not in tables:
+            raise ValueError("Файл не является совместимой базой LinkVision")
+
+        def columns(table):
+            return {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
+
+        def add_column(table, definition):
+            if table in tables and definition[0] not in columns(table):
+                conn.execute(
+                    f'ALTER TABLE "{table}" ADD COLUMN {definition[0]} {definition[1]}'
+                )
+                admin_logger.info(
+                    "Database restore migration: %s.%s", table, definition[0]
+                )
+
+        # Колонки, появившиеся в версиях после старых бэкапов.
+        add_column("map", ("is_locked", "BOOLEAN DEFAULT 0 NOT NULL"))
+        add_column("map", ("folder_id", "INTEGER"))
+        add_column("map", ("position", "INTEGER DEFAULT 0 NOT NULL"))
+        add_column("user", ("must_change_password", "BOOLEAN DEFAULT 0 NOT NULL"))
+        add_column("user", ("locale", "VARCHAR(8)"))
+
+        # Таблица папок и её порядок нужны текущему sidebar. Если таблицы не
+        # было в старом бэкапе, создаём её; затем добавляем недостающую position.
+        if "map_folder" not in tables:
+            conn.execute("""
+                CREATE TABLE map_folder (
+                    id INTEGER PRIMARY KEY,
+                    name VARCHAR(128) NOT NULL,
+                    parent_id INTEGER,
+                    owner_id INTEGER NOT NULL,
+                    created_at DATETIME,
+                    position INTEGER DEFAULT 0 NOT NULL,
+                    FOREIGN KEY(parent_id) REFERENCES map_folder(id),
+                    FOREIGN KEY(owner_id) REFERENCES user(id)
+                )
+            """)
+            tables.add("map_folder")
+        else:
+            add_column("map_folder", ("position", "INTEGER DEFAULT 0 NOT NULL"))
+
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def restore_backup_action():
     if "backup_file" not in request.files:
         flash(_("Файл не выбран"))
@@ -274,7 +341,7 @@ def restore_backup_action():
         flash(_("Пустой файл"))
         return redirect(url_for("admin.settings"))
 
-    if not file.filename.endswith(".db"):
+    if not file.filename.lower().endswith(".db"):
         flash(_("Допустимы только файлы .db"))
         return redirect(url_for("admin.settings"))
 
@@ -282,21 +349,47 @@ def restore_backup_action():
     if not db_path.startswith("/"):
         db_path = os.path.join(current_app.root_path, db_path)
 
+    os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
     backup_path = db_path + ".bak"
-    if os.path.exists(db_path):
-        shutil.copy2(db_path, backup_path)
+    temp_path = None
 
     try:
-        file.save(db_path)
-        admin_logger.info("Database restored from uploaded file")
-        flash(
-            _(
-                "База данных восстановлена. Пожалуйста, перезапустите приложение для применения изменений."
-            )
+        # Работаем с временным файлом: повреждённый/несовместимый бэкап не
+        # должен уничтожить рабочую БД.
+        fd, temp_path = tempfile.mkstemp(
+            prefix="linkvision_restore_",
+            suffix=".db",
+            dir=os.path.dirname(db_path) or ".",
         )
+        os.close(fd)
+        file.save(temp_path)
+        _upgrade_restored_sqlite_database(temp_path)
+
+        # SQLAlchemy/SQLite может держать старый файл открытым. Сбрасываем
+        # session и pool до атомарной замены. После этого приложение само
+        # подключится к новому файлу при следующем запросе.
+        from extensions import db
+
+        db.session.remove()
+        db.engine.dispose()
+
+        if os.path.exists(db_path):
+            shutil.copy2(db_path, backup_path)
+        os.replace(temp_path, db_path)
+        temp_path = None
+
+        admin_logger.info("Database restored from uploaded file and upgraded")
+        flash(_("База данных восстановлена и приведена к текущей схеме."))
     except Exception as e:
-        admin_logger.error(f"Error restoring database: {e}")
-        flash(_("Ошибка при восстановлении базы данных"))
+        admin_logger.exception(f"Error restoring database: {e}")
+        flash(_(f"Ошибка при восстановлении базы данных: {e}"))
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
     return redirect(url_for("admin.settings"))
 
 
