@@ -6,17 +6,52 @@
 
 import os
 import sys
+import shutil
+from datetime import datetime
 from sqlalchemy import create_engine, inspect, text
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import Config
 
 
+def _db_path():
+    uri = Config.SQLALCHEMY_DATABASE_URI
+    if not uri.startswith("sqlite:///"):
+        raise RuntimeError("Этот скрипт поддерживает только SQLite DATABASE_URL.")
+    path = uri.replace("sqlite:///", "", 1)
+    return path if os.path.isabs(path) else os.path.join(Config.BASE_DIR, path)
+
+
+def _require_base_tables(conn):
+    required = {"user", "device", "map"}
+    existing = {
+        row[0]
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+        )
+    }
+    missing = sorted(required - existing)
+    if missing:
+        raise RuntimeError(
+            "База не похожа на поддерживаемую LinkVision БД: отсутствуют таблицы "
+            + ", ".join(missing)
+        )
+
+
 def run_migration():
     engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
     inspector = inspect(engine)
 
+    db_path = _db_path()
+    if not os.path.exists(db_path):
+        raise RuntimeError(f"База данных не найдена: {db_path}")
+
+    backup_path = f"{db_path}.migration_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    shutil.copy2(db_path, backup_path)
+    print(f"Резервная копия перед миграцией: {backup_path}")
+
     with engine.connect() as conn:
+        _require_base_tables(conn)
         # 1. Таблица device_ips
         if not inspector.has_table("device_ips"):
             print("Creating table device_ips...")

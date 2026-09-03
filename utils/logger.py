@@ -9,6 +9,11 @@ def setup_logger(name):
     """Настройка и получение логера для модуля"""
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, Config.LOG_LEVEL))
+    logger.propagate = False
+
+    # Module reloads/tests must not attach duplicate handlers to the same logger.
+    if logger.handlers:
+        return logger
 
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s",

@@ -2,17 +2,20 @@ import atexit
 import secrets
 from pathlib import Path
 
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, send_from_directory
 from flask_login import current_user, login_required
 from flask_migrate import Migrate
 from flask_socketio import join_room
-from flask_wtf.csrf import CSRFProtect
-from sqlalchemy import event
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+from flask_babel import get_locale
+from sqlalchemy import event, inspect as sa_inspect, text
+from sqlalchemy.exc import NoSuchTableError
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.exceptions import HTTPException
 
 from config import Config
 from extensions import db, login_manager, socketio, init_extensions
-from models import User, DeviceType, Settings
+from models import User, DeviceType, Settings, Device
 from blueprints.auth import auth_bp
 from blueprints.admin import admin_bp
 from blueprints.main import main_bp
@@ -20,6 +23,12 @@ from blueprints.api import api_bp
 from blueprints.i18n import i18n_bp
 from services.monitor import init_monitor, start_monitor, stop_monitor
 from services.permissions import can_view_map
+from services.js_i18n import js_i18n_payload
+from services.db.schema_service import (
+    mark_sqlite_schema,
+    sqlite_database_is_empty,
+    validate_sqlite_database,
+)
 from utils.logger import app_logger
 from dotenv import load_dotenv
 import os
@@ -73,9 +82,6 @@ def _ensure_user_locale_column():
     объявляет — без ALTER первый же SELECT по User упал бы. Вызывается один раз
     при старте, внутри app_context.
     """
-    from sqlalchemy import inspect as sa_inspect, text
-    from sqlalchemy.exc import NoSuchTableError
-
     inspector = sa_inspect(db.engine)
     try:
         columns = {col["name"] for col in inspector.get_columns("user")}
@@ -139,8 +145,42 @@ def create_app():
         # первого запроса к User (иначе SELECT по несуществующей колонке упадёт).
         _ensure_user_locale_column()
 
-        # --- Создание таблиц, если их нет ---
-        db.create_all()
+        # --- Контроль схемы БД ---
+        # Для существующей БД запрещаем тихое создание недостающих таблиц:
+        # это могло скрыть несовместимое восстановление/старую версию.
+        # Чистая БД создаётся из текущих моделей.
+        database_uri = app.config["SQLALCHEMY_DATABASE_URI"]
+        sqlite_path = None
+        if database_uri.startswith("sqlite:///"):
+            sqlite_path = database_uri.replace("sqlite:///", "", 1)
+            if not os.path.isabs(sqlite_path):
+                sqlite_path = os.path.join(app.root_path, sqlite_path)
+
+            if sqlite_database_is_empty(sqlite_path):
+                db.create_all()
+            else:
+                schema_result = validate_sqlite_database(
+                    sqlite_path, db.metadata, expected_version=Config.VERSION
+                )
+                if not schema_result.valid:
+                    app_logger.critical(
+                        "Database schema is incompatible with this LinkVision version: %s",
+                        schema_result.message,
+                    )
+                    raise RuntimeError(
+                        "Несовместимая схема базы данных. "
+                        f"{schema_result.message}. "
+                        "Запустите поддерживаемую миграцию или восстановите совместимую резервную копию."
+                    )
+        else:
+            # PostgreSQL: Flask-SQLAlchemy может создавать отсутствующие таблицы
+            # только для действительно новой базы. Проверка существующей схемы
+            # будет отдельным шагом после появления полноценной Alembic-цепочки.
+            db.create_all()
+
+        # После успешной проверки/создания фиксируем версию схемы SQLite.
+        if database_uri.startswith("sqlite:///") and sqlite_path:
+            mark_sqlite_schema(sqlite_path, Config.VERSION)
 
         # --- Создание администратора, если ни одного нет ---
         if not User.query.filter_by(is_admin=True).first():
@@ -212,26 +252,17 @@ def create_app():
     @app.route("/static/uploads/maps/<path:filename>")
     @login_required
     def serve_map_background(filename):
-        from flask import send_from_directory
-
         maps_dir = os.path.join(app.root_path, "static", "uploads", "maps")
         return send_from_directory(maps_dir, filename)
 
     @app.route("/static/uploads/icons/<path:filename>")
     @login_required
     def serve_icon(filename):
-        from flask import send_from_directory
-
         icons_dir = os.path.join(app.root_path, "static", "uploads", "icons")
         return send_from_directory(icons_dir, filename)
 
     @app.context_processor
     def inject_globals():
-        from config import Config
-        from flask_wtf.csrf import generate_csrf
-        from flask_babel import get_locale  # выбранная локаль (не селектор!)
-        from services.js_i18n import js_i18n_payload
-
         locale = str(get_locale() or Config.BABEL_DEFAULT_LOCALE)
         return {
             "app_version": Config.VERSION,
@@ -270,8 +301,6 @@ def create_app():
 
     @app.errorhandler(Exception)
     def handle_unexpected(e):
-        from werkzeug.exceptions import HTTPException
-
         if isinstance(e, HTTPException):
             return e
         app_logger.exception("Unhandled exception")
@@ -282,8 +311,6 @@ def create_app():
         map_id = data.get("map_id")
         if not map_id or not current_user.is_authenticated or not can_view_map(map_id):
             return
-
-        from models import Device
 
         with app.app_context():
             devices = Device.query.filter_by(

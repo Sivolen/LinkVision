@@ -12,7 +12,7 @@ import time
 from typing import Dict, Optional, Tuple
 from collections import defaultdict
 from functools import wraps
-from flask import request, jsonify, current_app, has_app_context
+from flask import request, jsonify, current_app, has_app_context, render_template, redirect, url_for
 from flask_login import current_user
 import re
 
@@ -201,8 +201,6 @@ def rate_limit(max_requests: int = 10, window_seconds: int = 60):
                     )
 
                 # Если запрос HTML — возвращаем красивую страницу
-                from flask import render_template, redirect, url_for
-
                 return (
                     render_template(
                         "429.html",

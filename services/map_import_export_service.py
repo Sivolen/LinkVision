@@ -12,12 +12,11 @@ from models import (
     db,
 )
 from utils.logger import api_logger
+from services.permissions import can_edit_map
 
 
 def _check_map_edit_permission(map_id: int) -> None:
     """Проверить право редактирования карты. Вызывает ValueError если нет доступа."""
-    from services.permissions import can_edit_map
-
     if not can_edit_map(map_id):
         raise PermissionError("Доступ запрещён")
 
