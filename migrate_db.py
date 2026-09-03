@@ -27,7 +27,7 @@ def _require_base_tables(conn):
     existing = {
         row[0]
         for row in conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
         )
     }
     missing = sorted(required - existing)
@@ -39,9 +39,6 @@ def _require_base_tables(conn):
 
 
 def run_migration():
-    engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
-    inspector = inspect(engine)
-
     db_path = _db_path()
     if not os.path.exists(db_path):
         raise RuntimeError(f"База данных не найдена: {db_path}")
@@ -49,6 +46,9 @@ def run_migration():
     backup_path = f"{db_path}.migration_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     shutil.copy2(db_path, backup_path)
     print(f"Резервная копия перед миграцией: {backup_path}")
+
+    engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+    inspector = inspect(engine)
 
     with engine.connect() as conn:
         _require_base_tables(conn)
