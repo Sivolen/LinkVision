@@ -1,8 +1,9 @@
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from flask_babel import Babel
+from flask import request, session, current_app
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -35,8 +36,6 @@ def init_extensions(app):
 
 def _available_languages():
     """Коды поддерживаемых языков из конфига (в контексте запроса/приложения)."""
-    from flask import current_app
-
     return current_app.config["LANGUAGES"].keys()
 
 
@@ -53,9 +52,6 @@ def select_locale():
     Namespace-примечание: это НЕ flask_babel.get_locale (та возвращает уже
     выбранную локаль). Здесь именно селектор, поэтому имя select_locale.
     """
-    from flask import request, session, current_app
-    from flask_login import current_user
-
     languages = list(_available_languages())
 
     requested = request.args.get("lang")

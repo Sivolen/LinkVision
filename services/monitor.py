@@ -3,6 +3,9 @@ import datetime
 import threading
 import concurrent.futures
 import os
+import subprocess
+import platform
+import traceback
 from extensions import db, socketio
 from models import Device, Settings, DeviceHistory
 from utils.logger import monitor_logger
@@ -15,8 +18,6 @@ try:
     PING3_AVAILABLE = True
 except ImportError:
     PING3_AVAILABLE = False
-    import subprocess
-    import platform
 
 app_instance = None
 _monitor_thread = None
@@ -293,8 +294,6 @@ def monitor_loop():
 
         except Exception as e:
             monitor_logger.error(f"Monitor error: {e}")
-            import traceback
-
             monitor_logger.error(traceback.format_exc())
 
         elapsed = time.time() - start_time

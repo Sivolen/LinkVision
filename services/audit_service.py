@@ -9,12 +9,13 @@
 """
 
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import request
 from flask_login import current_user
 from extensions import db
 from models import AuditLog
 from utils.logger import main_logger
+from sqlalchemy import func
 
 
 def log_action(
@@ -267,9 +268,6 @@ def get_user_activity_summary(user_id: int, days: int = 7) -> Dict[str, Any]:
     Returns:
         Dict со статистикой
     """
-    from datetime import timedelta
-    from sqlalchemy import func
-
     date_from = datetime.now() - timedelta(days=days)
 
     # Общее количество действий

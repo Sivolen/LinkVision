@@ -18,6 +18,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from models import Map, db
 from services import user_service, device_type_service, settings_service, map_service
+from services.db.schema_service import validate_sqlite_database
 from services.security_service import rate_limiter
 from services.device_type_service import invalidate_types_cache
 from utils.logger import admin_logger
@@ -267,56 +268,19 @@ def delete_map(id):
 # Вспомогательная функция для восстановления БД
 # ============================================================================
 def _validate_sqlite_backup(backup_path):
-    """Проверяет резервную копию SQLite до замены рабочей БД.
-
-    В проекте пока нет надёжного общего номера схемы для старых БД, поэтому
-    сначала проверяем целостность SQLite и наличие всех таблиц/колонок,
-    которые требуются текущей ORM-модели. Лишние колонки допустимы.
-    """
-    required_tables = {}
-    for table in db.metadata.sorted_tables:
-        required_tables[table.name] = {column.name for column in table.columns}
-
-    conn = sqlite3.connect(backup_path)
-    try:
-        integrity = conn.execute("PRAGMA integrity_check").fetchone()
-        if not integrity or str(integrity[0]).lower() != "ok":
-            return False, _("Файл базы данных повреждён или не является корректной SQLite-базой.")
-
-        existing_tables = {
-            row[0]
-            for row in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-            )
-        }
-
-        missing_tables = sorted(set(required_tables) - existing_tables)
-        if missing_tables:
-            return False, _(
-                "Резервная копия несовместима с текущей версией LinkVision: отсутствуют таблицы ({tables}). Текущая база данных не изменена."
-            ).format(tables=", ".join(missing_tables))
-
-        missing_columns = []
-        for table_name, required_columns in required_tables.items():
-            columns = {
-                row[1]
-                for row in conn.execute(f'PRAGMA table_info("{table_name}")')
-            }
-            missing = sorted(required_columns - columns)
-            if missing:
-                missing_columns.append(f"{table_name}: {', '.join(missing)}")
-
-        if missing_columns:
-            return False, _(
-                "Резервная копия создана в несовместимой версии LinkVision. Отсутствуют поля: {fields}. Текущая база данных не изменена."
-            ).format(fields="; ".join(missing_columns))
-
+    """Validate an uploaded SQLite backup without changing the live database."""
+    result = validate_sqlite_database(
+        backup_path,
+        db.metadata,
+        expected_version=current_app.config.get("VERSION"),
+    )
+    if result.valid:
         return True, None
-    except sqlite3.DatabaseError as exc:
-        admin_logger.error(f"SQLite backup validation failed: {exc}")
-        return False, _("Не удалось проверить файл базы данных. Текущая база данных не изменена.")
-    finally:
-        conn.close()
+
+    details = result.message or _("Структура базы данных несовместима с текущей версией.")
+    return False, _("Резервная копия отклонена. {details} Текущая база данных не изменена.").format(
+        details=details
+    )
 
 
 def restore_backup_action():
@@ -368,6 +332,23 @@ def restore_backup_action():
         os.replace(temp_path, db_path)
         temp_path = None
         db.engine.dispose()
+
+        # Последняя проверка уже установленной БД. Если файл оказался
+        # непригоден после замены, немедленно откатываемся к .bak.
+        installed = validate_sqlite_database(
+            db_path,
+            db.metadata,
+            expected_version=current_app.config.get("VERSION"),
+        )
+        if not installed.valid:
+            db.session.remove()
+            db.engine.dispose()
+            if os.path.exists(backup_path):
+                os.replace(backup_path, db_path)
+                backup_path = None
+            raise RuntimeError(
+                f"Installed database failed validation: {installed.message}"
+            )
 
         admin_logger.info("Database restored from uploaded file after schema validation")
         flash(
