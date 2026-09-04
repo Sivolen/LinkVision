@@ -417,3 +417,22 @@ class TestImportExportLifecycle:
             assert len(reexported_data["devices"]) == len(exported_data["devices"])
             assert len(reexported_data["links"]) == len(exported_data["links"])
             assert len(reexported_data["groups"]) == len(exported_data["groups"])
+
+    def test_import_map_with_unknown_id_creates_new(self, app):
+        """ID из другой БД не должен делать импорт карты ошибочным."""
+        with app.app_context():
+            data = {
+                "id": 987654321,
+                "name": "Imported From Another DB",
+                "devices": [],
+                "links": [],
+                "groups": [],
+            }
+
+            mock_user = type("MockUser", (), {"id": 1})()
+            imported_map = import_map(data, mock_user)
+
+            assert imported_map is not None
+            assert imported_map.id != data["id"]
+            assert imported_map.name == data["name"]
+            assert imported_map.owner_id == 1

@@ -6,8 +6,9 @@
     "build": "esbuild static/js/common.js --minify --outfile=static/js/dist/common.min.js && esbuild static/js/base.js --minify --outfile=static/js/dist/base.min.js && esbuild static/js/src/modal/index.js --bundle --minify --outfile=static/js/dist/modal.min.js && esbuild static/js/src/map/index.js --bundle --minify --outfile=static/js/dist/map.min.js",
     "build:modal": "esbuild static/js/src/modal/index.js --bundle --minify --outfile=static/js/dist/modal.min.js",
     "build:map": "esbuild static/js/src/map/index.js --bundle --minify --outfile=static/js/dist/map.min.js",
-    "watch": "nodemon --watch static/js --ext js --exec 'npm run build'",
-    "test:js": "node tests/js/groupCollapse.test.mjs"
+    "watch": "nodemon --watch static/js --ignore static/js/dist/** --ext js --exec 'npm run build'",
+    "test:js": "node tests/js/groupCollapse.test.mjs",
+    "test:frontend": "bash scripts/check_frontend.sh"
   },
   "devDependencies": {
     "esbuild": "^0.27.4",

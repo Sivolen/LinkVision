@@ -1,74 +1,65 @@
 #!/bin/bash
 # Script to run LinkVision tests
 
-set -e
+set -euo pipefail
 
-echo "=========================================="
-echo "LinkVision Test Suite"
-echo "=========================================="
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
 
-# Colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+TEST_TYPE=${1:-all}
+COVERAGE=${2:-false}
 
-# Parse arguments
-TEST_TYPE=${1:-"all"}
-COVERAGE=${2:-"false"}
-
-echo ""
-echo "Running test type: $TEST_TYPE"
-echo "Coverage: $COVERAGE"
-echo ""
-
-# Activate virtual environment if exists
-if [ -d "venv" ]; then
-    echo "Activating virtual environment..."
-    source venv/bin/activate
+PYTEST_ARGS=()
+if [[ "$COVERAGE" == "true" ]]; then
+    PYTEST_ARGS+=(--cov=services --cov-report=term-missing)
 fi
 
-# Run tests based on type
-case $TEST_TYPE in
+run_pytest() {
+    pytest -v "${PYTEST_ARGS[@]}" "$@"
+}
+
+run_frontend() {
+    if command -v npm >/dev/null 2>&1; then
+        npm run test:frontend
+        npm run test:js
+    else
+        echo "WARNING: npm not found; frontend tests skipped."
+    fi
+}
+
+case "$TEST_TYPE" in
     unit)
-        echo "Running unit tests only..."
-        if [ "$COVERAGE" = "true" ]; then
-            pytest tests/test_services.py -v -m "unit" --cov=services --cov-report=term-missing
-        else
-            pytest tests/test_services.py -v -m "unit"
-        fi
+        run_pytest tests/test_services.py tests/test_security.py tests/test_permissions.py
         ;;
     integration)
-        echo "Running integration tests only..."
-        if [ "$COVERAGE" = "true" ]; then
-            pytest tests/test_integration.py -v -m "integration" --cov=services --cov-report=term-missing
-        else
-            pytest tests/test_integration.py -v -m "integration"
-        fi
+        run_pytest \
+            tests/test_import_export.py \
+            tests/test_lock_and_permissions.py \
+            tests/test_nested_groups.py \
+            tests/test_realtime_events.py \
+            tests/test_notifications.py
         ;;
     api)
-        echo "Running API tests only..."
-        if [ "$COVERAGE" = "true" ]; then
-            pytest tests/test_api.py -v -m "api" --cov=services --cov-report=term-missing
-        else
-            pytest tests/test_api.py -v -m "api"
-        fi
+        run_pytest \
+            tests/test_auth.py \
+            tests/test_import_export.py \
+            tests/test_lock_and_permissions.py \
+            tests/test_nested_groups.py \
+            tests/test_notifications.py \
+            tests/test_realtime_events.py
+        ;;
+    frontend)
+        run_frontend
         ;;
     all)
-        echo "Running all tests..."
-        if [ "$COVERAGE" = "true" ]; then
-            pytest tests/ -v --cov=services --cov-report=term-missing --cov-report=html
-        else
-            pytest tests/ -v
-        fi
+        run_pytest tests/
+        run_frontend
         ;;
     *)
-        echo "Unknown test type: $TEST_TYPE"
-        echo "Usage: $0 [unit|integration|api|all] [true|false]"
+        echo "Usage: $0 [unit|integration|api|frontend|all] [true|false]"
         exit 1
         ;;
 esac
 
-echo ""
-echo "=========================================="
-echo "Tests completed!"
+echo "LinkVision tests completed successfully!"
 echo "=========================================="
