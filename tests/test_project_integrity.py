@@ -40,3 +40,18 @@ def test_run_tests_does_not_reference_missing_test_modules():
     runner = (ROOT / "run_tests.sh").read_text(encoding="utf-8")
     assert "tests/test_api.py" not in runner
     assert "tests/test_integration.py" not in runner
+
+
+def test_realtime_status_batch_applies_quality_even_when_status_is_unchanged():
+    source = (ROOT / "static/js/src/map/index.js").read_text(encoding="utf-8")
+    assert "quality_status: item.quality_status || 'unknown'" in source
+    assert "quality_latency_ms: item.quality_latency_ms ?? null" in source
+    assert "quality_jitter_ms: item.quality_jitter_ms ?? null" in source
+    assert "quality_loss_percent: item.quality_loss_percent ?? null" in source
+
+
+def test_monitor_uses_rolling_quality_window_before_live_classification():
+    source = (ROOT / "services/monitor.py").read_text(encoding="utf-8")
+    assert "QUALITY_LIVE_MIN_SAMPLES = 100" in source
+    assert "_live_quality_from_window(dev_id, metrics)" in source
+    assert "calculate_quality(metrics)" in source

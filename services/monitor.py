@@ -9,6 +9,7 @@ from models import Device, Settings, DeviceHistory, DeviceQualityHistory
 from utils.logger import monitor_logger
 from cachetools import TTLCache
 from sqlalchemy.orm import joinedload
+from services.quality_service import calculate_quality
 
 try:
     from ping3 import ping
@@ -30,6 +31,7 @@ _quality_last_persist = {}
 QUALITY_PERSIST_SECONDS = 300
 QUALITY_RETENTION_DAYS = 30
 _last_quality_cleanup = 0
+QUALITY_LIVE_MIN_SAMPLES = 100
 
 
 def init_monitor(app):
@@ -120,22 +122,8 @@ def get_setting(key, default):
 
 
 def _quality_from_metrics(metrics):
-    if not metrics:
-        return "unknown", None, None, None
-    latencies = metrics.get("latencies", [])
-    jitter_values = metrics.get("jitter_values", [])
-    sent = metrics.get("samples", 0)
-    received = len(latencies)
-    loss = ((sent - received) / sent * 100.0) if sent else 100.0
-    avg = sum(latencies) / len(latencies) if latencies else None
-    jitter = sum(jitter_values) / len(jitter_values) if jitter_values else None
-    if loss >= 5 or (avg is not None and avg >= 100) or (jitter is not None and jitter >= 30):
-        quality = "bad"
-    elif loss >= 1 or (avg is not None and avg >= 50) or (jitter is not None and jitter >= 10):
-        quality = "degraded"
-    else:
-        quality = "good"
-    return quality, avg, jitter, loss
+    """Calculate quality using the single canonical implementation."""
+    return calculate_quality(metrics)
 
 
 def _record_quality_sample(device_id, metrics, now):
@@ -177,6 +165,27 @@ def _record_quality_sample(device_id, metrics, now):
     _quality_windows[device_id] = {"sent": 0, "received": 0, "latencies": [], "jitter": []}
     _quality_last_persist[device_id] = now
     return True
+
+
+def _live_quality_from_window(device_id, metrics):
+    """Calculate live quality from the current rolling window plus this sample."""
+    window = _quality_windows.get(device_id)
+    if not window:
+        sent = metrics.get("samples", 0)
+        latencies = list(metrics.get("latencies", []))
+        jitter_values = list(metrics.get("jitter_values", []))
+    else:
+        sent = window.get("sent", 0) + metrics.get("samples", 0)
+        latencies = list(window.get("latencies", [])) + list(metrics.get("latencies", []))
+        jitter_values = list(window.get("jitter", [])) + list(metrics.get("jitter_values", []))
+
+    if sent < QUALITY_LIVE_MIN_SAMPLES:
+        return None
+    return _quality_from_metrics({
+        "samples": sent,
+        "latencies": latencies,
+        "jitter_values": jitter_values,
+    })
 
 
 def monitor_loop():
@@ -356,6 +365,15 @@ def monitor_loop():
                 # изменившихся", стабильные (good, никогда не флапающие)
                 # устройства вообще перестали бы попадать в историю качества —
                 # а это как раз самый частый и самый важный для трендов случай.
+                # Drop rolling state for devices that are no longer monitored
+                # (disabled/deleted). Otherwise re-enabling a device can resurrect
+                # stale loss/jitter samples and produce a phantom quality alarm.
+                active_ids = set(prev_status_by_id)
+                for stale_id in list(_quality_windows):
+                    if stale_id not in active_ids:
+                        _quality_windows.pop(stale_id, None)
+                        _quality_last_persist.pop(stale_id, None)
+
                 needs_db_update = set()
                 computed = {}
                 for dev_id, new_status, metrics in results:
@@ -368,9 +386,35 @@ def monitor_loop():
                     quality_changed = False
                     history_persisted = False
                     if metrics:
-                        quality, q_latency, q_jitter, q_loss = _quality_from_metrics(metrics)
-                        quality_changed = prev_quality_by_id.get(dev_id) != quality
+                        # Calculate before _record_quality_sample() because that
+                        # function resets the window when it persists the 5-minute
+                        # aggregate. This keeps live classification and persisted
+                        # history based on the same rolling data.
+                        current_quality = _quality_from_metrics(metrics)
+                        live = _live_quality_from_window(dev_id, metrics)
                         history_persisted = _record_quality_sample(dev_id, metrics, current_time)
+                        if new_status == "down":
+                            # Down is an availability state; do not leave a stale
+                            # bad/degraded quality alarm visible when every address
+                            # is currently unreachable.
+                            quality = "unknown"
+                            q_latency = q_jitter = q_loss = None
+                        elif current_quality[0] == "good":
+                            # Recovery should be fast: once the current check is
+                            # completely clean, clear a previous quality alarm
+                            # immediately. A single clean cycle cannot create a
+                            # false positive, unlike a single lost packet creating
+                            # a false degradation.
+                            quality, q_latency, q_jitter, q_loss = current_quality
+                        elif live is not None:
+                            # Degradation is deliberately based on a rolling window
+                            # so one lost packet in a small ping batch does not create
+                            # a phantom alarm.
+                            quality, q_latency, q_jitter, q_loss = live
+                        else:
+                            quality = prev_quality_by_id.get(dev_id, "unknown")
+                            q_latency = q_jitter = q_loss = None
+                        quality_changed = prev_quality_by_id.get(dev_id) != quality
 
                     # Пишем в саму Device (не в историю — та копится выше
                     # независимо), только когда есть реальный повод:

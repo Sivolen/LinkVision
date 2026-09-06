@@ -207,8 +207,25 @@ export function initMap(id) {
                 const monitoringEnabled = (monitoringRaw === true || monitoringRaw === 'true');
                 if (!monitoringEnabled) {
                     if (node.data('status') !== 'up') node.data('status', 'up');
+                    node.data('quality_status', 'unknown');
+                    node.data('quality_latency_ms', null);
+                    node.data('quality_jitter_ms', null);
+                    node.data('quality_loss_percent', null);
                     removePulsingNode(cy, node);
                     return;
+                }
+
+                // Quality can change while availability stays "up". Always
+                // apply the quality fields from the batch independently of the
+                // status transition; otherwise a bad -> good recovery is sent by
+                // the backend but silently ignored until the next page refresh.
+                if (Object.prototype.hasOwnProperty.call(item, 'quality_status')) {
+                    node.data({
+                        quality_status: item.quality_status || 'unknown',
+                        quality_latency_ms: item.quality_latency_ms ?? null,
+                        quality_jitter_ms: item.quality_jitter_ms ?? null,
+                        quality_loss_percent: item.quality_loss_percent ?? null,
+                    });
                 }
 
                 if (node.data('status') !== item.status) {
