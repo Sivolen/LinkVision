@@ -28,7 +28,9 @@ def test_templates_do_not_load_unbundled_application_modules():
             if "<!--" in line and "-->" in line:
                 continue
             for token in forbidden:
-                assert token not in line, f"Unbundled script reference in {template}: {token}"
+                assert (
+                    token not in line
+                ), f"Unbundled script reference in {template}: {token}"
 
 
 def test_watch_script_ignores_generated_bundles():

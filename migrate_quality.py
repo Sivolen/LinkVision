@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Одноразовая миграция для ICMP quality monitoring."""
+
 import os
 import sys
 from sqlalchemy import create_engine, inspect, text
@@ -13,7 +14,9 @@ def main():
     with engine.begin() as conn:
         inspector = inspect(engine)
         if not inspector.has_table("device"):
-            raise RuntimeError("Таблица device отсутствует. Сначала выполните основные миграции.")
+            raise RuntimeError(
+                "Таблица device отсутствует. Сначала выполните основные миграции."
+            )
 
         columns = {c["name"] for c in inspector.get_columns("device")}
         fields = {
@@ -45,10 +48,12 @@ def main():
                     FOREIGN KEY(device_id) REFERENCES device(id) ON DELETE CASCADE
                 )
             """))
-            conn.execute(text(
-                "CREATE INDEX idx_device_quality_device_timestamp "
-                "ON device_quality_history (device_id, timestamp)"
-            ))
+            conn.execute(
+                text(
+                    "CREATE INDEX idx_device_quality_device_timestamp "
+                    "ON device_quality_history (device_id, timestamp)"
+                )
+            )
         else:
             print("device_quality_history уже существует")
 

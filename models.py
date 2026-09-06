@@ -272,7 +272,12 @@ class DeviceQualityHistory(db.Model):
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.Integer, db.ForeignKey("device.id", ondelete="CASCADE"), nullable=False, index=True)
+    device_id = db.Column(
+        db.Integer,
+        db.ForeignKey("device.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     timestamp = db.Column(db.DateTime, default=datetime.now, nullable=False, index=True)
     samples = db.Column(db.Integer, nullable=False, default=0)
     loss_percent = db.Column(db.Float, nullable=False, default=100.0)
@@ -282,7 +287,9 @@ class DeviceQualityHistory(db.Model):
     jitter_ms = db.Column(db.Float, nullable=True)
     quality = db.Column(db.String(12), nullable=False, default="unknown")
 
-    device = db.relationship("Device", backref=db.backref("quality_history", lazy="dynamic"))
+    device = db.relationship(
+        "Device", backref=db.backref("quality_history", lazy="dynamic")
+    )
 
 
 class Group(db.Model):

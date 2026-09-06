@@ -99,10 +99,16 @@ def ping_host(ip, count=1):
         else:
             cmd = ["ping", param, str(count), "-W", str(timeout_seconds), ip]
         output = subprocess.run(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            timeout=timeout_seconds * count + 5, text=True,
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=timeout_seconds * count + 5,
+            text=True,
         )
-        values = [float(x) for x in re.findall(r'time[=<]([0-9]+(?:\.[0-9]+)?)', output.stdout, re.I)]
+        values = [
+            float(x)
+            for x in re.findall(r"time[=<]([0-9]+(?:\.[0-9]+)?)", output.stdout, re.I)
+        ]
         return values, count
     except Exception:
         return [], count
@@ -138,7 +144,9 @@ def _record_quality_sample(device_id, metrics, now):
     """
     if not metrics or not metrics.get("samples"):
         return False
-    window = _quality_windows.setdefault(device_id, {"sent": 0, "received": 0, "latencies": [], "jitter": []})
+    window = _quality_windows.setdefault(
+        device_id, {"sent": 0, "received": 0, "latencies": [], "jitter": []}
+    )
     window["sent"] += metrics.get("samples", 0)
     window["received"] += len(metrics.get("latencies", []))
     window["latencies"].extend(metrics.get("latencies", []))
@@ -156,13 +164,33 @@ def _record_quality_sample(device_id, metrics, now):
     quality, avg, jitter, loss = _quality_from_metrics(
         {"samples": sent, "latencies": latencies, "jitter_values": window["jitter"]}
     )
-    db.session.add(DeviceQualityHistory(device_id=device_id, samples=sent, loss_percent=loss, latency_min_ms=min(latencies) if latencies else None, latency_avg_ms=avg, latency_max_ms=max(latencies) if latencies else None, jitter_ms=jitter, quality=quality))
+    db.session.add(
+        DeviceQualityHistory(
+            device_id=device_id,
+            samples=sent,
+            loss_percent=loss,
+            latency_min_ms=min(latencies) if latencies else None,
+            latency_avg_ms=avg,
+            latency_max_ms=max(latencies) if latencies else None,
+            jitter_ms=jitter,
+            quality=quality,
+        )
+    )
     global _last_quality_cleanup
     if now - _last_quality_cleanup >= 3600:
-        cutoff = datetime.datetime.now() - datetime.timedelta(days=QUALITY_RETENTION_DAYS)
-        db.session.query(DeviceQualityHistory).filter(DeviceQualityHistory.timestamp < cutoff).delete(synchronize_session=False)
+        cutoff = datetime.datetime.now() - datetime.timedelta(
+            days=QUALITY_RETENTION_DAYS
+        )
+        db.session.query(DeviceQualityHistory).filter(
+            DeviceQualityHistory.timestamp < cutoff
+        ).delete(synchronize_session=False)
         _last_quality_cleanup = now
-    _quality_windows[device_id] = {"sent": 0, "received": 0, "latencies": [], "jitter": []}
+    _quality_windows[device_id] = {
+        "sent": 0,
+        "received": 0,
+        "latencies": [],
+        "jitter": [],
+    }
     _quality_last_persist[device_id] = now
     return True
 
@@ -176,16 +204,22 @@ def _live_quality_from_window(device_id, metrics):
         jitter_values = list(metrics.get("jitter_values", []))
     else:
         sent = window.get("sent", 0) + metrics.get("samples", 0)
-        latencies = list(window.get("latencies", [])) + list(metrics.get("latencies", []))
-        jitter_values = list(window.get("jitter", [])) + list(metrics.get("jitter_values", []))
+        latencies = list(window.get("latencies", [])) + list(
+            metrics.get("latencies", [])
+        )
+        jitter_values = list(window.get("jitter", [])) + list(
+            metrics.get("jitter_values", [])
+        )
 
     if sent < QUALITY_LIVE_MIN_SAMPLES:
         return None
-    return _quality_from_metrics({
-        "samples": sent,
-        "latencies": latencies,
-        "jitter_values": jitter_values,
-    })
+    return _quality_from_metrics(
+        {
+            "samples": sent,
+            "latencies": latencies,
+            "jitter_values": jitter_values,
+        }
+    )
 
 
 def monitor_loop():
@@ -234,12 +268,24 @@ def monitor_loop():
             # ---- ФУНКЦИЯ ПРОВЕРКИ ----
             def _check_device(dev_id, ips, pcnt):
                 if not ips:
-                    return dev_id, "down", {"addresses": [], "samples": 0, "loss_percent": 100.0, "latencies": [], "jitter_values": []}
+                    return (
+                        dev_id,
+                        "down",
+                        {
+                            "addresses": [],
+                            "samples": 0,
+                            "loss_percent": 100.0,
+                            "latencies": [],
+                            "jitter_values": [],
+                        },
+                    )
 
                 address_results = []
                 for ip in ips:
                     latencies, sent = ping_host(ip, pcnt)
-                    address_results.append({"ip": ip, "latencies": latencies, "sent": sent})
+                    address_results.append(
+                        {"ip": ip, "latencies": latencies, "sent": sent}
+                    )
 
                 up_count = sum(1 for item in address_results if item["latencies"])
                 if up_count == len(address_results):
@@ -249,10 +295,16 @@ def monitor_loop():
                 else:
                     status = "down"
 
-                all_latencies = [v for item in address_results for v in item["latencies"]]
+                all_latencies = [
+                    v for item in address_results for v in item["latencies"]
+                ]
                 total_sent = sum(item["sent"] for item in address_results)
                 total_received = len(all_latencies)
-                loss_percent = ((total_sent - total_received) / total_sent * 100.0) if total_sent else 100.0
+                loss_percent = (
+                    ((total_sent - total_received) / total_sent * 100.0)
+                    if total_sent
+                    else 100.0
+                )
                 jitter_values = []
                 for item in address_results:
                     vals = item["latencies"]
@@ -264,16 +316,21 @@ def monitor_loop():
                     # совпадать с тем, что покажет Zabbix/Cisco для того же
                     # линка — методика другая, не баг. В UI поэтому явно подписано
                     # "Джиттер (среднее изменение RTT)", см. i18n modal.quality.jitter.
-                    jitter_values.extend(abs(vals[i] - vals[i - 1]) for i in range(1, len(vals)))
+                    jitter_values.extend(
+                        abs(vals[i] - vals[i - 1]) for i in range(1, len(vals))
+                    )
 
-                return dev_id, status, {
-                    "addresses": address_results,
-                    "samples": total_sent,
-                    "loss_percent": loss_percent,
-                    "latencies": all_latencies,
-                    "jitter_values": jitter_values,
-                }
-
+                return (
+                    dev_id,
+                    status,
+                    {
+                        "addresses": address_results,
+                        "samples": total_sent,
+                        "loss_percent": loss_percent,
+                        "latencies": all_latencies,
+                        "jitter_values": jitter_values,
+                    },
+                )
 
             # ---- РАЗБИЕНИЕ НА БАТЧИ ДЛЯ ИЗБЕЖАНИЯ ПЕРЕГРУЗКИ ----
             batch_size = 50
@@ -392,7 +449,9 @@ def monitor_loop():
                         # history based on the same rolling data.
                         current_quality = _quality_from_metrics(metrics)
                         live = _live_quality_from_window(dev_id, metrics)
-                        history_persisted = _record_quality_sample(dev_id, metrics, current_time)
+                        history_persisted = _record_quality_sample(
+                            dev_id, metrics, current_time
+                        )
                         if new_status == "down":
                             # Down is an availability state; do not leave a stale
                             # bad/degraded quality alarm visible when every address
@@ -433,19 +492,34 @@ def monitor_loop():
                     if status_changed or quality_changed or history_persisted:
                         needs_db_update.add(dev_id)
                         computed[dev_id] = (
-                            new_status, quality, q_latency, q_jitter, q_loss,
-                            status_changed, quality_changed,
+                            new_status,
+                            quality,
+                            q_latency,
+                            q_jitter,
+                            q_loss,
+                            status_changed,
+                            quality_changed,
                         )
 
                 if needs_db_update:
                     devices_by_id = {
                         d.id: d
-                        for d in Device.query.filter(Device.id.in_(needs_db_update)).all()
+                        for d in Device.query.filter(
+                            Device.id.in_(needs_db_update)
+                        ).all()
                     }
 
                     history_entries = []
                     for dev_id, values in computed.items():
-                        new_status, quality, q_latency, q_jitter, q_loss, status_changed, quality_changed = values
+                        (
+                            new_status,
+                            quality,
+                            q_latency,
+                            q_jitter,
+                            q_loss,
+                            status_changed,
+                            quality_changed,
+                        ) = values
                         device = devices_by_id.get(dev_id)
                         if not device:
                             continue
