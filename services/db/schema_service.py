@@ -41,7 +41,7 @@ def _sqlite_type_affinity(declared_type: str | None) -> str:
 
 def _metadata_schema(metadata) -> Mapping[str, Mapping[str, object]]:
     result = {}
-    for table in metadata.sorted_tables:
+    for table in metadata.tables.values():
         result[table.name] = {
             column.name: column
             for column in table.columns
