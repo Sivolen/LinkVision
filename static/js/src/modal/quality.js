@@ -14,10 +14,26 @@ export function renderDeviceQuality(data, current = null) {
     const chart = document.getElementById('device-quality-chart');
     if (!summary || !chart) return;
 
-    const latest = data?.latest || (current?.quality_status && current.quality_status !== 'unknown' ? {
+    // ВАЖНО: приоритет живых полей самой Device (current.quality_status и
+    // т.д.) над агрегатом из DeviceQualityHistory (data.latest). Это две
+    // РАЗНЫЕ, независимо считающиеся величины на бэкенде:
+    // - device.quality_status — "живое" значение с hysteresis-логикой
+    //   (быстрый возврат к good на чистом цикле / сглаживание по
+    //   скользящему окну), обновляется в monitor_loop и ИМЕННО оно летит по
+    //   сокету и красит иконку на карте;
+    // - DeviceQualityHistory — агрегат по ВСЕМУ 5-минутному окну целиком,
+    //   записывается раз в QUALITY_PERSIST_SECONDS, независимо от
+    //   hysteresis-логики выше.
+    // Раньше здесь было наоборот (data.latest в приоритете) — из-за этого
+    // карточка устройства могла показывать "good" из истории в тот самый
+    // момент, когда живое значение на иконке карты ещё "degraded" (или
+    // наоборот), хотя оба поля технически "верны" каждое для своего
+    // определения. Сводка в карточке должна совпадать с тем, что видно на
+    // карте — а график ниже как раз показывает историю отдельно.
+    const latest = (current?.quality_status && current.quality_status !== 'unknown' ? {
         quality: current.quality_status, latency_avg_ms: current.quality_latency_ms,
         jitter_ms: current.quality_jitter_ms, loss_percent: current.quality_loss_percent
-    } : null);
+    } : null) || data?.latest;
     if (!latest) {
         summary.innerHTML = `<div class="text-muted">${t('modal.quality.noData')}</div>`;
         chart.innerHTML = '';
