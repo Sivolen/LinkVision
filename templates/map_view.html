@@ -3,6 +3,14 @@
 {% block content %}
 {% set is_operator = is_operator|default(false) %}
 
+<style>
+.badge.quality-good { background-color: #28a745; }
+.badge.quality-degraded { background-color: #fd7e14; }
+.badge.quality-bad { background-color: #6f42c1; }
+.badge.quality-unknown { background-color: #6c757d; }
+.device-quality-chart { max-width: 100%; overflow-x: auto; }
+</style>
+
 <script>
     // Устанавливаем data-map-id на body (body находится в base.html)
     document.body.dataset.mapId = {{ map.id if map else 'null' }};
@@ -172,6 +180,9 @@
                         <a class="nav-link" data-bs-toggle="tab" href="#device-history">{{ _('История') }}</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#device-quality">{{ _('Качество') }}</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="tab" href="#device-neighbors">{{ _('Соседи') }}</a>
                     </li>
                 </ul>
@@ -248,6 +259,12 @@
                         <span class="pagination-info" id="history-page-info">{{ _('Страница 1 из 1') }}</span>
                         <button class="pagination-btn" id="history-next" disabled>{{ _('Следующая ›') }}</button>
                     </div>
+                    </div>
+                    <!-- Вкладка "Качество" -->
+                    <div class="tab-pane" id="device-quality">
+                        <div id="device-quality-summary" class="mb-3"></div>
+                        <div id="device-quality-chart" class="device-quality-chart"></div>
+                        <small class="text-muted">{{ _('График средней задержки за последние 24 часа') }}</small>
                     </div>
                     <!-- Вкладка "Соседи" -->
                     <div class="tab-pane" id="device-neighbors">

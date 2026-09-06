@@ -14,6 +14,7 @@ from services import (
     validate_name,
     log_device_action,
 )
+from services.quality_service import get_device_quality_history
 from services.notifications import (
     notify_device_created,
     notify_device_updated,
@@ -74,6 +75,17 @@ def get_device_details(device_id):
     except Exception as e:
         api_logger.error(f"Error fetching device details: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+
+@devices_bp.route("/device/<int:device_id>/quality", methods=["GET"])
+@login_required
+@require_device_access
+def get_device_quality(device_id):
+    """Получить историю качества ICMP-мониторинга устройства."""
+    hours = request.args.get("hours", 24, type=int)
+    hours = min(hours, 720)  # максимум 30 дней
+    data = get_device_quality_history(device_id, hours=hours)
+    return jsonify(data)
 
 
 # ============================================================================

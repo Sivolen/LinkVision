@@ -181,6 +181,21 @@
     "ip": {
       "placeholder": "IPv4 или IPv6",
       "removeIp": "Удалить IP"
+    },
+    "quality": {
+      "noData": "Нет накопленной статистики",
+      "latency": "Задержка",
+      "jitter": "Джиттер (среднее изменение RTT)",
+      "loss": "Потери",
+      "status": "Качество",
+      "chartLabel": "График задержки",
+      "avgLatency": "Средняя задержка",
+      "value": {
+        "good": "Хорошее",
+        "degraded": "Снижено",
+        "bad": "Плохое",
+        "unknown": "Неизвестно"
+      }
     }
   },
   "modes": {

@@ -84,3 +84,6 @@ webnetmap.db.save
 /future/newzoom/
 /future/fixlink/
 /future/
+
+# Stakpak session files
+.stakpak/session*

@@ -181,6 +181,21 @@
     "ip": {
       "placeholder": "IPv4 or IPv6",
       "removeIp": "Remove IP"
+    },
+    "quality": {
+      "noData": "No quality data yet",
+      "latency": "Latency",
+      "jitter": "Jitter (mean RTT delta)",
+      "loss": "Loss",
+      "status": "Quality",
+      "chartLabel": "Latency chart",
+      "avgLatency": "Average latency",
+      "value": {
+        "good": "Good",
+        "degraded": "Degraded",
+        "bad": "Bad",
+        "unknown": "Unknown"
+      }
     }
   },
   "modes": {

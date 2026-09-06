@@ -274,6 +274,10 @@ export async function addDeviceToGraph(device) {
                 parent: groupParent, // Теперь это строка или undefined
                 monitoring_enabled: device.monitoring_enabled ? 'true' : 'false',
                 status: device.status || 'up',
+                quality_status: device.quality_status || 'unknown',
+                quality_latency_ms: device.quality_latency_ms ?? null,
+                quality_jitter_ms: device.quality_jitter_ms ?? null,
+                quality_loss_percent: device.quality_loss_percent ?? null,
                 iconUrl: device.iconUrl || '',
                 width: device.width || null,
                 height: device.height || null,
