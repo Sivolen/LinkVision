@@ -16,6 +16,7 @@ import { initMapIntegration, withViewportRestore, reloadMapWithViewportRestore }
 import { initLinkModal, openLinkModal, openLinkModalForEdit, confirmCreateLink, deleteLink } from './link.js';
 import { openPermissionsModal, addPermission, addRolePermission } from './permissions.js';
 import { http } from '../utils/http.js';
+import { loadDeviceQuality } from './quality.js';
 
 // Экспорт для глобального доступа
 window.openDeviceModal = openDeviceModal;
@@ -28,6 +29,7 @@ window.openShapeModal = openShapeModal;
 window.saveShape = saveShape;
 window.deleteShape = deleteShape;
 window.loadHistoryPage = loadHistoryPage;
+window.loadDeviceQuality = loadDeviceQuality;
 
 // Глобальные переменные (используем window для доступа из других модулей)
 let deviceModal = null;

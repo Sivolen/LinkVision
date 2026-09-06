@@ -21,6 +21,7 @@ from . import monitor
 from . import audit_service
 from . import security_service
 from . import folder_service
+from . import quality_service
 
 from . import permission_service
 

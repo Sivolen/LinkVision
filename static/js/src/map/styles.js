@@ -170,6 +170,15 @@ export const CY_STYLE = [
             'overlay-padding': '4px'
         }
     },
+    // Плохое качество ICMP: down/partial имеют приоритет.
+    { selector: 'node[quality_status="bad"][status="up"]', style: {
+        'border-color': '#6f42c1', 'border-style': 'solid', 'border-width': 4,
+        'overlay-color': '#6f42c1', 'overlay-opacity': 0.18, 'overlay-padding': '4px'
+    } },
+    { selector: 'node[quality_status="degraded"][status="up"]', style: {
+        'border-color': '#fd7e14', 'border-style': 'solid', 'border-width': 3,
+        'overlay-color': '#fd7e14', 'overlay-opacity': 0.12, 'overlay-padding': '3px'
+    } },
     // Выделенный узел — overlay вместо border-width, чтобы не менять bounding box
     {
         selector: 'node:selected, node[selected]',

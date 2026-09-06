@@ -60,6 +60,12 @@ class Device(db.Model):
     last_check = db.Column(db.DateTime, default=datetime.now)
     group_id = db.Column(db.Integer, db.ForeignKey("group.id"), index=True)
     monitoring_enabled = db.Column(db.Boolean, default=True)
+    # Последнее рассчитанное качество ICMP для быстрого отображения на карте.
+    quality_status = db.Column(db.String(12), default="unknown", nullable=False)
+    quality_latency_ms = db.Column(db.Float, nullable=True)
+    quality_jitter_ms = db.Column(db.Float, nullable=True)
+    quality_loss_percent = db.Column(db.Float, nullable=True)
+    quality_last_check = db.Column(db.DateTime, nullable=True)
 
     source_links = db.relationship(
         "Link",
@@ -255,6 +261,28 @@ class DeviceHistory(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.now, index=True)
 
     device = db.relationship("Device", backref="history")
+
+
+class DeviceQualityHistory(db.Model):
+    """Пятиминутные агрегаты качества ICMP для устройства."""
+
+    __tablename__ = "device_quality_history"
+    __table_args__ = (
+        db.Index("idx_device_quality_device_timestamp", "device_id", "timestamp"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.Integer, db.ForeignKey("device.id", ondelete="CASCADE"), nullable=False, index=True)
+    timestamp = db.Column(db.DateTime, default=datetime.now, nullable=False, index=True)
+    samples = db.Column(db.Integer, nullable=False, default=0)
+    loss_percent = db.Column(db.Float, nullable=False, default=100.0)
+    latency_min_ms = db.Column(db.Float, nullable=True)
+    latency_avg_ms = db.Column(db.Float, nullable=True)
+    latency_max_ms = db.Column(db.Float, nullable=True)
+    jitter_ms = db.Column(db.Float, nullable=True)
+    quality = db.Column(db.String(12), nullable=False, default="unknown")
+
+    device = db.relationship("Device", backref=db.backref("quality_history", lazy="dynamic"))
 
 
 class Group(db.Model):

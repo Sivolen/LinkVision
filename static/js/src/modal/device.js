@@ -11,6 +11,7 @@ import { getErrorMessage, escapeHtml } from './utils.js';
 import { withViewportRestore, reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
+import { loadDeviceQuality, clearDeviceQuality } from './quality.js';
 
 // Глобальные переменные модуля
 let deviceModal = null;
@@ -88,6 +89,7 @@ export function openDeviceModal(node) {
 
     const historyTabItem = document.querySelector('a[href="#device-history"]')?.closest('.nav-item');
     const neighborsTabItem = document.querySelector('a[href="#device-neighbors"]')?.closest('.nav-item');
+    const qualityTabItem = document.querySelector('a[href="#device-quality"]')?.closest('.nav-item');
     const infoTabLink = document.querySelector('a[href="#device-info"]');
 
     const historyBody = document.getElementById('device-history-body');
@@ -105,6 +107,7 @@ export function openDeviceModal(node) {
 
         if (historyTabItem) historyTabItem.style.display = 'block';
         if (neighborsTabItem) neighborsTabItem.style.display = 'block';
+        if (qualityTabItem) qualityTabItem.style.display = 'block';
 
         fetch(`/api/device/${node.id()}/details`)
             .then(res => res.ok ? res.json() : Promise.reject(t('toast.errorTitle')))
@@ -133,6 +136,7 @@ export function openDeviceModal(node) {
                 if (monitoringCheck) monitoringCheck.checked = data.monitoring_enabled;
                 fontSizeInput.value = node.data('fontSize') || '';
                 loadGroups(devGroup, data.group_id);
+                loadDeviceQuality(node.id(), 24, data, data.quality_history);
             })
             .catch(err => {
                 Logger.error('Ошибка загрузки деталей:', err);
@@ -151,6 +155,8 @@ export function openDeviceModal(node) {
 
         if (historyTabItem) historyTabItem.style.display = 'none';
         if (neighborsTabItem) neighborsTabItem.style.display = 'none';
+        if (qualityTabItem) qualityTabItem.style.display = 'none';
+        clearDeviceQuality();
         loadDeviceTypes(devType);
     }
 

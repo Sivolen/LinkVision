@@ -1,15 +1,17 @@
-// zoomEmphasis.js – усиление видимости статуса down/partial, а также
-// результатов поиска, при отдалении карты.
+// zoomEmphasis.js – усиление видимости статуса down/partial, деградации
+// ICMP-качества (quality_status=bad/degraded при status=up) и результатов
+// поиска при отдалении карты.
 //
 // Проблема: border-width/overlay-padding в styles.js заданы в единицах графа,
 // а не в экранных пикселях — при zoom "вписать всю карту" на 200+ устройствах
 // (zoom ~0.1–0.2) 3-единичная рамка превращается в доли пикселя на экране и
 // физически неразличима. Этот модуль на каждое изменение zoom пересчитывает
-// border-width/overlay-padding/overlay-opacity для двух независимых групп
-// узлов — авария (status down/partial) и подсветка поиска (.cy-node-highlight) —
-// так, чтобы на экране они не становились тоньше заданного минимума в px,
-// независимо от того, насколько отдалена карта. Здоровые/неподсвеченные узлы
-// не трогаем — их не обязательно "видеть" издалека.
+// border-width/overlay-padding/overlay-opacity для трёх независимых групп
+// узлов — авария (status down/partial), деградация качества и подсветка
+// поиска (.cy-node-highlight) — так, чтобы на экране они не становились
+// тоньше заданного минимума в px, независимо от того, насколько отдалена
+// карта. Здоровые/неподсвеченные узлы не трогаем — их не обязательно
+// "видеть" издалека.
 import { getCy } from './core.js';
 import { registerCleanup } from './moduleRegistry.js';
 
@@ -38,9 +40,21 @@ function isSearchTarget(n) {
     return n.hasClass('cy-node-highlight');
 }
 
-// Две независимые группы усиления — свой data-флаг на группу, чтобы статус-
-// авария и подсветка поиска не затирали состояние друг друга на одном и том
-// же узле (узел вполне может быть одновременно "down" и найден поиском).
+// Плохое/сниженное ICMP-качество при status="up" (styles.js:
+// node[quality_status="bad"/"degraded"][status="up"]) — устройство отвечает
+// на пинг, поэтому status у него не down/partial, но качество (потери,
+// задержка, джиттер) деградировало. У этих правил в styles.js тоже
+// border-width:4/3 и overlay-padding:4px/3px в единицах графа — та же
+// проблема отдаления, что и у status-аварий.
+function isQualityTarget(n) {
+    const q = n.data('quality_status');
+    return (q === 'bad' || q === 'degraded') && n.data('status') === 'up' && !isMonitoringOff(n);
+}
+
+// Три независимые группы усиления — свой data-флаг на группу, чтобы
+// status-авария, quality-деградация и подсветка поиска не затирали
+// состояние друг друга на одном и том же узле (узел вполне может быть
+// одновременно, например, quality=bad и найден поиском).
 const EMPHASIS_GROUPS = [
     {
         dataKey: '_zoomEmphasisStatus',
@@ -69,6 +83,18 @@ const EMPHASIS_GROUPS = [
         maxOverlayPaddingGraphUnits: 44,
         minOverlayOpacity: 0.3,
         maxOverlayOpacity: 0.6,
+    },
+    {
+        dataKey: '_zoomEmphasisQuality',
+        isTarget: isQualityTarget,
+        minBorderPx: 5,
+        baseBorder: 3,           // ориентируемся на degraded (3 в styles.js); bad (4) чуть плотнее, но это тот же минимум группы
+        maxBorderGraphUnits: 16,
+        minOverlayPaddingPx: 9,
+        baseOverlayPadding: 3,
+        maxOverlayPaddingGraphUnits: 36,
+        minOverlayOpacity: 0.12, // деградация — менее критично, чем down/partial, поэтому гало заметно бледнее
+        maxOverlayOpacity: 0.4,
     },
 ];
 
