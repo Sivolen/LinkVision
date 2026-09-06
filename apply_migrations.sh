@@ -32,10 +32,13 @@ path = Config.SQLALCHEMY_DATABASE_URI.replace("sqlite:///", "", 1)
 if not os.path.isabs(path):
     path = os.path.join(Config.BASE_DIR, path)
 
-result = validate_sqlite_database(path, db.metadata, expected_version=Config.VERSION)
+result = validate_sqlite_database(path, db.metadata, expected_version=None)
 if not result.valid:
     raise SystemExit(f"❌ Схема после миграций всё ещё несовместима: {result.message}")
 
+# Structural validation succeeded. The old marker is intentionally not used
+# as a migration gate: migrations above have just upgraded the actual schema.
+# Only now advance the marker to the application version.
 mark_sqlite_schema(path, Config.VERSION)
 print(f"✅ Схема LinkVision {Config.VERSION} подтверждена.")
 PY
