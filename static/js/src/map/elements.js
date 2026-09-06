@@ -348,6 +348,10 @@ export function updateDevice(device) {
         ...(has('iconUrl') ? { iconUrl: device.iconUrl || '' } : {}),
         ...(has('width') ? { width: device.width ?? null } : {}),
         ...(has('height') ? { height: device.height ?? null } : {}),
+        ...(has('quality_status') ? { quality_status: device.quality_status || 'unknown' } : {}),
+        ...(has('quality_latency_ms') ? { quality_latency_ms: device.quality_latency_ms ?? null } : {}),
+        ...(has('quality_jitter_ms') ? { quality_jitter_ms: device.quality_jitter_ms ?? null } : {}),
+        ...(has('quality_loss_percent') ? { quality_loss_percent: device.quality_loss_percent ?? null } : {}),
     });
 
     // Мониторинг только что ВЫКЛЮЧИЛИ — status в data узла мог остаться
@@ -359,7 +363,13 @@ export function updateDevice(device) {
     // хотя визуально узел уже показывался серым как отключённый.
     if (wasMonitoringOn && !monitoringOn) {
         const wasAlarm = previousStatus === 'down' || previousStatus === 'partial';
-        node.data('status', 'up');
+        node.data({
+            status: 'up',
+            quality_status: 'unknown',
+            quality_latency_ms: null,
+            quality_jitter_ms: null,
+            quality_loss_percent: null,
+        });
         removePulsingNode(cy, node);
         if (wasAlarm) {
             updateSidebarCounter(window.currentMapId, false);
