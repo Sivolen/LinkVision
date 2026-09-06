@@ -277,10 +277,12 @@ def _validate_sqlite_backup(backup_path):
     if result.valid:
         return True, None
 
-    details = result.message or _("Структура базы данных несовместима с текущей версией.")
-    return False, _("Резервная копия отклонена. {details} Текущая база данных не изменена.").format(
-        details=details
+    details = result.message or _(
+        "Структура базы данных несовместима с текущей версией."
     )
+    return False, _(
+        "Резервная копия отклонена. {details} Текущая база данных не изменена."
+    ).format(details=details)
 
 
 def restore_backup_action():
@@ -311,13 +313,17 @@ def restore_backup_action():
     try:
         # Сначала сохраняем загруженный файл во временный путь. Рабочая БД
         # вообще не трогается, пока файл не прошёл все проверки.
-        fd, temp_path = tempfile.mkstemp(prefix="linkvision_restore_", suffix=".db", dir=os.path.dirname(db_path))
+        fd, temp_path = tempfile.mkstemp(
+            prefix="linkvision_restore_", suffix=".db", dir=os.path.dirname(db_path)
+        )
         os.close(fd)
         file.save(temp_path)
 
         valid, error_message = _validate_sqlite_backup(temp_path)
         if not valid:
-            admin_logger.warning(f"Rejected incompatible database backup: {file.filename}")
+            admin_logger.warning(
+                f"Rejected incompatible database backup: {file.filename}"
+            )
             flash(error_message, "error")
             return redirect(url_for("admin.settings"))
 
@@ -350,7 +356,9 @@ def restore_backup_action():
                 f"Installed database failed validation: {installed.message}"
             )
 
-        admin_logger.info("Database restored from uploaded file after schema validation")
+        admin_logger.info(
+            "Database restored from uploaded file after schema validation"
+        )
         flash(
             _(
                 "База данных успешно восстановлена. Резервная копия предыдущей БД сохранена как .bak."
@@ -359,7 +367,12 @@ def restore_backup_action():
         )
     except Exception as e:
         admin_logger.error(f"Error restoring database: {e}", exc_info=True)
-        flash(_("Ошибка при восстановлении базы данных. Текущая база данных не изменена."), "error")
+        flash(
+            _(
+                "Ошибка при восстановлении базы данных. Текущая база данных не изменена."
+            ),
+            "error",
+        )
     finally:
         if temp_path and os.path.exists(temp_path):
             try:

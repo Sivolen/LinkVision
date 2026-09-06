@@ -12,7 +12,15 @@ import time
 from typing import Dict, Optional, Tuple
 from collections import defaultdict
 from functools import wraps
-from flask import request, jsonify, current_app, has_app_context, render_template, redirect, url_for
+from flask import (
+    request,
+    jsonify,
+    current_app,
+    has_app_context,
+    render_template,
+    redirect,
+    url_for,
+)
 from flask_login import current_user
 import re
 

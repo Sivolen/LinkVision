@@ -24,12 +24,16 @@ def run_migration():
         path = os.path.join(Config.BASE_DIR, path)
 
     print("⚠️ fix_db.py устарел: используется единый безопасный набор миграций.")
-    print("⚠️ Перед запуском остановите приложение/worker, чтобы БД не изменялась параллельно.")
+    print(
+        "⚠️ Перед запуском остановите приложение/worker, чтобы БД не изменялась параллельно."
+    )
 
     run_base_migration()
     run_ordering_migration()
 
-    result = validate_sqlite_database(path, db.metadata, expected_version=Config.VERSION)
+    result = validate_sqlite_database(
+        path, db.metadata, expected_version=Config.VERSION
+    )
     if not result.valid:
         raise RuntimeError(f"После миграции схема несовместима: {result.message}")
 

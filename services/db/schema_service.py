@@ -11,7 +11,6 @@ import sqlite3
 from dataclasses import dataclass
 from typing import Iterable, Mapping
 
-
 SCHEMA_TABLE = "linkvision_schema"
 SCHEMA_KEY = "schema_version"
 
@@ -42,10 +41,7 @@ def _sqlite_type_affinity(declared_type: str | None) -> str:
 def _metadata_schema(metadata) -> Mapping[str, Mapping[str, object]]:
     result = {}
     for table in metadata.tables.values():
-        result[table.name] = {
-            column.name: column
-            for column in table.columns
-        }
+        result[table.name] = {column.name: column for column in table.columns}
     return result
 
 
@@ -67,20 +63,18 @@ def read_schema_version(conn: sqlite3.Connection) -> str | None:
 
 def write_schema_version(conn: sqlite3.Connection, version: str) -> None:
     """Create/update the optional schema marker table."""
-    conn.execute(
-        f'''
+    conn.execute(f"""
         CREATE TABLE IF NOT EXISTS "{SCHEMA_TABLE}" (
             key VARCHAR(64) PRIMARY KEY,
             value VARCHAR(64) NOT NULL
         )
-        '''
-    )
+        """)
     conn.execute(
-        f'''
+        f"""
         INSERT INTO "{SCHEMA_TABLE}" (key, value)
         VALUES (?, ?)
         ON CONFLICT(key) DO UPDATE SET value = excluded.value
-        ''',
+        """,
         (SCHEMA_KEY, str(version)),
     )
 
@@ -139,10 +133,16 @@ def validate_sqlite_database(
                 # Compare only broad SQLite affinity. This catches a genuinely
                 # incompatible schema without rejecting harmless VARCHAR length
                 # differences between SQLite/SQLAlchemy versions.
-                model_type = _sqlite_type_affinity(getattr(model_column.type, "compile", lambda **_: str(model_column.type))())
+                model_type = _sqlite_type_affinity(
+                    getattr(
+                        model_column.type, "compile", lambda **_: str(model_column.type)
+                    )()
+                )
                 db_type = _sqlite_type_affinity(actual[name][2])
                 if model_type != db_type:
-                    type_errors.append(f"{table_name}.{name} ({db_type}, требуется {model_type})")
+                    type_errors.append(
+                        f"{table_name}.{name} ({db_type}, требуется {model_type})"
+                    )
 
         if missing_columns:
             return SchemaValidationResult(
@@ -168,19 +168,23 @@ def validate_sqlite_database(
 
         return SchemaValidationResult(True, version=version)
     except sqlite3.DatabaseError as exc:
-        return SchemaValidationResult(False, f"Не удалось проверить структуру базы данных: {exc}")
+        return SchemaValidationResult(
+            False, f"Не удалось проверить структуру базы данных: {exc}"
+        )
     finally:
         conn.close()
-
 
 
 def sqlite_database_is_empty(path: str) -> bool:
     """Return True when the SQLite file contains no application tables."""
     conn = sqlite3.connect(path)
     try:
-        return conn.execute(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-        ).fetchone()[0] == 0
+        return (
+            conn.execute(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            ).fetchone()[0]
+            == 0
+        )
     finally:
         conn.close()
 

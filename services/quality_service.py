@@ -22,8 +22,7 @@ def get_device_quality_history(device_id: int, hours: int = 24) -> Dict[str, Any
     """
     cutoff = datetime.now() - timedelta(hours=hours)
     items = (
-        DeviceQualityHistory.query
-        .filter(
+        DeviceQualityHistory.query.filter(
             DeviceQualityHistory.device_id == device_id,
             DeviceQualityHistory.timestamp >= cutoff,
         )
@@ -50,7 +49,9 @@ def get_device_quality_history(device_id: int, hours: int = 24) -> Dict[str, Any
     return {"latest": latest, "items": records}
 
 
-def calculate_quality(metrics: Optional[Dict[str, Any]]) -> Tuple[str, Optional[float], Optional[float], Optional[float]]:
+def calculate_quality(
+    metrics: Optional[Dict[str, Any]],
+) -> Tuple[str, Optional[float], Optional[float], Optional[float]]:
     """
     Рассчитать качество ICMP по метрикам пинга.
 
@@ -71,9 +72,17 @@ def calculate_quality(metrics: Optional[Dict[str, Any]]) -> Tuple[str, Optional[
     avg = sum(latencies) / len(latencies) if latencies else None
     jitter = sum(jitter_values) / len(jitter_values) if jitter_values else None
 
-    if loss >= 5 or (avg is not None and avg >= 100) or (jitter is not None and jitter >= 30):
+    if (
+        loss >= 5
+        or (avg is not None and avg >= 100)
+        or (jitter is not None and jitter >= 30)
+    ):
         quality = "bad"
-    elif loss >= 1 or (avg is not None and avg >= 50) or (jitter is not None and jitter >= 10):
+    elif (
+        loss >= 1
+        or (avg is not None and avg >= 50)
+        or (jitter is not None and jitter >= 10)
+    ):
         quality = "degraded"
     else:
         quality = "good"

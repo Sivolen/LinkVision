@@ -41,7 +41,9 @@ def run_migration() -> None:
             columns = {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
             if "position" not in columns:
                 print(f"Добавляем {table}.position...")
-                conn.execute(f'ALTER TABLE "{table}" ADD COLUMN position INTEGER NOT NULL DEFAULT 0')
+                conn.execute(
+                    f'ALTER TABLE "{table}" ADD COLUMN position INTEGER NOT NULL DEFAULT 0'
+                )
         conn.commit()
         print("Миграция ordering завершена успешно.")
     except Exception:
