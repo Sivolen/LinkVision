@@ -316,7 +316,21 @@ def create_app():
             devices = Device.query.filter_by(
                 map_id=map_id, monitoring_enabled=True
             ).all()
-            statuses = [{"id": d.id, "status": d.status} for d in devices]
+            # Поля качества тоже нужны, а не только status — иначе этот
+            # (лёгкий) путь ресинхронизации после реконнекта оставляет
+            # quality_status/latency/jitter/loss на карте устаревшими, пока
+            # их не подтянет следующий цикл монитора или полный reload.
+            statuses = [
+                {
+                    "id": d.id,
+                    "status": d.status,
+                    "quality_status": d.quality_status,
+                    "quality_latency_ms": d.quality_latency_ms,
+                    "quality_jitter_ms": d.quality_jitter_ms,
+                    "quality_loss_percent": d.quality_loss_percent,
+                }
+                for d in devices
+            ]
             socketio.emit("device_status_batch", statuses, room=f"map_{map_id}")
 
     return app

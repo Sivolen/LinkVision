@@ -40,7 +40,7 @@ class TestConfig:
     DEBUG = False
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "icons")
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-    VERSION = "2.2.0"
+    VERSION = "2.2.1"
 
     # Отключаем безопасные куки для тестов
     SESSION_COOKIE_SECURE = False
