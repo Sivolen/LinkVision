@@ -9,7 +9,7 @@ from models import Device, Settings, DeviceHistory, DeviceQualityHistory
 from utils.logger import monitor_logger
 from cachetools import TTLCache
 from sqlalchemy.orm import joinedload
-from services.quality_service import calculate_quality
+from services.quality_service import calculate_quality, get_device_thresholds_map
 
 try:
     from ping3 import ping
@@ -127,15 +127,20 @@ def get_setting(key, default):
     return default
 
 
-def _quality_from_metrics(metrics):
+def _quality_from_metrics(metrics, thresholds=None):
     """Calculate quality using the single canonical implementation."""
-    return calculate_quality(metrics)
+    return calculate_quality(metrics, thresholds)
 
 
-def _record_quality_sample(device_id, metrics, now):
+def _record_quality_sample(device_id, metrics, now, thresholds=None):
     """
     Накопить сэмпл в скользящее окно качества и, если окно (QUALITY_PERSIST_SECONDS)
     закрылось, записать агрегат в DeviceQualityHistory.
+
+    thresholds — пороги ПРОФИЛЯ ЭТОГО устройства (см. get_device_thresholds_map
+    в monitor_loop); используются при закрытии окна, чтобы агрегат в истории
+    считался по тем же порогам, что и live-значение на карте для этого же
+    устройства.
 
     Возвращает True, если в ЭТОТ вызов реально была добавлена строка истории —
     monitor_loop использует это как один из поводов освежить live-поля
@@ -162,7 +167,8 @@ def _record_quality_sample(device_id, metrics, now):
     # место, и то, что видно на карте прямо сейчас, молча разошлось бы с тем,
     # что легло в историю (device_quality_history).
     quality, avg, jitter, loss = _quality_from_metrics(
-        {"samples": sent, "latencies": latencies, "jitter_values": window["jitter"]}
+        {"samples": sent, "latencies": latencies, "jitter_values": window["jitter"]},
+        thresholds,
     )
     db.session.add(
         DeviceQualityHistory(
@@ -195,7 +201,7 @@ def _record_quality_sample(device_id, metrics, now):
     return True
 
 
-def _live_quality_from_window(device_id, metrics):
+def _live_quality_from_window(device_id, metrics, thresholds=None):
     """Calculate live quality from the current rolling window plus this sample."""
     window = _quality_windows.get(device_id)
     if not window:
@@ -218,7 +224,8 @@ def _live_quality_from_window(device_id, metrics):
             "samples": sent,
             "latencies": latencies,
             "jitter_values": jitter_values,
-        }
+        },
+        thresholds,
     )
 
 
@@ -261,6 +268,19 @@ def monitor_loop():
                 # того, чтобы гонять батч-запрос на ВСЕ устройства каждый цикл.
                 prev_status_by_id = {dev.id: dev.status for dev in devices}
                 prev_quality_by_id = {dev.id: dev.quality_status for dev in devices}
+
+                # Пороги качества по профилям — один раз на весь цикл, а не по
+                # запросу на устройство. profiles_by_id ключуется ПО ID
+                # ПРОФИЛЯ (не устройства): у устройства с quality_profile_id=NULL
+                # берём default_thresholds — так дефолт применяется даже если
+                # админ сменил, какой профиль дефолтный, между циклами.
+                profiles_by_id, default_thresholds = get_device_thresholds_map()
+                thresholds_by_device = {
+                    dev.id: profiles_by_id.get(
+                        dev.quality_profile_id, default_thresholds
+                    )
+                    for dev in devices
+                }
 
                 ping_count = get_setting("ping_count", 4)
                 ping_interval = get_setting("ping_interval", 10)
@@ -438,6 +458,7 @@ def monitor_loop():
                         continue  # устройство удалили/выключили из мониторинга уже после начала цикла
 
                     status_changed = prev_status_by_id[dev_id] != new_status
+                    thresholds = thresholds_by_device.get(dev_id, default_thresholds)
 
                     quality = q_latency = q_jitter = q_loss = None
                     quality_changed = False
@@ -447,10 +468,12 @@ def monitor_loop():
                         # function resets the window when it persists the 5-minute
                         # aggregate. This keeps live classification and persisted
                         # history based on the same rolling data.
-                        current_quality = _quality_from_metrics(metrics)
-                        live = _live_quality_from_window(dev_id, metrics)
+                        current_quality = _quality_from_metrics(metrics, thresholds)
+                        # live = _live_quality_from_window(dev_id, metrics, thresholds)
+                        # (signature: _live_quality_from_window(dev_id, metrics))
+                        live = _live_quality_from_window(dev_id, metrics, thresholds)
                         history_persisted = _record_quality_sample(
-                            dev_id, metrics, current_time
+                            dev_id, metrics, current_time, thresholds
                         )
                         if new_status == "down":
                             # Down is an availability state; do not leave a stale

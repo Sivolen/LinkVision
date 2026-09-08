@@ -70,6 +70,27 @@ function loadGroups(selectEl, selectedGroupId) {
 }
 
 /**
+ * Загрузить профили качества связи для устройства
+ */
+function loadQualityProfiles(selectEl, selectedProfileId) {
+    if (!selectEl) return;
+
+    fetch('/api/quality-profiles')
+        .then(res => res.ok ? res.json() : [])
+        .then(profiles => {
+            selectEl.innerHTML = '<option value="">' + t('modal.device.defaultQualityProfileOpt') + '</option>';
+            profiles.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = p.is_default ? `${p.name} (${t('modal.device.defaultBadge')})` : p.name;
+                selectEl.appendChild(option);
+            });
+            selectEl.value = selectedProfileId || '';
+        })
+        .catch(err => Logger.error('Ошибка загрузки профилей качества:', err));
+}
+
+/**
  * Открыть модальное окно устройства
  */
 export function openDeviceModal(node) {
@@ -136,6 +157,7 @@ export function openDeviceModal(node) {
                 if (monitoringCheck) monitoringCheck.checked = data.monitoring_enabled;
                 fontSizeInput.value = node.data('fontSize') || '';
                 loadGroups(devGroup, data.group_id);
+                loadQualityProfiles(document.getElementById('dev_quality_profile'), data.quality_profile_id);
                 loadDeviceQuality(node.id(), 24, data, data.quality_history);
             })
             .catch(err => {
@@ -151,6 +173,7 @@ export function openDeviceModal(node) {
         deleteBtn.style.display = 'none';
         neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">' + t('modal.device.noData') + '</td></tr>';
         loadGroups(devGroup);
+        loadQualityProfiles(document.getElementById('dev_quality_profile'), null);
         setIpsInForm([]);
 
         if (historyTabItem) historyTabItem.style.display = 'none';
@@ -202,6 +225,7 @@ export async function saveDevice() {
     const typeId = document.getElementById('dev_type').value;
     const groupId = document.getElementById('dev_group').value;
     const monitoring = document.getElementById('dev_monitoring').checked;
+    const qualityProfileId = document.getElementById('dev_quality_profile')?.value || '';
     const fontSize = document.getElementById('dev_font_size').value;
     const ips = getIpsFromForm();
 
@@ -225,7 +249,8 @@ export async function saveDevice() {
         ips: ips,
         type_id: parseInt(typeId),
         group_id: groupId ? parseInt(groupId) : null,
-        monitoring_enabled: monitoring
+        monitoring_enabled: monitoring,
+        quality_profile_id: qualityProfileId ? parseInt(qualityProfileId) : null
     };
     if (fontSize !== '') data.font_size = parseInt(fontSize, 10);
     else data.font_size = null;

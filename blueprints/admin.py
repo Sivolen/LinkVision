@@ -17,7 +17,13 @@ from flask import (
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from models import Map, db
-from services import user_service, device_type_service, settings_service, map_service
+from services import (
+    user_service,
+    device_type_service,
+    settings_service,
+    map_service,
+    quality_service,
+)
 from services.db.schema_service import validate_sqlite_database
 from services.security_service import rate_limiter
 from services.device_type_service import invalidate_types_cache
@@ -238,7 +244,87 @@ def settings():
         interval=ping_interval,
         db_size=db_size,
         db_mtime=db_mtime,
+        quality_profiles=quality_service.get_all_quality_profiles(),
     )
+
+
+# ============================================================================
+# Профили качества (пороги ICMP-мониторинга)
+# ============================================================================
+
+_QUALITY_THRESHOLD_FIELDS = (
+    "loss_degraded_percent",
+    "loss_bad_percent",
+    "latency_degraded_ms",
+    "latency_bad_ms",
+    "jitter_degraded_ms",
+    "jitter_bad_ms",
+)
+
+
+def _parse_threshold_fields(form) -> dict:
+    """
+    Разобрать 6 полей порогов из формы в float. Бросает ValueError с понятным
+    сообщением, если что-то не число — чтобы не падать с трассировкой на
+    простой опечатке в поле формы.
+    """
+    result = {}
+    for field in _QUALITY_THRESHOLD_FIELDS:
+        raw = form.get(field)
+        try:
+            result[field] = float(raw)
+        except (TypeError, ValueError):
+            raise ValueError(f"Поле «{field}» должно быть числом")
+    return result
+
+
+@admin_bp.route("/quality-profiles", methods=["POST"])
+def create_quality_profile():
+    try:
+        thresholds = _parse_threshold_fields(request.form)
+        quality_service.create_quality_profile(request.form.get("name", ""), thresholds)
+        flash(_("Профиль качества создан"), "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    return redirect(url_for("admin.settings"))
+
+
+@admin_bp.route("/quality-profiles/<int:profile_id>", methods=["POST"])
+def update_quality_profile(profile_id):
+    try:
+        thresholds = _parse_threshold_fields(request.form)
+        quality_service.update_quality_profile(
+            profile_id, request.form.get("name"), thresholds
+        )
+        flash(_("Профиль качества сохранён"), "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    return redirect(url_for("admin.settings"))
+
+
+@admin_bp.route("/quality-profiles/<int:profile_id>/default", methods=["POST"])
+def set_default_quality_profile(profile_id):
+    try:
+        quality_service.set_default_quality_profile(profile_id)
+        flash(_("Профиль назначен профилем по умолчанию"), "success")
+    except ValueError as e:
+        flash(str(e), "error")
+    return redirect(url_for("admin.settings"))
+
+
+@admin_bp.route("/quality-profiles/<int:profile_id>/delete", methods=["POST"])
+def delete_quality_profile(profile_id):
+    try:
+        quality_service.delete_quality_profile(profile_id)
+        flash(
+            _(
+                "Профиль удалён, затронутые устройства переведены на профиль по умолчанию"
+            ),
+            "success",
+        )
+    except ValueError as e:
+        flash(str(e), "error")
+    return redirect(url_for("admin.settings"))
 
 
 # ============================================================================

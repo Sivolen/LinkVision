@@ -14,7 +14,10 @@ from services import (
     validate_name,
     log_device_action,
 )
-from services.quality_service import get_device_quality_history
+from services.quality_service import (
+    get_device_quality_history,
+    get_all_quality_profiles,
+)
 from services.notifications import (
     notify_device_created,
     notify_device_updated,
@@ -88,6 +91,21 @@ def get_device_quality(device_id):
     return jsonify(data)
 
 
+@devices_bp.route("/quality-profiles", methods=["GET"])
+@login_required
+def list_quality_profiles():
+    """
+    Список профилей качества для выпадающего списка в карточке устройства.
+    Доступен любому авторизованному пользователю (это справочник, не
+    чувствительные данные) — управление профилями (создание/правка/удаление)
+    по-прежнему только через /admin/quality-profiles (только для админов).
+    """
+    profiles = get_all_quality_profiles()
+    return jsonify(
+        [{"id": p.id, "name": p.name, "is_default": p.is_default} for p in profiles]
+    )
+
+
 # ============================================================================
 # POST, PUT, DELETE – запрещены оператору
 # ============================================================================
@@ -139,6 +157,7 @@ def create_device():
             y=data.get("y", 100),
             group_id=data.get("group_id"),
             monitoring_enabled=data.get("monitoring_enabled", True),
+            quality_profile_id=data.get("quality_profile_id") or None,
         )
 
         dtype = dev.type
@@ -202,6 +221,7 @@ def update_device(device_id):
         "pos_y",
         "group_id",
         "monitoring_enabled",
+        "quality_profile_id",
     ]
     update_data = {k: v for k, v in data.items() if k in allowed_fields}
 

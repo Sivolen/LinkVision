@@ -123,7 +123,9 @@
       "deleteTitle": "Delete device",
       "deleteMsg": "Are you sure you want to delete this device?",
       "deleted": "Device deleted",
-      "deleteFail": "Failed to delete the device"
+      "deleteFail": "Failed to delete the device",
+      "defaultQualityProfileOpt": "-- Default --",
+      "defaultBadge": "default"
     },
     "link": {
       "newTitle": "New link",

@@ -1119,7 +1119,7 @@ msgstr "Reset limits"
 msgid ""
 "Если пользователи жалуются на «Слишком много запросов» (ошибка 429), "
 "нажмите кнопку ниже для сброса счётчиков."
-msgstr "If users complain about "Too many requests" (error 429), click the button below to reset the counters."
+msgstr "If users complain about \"Too many requests\" (error 429), click the button below to reset the counters."
 
 #: templates/admin/settings.html:71
 msgid "Сбросить счётчики"
@@ -1231,42 +1231,6 @@ msgid "Права на папку"
 msgstr "Folder permissions"
 
 #: templates/base.html
-msgid "Добавить право пользователю"
-msgstr "Add permission to user"
-
-#: templates/base.html
-msgid "Загрузка..."
-msgstr "Loading..."
-
-#: templates/base.html
-msgid "Просмотр"
-msgstr "View"
-
-#: templates/base.html
-msgid "Редактор"
-msgstr "Editor"
-
-#: templates/base.html
-msgid "Админ папки"
-msgstr "Folder admin"
-
-#: templates/base.html
-msgid "Всем операторам"
-msgstr "All operators"
-
-#: templates/base.html
-msgid "OK"
-msgstr "OK"
-
-#: templates/base.html
-msgid "Отмена"
-msgstr "Cancel"
-
-#: templates/base.html
-msgid "Новая папка"
-msgstr "New folder"
-
-#: templates/base.html
 msgid "— Корень (без папки) —"
 msgstr "— Root (no folder) —"
 #: templates/base.html
@@ -1301,3 +1265,84 @@ msgstr "The database was restored successfully. A backup of the previous databas
 #: blueprints/admin.py
 msgid "Ошибка при восстановлении базы данных. Текущая база данных не изменена."
 msgstr "Database restore failed. The current database was not changed."
+#: templates/admin/settings.html
+msgid "Джиттер, мс"
+msgstr "Jitter, ms"
+
+#: templates/admin/settings.html
+msgid "Джиттер, мс (снижено/плохо)"
+msgstr "Jitter, ms (degraded/bad)"
+
+#: templates/admin/settings.html
+msgid "Задержка, мс"
+msgstr "Latency, ms"
+
+#: templates/admin/settings.html
+msgid "Задержка, мс (снижено/плохо)"
+msgstr "Latency, ms (degraded/bad)"
+
+#: templates/admin/settings.html
+msgid "Новый профиль"
+msgstr "New profile"
+
+#: templates/admin/settings.html
+msgid "По умолчанию"
+msgstr "Default"
+
+#: templates/admin/settings.html
+msgid "Потери, %%"
+msgstr "Loss, %%"
+
+#: templates/admin/settings.html
+msgid "Потери, %% (плохо)"
+msgstr "Loss, %% (bad)"
+
+#: templates/admin/settings.html
+msgid "Потери, %% (снижено)"
+msgstr "Loss, %% (degraded)"
+
+#: templates/admin/settings.html
+msgid "Профили качества связи"
+msgstr "Connection quality profiles"
+
+#: templates/admin/settings.html
+msgid "Профиль"
+msgstr "Profile"
+
+#: templates/admin/settings.html
+msgid "Сделать профилем по умолчанию"
+msgstr "Set as default profile"
+
+#: templates/admin/settings.html
+msgid "Удалить профиль? Устройства с этим профилем вернутся на профиль по умолчанию."
+msgstr "Delete profile? Devices using it will fall back to the default profile."
+
+#: templates/admin/settings.html
+msgid "снижено / плохо"
+msgstr "degraded / bad"
+
+#: templates/admin/settings.html
+msgid "Пороги, при которых устройство считается \"снижено\" (degraded) или \"плохо\" (bad) по потерям/задержке/джиттеру. Профиль \"По умолчанию\" действует на все устройства без явно назначенного профиля — назначить другой профиль конкретному устройству можно в его карточке."
+msgstr "Thresholds at which a device is considered \"degraded\" or \"bad\" by loss/latency/jitter. The \"Default\" profile applies to all devices without an explicitly assigned profile — a different profile can be assigned to a specific device from its card."
+#: templates/map_view.html
+msgid "Профиль качества связи"
+msgstr "Connection quality profile"
+
+#: templates/map_view.html
+msgid "Пороги потерь/задержки/джиттера, при которых устройство считается \"снижено\" или \"плохо\". Управляются в Настройках."
+msgstr "Loss/latency/jitter thresholds at which a device is considered \"degraded\" or \"bad\". Managed in Settings."
+#: templates/admin/settings.html
+msgid "Снижено"
+msgstr "Degraded"
+
+#: templates/admin/settings.html
+msgid "Плохо"
+msgstr "Bad"
+
+#: templates/admin/settings.html
+msgid "такой же оранжевый ободок, как у устройства на карте"
+msgstr "same orange ring as a device on the map"
+
+#: templates/admin/settings.html
+msgid "такой же фиолетовый ободок, как у устройства на карте"
+msgstr "same purple ring as a device on the map"

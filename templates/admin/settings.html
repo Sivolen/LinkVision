@@ -29,6 +29,148 @@
     </div>
 </div>
 
+<!-- Профили качества ICMP -->
+<div class="admin-card mt-4">
+    <div class="card-header">
+        <i class="fas fa-heartbeat"></i> {{ _('Профили качества связи') }}
+    </div>
+    <div class="card-body">
+        <p class="text-muted small">
+            {{ _('Пороги, при которых устройство считается "снижено" (degraded) или "плохо" (bad) по потерям/задержке/джиттеру. Профиль "По умолчанию" действует на все устройства без явно назначенного профиля — назначить другой профиль конкретному устройству можно в его карточке.') }}
+        </p>
+        <div class="quality-legend mb-3">
+            <span class="quality-legend-item"><span class="quality-legend-dot quality-legend-degraded"></span>{{ _('Снижено') }} — {{ _('такой же оранжевый ободок, как у устройства на карте') }}</span>
+            <span class="quality-legend-item"><span class="quality-legend-dot quality-legend-bad"></span>{{ _('Плохо') }} — {{ _('такой же фиолетовый ободок, как у устройства на карте') }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="modern-table quality-profiles-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Профиль') }}</th>
+                        <th>{{ _('Потери, %%') }} <small class="text-muted fw-normal">({{ _('снижено / плохо') }})</small></th>
+                        <th>{{ _('Задержка, мс') }} <small class="text-muted fw-normal">({{ _('снижено / плохо') }})</small></th>
+                        <th>{{ _('Джиттер, мс') }} <small class="text-muted fw-normal">({{ _('снижено / плохо') }})</small></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profile in quality_profiles|default([]) %}
+                    <tr>
+                        <td style="min-width: 160px;">
+                            <form id="quality-profile-form-{{ profile.id }}" method="POST" action="{{ url_for('admin.update_quality_profile', profile_id=profile.id) }}"></form>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" form="quality-profile-form-{{ profile.id }}">
+                            <div class="quality-name-cell">
+                                <input type="text" name="name" form="quality-profile-form-{{ profile.id }}"
+                                       class="form-control form-control-sm" value="{{ profile.name }}">
+                                {% if profile.is_default %}
+                                <span class="badge bg-primary quality-default-badge" title="{{ _('Профиль по умолчанию для всех устройств без явно назначенного профиля') }}">{{ _('По умолчанию') }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td style="min-width: 190px;">
+                            <div class="quality-threshold-pair">
+                                <span class="quality-legend-dot quality-legend-degraded" title="{{ _('Снижено') }}"></span>
+                                <input type="number" step="0.1" min="0" name="loss_degraded_percent" form="quality-profile-form-{{ profile.id }}" class="form-control form-control-sm" value="{{ profile.loss_degraded_percent }}" title="{{ _('Снижено') }}">
+                                <span class="quality-pair-sep">/</span>
+                                <span class="quality-legend-dot quality-legend-bad" title="{{ _('Плохо') }}"></span>
+                                <input type="number" step="0.1" min="0" name="loss_bad_percent" form="quality-profile-form-{{ profile.id }}" class="form-control form-control-sm" value="{{ profile.loss_bad_percent }}" title="{{ _('Плохо') }}">
+                            </div>
+                        </td>
+                        <td style="min-width: 190px;">
+                            <div class="quality-threshold-pair">
+                                <span class="quality-legend-dot quality-legend-degraded" title="{{ _('Снижено') }}"></span>
+                                <input type="number" step="1" min="0" name="latency_degraded_ms" form="quality-profile-form-{{ profile.id }}" class="form-control form-control-sm" value="{{ profile.latency_degraded_ms }}" title="{{ _('Снижено') }}">
+                                <span class="quality-pair-sep">/</span>
+                                <span class="quality-legend-dot quality-legend-bad" title="{{ _('Плохо') }}"></span>
+                                <input type="number" step="1" min="0" name="latency_bad_ms" form="quality-profile-form-{{ profile.id }}" class="form-control form-control-sm" value="{{ profile.latency_bad_ms }}" title="{{ _('Плохо') }}">
+                            </div>
+                        </td>
+                        <td style="min-width: 190px;">
+                            <div class="quality-threshold-pair">
+                                <span class="quality-legend-dot quality-legend-degraded" title="{{ _('Снижено') }}"></span>
+                                <input type="number" step="1" min="0" name="jitter_degraded_ms" form="quality-profile-form-{{ profile.id }}" class="form-control form-control-sm" value="{{ profile.jitter_degraded_ms }}" title="{{ _('Снижено') }}">
+                                <span class="quality-pair-sep">/</span>
+                                <span class="quality-legend-dot quality-legend-bad" title="{{ _('Плохо') }}"></span>
+                                <input type="number" step="1" min="0" name="jitter_bad_ms" form="quality-profile-form-{{ profile.id }}" class="form-control form-control-sm" value="{{ profile.jitter_bad_ms }}" title="{{ _('Плохо') }}">
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <div class="table-actions justify-content-end">
+                                <button type="submit" form="quality-profile-form-{{ profile.id }}" class="btn-action" title="{{ _('Сохранить') }}">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                                {% if not profile.is_default %}
+                                <form method="POST" action="{{ url_for('admin.set_default_quality_profile', profile_id=profile.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-action" title="{{ _('Сделать профилем по умолчанию') }}">
+                                        <i class="fas fa-star"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin.delete_quality_profile', profile_id=profile.id) }}" class="d-inline"
+                                      onsubmit="return confirm('{{ _('Удалить профиль? Устройства с этим профилем вернутся на профиль по умолчанию.') }}');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-action" title="{{ _('Удалить') }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="quality-profile-new mt-3">
+            <h6 class="mb-3"><i class="fas fa-plus-circle"></i> {{ _('Новый профиль') }}</h6>
+            <form method="POST" action="{{ url_for('admin.create_quality_profile') }}" class="row g-3" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ _('Название') }}</label>
+                    <input type="text" name="name" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted d-block">{{ _('Потери, %%') }} ({{ _('снижено / плохо') }})</label>
+                    <div class="quality-threshold-pair">
+                        <span class="quality-legend-dot quality-legend-degraded" title="{{ _('Снижено') }}"></span>
+                        <input type="number" step="0.1" min="0" name="loss_degraded_percent" class="form-control form-control-sm" value="1" required title="{{ _('Снижено') }}">
+                        <span class="quality-pair-sep">/</span>
+                        <span class="quality-legend-dot quality-legend-bad" title="{{ _('Плохо') }}"></span>
+                        <input type="number" step="0.1" min="0" name="loss_bad_percent" class="form-control form-control-sm" value="5" required title="{{ _('Плохо') }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted d-block">{{ _('Задержка, мс') }} ({{ _('снижено / плохо') }})</label>
+                    <div class="quality-threshold-pair">
+                        <span class="quality-legend-dot quality-legend-degraded" title="{{ _('Снижено') }}"></span>
+                        <input type="number" step="1" min="0" name="latency_degraded_ms" class="form-control form-control-sm" value="50" required title="{{ _('Снижено') }}">
+                        <span class="quality-pair-sep">/</span>
+                        <span class="quality-legend-dot quality-legend-bad" title="{{ _('Плохо') }}"></span>
+                        <input type="number" step="1" min="0" name="latency_bad_ms" class="form-control form-control-sm" value="100" required title="{{ _('Плохо') }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted d-block">{{ _('Джиттер, мс') }} ({{ _('снижено / плохо') }})</label>
+                    <div class="quality-threshold-pair">
+                        <span class="quality-legend-dot quality-legend-degraded" title="{{ _('Снижено') }}"></span>
+                        <input type="number" step="1" min="0" name="jitter_degraded_ms" class="form-control form-control-sm" value="10" required title="{{ _('Снижено') }}">
+                        <span class="quality-pair-sep">/</span>
+                        <span class="quality-legend-dot quality-legend-bad" title="{{ _('Плохо') }}"></span>
+                        <input type="number" step="1" min="0" name="jitter_bad_ms" class="form-control form-control-sm" value="30" required title="{{ _('Плохо') }}">
+                    </div>
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-plus"></i>
+ {{ _('Создать') }}
+                </button>
+            </div>
+        </form>
+    </div>
+    </div>
+</div>
+
 <!-- Резервное копирование -->
 <div class="admin-card mt-4">
     <div class="card-header">
