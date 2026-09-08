@@ -481,21 +481,30 @@ def monitor_loop():
                             # is currently unreachable.
                             quality = "unknown"
                             q_latency = q_jitter = q_loss = None
-                        elif current_quality[0] == "good":
-                            # Recovery should be fast: once the current check is
-                            # completely clean, clear a previous quality alarm
-                            # immediately. A single clean cycle cannot create a
-                            # false positive, unlike a single lost packet creating
-                            # a false degradation.
-                            quality, q_latency, q_jitter, q_loss = current_quality
                         elif live is not None:
-                            # Degradation is deliberately based on a rolling window
-                            # so one lost packet in a small ping batch does not create
-                            # a phantom alarm.
+                            # После накопления окна качество считаем по полному
+                            # окну: так loss/jitter не реагируют на единичный
+                            # пакет.
                             quality, q_latency, q_jitter, q_loss = live
                         else:
-                            quality = prev_quality_by_id.get(dev_id, "unknown")
-                            q_latency = q_jitter = q_loss = None
+                            # До накопления 100 samples НЕ блокируем latency/jitter:
+                            # иначе после изменения профиля (например bad latency
+                            # = 20 ms) устройство с RTT 39 ms оставалось бы старым
+                            # "good" до 100-го пакета. Потери на коротком окне
+                            # намеренно игнорируем, чтобы 1 потерянный пакет из 4
+                            # не давал ложный alarm.
+                            warmup_metrics = dict(metrics)
+                            warmup_metrics["samples"] = len(metrics.get("latencies", []))
+                            warmup_quality = _quality_from_metrics(
+                                warmup_metrics, thresholds
+                            )
+                            quality, q_latency, q_jitter, _ = warmup_quality
+                            q_loss = current_quality[3]
+                            if current_quality[0] == "good":
+                                quality = "good"
+                            elif warmup_quality[0] == "good":
+                                quality = prev_quality_by_id.get(dev_id, "unknown")
+                                q_latency = q_jitter = q_loss = None
                         quality_changed = prev_quality_by_id.get(dev_id) != quality
 
                     # Пишем в саму Device (не в историю — та копится выше
