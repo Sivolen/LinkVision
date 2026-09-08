@@ -124,7 +124,7 @@
       "deleteMsg": "Are you sure you want to delete this device?",
       "deleted": "Device deleted",
       "deleteFail": "Failed to delete the device",
-      "defaultQualityProfileOpt": "-- Default --",
+      "defaultQualityProfileOpt": "— Use default profile —",
       "defaultBadge": "default"
     },
     "link": {
@@ -197,10 +197,7 @@
         "degraded": "Degraded",
         "bad": "Bad",
         "unknown": "Unknown"
-      },
-      "noChartData": "Not enough data for the chart",
-      "chartTitle": "Average latency",
-      "chartSubtitle": "Latency over the saved monitoring points"
+      }
     }
   },
   "modes": {

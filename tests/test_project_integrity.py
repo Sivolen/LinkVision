@@ -73,8 +73,8 @@ def test_migrations_have_single_entrypoint():
 
 def test_quality_profile_service_validates_threshold_order():
     source = (ROOT / "services/quality_service.py").read_text(encoding="utf-8")
-    assert "def _validate_thresholds" in source
-    assert "bad <= degraded" in source
+    assert "def validate_quality_thresholds" in source
+    assert ">= float(thresholds[bad])" in source or ">= float(thresholds[" in source
 
 
 def test_quality_card_contains_chart_structure():

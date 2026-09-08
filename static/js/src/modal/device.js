@@ -82,7 +82,11 @@ function loadQualityProfiles(selectEl, selectedProfileId) {
             profiles.forEach(p => {
                 const option = document.createElement('option');
                 option.value = p.id;
-                option.textContent = p.is_default ? `${p.name} (${t('modal.device.defaultBadge')})` : p.name;
+                // Отдельный пункт выше уже означает "использовать текущий
+                // профиль по умолчанию". Не дублируем это как "По умолчанию
+                // (по умолчанию)" внутри самого списка. Имя профиля остаётся
+                // чистым и читаемым.
+                option.textContent = p.name;
                 selectEl.appendChild(option);
             });
             selectEl.value = selectedProfileId || '';
