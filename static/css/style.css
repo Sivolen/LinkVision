@@ -2618,3 +2618,93 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 #add-ip-btn i {
     font-size: 0.9rem;
 }
+/* ============================================================================
+ПРОФИЛИ КАЧЕСТВА СВЯЗИ (Настройки -> Профили качества связи)
+============================================================================ */
+.quality-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+}
+
+.quality-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.quality-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Те же цвета, что и border-color/overlay-color в static/js/src/map/styles.js
+   для node[quality_status="degraded"|"bad"] — специально одинаковые, чтобы
+   было сразу видно, какое поле отвечает за какой ободок на карте. */
+.quality-legend-dot.quality-legend-degraded {
+  background: #fd7e14;
+}
+
+.quality-legend-dot.quality-legend-bad {
+  background: #6f42c1;
+}
+
+/* Пара порогов "снижено / плохо" в одну строку: [точка][поле] / [точка][поле] */
+.quality-threshold-pair {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.quality-threshold-pair .form-control {
+  width: 72px;
+  min-width: 72px;
+  max-width: 72px;
+  text-align: center;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.quality-pair-sep {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.quality-profiles-table td {
+  vertical-align: middle;
+}
+
+/* Название профиля + бейдж "По умолчанию" в одну строку */
+.quality-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quality-name-cell .form-control {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.quality-default-badge {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.35em 0.6em;
+  white-space: nowrap;
+}
+
+.quality-profile-new {
+  padding: 1.2rem;
+  border: 1px dashed var(--border-color);
+  border-radius: 18px;
+  background: var(--bg-primary);
+}

@@ -237,6 +237,13 @@
                             <input type="checkbox" class="form-check-input" id="dev_monitoring">
                             <label class="form-check-label" for="dev_monitoring">{{ _('Мониторинг включён') }}</label>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ _('Профиль качества связи') }}</label>
+                            <select id="dev_quality_profile" class="form-select">
+                                <option value="">{{ _('-- По умолчанию --') }}</option>
+                            </select>
+                            <small class="text-muted">{{ _('Пороги потерь/задержки/джиттера, при которых устройство считается "снижено" или "плохо". Управляются в Настройках.') }}</small>
+                        </div>
                     </div>
                     <!-- Вкладка "История" -->
                     <div class="tab-pane" id="device-history">

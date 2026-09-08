@@ -258,10 +258,15 @@ class TestBatch5Admin:
                     interval=10,
                     db_size=0,
                     db_mtime=None,
+                    # Реальный роут (blueprints/admin.py::settings) всегда передаёт
+                    # quality_profiles — тест должен рендерить с тем же контрактом,
+                    # а не только с исторической частью контекста.
+                    quality_profiles=[],
                 )
         assert "Monitoring settings" in html
         assert "Unknown" in html  # db_mtime=None → «Неизвестно»
         assert "Reset limits" in html
+        assert "Connection quality profiles" in html  # заголовок нового блока
 
 
 class TestCatalogIntegrity:

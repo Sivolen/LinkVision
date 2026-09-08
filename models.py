@@ -37,6 +37,42 @@ class DeviceType(db.Model):
     devices = db.relationship("Device", backref="type", lazy="dynamic")
 
 
+class QualityProfile(db.Model):
+    """
+    Профиль порогов качества ICMP (потери/задержка/джиттер -> good/degraded/bad).
+
+    Раньше эти пороги были захардкожены в коде (calculate_quality). Теперь
+    один профиль с is_default=True действует на все устройства, у которых
+    quality_profile_id не задан явно (NULL) — а для отдельных устройств можно
+    точечно назначить другой профиль (например, более мягкий для линка с
+    заведомо высокой задержкой, или более строгий для критичного сервиса).
+    """
+
+    __tablename__ = "quality_profile"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), nullable=False, unique=True)
+    is_default = db.Column(db.Boolean, default=False, nullable=False)
+    # "Снижено" (degraded) — от этого значения и выше по каждой метрике.
+    loss_degraded_percent = db.Column(db.Float, nullable=False, default=1.0)
+    latency_degraded_ms = db.Column(db.Float, nullable=False, default=50.0)
+    jitter_degraded_ms = db.Column(db.Float, nullable=False, default=10.0)
+    # "Плохое" (bad) — от этого значения и выше по каждой метрике.
+    loss_bad_percent = db.Column(db.Float, nullable=False, default=5.0)
+    latency_bad_ms = db.Column(db.Float, nullable=False, default=100.0)
+    jitter_bad_ms = db.Column(db.Float, nullable=False, default=30.0)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+    devices = db.relationship("Device", backref="quality_profile", lazy="dynamic")
+
+    __table_args__ = (
+        # Ровно один профиль-дефолт — по значению колонки нельзя выразить
+        # "только один True" через обычный constraint без вычисляемого
+        # индекса, специфичного для БД, поэтому проверка "остался ли хотя бы
+        # один дефолт" делается в сервисе (см. quality_profile_service.py) при
+        # удалении/смене дефолта, а не на уровне схемы.
+    )
+
+
 class Device(db.Model):
     __tablename__ = "device"
     __table_args__ = (
@@ -66,6 +102,16 @@ class Device(db.Model):
     quality_jitter_ms = db.Column(db.Float, nullable=True)
     quality_loss_percent = db.Column(db.Float, nullable=True)
     quality_last_check = db.Column(db.DateTime, nullable=True)
+    # NULL = устройство использует профиль, помеченный is_default=True (а не
+    # "профиль по умолчанию на момент назначения") — если админ поменяет,
+    # какой профиль дефолтный, устройства без явного профиля автоматически
+    # подхватят новый дефолт, что и ожидается от "по умолчанию".
+    quality_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("quality_profile.id", use_alter=True),
+        nullable=True,
+        index=True,
+    )
 
     source_links = db.relationship(
         "Link",

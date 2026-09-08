@@ -12,7 +12,16 @@ import datetime
 
 from sqlalchemy.exc import IntegrityError
 
-from models import Device, DeviceIP, DeviceHistory, db, DeviceType, Group, Map
+from models import (
+    Device,
+    DeviceIP,
+    DeviceHistory,
+    db,
+    DeviceType,
+    Group,
+    Map,
+    QualityProfile,
+)
 from utils.logger import api_logger
 from services.validators import validate_ip_list
 from services.db.device_repository import device_repo
@@ -166,6 +175,7 @@ def get_device_details(device_id: int) -> Dict[str, Any]:
         "map_id": device.map_id,
         "group_id": device.group_id,
         "monitoring_enabled": device.monitoring_enabled,
+        "quality_profile_id": device.quality_profile_id,
         "quality_status": device.quality_status,
         "quality_latency_ms": device.quality_latency_ms,
         "quality_jitter_ms": device.quality_jitter_ms,
@@ -189,6 +199,7 @@ def create_device(
     group_id: Optional[int] = None,
     monitoring_enabled: bool = True,
     font_size: Optional[int] = None,
+    quality_profile_id: Optional[int] = None,
 ) -> Device:
     """
     Создать новое устройство.
@@ -203,6 +214,7 @@ def create_device(
         group_id: ID группы
         monitoring_enabled: Включить мониторинг
         font_size: Размер шрифта
+        quality_profile_id: ID профиля порогов качества (None — профиль по умолчанию)
 
     Returns:
         Device: Созданное устройство
@@ -219,6 +231,9 @@ def create_device(
     if not type_obj:
         raise ValueError(f"Тип устройства с id {type_id} не найден")
 
+    if quality_profile_id and not db.session.get(QualityProfile, quality_profile_id):
+        raise ValueError(f"Профиль качества с id {quality_profile_id} не найден")
+
     try:
         device = Device(
             map_id=map_id,
@@ -229,6 +244,7 @@ def create_device(
             pos_y=y,
             group_id=group_id if group_id and group_id > 0 else None,
             monitoring_enabled=monitoring_enabled,
+            quality_profile_id=quality_profile_id if quality_profile_id else None,
             status="up",
         )
         db.session.add(device)
@@ -291,7 +307,15 @@ def update_device(device_id: int, **kwargs: Any) -> Device:
         "group_id",
         "monitoring_enabled",
         "font_size",
+        "quality_profile_id",
     ]
+
+    if "quality_profile_id" in kwargs:
+        qp_id = kwargs["quality_profile_id"]
+        qp_id = qp_id if qp_id else None
+        if qp_id and not db.session.get(QualityProfile, qp_id):
+            raise ValueError(f"Профиль качества с id {qp_id} не найден")
+        kwargs["quality_profile_id"] = qp_id
 
     for key, value in kwargs.items():
         if key in allowed_fields:
