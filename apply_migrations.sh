@@ -20,6 +20,8 @@ echo "============================================"
 
 "$PYTHON_BIN" "$ROOT_DIR/migrate_db.py"
 "$PYTHON_BIN" "$ROOT_DIR/migrate_ordering.py"
+"$PYTHON_BIN" "$ROOT_DIR/migrate_quality.py"
+"$PYTHON_BIN" "$ROOT_DIR/migrate_quality_profile.py"
 
 "$PYTHON_BIN" - <<'PY'
 import os
