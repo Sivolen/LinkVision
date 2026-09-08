@@ -175,11 +175,35 @@ export function initMap(id) {
 
         if (!monitoringEnabled) {
             if (typeof removePulsingNode === 'function') removePulsingNode(cy, node);
-            node.data('status', 'up');
+            node.data({
+                status: 'up',
+                quality_status: 'unknown',
+                quality_latency_ms: null,
+                quality_jitter_ms: null,
+                quality_loss_percent: null,
+            });
             return;
         }
 
-        if (node.data('status') === newStatus) return;
+        // Поддерживаем и одиночное событие полностью: если backend/прокси
+        // когда-нибудь отправит device_status с quality-полями, карта не
+        // должна оставить старый цвет качества. Основной монитор сейчас
+        // использует device_status_batch, но оба пути должны иметь одинаковую
+        // семантику.
+        if (Object.prototype.hasOwnProperty.call(data, 'quality_status')) {
+            node.data({
+                quality_status: data.quality_status || 'unknown',
+                quality_latency_ms: data.quality_latency_ms ?? null,
+                quality_jitter_ms: data.quality_jitter_ms ?? null,
+                quality_loss_percent: data.quality_loss_percent ?? null,
+            });
+        }
+
+        if (node.data('status') === newStatus) {
+            cy.style().update();
+            refreshZoomEmphasis();
+            return;
+        }
 
         statusBatch.push({ node, newStatus });
         if (statusBatchTimeout) clearTimeout(statusBatchTimeout);

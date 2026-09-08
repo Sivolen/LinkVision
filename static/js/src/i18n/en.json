@@ -197,7 +197,10 @@
         "degraded": "Degraded",
         "bad": "Bad",
         "unknown": "Unknown"
-      }
+      },
+      "noChartData": "Not enough data for the chart",
+      "chartTitle": "Average latency",
+      "chartSubtitle": "Latency over the saved monitoring points"
     }
   },
   "modes": {
