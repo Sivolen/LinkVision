@@ -60,11 +60,13 @@
                             <form id="quality-profile-form-{{ profile.id }}" method="POST" action="{{ url_for('admin.update_quality_profile', profile_id=profile.id) }}"></form>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" form="quality-profile-form-{{ profile.id }}">
                             <div class="quality-name-cell">
+                                {% if profile.is_default %}
+                                <span class="badge bg-primary quality-default-badge" title="{{ _('Профиль по умолчанию для всех устройств без явно назначенного профиля') }}">
+                                    <i class="fas fa-star" aria-hidden="true"></i>{{ _('По умолчанию') }}
+                                </span>
+                                {% endif %}
                                 <input type="text" name="name" form="quality-profile-form-{{ profile.id }}"
                                        class="form-control form-control-sm" value="{{ profile.name }}">
-                                {% if profile.is_default %}
-                                <span class="badge bg-primary quality-default-badge" title="{{ _('Профиль по умолчанию для всех устройств без явно назначенного профиля') }}">{{ _('По умолчанию') }}</span>
-                                {% endif %}
                             </div>
                         </td>
                         <td style="min-width: 190px;">

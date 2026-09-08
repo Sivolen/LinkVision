@@ -180,10 +180,41 @@ def get_device_thresholds_map(
     return profiles_by_id, profile_to_thresholds(default_profile)
 
 
+def _validate_thresholds(thresholds: Dict[str, float]) -> Dict[str, float]:
+    """Validate and normalize a quality profile before it reaches the DB."""
+    result = {}
+    for key in FALLBACK_THRESHOLDS:
+        try:
+            value = float(thresholds[key])
+        except (KeyError, TypeError, ValueError):
+            raise ValueError(f"Некорректное значение порога: {key}")
+        if value < 0:
+            raise ValueError(f"Порог {key} не может быть отрицательным")
+        result[key] = value
+
+    for metric in ("loss", "latency", "jitter"):
+        degraded = result[
+            (
+                f"{metric}_degraded_percent"
+                if metric == "loss"
+                else f"{metric}_degraded_ms"
+            )
+        ]
+        bad = result[
+            f"{metric}_bad_percent" if metric == "loss" else f"{metric}_bad_ms"
+        ]
+        if bad <= degraded:
+            raise ValueError(
+                f"Порог 'плохо' должен быть выше порога 'снижено' для {metric}"
+            )
+    return result
+
+
 def create_quality_profile(name: str, thresholds: Dict[str, float]) -> QualityProfile:
     name = (name or "").strip()
     if not name:
         raise ValueError("Название профиля не может быть пустым")
+    thresholds = _validate_thresholds(thresholds)
     if QualityProfile.query.filter_by(name=name).first():
         raise ValueError("Профиль с таким названием уже существует")
 
@@ -197,6 +228,7 @@ def update_quality_profile(
     profile_id: int, name: Optional[str], thresholds: Dict[str, float]
 ) -> QualityProfile:
     profile = QualityProfile.query.get_or_404(profile_id)
+    thresholds = _validate_thresholds(thresholds)
     if name and name.strip() and name.strip() != profile.name:
         if QualityProfile.query.filter(
             QualityProfile.name == name.strip(), QualityProfile.id != profile_id

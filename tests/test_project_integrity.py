@@ -61,3 +61,42 @@ def test_monitor_uses_rolling_quality_window_before_live_classification():
     # классифицируем) не изменилось.
     assert "_live_quality_from_window(dev_id, metrics, thresholds)" in source
     assert "calculate_quality(metrics, thresholds)" in source
+
+
+def test_migrations_have_single_entrypoint():
+    script = (ROOT / "apply_migrations.sh").read_text(encoding="utf-8")
+    assert '"$PYTHON_BIN" "$ROOT_DIR/migrate_db.py"' in script
+    assert "migrate_ordering.py" not in script
+    assert "migrate_quality.py" not in script
+    assert "migrate_quality_profile.py" not in script
+
+
+def test_quality_profile_service_validates_threshold_order():
+    source = (ROOT / "services/quality_service.py").read_text(encoding="utf-8")
+    assert "def _validate_thresholds" in source
+    assert "bad <= degraded" in source
+
+
+def test_quality_card_contains_chart_structure():
+    source = (ROOT / "static/js/src/modal/quality.js").read_text(encoding="utf-8")
+    assert "quality-summary-grid" in source
+    assert "quality-chart-svg" in source
+    assert "quality-chart-grid" in source
+
+
+def test_request_status_contains_quality_fields():
+    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert 'socketio.on("request_status")' in source
+    for key in (
+        "quality_status",
+        "quality_latency_ms",
+        "quality_jitter_ms",
+        "quality_loss_percent",
+    ):
+        assert f'"{key}": d.{key}' in source
+
+
+def test_single_realtime_status_event_can_update_quality():
+    source = (ROOT / "static/js/src/map/index.js").read_text(encoding="utf-8")
+    assert "quality_status: data.quality_status || 'unknown'" in source
+    assert "if (node.data('status') === newStatus)" in source
