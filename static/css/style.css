@@ -2709,152 +2709,46 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   background: var(--bg-primary);
 }
 
-/* ==========================================================================
-   КАРТОЧКА УСТРОЙСТВА — КАЧЕСТВО ICMP
-   ========================================================================== */
-.quality-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.quality-metric-card {
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: var(--bg-primary);
-}
-
-.quality-metric-label {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-}
-
-.quality-metric-card strong {
-  font-size: 1.05rem;
-  line-height: 1.2;
-}
-
-.quality-metric-status {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.device-quality-chart {
-  margin-top: 14px;
-  padding: 14px;
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
-  background: var(--bg-primary);
-  overflow-x: auto;
-}
-
-.device-quality-chart-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.quality-chart-period {
-  padding: 4px 9px;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  white-space: nowrap;
+/* График качества в карточке устройства */
+.quality-chart-title {
+  font-weight: 600;
+  margin-bottom: .35rem;
 }
 
 .quality-chart-svg {
   display: block;
   width: 100%;
-  min-width: 520px;
-  height: auto;
+  min-height: 220px;
+  overflow: visible;
+  color: var(--text-primary, currentColor);
 }
 
 .quality-chart-grid {
-  stroke: var(--border-color);
+  stroke: currentColor;
+  stroke-opacity: .12;
   stroke-width: 1;
-  opacity: 0.7;
 }
 
 .quality-chart-axis {
-  fill: var(--text-secondary);
+  fill: currentColor;
+  opacity: .65;
   font-size: 11px;
 }
 
-.quality-chart-title {
-  fill: var(--text-primary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.quality-chart-area {
-  fill: currentColor;
-  opacity: 0.08;
-}
-
 .quality-chart-line {
-  fill: none;
   stroke: currentColor;
   stroke-width: 2.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .quality-chart-point {
-  fill: var(--bg-primary);
-  stroke: currentColor;
-  stroke-width: 2;
+  fill: currentColor;
+  stroke: var(--bg-primary, #fff);
+  stroke-width: 1.5;
 }
 
-.device-quality-chart-empty,
-.quality-empty-state {
-  padding: 28px 12px;
-  text-align: center;
-}
-
-/* Профиль по умолчанию: не сжимает поле имени и выглядит как аккуратный pill. */
-.quality-name-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.quality-name-field {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.quality-name-field .form-control {
-  width: 100%;
-}
-
-.quality-default-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 5px;
-  padding: 3px 8px;
-  border: 1px solid rgba(13, 110, 253, 0.2);
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.quality-default-badge i {
-  font-size: 0.65rem;
-}
-
-@media (max-width: 768px) {
-  .quality-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.quality-chart-caption {
+  margin-top: .25rem;
+  color: var(--text-secondary, #777);
+  font-size: .8rem;
 }

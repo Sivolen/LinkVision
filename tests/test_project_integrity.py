@@ -79,9 +79,9 @@ def test_quality_profile_service_validates_threshold_order():
 
 def test_quality_card_contains_chart_structure():
     source = (ROOT / "static/js/src/modal/quality.js").read_text(encoding="utf-8")
-    assert "quality-summary-grid" in source
     assert "quality-chart-svg" in source
     assert "quality-chart-grid" in source
+    assert "quality-chart-line" in source
 
 
 def test_request_status_contains_quality_fields():
