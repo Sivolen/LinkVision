@@ -46,7 +46,11 @@ function renderLatencyChart(chart, items, latest) {
     const plotWidth = width - padLeft - padRight;
     const plotHeight = height - padTop - padBottom;
 
-    const pointsData = (items || [])
+    const rawItems = Array.isArray(items)
+        ? items
+        : (items && Array.isArray(items.items) ? items.items : []);
+
+    const pointsData = rawItems
         .filter(item => item && item.latency_avg_ms !== null && item.latency_avg_ms !== undefined)
         .map(item => ({
             value: Number(item.latency_avg_ms),
@@ -90,7 +94,7 @@ function renderLatencyChart(chart, items, latest) {
     chart.innerHTML = `<div class="quality-chart-title">${escapeSvgText(tr('modal.quality.chartTitle', 'Средняя задержка за 24 часа'))}</div>
         <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeSvgText(tr('modal.quality.chartLabel', 'График средней задержки'))}" class="quality-chart-svg">
             ${grid}
-            <polyline points="${linePoints}" class="quality-chart-line" fill="none" />
+            ${pointsData.length > 1 ? `<polyline points="${linePoints}" class="quality-chart-line" fill="none" />` : ''}
             ${circles}
             ${xLabels}
             <text x="14" y="${padTop + plotHeight / 2}" transform="rotate(-90 14 ${padTop + plotHeight / 2})" text-anchor="middle" class="quality-chart-axis">${escapeSvgText(tr('modal.quality.latencyAxis', 'Задержка, мс'))}</text>
@@ -124,7 +128,24 @@ export function renderDeviceQuality(data, current = null) {
             <div class="col-6 col-md-3"><strong>${escapeSvgText(tr('modal.quality.status', 'Качество'))}</strong><br><span class="badge quality-${escapeSvgText(latest.quality)}">${escapeSvgText(qualityLabel(latest.quality))}</span></div>
         </div>`;
 
-    renderLatencyChart(chart, data?.items || [], latest);
+    const historyItems = Array.isArray(data?.items)
+        ? data.items
+        : (Array.isArray(data) ? data : []);
+
+    // История пишется агрегатами раз в 5 минут. Сразу после начала
+    // мониторинга она может быть ещё пустой, хотя live-метрики уже есть.
+    // В этом случае всё равно рисуем текущую точку, чтобы график не выглядел
+    // сломанным. Когда накопится история, она полностью заменит этот fallback.
+    const chartItems = historyItems.length > 0
+        ? historyItems
+        : (latest?.latency_avg_ms !== null && latest?.latency_avg_ms !== undefined
+            ? [{
+                timestamp: current?.quality_last_check || data?.latest?.timestamp || new Date().toISOString(),
+                latency_avg_ms: latest.latency_avg_ms,
+            }]
+            : []);
+
+    renderLatencyChart(chart, chartItems, latest);
 }
 
 export function clearDeviceQuality() {
