@@ -79,17 +79,28 @@ function loadQualityProfiles(selectEl, selectedProfileId) {
         .then(res => res.ok ? res.json() : [])
         .then(profiles => {
             selectEl.innerHTML = '<option value="">' + t('modal.device.defaultQualityProfileOpt') + '</option>';
+
+            // Глобальный профиль по умолчанию уже представлен служебным
+            // пунктом "— По умолчанию —". Поэтому сам профиль, отмеченный
+            // is_default, не показываем отдельно в списке.
+            const defaultProfile = profiles.find(p => p.is_default === true);
+
             profiles.forEach(p => {
+                if (p.is_default === true) return;
+
                 const option = document.createElement('option');
                 option.value = p.id;
-                // Отдельный пункт выше уже означает "использовать текущий
-                // профиль по умолчанию". Не дублируем это как "По умолчанию
-                // (по умолчанию)" внутри самого списка. Имя профиля остаётся
-                // чистым и читаемым.
                 option.textContent = p.name;
                 selectEl.appendChild(option);
             });
-            selectEl.value = selectedProfileId || '';
+
+            // NULL/пустое значение означает использовать текущий глобальный
+            // профиль по умолчанию. Если старое устройство явно ссылалось на
+            // default-профиль, визуально переводим его в этот режим.
+            const selectedId = selectedProfileId ? Number(selectedProfileId) : null;
+            selectEl.value = defaultProfile && selectedId === Number(defaultProfile.id)
+                ? ''
+                : (selectedProfileId || '');
         })
         .catch(err => Logger.error('Ошибка загрузки профилей качества:', err));
 }
