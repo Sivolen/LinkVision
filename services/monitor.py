@@ -156,7 +156,19 @@ def _record_quality_sample(device_id, metrics, now, thresholds=None):
     window["received"] += len(metrics.get("latencies", []))
     window["latencies"].extend(metrics.get("latencies", []))
     window["jitter"].extend(metrics.get("jitter_values", []))
-    if now - _quality_last_persist.get(device_id, now) < QUALITY_PERSIST_SECONDS:
+    # ВАЖНО: fallback здесь раньше был `now` (сам текущий момент) — значит
+    # `now - now = 0 < QUALITY_PERSIST_SECONDS` было ИСТИНОЙ на каждом вызове
+    # для устройства, у которого ключа ещё нет в _quality_last_persist. А
+    # ключ выставляется ТОЛЬКО внутри персиста ниже — то есть условие никогда
+    # не открывалось: окно не пересоздавалось НИКОГДА, копилось бесконечно с
+    # момента запуска процесса (или последнего рестарта). Отсюда и "фиолетовое
+    # устройство с 95% потерь", которое на самом деле уже часами отвечает
+    # нормально — просто накопленные когда-то давно неудачные пакеты навсегда
+    # тянут кумулятивный процент вниз, потому что сброс никогда не наступал.
+    # Правильный sentinel — None: тогда для НОВОГО device_id (ключа ещё нет)
+    # условие корректно False, и первый персист происходит сразу же.
+    last_persist = _quality_last_persist.get(device_id)
+    if last_persist is not None and now - last_persist < QUALITY_PERSIST_SECONDS:
         return False
     latencies = window["latencies"]
     sent = window["sent"]
