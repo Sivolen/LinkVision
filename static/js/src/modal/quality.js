@@ -47,9 +47,18 @@ function makeSeriesChart(items, series, title, aria, suffix, step) {
     }).join('');
     const dots=series.map((s,si)=>points.map((p,i)=>Number.isFinite(p.values[si])?`<circle cx="${x(i)}" cy="${y(p.values[si])}" r="3" class="quality-chart-point quality-chart-series-${si}"><title>${esc(`${s.label}: ${value(p.values[si],suffix)} — ${chartTime(p.time)}`)}</title></circle>`:'').join('')).join('');
     const first=points[0], last=points[points.length-1];
-    const labels=points.length===1
-        ? `<text x="${x(0)}" y="${height-12}" text-anchor="middle" class="quality-chart-axis">${esc(chartTime(first.time))}</text>`
-        : `<text x="${x(0)}" y="${height-12}" text-anchor="start" class="quality-chart-axis">${esc(chartTime(first.time))}</text><text x="${x(points.length-1)}" y="${height-12}" text-anchor="end" class="quality-chart-axis">${esc(chartTime(last.time))}</text>`;
+    // Промежуточные подписи по оси времени: раньше показывались только первая
+    // и последняя точки — для окна в 24 часа (до ~288 точек) этого мало,
+    // чтобы понять, на какое время суток пришёлся конкретный участок графика.
+    // Берём умеренное число меток (5), равномерно распределённых по оси, и не
+    // дублируем first/last, если шаг совпал с краем.
+    const tickCount = Math.min(5, points.length);
+    const tickIdx = points.length <= 1 ? [0] : Array.from({length: tickCount}, (_, i) => Math.round(i * (points.length - 1) / (tickCount - 1)));
+    const uniqueTickIdx = [...new Set(tickIdx)];
+    const labels = uniqueTickIdx.map((i, pos) => {
+        const anchor = pos === 0 ? 'start' : pos === uniqueTickIdx.length - 1 ? 'end' : 'middle';
+        return `<text x="${x(i).toFixed(1)}" y="${height-12}" text-anchor="${anchor}" class="quality-chart-axis">${esc(chartTime(points[i].time))}</text>`;
+    }).join('');
     const legend=series.map((s,i)=>`<span class="quality-chart-legend-item quality-chart-series-${i}"><i></i>${esc(s.label)}</span>`).join('');
     return `<div class="quality-chart-title">${esc(title)}</div><div class="quality-chart-legend">${legend}</div><svg viewBox="0 0 ${width} ${height}" class="quality-chart-svg" role="img" aria-label="${esc(aria)}">${grid}${lines}${dots}${labels}<text x="14" y="${top+ph/2}" transform="rotate(-90 14 ${top+ph/2})" text-anchor="middle" class="quality-chart-axis">${esc(suffix.trim())}</text></svg>`;
 }
@@ -63,7 +72,13 @@ function makeLossChart(items) {
     const grid=[0,.5,1].map(r=>`<line x1="${left}" y1="${y(max*r)}" x2="${width-right}" y2="${y(max*r)}" class="quality-chart-grid"/><text x="${left-8}" y="${y(max*r)+4}" text-anchor="end" class="quality-chart-axis">${(max*r).toFixed(0)}%</text>`).join('');
     const line=points.map((p,i)=>`${x(i)},${y(p.value)}`).join(' ');
     const dots=points.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.value)}" r="3" class="quality-chart-point quality-chart-loss"><title>${esc(`${tr('modal.quality.loss','Потери')}: ${value(p.value,' %')} — ${chartTime(p.time)}`)}</title></circle>`).join('');
-    return `<div class="quality-chart-title">${esc(tr('modal.quality.lossChartTitle','Потери пакетов'))}</div><svg viewBox="0 0 ${width} ${height}" class="quality-chart-svg" role="img" aria-label="${esc(tr('modal.quality.lossChartLabel','График потерь пакетов'))}">${grid}<polyline points="${line}" class="quality-chart-line quality-chart-loss" fill="none"/>${dots}</svg>`;
+    const lossTickCount = Math.min(5, points.length);
+    const lossTickIdx = points.length <= 1 ? [0] : Array.from({length: lossTickCount}, (_, i) => Math.round(i * (points.length - 1) / (lossTickCount - 1)));
+    const lossLabels = [...new Set(lossTickIdx)].map((i, pos, arr) => {
+        const anchor = pos === 0 ? 'start' : pos === arr.length - 1 ? 'end' : 'middle';
+        return `<text x="${x(i).toFixed(1)}" y="${height-12}" text-anchor="${anchor}" class="quality-chart-axis">${esc(chartTime(points[i].time))}</text>`;
+    }).join('');
+    return `<div class="quality-chart-title">${esc(tr('modal.quality.lossChartTitle','Потери пакетов'))}</div><svg viewBox="0 0 ${width} ${height}" class="quality-chart-svg" role="img" aria-label="${esc(tr('modal.quality.lossChartLabel','График потерь пакетов'))}">${grid}<polyline points="${line}" class="quality-chart-line quality-chart-loss" fill="none"/>${dots}${lossLabels}</svg>`;
 }
 
 function renderCharts(chart, data, current) {
