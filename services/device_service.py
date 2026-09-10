@@ -25,7 +25,7 @@ from models import (
 from utils.logger import api_logger
 from services.validators import validate_ip_list
 from services.db.device_repository import device_repo
-from services.quality_service import get_device_quality_history
+from services.quality_service import get_device_quality_history, get_device_quality_thresholds, get_metric_statuses
 
 
 def validate_device_type(type_id: int) -> DeviceType:
@@ -182,6 +182,12 @@ def get_device_details(device_id: int) -> Dict[str, Any]:
         "quality_loss_percent": device.quality_loss_percent,
         "quality_last_check": (
             device.quality_last_check.isoformat() if device.quality_last_check else None
+        ),
+        "quality_metric_status": get_metric_statuses(
+            device.quality_latency_ms,
+            device.quality_jitter_ms,
+            device.quality_loss_percent,
+            get_device_quality_thresholds(device_id),
         ),
         "quality_history": get_device_quality_history(device_id),
         "history": history,

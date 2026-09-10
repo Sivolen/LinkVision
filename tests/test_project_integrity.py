@@ -54,11 +54,9 @@ def test_realtime_status_batch_applies_quality_even_when_status_is_unchanged():
 
 def test_monitor_uses_rolling_quality_window_before_live_classification():
     source = (ROOT / "services/monitor.py").read_text(encoding="utf-8")
-    assert "QUALITY_LIVE_MIN_SAMPLES = 100" in source
-    # calculate_quality/_live_quality_from_window теперь принимают thresholds
-    # профиля устройства (фича профилей качества) — сигнатура вызовов
-    # обновлена вместе с ней, поведение (сначала копим окно, потом
-    # классифицируем) не изменилось.
+    assert "QUALITY_LIVE_MIN_SAMPLES = 8" in source
+    # 8 пакетов = два цикла при типичной настройке 4 пакета/цикл;
+    # latency/jitter при этом оцениваются сразу, а короткая потеря не флапает карту.
     assert "_live_quality_from_window(dev_id, metrics, thresholds)" in source
     assert "calculate_quality(metrics, thresholds)" in source
 
