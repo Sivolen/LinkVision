@@ -80,6 +80,9 @@ def ping_host(ip, count=1):
     """Выполнить ICMP-проверку и вернуть RTT каждого успешного пакета в мс."""
     latencies = []
     if PING3_AVAILABLE:
+        # Не делаем искусственную паузу между ICMP-пакетами: при большом
+        # количестве устройств это заметно увеличивает длительность цикла.
+        # Последовательные RTT по-прежнему используются для расчёта jitter.
         for i in range(count):
             try:
                 response_time = ping(ip, timeout=2)
@@ -87,8 +90,6 @@ def ping_host(ip, count=1):
                     latencies.append(float(response_time) * 1000.0)
             except Exception:
                 pass
-            if i < count - 1:
-                time.sleep(0.5)
         return latencies, count
 
     param = "-n" if platform.system().lower() == "windows" else "-c"
