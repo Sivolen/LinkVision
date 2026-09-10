@@ -25,45 +25,112 @@ FALLBACK_THRESHOLDS: Dict[str, float] = {
 }
 
 
+def _metric_status(value: Optional[float], degraded: float, bad: float) -> str:
+    if value is None:
+        return "unknown"
+    value = float(value)
+    if value >= float(bad):
+        return "bad"
+    if value >= float(degraded):
+        return "degraded"
+    return "good"
+
+
+def get_metric_statuses(
+    latency_avg_ms: Optional[float],
+    jitter_ms: Optional[float],
+    loss_percent: Optional[float],
+    thresholds: Optional[Dict[str, float]] = None,
+) -> Dict[str, str]:
+    t = thresholds or FALLBACK_THRESHOLDS
+    return {
+        "latency": _metric_status(latency_avg_ms, t["latency_degraded_ms"], t["latency_bad_ms"]),
+        "jitter": _metric_status(jitter_ms, t["jitter_degraded_ms"], t["jitter_bad_ms"]),
+        "loss": _metric_status(loss_percent, t["loss_degraded_percent"], t["loss_bad_percent"]),
+    }
+
+
+def get_device_quality_thresholds(device_id: int) -> Dict[str, float]:
+    ensure_default_quality_profile()
+    device = Device.query.get(device_id)
+    if not device:
+        return dict(FALLBACK_THRESHOLDS)
+    profile = None
+    if device.quality_profile_id:
+        profile = QualityProfile.query.get(device.quality_profile_id)
+    if profile is None:
+        profile = QualityProfile.query.filter_by(is_default=True).first()
+    return profile_to_thresholds(profile) if profile else dict(FALLBACK_THRESHOLDS)
+
+
 def get_device_quality_history(device_id: int, hours: int = 24) -> Dict[str, Any]:
-    """
-    Получить историю качества устройства за указанный период.
+    """Return every persisted quality aggregate in the requested time range.
 
-    Args:
-        device_id: ID устройства
-        hours: Количество часов (по умолчанию 24)
-
-    Returns:
-        Dict с полями latest и items
+    History rows are 5-minute aggregates; they are deliberately NOT collapsed
+    into a daily average. The current live sample is returned separately so the
+    UI can show it without pretending it is a historical 5-minute point.
     """
+    hours = max(1, min(int(hours or 24), 720))
     cutoff = datetime.now() - timedelta(hours=hours)
+    thresholds = get_device_quality_thresholds(device_id)
     items = (
         DeviceQualityHistory.query.filter(
             DeviceQualityHistory.device_id == device_id,
             DeviceQualityHistory.timestamp >= cutoff,
         )
-        .order_by(DeviceQualityHistory.timestamp.asc())
+        .order_by(DeviceQualityHistory.timestamp.asc(), DeviceQualityHistory.id.asc())
         .all()
     )
 
-    records = [
-        {
+    records = []
+    for item in items:
+        records.append({
+            "id": item.id,
             "timestamp": item.timestamp.isoformat(),
             "samples": item.samples,
             "loss_percent": item.loss_percent,
-            "latency_avg_ms": item.latency_avg_ms,
             "latency_min_ms": item.latency_min_ms,
+            "latency_avg_ms": item.latency_avg_ms,
             "latency_max_ms": item.latency_max_ms,
             "jitter_ms": item.jitter_ms,
             "quality": item.quality,
+            "metric_status": get_metric_statuses(
+                item.latency_avg_ms, item.jitter_ms, item.loss_percent, thresholds
+            ),
+        })
+
+    # Live snapshot is deliberately separate from persisted 5-minute history.
+    # This lets the UI draw the current point even when the first history
+    # aggregate has not been persisted yet, and avoids guessing field names
+    # from /details response on the frontend.
+    device = Device.query.get(device_id)
+    live = None
+    if device and device.quality_last_check:
+        live_latency = device.quality_latency_ms
+        live_jitter = device.quality_jitter_ms
+        live_loss = device.quality_loss_percent
+        live_quality = device.quality_status or "unknown"
+        live = {
+            "timestamp": device.quality_last_check.isoformat(),
+            "quality": live_quality,
+            "latency_avg_ms": live_latency,
+            "jitter_ms": live_jitter,
+            "loss_percent": live_loss,
+            "metric_status": get_metric_statuses(
+                live_latency, live_jitter, live_loss, thresholds
+            ),
         }
-        for item in items
-    ]
 
     latest = records[-1] if records else None
-
-    return {"latest": latest, "items": records}
-
+    return {
+        "hours": hours,
+        "interval_seconds": 300,
+        "count": len(records),
+        "latest": latest,
+        "items": records,
+        "live": live,
+        "thresholds": thresholds,
+    }
 
 def calculate_quality(
     metrics: Optional[Dict[str, Any]], thresholds: Optional[Dict[str, float]] = None

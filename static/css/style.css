@@ -2752,3 +2752,25 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   color: var(--text-secondary, #777);
   font-size: .8rem;
 }
+
+/* Детализация качества: каждая метрика подсвечивается независимо от общего статуса. */
+.quality-metric-card {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: .65rem .75rem;
+  min-height: 86px;
+  background: var(--bg-primary);
+}
+.quality-metric-card small { opacity: .72; }
+.quality-metric-value { font-size: 1.08rem; font-weight: 600; margin: .12rem 0; }
+.quality-metric-bad { border-color: #6f42c1; box-shadow: inset 4px 0 0 #6f42c1; }
+.quality-metric-bad small { color: #6f42c1; font-weight: 600; }
+.quality-metric-degraded { border-color: #fd7e14; box-shadow: inset 4px 0 0 #fd7e14; }
+.quality-metric-degraded small { color: #fd7e14; font-weight: 600; }
+.quality-metric-good { border-color: #198754; box-shadow: inset 4px 0 0 #198754; }
+.quality-overall { overflow: hidden; }
+.quality-chart-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: .15rem; font-size: .8rem; }
+.quality-chart-legend-item i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: .3rem; background: currentColor; }
+.quality-chart-series-0 { color: #0d6efd; stroke: #0d6efd; fill: #0d6efd; }
+.quality-chart-series-1 { color: #6f42c1; stroke: #6f42c1; fill: #6f42c1; }
+.quality-chart-loss { color: #dc3545; stroke: #dc3545; fill: #dc3545; }

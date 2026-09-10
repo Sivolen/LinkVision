@@ -189,7 +189,7 @@
       "jitter": "Jitter (mean RTT delta)",
       "loss": "Loss",
       "status": "Quality",
-      "chartLabel": "Latency chart",
+      "chartLabel": "Quality chart",
       "avgLatency": "Average latency",
       "value": {
         "good": "Good",
@@ -197,10 +197,20 @@
         "bad": "Bad",
         "unknown": "Unknown"
       },
-      "chartTitle": "Average latency over 24 hours",
+      "chartTitle": "Latency and jitter over 24 hours",
       "latencyAxis": "Latency, ms",
-      "chartPeriod": "Average latency history for the last 24 hours",
-      "noChartData": "No chart data available"
+      "chartPeriod": "One point = one 5-minute monitoring aggregate",
+      "noChartData": "No chart data available",
+      "metric": {
+        "latency": "Latency",
+        "jitter": "Jitter",
+        "loss": "Packet loss"
+      },
+      "jitterShort": "Jitter",
+      "msAxis": "ms",
+      "lossChartTitle": "Packet loss",
+      "lossChartLabel": "Packet loss chart",
+      "noProblems": "No individual metric problems detected"
     }
   },
   "modes": {

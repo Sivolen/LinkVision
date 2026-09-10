@@ -31,7 +31,7 @@ _quality_last_persist = {}
 QUALITY_PERSIST_SECONDS = 300
 QUALITY_RETENTION_DAYS = 30
 _last_quality_cleanup = 0
-QUALITY_LIVE_MIN_SAMPLES = 100
+QUALITY_LIVE_MIN_SAMPLES = 8
 
 
 def init_monitor(app):
