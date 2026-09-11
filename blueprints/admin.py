@@ -223,8 +223,12 @@ def settings():
         if "ping_count" in request.form:
             ping_count = request.form.get("ping_count")
             ping_interval = request.form.get("ping_interval")
+            ping_timeout = request.form.get("ping_timeout")
+            history_retention_days = request.form.get("history_retention_days")
             try:
-                settings_service.update_ping_settings(ping_count, ping_interval)
+                settings_service.update_ping_settings(
+                    ping_count, ping_interval, ping_timeout, history_retention_days
+                )
                 flash(_("Настройки сохранены"))
             except Exception as e:
                 admin_logger.error(f"Error updating settings: {e}")
@@ -237,11 +241,15 @@ def settings():
             flash(_("Счётчики rate limit успешно сброшены"), "success")
             return redirect(url_for("admin.settings"))
 
-    ping_count, ping_interval = settings_service.get_ping_settings()
+    ping_count, ping_interval, ping_timeout, history_retention_days = (
+        settings_service.get_monitor_settings()
+    )
     return render_template(
         "admin/settings.html",
         count=ping_count,
         interval=ping_interval,
+        timeout=ping_timeout,
+        history_retention_days=history_retention_days,
         db_size=db_size,
         db_mtime=db_mtime,
         quality_profiles=quality_service.get_all_quality_profiles(),

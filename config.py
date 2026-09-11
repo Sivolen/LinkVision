@@ -56,7 +56,7 @@ class Config:
     BABEL_DEFAULT_LOCALE = "ru"
     BABEL_TRANSLATION_DIRECTORIES = "translations"
 
-    VERSION = "2.2.1"
+    VERSION = "2.2.2"
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
     LOG_FOLDER = os.path.join(BASE_DIR, "logs")
     LOG_MAX_BYTES = 10 * 1024 * 1024

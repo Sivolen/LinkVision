@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: LinkVision 2.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-09 15:30+1100\n"
+"POT-Creation-Date: 2026-09-11 10:48+1100\n"
 "PO-Revision-Date: 2026-07-09 14:24+1100\n"
 "Last-Translator: LinkVision\n"
 "Language: en\n"
@@ -17,185 +17,519 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: forms.py:16 forms.py:22 templates/admin/users.html:14
-#: templates/admin/users.html:42 templates/admin/users.html:97
+#: forms.py:14 forms.py:20
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:14
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:20
+#: future/fix4/extracted/LinkVision-ver2/forms.py:14
+#: future/fix4/extracted/LinkVision-ver2/forms.py:20
+#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:14
+#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:20
+#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:14
+#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:20
+#: templates/admin/users.html:14 templates/admin/users.html:42
+#: templates/admin/users.html:97
 msgid "Имя пользователя"
 msgstr "Username"
 
-#: forms.py:17 forms.py:25 templates/admin/users.html:18
+#: forms.py:15 forms.py:23
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:15
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:23
+#: future/fix4/extracted/LinkVision-ver2/forms.py:15
+#: future/fix4/extracted/LinkVision-ver2/forms.py:23
+#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:15
+#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:23
+#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:15
+#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:23
+#: templates/admin/users.html:18
 msgid "Пароль"
 msgstr "Password"
 
-#: forms.py:31
+#: forms.py:29 future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:29
+#: future/fix4/extracted/LinkVision-ver2/forms.py:29
+#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:29
+#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:29
 msgid "Пароль должен содержать хотя бы одну букву и одну цифру"
 msgstr "Password must contain at least one letter and one digit"
 
-#: forms.py:36
+#: forms.py:34 future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:34
+#: future/fix4/extracted/LinkVision-ver2/forms.py:34
+#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:34
+#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:34
 msgid "Подтверждение пароля"
 msgstr "Password confirmation"
 
-#: forms.py:37
+#: forms.py:37 future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:37
+#: future/fix4/extracted/LinkVision-ver2/forms.py:37
+#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:37
+#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:37
 msgid "Пароли не совпадают"
 msgstr "Passwords do not match"
 
-#: blueprints/admin.py:31
+#: blueprints/admin.py:38 future/blueprints/admin.py:31
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:29
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:29
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:29
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:29
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:31
+#: future/fiximport/admin.py:31
 msgid "Доступ запрещен. Требуются права администратора."
 msgstr "Access denied. Administrator rights required."
 
-#: blueprints/admin.py:54
+#: blueprints/admin.py:61 future/blueprints/admin.py:54
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:52
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:52
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:52
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:52
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:54
+#: future/fiximport/admin.py:54
 msgid "Имя пользователя и пароль обязательны"
 msgstr "Username and password are required"
 
-#: blueprints/admin.py:58 blueprints/admin.py:108
+#: blueprints/admin.py:65 blueprints/admin.py:115 future/blueprints/admin.py:58
+#: future/blueprints/admin.py:108
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:56
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:106
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:56
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:106
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:56
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:106
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:56
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:106
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:58
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:108
+#: future/fiximport/admin.py:58 future/fiximport/admin.py:108
 msgid "Пользователь с таким именем уже существует"
 msgstr "A user with this name already exists"
 
-#: blueprints/admin.py:63
+#: blueprints/admin.py:70 future/blueprints/admin.py:63
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:61
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:61
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:61
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:61
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:63
+#: future/fiximport/admin.py:63
 msgid "Пользователь создан"
 msgstr "User created"
 
-#: blueprints/admin.py:66
+#: blueprints/admin.py:73 future/blueprints/admin.py:66
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:64
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:64
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:64
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:64
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:66
+#: future/fiximport/admin.py:66
 msgid "Ошибка при создании пользователя"
 msgstr "Error creating user"
 
-#: blueprints/admin.py:74
+#: blueprints/admin.py:81 future/blueprints/admin.py:74
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:72
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:72
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:72
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:72
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:74
+#: future/fiximport/admin.py:74
 msgid "Пользователь не найден"
 msgstr "User not found"
 
-#: blueprints/admin.py:78
+#: blueprints/admin.py:85 future/blueprints/admin.py:78
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:76
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:76
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:76
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:76
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:78
+#: future/fiximport/admin.py:78
 msgid "Нельзя удалить самого себя"
 msgstr "You cannot delete yourself"
 
-#: blueprints/admin.py:83
+#: blueprints/admin.py:90 future/blueprints/admin.py:83
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:81
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:81
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:81
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:81
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:83
+#: future/fiximport/admin.py:83
 msgid "Пользователь удалён"
 msgstr "User deleted"
 
-#: blueprints/admin.py:86
+#: blueprints/admin.py:93 future/blueprints/admin.py:86
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:84
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:84
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:84
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:84
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:86
+#: future/fiximport/admin.py:86
 msgid "Ошибка при удалении пользователя"
 msgstr "Error deleting user"
 
-#: blueprints/admin.py:102
+#: blueprints/admin.py:109 future/blueprints/admin.py:102
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:100
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:100
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:100
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:100
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:102
+#: future/fiximport/admin.py:102
 msgid "Имя пользователя обязательно"
 msgstr "Username is required"
 
-#: blueprints/admin.py:115
+#: blueprints/admin.py:122 future/blueprints/admin.py:115
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:113
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:113
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:113
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:113
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:115
+#: future/fiximport/admin.py:115
 msgid "Пользователь обновлён"
 msgstr "User updated"
 
-#: blueprints/admin.py:119
+#: blueprints/admin.py:126 future/blueprints/admin.py:119
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:117
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:117
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:117
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:117
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:119
+#: future/fiximport/admin.py:119
 msgid "Ошибка при обновлении пользователя"
 msgstr "Error updating user"
 
-#: blueprints/admin.py:146
+#: blueprints/admin.py:153 future/blueprints/admin.py:146
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:144
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:144
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:144
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:144
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:146
+#: future/fiximport/admin.py:146
 msgid "Название типа обязательно"
 msgstr "Type name is required"
 
-#: blueprints/admin.py:152
+#: blueprints/admin.py:159 future/blueprints/admin.py:152
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:150
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:150
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:150
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:150
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:152
+#: future/fiximport/admin.py:152
 msgid "Тип устройства создан"
 msgstr "Device type created"
 
-#: blueprints/admin.py:155
+#: blueprints/admin.py:162 future/blueprints/admin.py:155
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:153
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:153
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:153
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:153
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:155
+#: future/fiximport/admin.py:155
 msgid "Ошибка при создании типа"
 msgstr "Error creating type"
 
-#: blueprints/admin.py:174
+#: blueprints/admin.py:181 future/blueprints/admin.py:174
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:172
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:172
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:172
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:172
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:174
+#: future/fiximport/admin.py:174
 msgid "Тип устройства обновлён"
 msgstr "Device type updated"
 
-#: blueprints/admin.py:178
+#: blueprints/admin.py:185 future/blueprints/admin.py:178
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:176
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:176
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:176
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:176
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:178
+#: future/fiximport/admin.py:178
 msgid "Ошибка при обновлении типа"
 msgstr "Error updating type"
 
-#: blueprints/admin.py:189
+#: blueprints/admin.py:196 future/blueprints/admin.py:189
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:187
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:187
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:187
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:187
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:189
+#: future/fiximport/admin.py:189
 msgid "Тип устройства удалён"
 msgstr "Device type deleted"
 
-#: blueprints/admin.py:192
+#: blueprints/admin.py:199 future/blueprints/admin.py:192
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:190
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:190
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:190
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:190
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:192
+#: future/fiximport/admin.py:192
 msgid "Ошибка при удалении типа"
 msgstr "Error deleting type"
 
-#: blueprints/admin.py:221
+#: blueprints/admin.py:232 future/blueprints/admin.py:221
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:219
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:219
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:219
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:219
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:221
+#: future/fiximport/admin.py:221
 msgid "Настройки сохранены"
 msgstr "Settings saved"
 
-#: blueprints/admin.py:224
+#: blueprints/admin.py:235 future/blueprints/admin.py:224
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:222
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:222
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:222
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:222
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:224
+#: future/fiximport/admin.py:224
 msgid "Ошибка при сохранении настроек"
 msgstr "Error saving settings"
 
-#: blueprints/admin.py:230
+#: blueprints/admin.py:241 future/blueprints/admin.py:230
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:228
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:228
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:228
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:228
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:230
+#: future/fiximport/admin.py:230
 msgid "Счётчики rate limit успешно сброшены"
 msgstr "Rate limit counters reset successfully"
 
-#: blueprints/admin.py:261
+#: blueprints/admin.py:294
+msgid "Профиль качества создан"
+msgstr "Quality profile created"
+
+#: blueprints/admin.py:307
+msgid "Профиль качества сохранён"
+msgstr "Quality profile saved"
+
+#: blueprints/admin.py:317
+msgid "Профиль назначен профилем по умолчанию"
+msgstr "Profile set as the default profile"
+
+#: blueprints/admin.py:329
+msgid "Профиль удалён, затронутые устройства переведены на профиль по умолчанию"
+msgstr "Profile deleted; affected devices switched to the default profile"
+
+#: blueprints/admin.py:354 future/blueprints/admin.py:259
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:257
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:257
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:257
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:257
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:259
+#: future/fiximport/admin.py:260
 msgid "Карта удалена"
 msgstr "Map deleted"
 
-#: blueprints/admin.py:264
+#: blueprints/admin.py:357 future/blueprints/admin.py:262
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:260
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:260
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:260
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:260
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:262
+#: future/fiximport/admin.py:263
 msgid "Ошибка при удалении карты"
 msgstr "Error deleting map"
 
-#: blueprints/admin.py:273
+#: blueprints/admin.py:375
+msgid "Структура базы данных несовместима с текущей версией."
+msgstr "Database structure is incompatible with the current version."
+
+#: blueprints/admin.py:378
+#, python-brace-format
+msgid "Резервная копия отклонена. {details} Текущая база данных не изменена."
+msgstr ""
+"Backup rejected. {details} The current database was not changed."
+
+#: blueprints/admin.py:384 future/blueprints/admin.py:324
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:269
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:269
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:269
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:269
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:324
+#: future/fiximport/admin.py:272
 msgid "Файл не выбран"
 msgstr "No file selected"
 
-#: blueprints/admin.py:278
+#: blueprints/admin.py:389 future/blueprints/admin.py:329
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:274
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:274
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:274
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:274
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:329
+#: future/fiximport/admin.py:277
 msgid "Пустой файл"
 msgstr "Empty file"
 
-#: blueprints/admin.py:282
+#: blueprints/admin.py:393 future/blueprints/admin.py:333
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:278
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:278
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:278
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:278
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:333
+#: future/fiximport/admin.py:281
 msgid "Допустимы только файлы .db"
 msgstr "Only .db files are allowed"
 
-#: blueprints/admin.py:297
+#: blueprints/admin.py:398 future/blueprints/admin.py:338
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:338
+msgid "Восстановление файла .db доступно только для SQLite."
+msgstr "Restoring .db files is available only for SQLite."
+
+#: blueprints/admin.py:458 future/blueprints/admin.py:375
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:375
+msgid ""
+"База данных успешно восстановлена. Резервная копия предыдущей БД "
+"сохранена как .bak."
+msgstr ""
+"The database was restored successfully. A backup of the previous database"
+" was saved as .bak."
+
+#: blueprints/admin.py:466 future/blueprints/admin.py:381
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:381
+msgid "Ошибка при восстановлении базы данных. Текущая база данных не изменена."
+msgstr "Database restore failed. The current database was not changed."
+
+#: blueprints/auth.py:58
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/auth.py:58
+#: future/fix4/extracted/LinkVision-ver2/blueprints/auth.py:58
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/auth.py:58
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/auth.py:58
+#: future/fiximport/auth.py:53
+msgid "Неверный логин или пароль"
+msgstr "Invalid username or password"
+
+#: blueprints/auth.py:79
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/auth.py:79
+#: future/fix4/extracted/LinkVision-ver2/blueprints/auth.py:79
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/auth.py:79
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/auth.py:79
+#: future/fiximport/auth.py:74
+msgid "Неверный текущий пароль"
+msgstr "Invalid current password"
+
+#: blueprints/auth.py:86 blueprints/auth.py:119
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/auth.py:86
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/auth.py:119
+#: future/fix4/extracted/LinkVision-ver2/blueprints/auth.py:86
+#: future/fix4/extracted/LinkVision-ver2/blueprints/auth.py:119
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/auth.py:86
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/auth.py:119
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/auth.py:86
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/auth.py:119
+#: future/fiximport/auth.py:81 future/fiximport/auth.py:114
+#, python-format
+msgid "Слабый пароль: %(error)s"
+msgstr "Weak password: %(error)s"
+
+#: blueprints/auth.py:94
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/auth.py:94
+#: future/fix4/extracted/LinkVision-ver2/blueprints/auth.py:94
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/auth.py:94
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/auth.py:94
+#: future/fiximport/auth.py:89
+msgid "Пароль успешно изменён. Теперь используйте новый пароль."
+msgstr "Password changed successfully. Use the new password from now on."
+
+#: blueprints/auth.py:113
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/auth.py:113
+#: future/fix4/extracted/LinkVision-ver2/blueprints/auth.py:113
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/auth.py:113
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/auth.py:113
+#: future/fiximport/auth.py:108
+msgid "Пользователь уже существует"
+msgstr "User already exists"
+
+#: blueprints/auth.py:124
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/auth.py:124
+#: future/fix4/extracted/LinkVision-ver2/blueprints/auth.py:124
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/auth.py:124
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/auth.py:124
+#: future/fiximport/auth.py:119
+msgid "Регистрация успешна. Войдите."
+msgstr "Registration successful. Please sign in."
+
+#: blueprints/auth.py:128
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/auth.py:128
+#: future/fix4/extracted/LinkVision-ver2/blueprints/auth.py:128
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/auth.py:128
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/auth.py:128
+#: future/fiximport/auth.py:123
+msgid "Ошибка при регистрации"
+msgstr "Registration error"
+
+#: blueprints/auth.py:138
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/auth.py:138
+#: future/fix4/extracted/LinkVision-ver2/blueprints/auth.py:138
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/auth.py:138
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/auth.py:138
+#: future/fiximport/auth.py:133
+msgid "Доступ запрещён"
+msgstr "Access denied"
+
+#: blueprints/auth.py:142
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/auth.py:142
+#: future/fix4/extracted/LinkVision-ver2/blueprints/auth.py:142
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/auth.py:142
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/auth.py:142
+#: future/fiximport/auth.py:137
+msgid "Rate limit счётчики сброшены"
+msgstr "Rate limit counters reset"
+
+#: blueprints/main.py:98
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/main.py:93
+#: future/fix4/extracted/LinkVision-ver2/blueprints/main.py:93
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/main.py:93
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/main.py:93
+#: future/fiximport/main.py:94
+msgid "Оператор не может создавать карты"
+msgstr "Operator cannot create maps"
+
+#: future/blueprints/admin.py:284
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:284
+msgid "Файл базы данных повреждён или не является корректной SQLite-базой."
+msgstr "The database file is corrupted or is not a valid SQLite database."
+
+#: future/blueprints/admin.py:296
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:296
+#, python-brace-format
+msgid ""
+"Резервная копия несовместима с текущей версией LinkVision: отсутствуют "
+"таблицы ({tables}). Текущая база данных не изменена."
+msgstr ""
+"The backup is incompatible with the current LinkVision version: missing "
+"tables ({tables}). The current database was not changed."
+
+#: future/blueprints/admin.py:311
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:311
+#, python-brace-format
+msgid ""
+"Резервная копия создана в несовместимой версии LinkVision. Отсутствуют "
+"поля: {fields}. Текущая база данных не изменена."
+msgstr ""
+"The backup was created by an incompatible LinkVision version. Missing "
+"fields: {fields}. The current database was not changed."
+
+#: future/blueprints/admin.py:317
+#: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:317
+msgid "Не удалось проверить файл базы данных. Текущая база данных не изменена."
+msgstr ""
+"The database file could not be validated. The current database was not "
+"changed."
+
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:294
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:294
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:294
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:294
+#: future/fiximport/admin.py:297
 msgid ""
 "База данных восстановлена. Пожалуйста, перезапустите приложение для "
 "применения изменений."
 msgstr "Database restored. Please restart the application to apply the changes."
 
-#: blueprints/admin.py:301
+#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:299
+#: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:299
+#: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:299
+#: future/fix4/extracted_reload/LinkVision-ver2/blueprints/admin.py:299
+#: future/fiximport/admin.py:302
 msgid "Ошибка при восстановлении базы данных"
 msgstr "Error restoring the database"
-
-#: blueprints/auth.py:53
-msgid "Неверный логин или пароль"
-msgstr "Invalid username or password"
-
-#: blueprints/auth.py:76
-msgid "Неверный текущий пароль"
-msgstr "Invalid current password"
-
-#: blueprints/auth.py:81 blueprints/auth.py:114
-#, python-format
-msgid "Слабый пароль: %(error)s"
-msgstr "Weak password: %(error)s"
-
-#: blueprints/auth.py:89
-msgid "Пароль успешно изменён. Теперь используйте новый пароль."
-msgstr "Password changed successfully. Use the new password from now on."
-
-#: blueprints/auth.py:108
-msgid "Пользователь уже существует"
-msgstr "User already exists"
-
-#: blueprints/auth.py:119
-msgid "Регистрация успешна. Войдите."
-msgstr "Registration successful. Please sign in."
-
-#: blueprints/auth.py:123
-msgid "Ошибка при регистрации"
-msgstr "Registration error"
-
-#: blueprints/auth.py:133
-msgid "Доступ запрещён"
-msgstr "Access denied"
-
-#: blueprints/auth.py:137
-msgid "Rate limit счётчики сброшены"
-msgstr "Rate limit counters reset"
-
-#: blueprints/main.py:94
-msgid "Оператор не может создавать карты"
-msgstr "Operator cannot create maps"
 
 #: templates/404.html:284
 msgid "Упс! Узел не найден"
@@ -237,7 +571,9 @@ msgstr "Too many requests"
 msgid ""
 "Вы отправили слишком много запросов. Пожалуйста, подождите несколько "
 "минут перед повторной попыткой."
-msgstr "You have sent too many requests. Please wait a few minutes before trying again."
+msgstr ""
+"You have sent too many requests. Please wait a few minutes before trying "
+"again."
 
 #: templates/429.html:209
 #, python-format
@@ -248,11 +584,11 @@ msgstr "Try again in %(sec)s seconds"
 msgid "На страницу входа"
 msgstr "To the login page"
 
-#: templates/base.html:53 templates/base.html:110
+#: templates/base.html:53 templates/base.html:116
 msgid "Карты"
 msgstr "Maps"
 
-#: templates/base.html:59 templates/base.html:160 templates/dashboard.html:42
+#: templates/base.html:59 templates/base.html:246 templates/dashboard.html:42
 msgid "Новая карта"
 msgstr "New map"
 
@@ -260,109 +596,166 @@ msgstr "New map"
 msgid "Импорт карты"
 msgstr "Import map"
 
-#: templates/base.html:71
+#: templates/base.html:69 templates/base.html:165
+msgid "Новая папка"
+msgstr "New folder"
+
+#: templates/base.html:77
 msgid "Тема"
 msgstr "Theme"
 
-#: templates/base.html:74
+#: templates/base.html:80
 msgid "Выход"
 msgstr "Log out"
 
-#: templates/base.html:99
+#: templates/base.html:105
 msgid "Администрирование"
 msgstr "Administration"
 
-#: templates/base.html:101
+#: templates/base.html:107
 msgid "Пользователи"
 msgstr "Users"
 
-#: templates/admin/types.html:3 templates/base.html:104
+#: templates/admin/types.html:3 templates/base.html:110
 msgid "Типы устройств"
 msgstr "Device types"
 
-#: templates/base.html:107
+#: templates/base.html:113
 msgid "Настройки"
 msgstr "Settings"
 
-#: templates/base.html:117
+#: templates/base.html:123
 msgid "Проверка..."
 msgstr "Checking..."
 
-#: templates/base.html:165 templates/base.html:189 templates/dashboard.html:47
-msgid "Название карты"
-msgstr "Map name"
-
-#: templates/base.html:166 templates/dashboard.html:48
-msgid "Например: Офис Москва"
-msgstr "For example: Moscow Office"
+#: templates/base.html:169
+msgid "Название папки"
+msgstr "Folder name"
 
 #: templates/admin/types.html:46 templates/admin/users.html:124
-#: templates/base.html:170 templates/base.html:204 templates/base.html:223
-#: templates/dashboard.html:52 templates/map_view.html:269
-#: templates/map_view.html:361 templates/map_view.html:557
-#: templates/map_view.html:638
+#: templates/base.html:172 templates/base.html:194 templates/base.html:256
+#: templates/base.html:290 templates/base.html:309 templates/dashboard.html:52
+#: templates/map_view.html:295 templates/map_view.html:387
+#: templates/map_view.html:589 templates/map_view.html:670
 msgid "Отмена"
 msgstr "Cancel"
 
-#: templates/base.html:171 templates/dashboard.html:53
-msgid "Создать"
-msgstr "Create"
-
-#: templates/base.html:183
-msgid "Редактировать карту"
-msgstr "Edit map"
-
-#: templates/base.html:193
-msgid "Фоновое изображение"
-msgstr "Background image"
-
-#: templates/base.html:195
-msgid "Оставьте пустым, чтобы не менять"
-msgstr "Leave empty to keep unchanged"
-
-#: templates/base.html:199
-msgid "Удалить текущий фон"
-msgstr "Remove current background"
-
-#: templates/base.html:203
-msgid "Экспорт"
-msgstr "Export"
-
-#: templates/admin/users.html:125 templates/base.html:205
-#: templates/map_view.html:272 templates/map_view.html:365
-#: templates/map_view.html:641
+#: templates/admin/settings.html:111 templates/admin/users.html:125
+#: templates/base.html:173 templates/base.html:291 templates/map_view.html:298
+#: templates/map_view.html:391 templates/map_view.html:673
 msgid "Сохранить"
 msgstr "Save"
 
-#: templates/base.html:216
+#: templates/base.html:184
+msgid "Переместить карту"
+msgstr "Move map"
+
+#: templates/base.html:190
+msgid "— Корень (без папки) —"
+msgstr "— Root (no folder) —"
+
+#: templates/base.html:195
+msgid "Переместить"
+msgstr "Move"
+
+#: templates/base.html:206
+msgid "Права на папку"
+msgstr "Folder permissions"
+
+#: templates/base.html:211 templates/base.html:217 templates/map_view.html:258
+#: templates/map_view.html:288 templates/map_view.html:693
+#: templates/map_view.html:706
+msgid "Загрузка..."
+msgstr "Loading..."
+
+#: templates/base.html:214 templates/map_view.html:702
+msgid "Добавить право пользователю"
+msgstr "Grant permission to a user"
+
+#: templates/base.html:220 templates/base.html:229 templates/map_view.html:44
+msgid "Просмотр"
+msgstr "View"
+
+#: templates/base.html:221 templates/base.html:230
+msgid "Редактор"
+msgstr "Editor"
+
+#: templates/base.html:222
+msgid "Админ папки"
+msgstr "Folder admin"
+
+#: templates/admin/types.html:40 templates/admin/users.html:31
+#: templates/base.html:224 templates/base.html:232
+msgid "Добавить"
+msgstr "Add"
+
+#: templates/base.html:226
+msgid "Всем операторам"
+msgstr "All operators"
+
+#: templates/base.html:251 templates/base.html:275 templates/dashboard.html:47
+msgid "Название карты"
+msgstr "Map name"
+
+#: templates/base.html:252 templates/dashboard.html:48
+msgid "Например: Офис Москва"
+msgstr "For example: Moscow Office"
+
+#: templates/admin/settings.html:178 templates/base.html:257
+#: templates/dashboard.html:53
+msgid "Создать"
+msgstr "Create"
+
+#: templates/base.html:269
+msgid "Редактировать карту"
+msgstr "Edit map"
+
+#: templates/base.html:279
+msgid "Фоновое изображение"
+msgstr "Background image"
+
+#: templates/base.html:281
+msgid "Оставьте пустым, чтобы не менять"
+msgstr "Leave empty to keep unchanged"
+
+#: templates/base.html:285
+msgid "Удалить текущий фон"
+msgstr "Remove current background"
+
+#: templates/base.html:289
+msgid "Экспорт"
+msgstr "Export"
+
+#: templates/base.html:302
 msgid "Подтверждение"
 msgstr "Confirmation"
 
-#: templates/base.html:220
+#: templates/base.html:306
 msgid "Вы уверены?"
 msgstr "Are you sure?"
 
-#: templates/admin/maps.html:29 templates/admin/types.html:91
-#: templates/admin/users.html:76 templates/base.html:224
-#: templates/dashboard.html:22 templates/map_view.html:277
-#: templates/map_view.html:363 templates/map_view.html:640
+#: templates/admin/maps.html:29 templates/admin/settings.html:124
+#: templates/admin/types.html:91 templates/admin/users.html:76
+#: templates/base.html:310 templates/dashboard.html:22
+#: templates/map_view.html:303 templates/map_view.html:389
+#: templates/map_view.html:672
 msgid "Удалить"
 msgstr "Delete"
 
-#: templates/base.html:234
+#: templates/base.html:320
 msgid "Успешно"
 msgstr "Success"
 
-#: templates/base.html:235
+#: templates/base.html:321
 msgid "только что"
 msgstr "just now"
 
-#: templates/base.html:236 templates/map_view.html:386
-#: templates/map_view.html:517 templates/map_view.html:712
+#: templates/base.html:322 templates/map_view.html:412
+#: templates/map_view.html:549 templates/map_view.html:744
 msgid "Закрыть"
 msgstr "Close"
 
-#: templates/base.html:239
+#: templates/base.html:325
 msgid "Операция выполнена успешно"
 msgstr "Operation completed successfully"
 
@@ -424,578 +817,597 @@ msgstr "Sign in"
 msgid "Нет аккаунта? Зарегистрироваться"
 msgstr "No account? Sign up"
 
-#: templates/map_view.html:14
+#: templates/map_view.html:24
 msgid "Добавить устройство"
 msgstr "Add device"
 
-#: templates/map_view.html:15 templates/map_view.html:254
+#: templates/map_view.html:25 templates/map_view.html:280
 msgid "Устройство"
 msgstr "Device"
 
-#: templates/map_view.html:17
+#: templates/map_view.html:27
 msgid "Создать связь"
 msgstr "Create link"
 
-#: templates/map_view.html:18
+#: templates/map_view.html:28
 msgid "Связь"
 msgstr "Link"
 
-#: templates/map_view.html:24
+#: templates/map_view.html:34
 msgid "Перемещение карты"
 msgstr "Pan map"
 
-#: templates/map_view.html:24
+#: templates/map_view.html:34
 msgid "Режим перемещения карты"
 msgstr "Pan mode"
 
-#: templates/map_view.html:25
+#: templates/map_view.html:35
 msgid "Пан"
 msgstr "Pan"
 
-#: templates/map_view.html:27
+#: templates/map_view.html:37
 msgid "Выделение нескольких устройств"
 msgstr "Select multiple devices"
 
-#: templates/map_view.html:27
+#: templates/map_view.html:37
 msgid "Режим выделения устройств"
 msgstr "Selection mode"
 
-#: templates/map_view.html:28
+#: templates/map_view.html:38
 msgid "Выделение"
 msgstr "Select"
 
-#: templates/map_view.html:34
-msgid "Просмотр"
-msgstr "View"
-
-#: templates/map_view.html:39
+#: templates/map_view.html:49
 msgid "Массовое редактирование выбранных устройств"
 msgstr "Bulk edit selected devices"
 
-#: templates/map_view.html:40
+#: templates/map_view.html:50
 msgid "Редактировать выбранные"
 msgstr "Edit selected"
 
-#: templates/map_view.html:46
+#: templates/map_view.html:56
 msgid "Увеличить масштаб"
 msgstr "Zoom in"
 
-#: templates/map_view.html:49
+#: templates/map_view.html:59
 msgid "Уменьшить масштаб"
 msgstr "Zoom out"
 
-#: templates/map_view.html:52
+#: templates/map_view.html:62
 msgid "Сбросить масштаб"
 msgstr "Reset zoom"
 
-#: templates/map_view.html:59
+#: templates/map_view.html:69
 msgid "Управление группами устройств"
 msgstr "Manage device groups"
 
-#: templates/map_view.html:60
+#: templates/map_view.html:70
 msgid "Группы"
 msgstr "Groups"
 
-#: templates/map_view.html:62
+#: templates/map_view.html:72
 msgid "Создать фигуру"
 msgstr "Create shape"
 
-#: templates/map_view.html:63 templates/map_view.html:570
+#: templates/map_view.html:73 templates/map_view.html:602
 msgid "Фигура"
 msgstr "Shape"
 
-#: templates/map_view.html:68
+#: templates/map_view.html:78
 msgid "Автораскладка карты"
 msgstr "Auto layout"
 
-#: templates/map_view.html:69
+#: templates/map_view.html:79
 msgid "Автораскладка"
 msgstr "Auto layout"
 
-#: templates/map_view.html:72
+#: templates/map_view.html:82
 msgid "Сетка (grid)"
 msgstr "Grid"
 
-#: templates/map_view.html:73
+#: templates/map_view.html:83
 msgid "Круг (circle)"
 msgstr "Circle"
 
-#: templates/map_view.html:74
+#: templates/map_view.html:84
 msgid "Концентрический (concentric)"
 msgstr "Concentric"
 
-#: templates/map_view.html:75
+#: templates/map_view.html:85
 msgid "Дерево (сверху → вниз)"
 msgstr "Tree (top → bottom)"
 
-#: templates/map_view.html:76
+#: templates/map_view.html:86
 msgid "Дерево (снизу → вверх)"
 msgstr "Tree (bottom → top)"
 
-#: templates/map_view.html:77
+#: templates/map_view.html:87
 msgid "Дерево (слева → направо)"
 msgstr "Tree (left → right)"
 
-#: templates/map_view.html:78
+#: templates/map_view.html:88
 msgid "Дерево (справа → налево)"
 msgstr "Tree (right → left)"
 
-#: templates/map_view.html:79
+#: templates/map_view.html:89
 msgid "Силовой (cose)"
 msgstr "Force-directed (cose)"
 
-#: templates/map_view.html:88
+#: templates/map_view.html:98
 msgid "Поиск по имени, IP или типу..."
 msgstr "Search by name, IP or type..."
 
-#: templates/map_view.html:89
+#: templates/map_view.html:99
 msgid "Фильтр"
 msgstr "Filter"
 
-#: templates/map_view.html:91
+#: templates/map_view.html:101
 msgid "Все устройства"
 msgstr "All devices"
 
-#: templates/map_view.html:92
+#: templates/map_view.html:102
 msgid "Только UP"
 msgstr "UP only"
 
-#: templates/map_view.html:93
+#: templates/map_view.html:103
 msgid "Только DOWN"
 msgstr "DOWN only"
 
-#: templates/map_view.html:95
+#: templates/map_view.html:105
 msgid "Сбросить поиск"
 msgstr "Clear search"
 
-#: templates/map_view.html:101
+#: templates/map_view.html:111
 msgid "Отменить (Ctrl+Z)"
 msgstr "Undo (Ctrl+Z)"
 
-#: templates/map_view.html:101
+#: templates/map_view.html:111
 msgid "Отменить последнее действие"
 msgstr "Undo last action"
 
-#: templates/map_view.html:104
+#: templates/map_view.html:114
 msgid "Повторить (Ctrl+Y)"
 msgstr "Redo (Ctrl+Y)"
 
-#: templates/map_view.html:104
+#: templates/map_view.html:114
 msgid "Повторить отменённое действие"
 msgstr "Redo the undone action"
 
-#: templates/map_view.html:111
+#: templates/map_view.html:121
 msgid "Заблокировать/разблокировать перемещение устройств"
 msgstr "Lock/unlock device dragging"
 
-#: templates/map_view.html:111
+#: templates/map_view.html:121
 msgid "Заблокировать или разблокировать перемещение устройств"
 msgstr "Lock or unlock device dragging"
 
-#: templates/map_view.html:118
+#: templates/map_view.html:128
 msgid "Управление правами доступа"
 msgstr "Manage access permissions"
 
-#: templates/map_view.html:118
+#: templates/map_view.html:128
 msgid "Управление правами доступа к карте"
 msgstr "Manage map access permissions"
 
-#: templates/map_view.html:119
+#: templates/map_view.html:129
 msgid "Права"
 msgstr "Permissions"
 
-#: templates/map_view.html:124
+#: templates/map_view.html:134
 msgid "Полноэкранный режим"
 msgstr "Fullscreen"
 
-#: templates/map_view.html:124
+#: templates/map_view.html:134
 msgid "Переключить полноэкранный режим"
 msgstr "Toggle fullscreen"
 
-#: templates/map_view.html:127
+#: templates/map_view.html:137
 msgid "Мини-карта (обзор)"
 msgstr "Minimap (overview)"
 
-#: templates/map_view.html:127
+#: templates/map_view.html:137
 msgid "Переключить мини-карту"
 msgstr "Toggle minimap"
 
-#: templates/map_view.html:151
+#: templates/map_view.html:161
 msgid "Обзор карты"
 msgstr "Map overview"
 
-#: templates/map_view.html:156
+#: templates/map_view.html:166
 msgid "Выйти из полноэкранного режима"
 msgstr "Exit fullscreen"
 
-#: templates/map_view.html:157
+#: templates/map_view.html:167
 msgid "Выйти"
 msgstr "Exit"
 
-#: templates/map_view.html:166
+#: templates/map_view.html:176
 msgid "Информация"
 msgstr "Information"
 
-#: templates/map_view.html:169
+#: templates/map_view.html:179
 msgid "История"
 msgstr "History"
 
-#: templates/map_view.html:172
+#: templates/map_view.html:182
+msgid "Качество"
+msgstr "Quality"
+
+#: templates/map_view.html:185
 msgid "Соседи"
 msgstr "Neighbors"
 
-#: templates/map_view.html:183
+#: templates/map_view.html:196
 msgid "Имя"
 msgstr "Name"
 
-#: templates/map_view.html:187
+#: templates/map_view.html:200
 msgid "IP-адреса"
 msgstr "IP addresses"
 
-#: templates/map_view.html:191
+#: templates/map_view.html:204
 msgid "IPv4 или IPv6"
 msgstr "IPv4 or IPv6"
 
-#: templates/map_view.html:192
+#: templates/map_view.html:205
 msgid "Удалить IP"
 msgstr "Remove IP"
 
-#: templates/map_view.html:198
+#: templates/map_view.html:211
 msgid "Добавить IP"
 msgstr "Add IP"
 
-#: templates/map_view.html:201
+#: templates/map_view.html:214
 msgid "Нажмите Enter, чтобы добавить новый IP"
 msgstr "Press Enter to add a new IP"
 
-#: templates/map_view.html:204 templates/map_view.html:532
+#: templates/map_view.html:217 templates/map_view.html:564
 msgid "Тип устройства"
 msgstr "Device type"
 
-#: templates/map_view.html:206
+#: templates/map_view.html:219
 msgid "-- Выберите тип --"
 msgstr "-- Select type --"
 
-#: templates/map_view.html:211 templates/map_view.html:546
+#: templates/map_view.html:224 templates/map_view.html:578
 msgid "Группа"
 msgstr "Group"
 
-#: templates/map_view.html:213
+#: templates/map_view.html:226
 msgid "-- Без группы --"
 msgstr "-- No group --"
 
-#: templates/map_view.html:217 templates/map_view.html:447
-#: templates/map_view.html:629
+#: templates/map_view.html:230 templates/map_view.html:473
+#: templates/map_view.html:661
 msgid "Размер шрифта (px)"
 msgstr "Font size (px)"
 
-#: templates/map_view.html:219
+#: templates/map_view.html:232
 msgid "Оставьте пустым для стандартного"
 msgstr "Leave empty for default"
 
-#: templates/map_view.html:224
+#: templates/map_view.html:237
 msgid "Мониторинг включён"
 msgstr "Monitoring enabled"
 
-#: templates/map_view.html:232
+#: templates/map_view.html:240
+msgid "Профиль качества связи"
+msgstr "Connection quality profile"
+
+#: templates/map_view.html:242
+msgid "-- По умолчанию --"
+msgstr "-- Default --"
+
+#: templates/map_view.html:244
+msgid ""
+"Пороги потерь/задержки/джиттера, при которых устройство считается "
+"\"снижено\" или \"плохо\". Управляются в Настройках."
+msgstr ""
+"Loss/latency/jitter thresholds at which a device is considered "
+"\"degraded\" or \"bad\". Managed in Settings."
+
+#: templates/map_view.html:252
 msgid "Время"
 msgstr "Time"
 
-#: templates/map_view.html:233
+#: templates/map_view.html:253
 msgid "Старый статус"
 msgstr "Old status"
 
-#: templates/map_view.html:234
+#: templates/map_view.html:254
 msgid "Новый статус"
 msgstr "New status"
 
-#: templates/map_view.html:238 templates/map_view.html:262
-#: templates/map_view.html:661 templates/map_view.html:674
-msgid "Загрузка..."
-msgstr "Loading..."
-
-#: templates/map_view.html:244
+#: templates/map_view.html:264
 msgid "‹ Предыдущая"
 msgstr "‹ Previous"
 
-#: templates/map_view.html:245
+#: templates/map_view.html:265
 msgid "Страница 1 из 1"
 msgstr "Page 1 of 1"
 
-#: templates/map_view.html:246
+#: templates/map_view.html:266
 msgid "Следующая ›"
 msgstr "Next ›"
 
-#: templates/map_view.html:255
+#: templates/map_view.html:273
+msgid "История средней задержки за последние 24 часа"
+msgstr "Average latency history for the last 24 hours"
+
+#: templates/map_view.html:281
 msgid "Интерфейс"
 msgstr "Interface"
 
-#: templates/map_view.html:257
+#: templates/map_view.html:283
 msgid "Интерфейс соседа"
 msgstr "Neighbor interface"
 
-#: templates/map_view.html:258
+#: templates/map_view.html:284
 msgid "Тип линии"
 msgstr "Line type"
 
-#: templates/map_view.html:274 templates/map_view.html:367
-#: templates/map_view.html:457
+#: templates/map_view.html:300 templates/map_view.html:393
+#: templates/map_view.html:489
 msgid "Сохранение..."
 msgstr "Saving..."
 
-#: templates/map_view.html:289
+#: templates/map_view.html:315
 msgid "Настройка связи"
 msgstr "Link settings"
 
-#: templates/map_view.html:300
+#: templates/map_view.html:326
 msgid "Интерфейс источника"
 msgstr "Source interface"
 
-#: templates/map_view.html:304
+#: templates/map_view.html:330
 msgid "Интерфейс назначения"
 msgstr "Target interface"
 
-#: templates/map_view.html:316
+#: templates/map_view.html:342
 msgid "Тип линии (предустановки)"
 msgstr "Line type (presets)"
 
-#: templates/map_view.html:318
+#: templates/map_view.html:344
 msgid "-- Ручная настройка --"
 msgstr "-- Manual --"
 
-#: templates/map_view.html:334
+#: templates/map_view.html:360
 msgid "Цвет линии"
 msgstr "Line color"
 
-#: templates/map_view.html:338
+#: templates/map_view.html:364
 msgid "Толщина (px)"
 msgstr "Thickness (px)"
 
-#: templates/map_view.html:342
+#: templates/map_view.html:368
 msgid "Стиль линии"
 msgstr "Line style"
 
-#: templates/map_view.html:344
+#: templates/map_view.html:370
 msgid "Сплошная"
 msgstr "Solid"
 
-#: templates/map_view.html:345
+#: templates/map_view.html:371
 msgid "Пунктирная"
 msgstr "Dashed"
 
-#: templates/map_view.html:346
+#: templates/map_view.html:372
 msgid "Точечная"
 msgstr "Dotted"
 
-#: templates/map_view.html:354
+#: templates/map_view.html:380
 msgid "Размер шрифта подписи (px)"
 msgstr "Label font size (px)"
 
-#: templates/map_view.html:356
+#: templates/map_view.html:382
 msgid "Оставьте пустым для использования стандартного размера (8px)"
 msgstr "Leave empty to use the default size (8px)"
 
-#: templates/map_view.html:383
+#: templates/map_view.html:409
 msgid "Группы устройств"
 msgstr "Device groups"
 
-#: templates/map_view.html:384
+#: templates/map_view.html:410
 msgid "Организуйте устройства по категориям"
 msgstr "Organize devices by category"
 
-#: templates/map_view.html:400
+#: templates/map_view.html:426
 msgid "Название группы"
 msgstr "Group name"
 
-#: templates/map_view.html:407
+#: templates/map_view.html:433
 msgid "Например: Серверная"
 msgstr "For example: Server room"
 
-#: templates/map_view.html:409
+#: templates/map_view.html:435
 msgid "От 2 до 50 символов"
 msgstr "From 2 to 50 characters"
 
-#: templates/map_view.html:412
+#: templates/map_view.html:438
 msgid "Введите название от 2 до 50 символов"
 msgstr "Enter a name of 2 to 50 characters"
 
-#: templates/map_view.html:417
+#: templates/map_view.html:443
 msgid "Цвет метки"
 msgstr "Label color"
 
-#: templates/map_view.html:441 templates/map_view.html:617
+#: templates/map_view.html:467 templates/map_view.html:649
 msgid "Свой цвет"
 msgstr "Custom color"
 
-#: templates/map_view.html:453
+#: templates/map_view.html:477
+msgid "Родительская группа"
+msgstr "Parent group"
+
+#: templates/map_view.html:479
+msgid "-- Без родителя --"
+msgstr "-- No parent --"
+
+#: templates/map_view.html:485
 msgid "Сбросить"
 msgstr "Reset"
 
-#: templates/map_view.html:455
+#: templates/map_view.html:487
 msgid "Добавить группу"
 msgstr "Add group"
 
-#: templates/map_view.html:469
+#: templates/map_view.html:501
 msgid "Существующие группы"
 msgstr "Existing groups"
 
-#: templates/map_view.html:479
+#: templates/map_view.html:511
 msgid "Поиск по названию..."
 msgstr "Search by name..."
 
-#: templates/admin/maps.html:9 templates/admin/types.html:61
-#: templates/map_view.html:487
+#: templates/admin/maps.html:9 templates/admin/settings.html:142
+#: templates/admin/types.html:61 templates/map_view.html:519
 msgid "Название"
 msgstr "Name"
 
-#: templates/map_view.html:488 templates/map_view.html:597
+#: templates/map_view.html:520 templates/map_view.html:629
 msgid "Цвет"
 msgstr "Color"
 
-#: templates/admin/types.html:65 templates/map_view.html:489
+#: templates/admin/types.html:65 templates/map_view.html:521
 msgid "Устройств"
 msgstr "Devices"
 
 #: templates/admin/maps.html:12 templates/admin/types.html:66
-#: templates/admin/users.html:46 templates/map_view.html:490
+#: templates/admin/users.html:46 templates/map_view.html:522
 msgid "Действия"
 msgstr "Actions"
 
-#: templates/map_view.html:502
+#: templates/map_view.html:534
 msgid "Нет созданных групп"
 msgstr "No groups created"
 
-#: templates/map_view.html:503
+#: templates/map_view.html:535
 msgid "Создайте первую группу выше"
 msgstr "Create your first group above"
 
-#: templates/map_view.html:527
+#: templates/map_view.html:559
 msgid "Редактировать выбранные устройства"
 msgstr "Edit selected devices"
 
-#: templates/map_view.html:534 templates/map_view.html:540
-#: templates/map_view.html:548
+#: templates/map_view.html:566 templates/map_view.html:572
+#: templates/map_view.html:580
 msgid "-- Не изменять --"
 msgstr "-- Keep unchanged --"
 
-#: templates/map_view.html:538
+#: templates/map_view.html:570
 msgid "Мониторинг"
 msgstr "Monitoring"
 
-#: templates/map_view.html:541
+#: templates/map_view.html:573
 msgid "Включено"
 msgstr "Enabled"
 
-#: templates/map_view.html:542
+#: templates/map_view.html:574
 msgid "Выключено"
 msgstr "Disabled"
 
-#: templates/map_view.html:553
+#: templates/map_view.html:585
 msgid "Переместить в центр видимой области"
 msgstr "Move to the center of the visible area"
 
-#: templates/map_view.html:559
+#: templates/map_view.html:591
 msgid "Применить"
 msgstr "Apply"
 
-#: templates/map_view.html:576
+#: templates/map_view.html:608
 msgid "Тип фигуры"
 msgstr "Shape type"
 
-#: templates/map_view.html:578
+#: templates/map_view.html:610
 msgid "Квадрат"
 msgstr "Square"
 
-#: templates/map_view.html:579
+#: templates/map_view.html:611
 msgid "Прямоугольник"
 msgstr "Rectangle"
 
-#: templates/map_view.html:580
+#: templates/map_view.html:612
 msgid "Треугольник"
 msgstr "Triangle"
 
-#: templates/map_view.html:581
+#: templates/map_view.html:613
 msgid "Ромб"
 msgstr "Diamond"
 
-#: templates/map_view.html:582
+#: templates/map_view.html:614
 msgid "Круг"
 msgstr "Circle"
 
-#: templates/admin/types.html:24 templates/map_view.html:587
+#: templates/admin/types.html:24 templates/map_view.html:619
 msgid "Ширина (px)"
 msgstr "Width (px)"
 
-#: templates/admin/types.html:28 templates/map_view.html:591
+#: templates/admin/types.html:28 templates/map_view.html:623
 msgid "Высота (px)"
 msgstr "Height (px)"
 
-#: templates/map_view.html:623
+#: templates/map_view.html:655
 msgid "Прозрачность"
 msgstr "Opacity"
 
-#: templates/map_view.html:633
+#: templates/map_view.html:665
 msgid "Описание (отображается по центру)"
 msgstr "Description (shown in the center)"
 
-#: templates/map_view.html:634
+#: templates/map_view.html:666
 msgid "Текст"
 msgstr "Text"
 
-#: templates/map_view.html:653
+#: templates/map_view.html:685
 msgid "Права доступа:"
 msgstr "Access permissions:"
 
-#: templates/map_view.html:659
+#: templates/map_view.html:691
 msgid "Текущие права доступа"
 msgstr "Current access permissions"
 
-#: templates/map_view.html:670
-msgid "Добавить право пользователю"
-msgstr "Grant permission to a user"
-
 #: templates/admin/users.html:24 templates/admin/users.html:111
-#: templates/map_view.html:672
+#: templates/map_view.html:704
 msgid "Пользователь"
 msgstr "User"
 
-#: templates/admin/users.html:108 templates/map_view.html:678
+#: templates/admin/users.html:108 templates/map_view.html:710
 msgid "Роль"
 msgstr "Role"
 
-#: templates/map_view.html:680 templates/map_view.html:700
+#: templates/map_view.html:712 templates/map_view.html:732
 msgid "Выберите роль"
 msgstr "Select a role"
 
-#: templates/map_view.html:681 templates/map_view.html:701
+#: templates/map_view.html:713 templates/map_view.html:733
 msgid "Просмотр (viewer)"
 msgstr "View (viewer)"
 
-#: templates/map_view.html:682 templates/map_view.html:702
+#: templates/map_view.html:714 templates/map_view.html:734
 msgid "Редактор (editor)"
 msgstr "Editor (editor)"
 
-#: templates/map_view.html:683
+#: templates/map_view.html:715
 msgid "Админ (admin)"
 msgstr "Admin (admin)"
 
-#: templates/map_view.html:687
+#: templates/map_view.html:719
 msgid "Добавить право"
 msgstr "Grant permission"
 
-#: templates/map_view.html:692
+#: templates/map_view.html:724
 msgid "Добавить право для операторов"
 msgstr "Grant permission for operators"
 
-#: templates/map_view.html:695
+#: templates/map_view.html:727
 msgid "Эти права будут действовать для всех пользователей с ролью"
 msgstr "These permissions will apply to all users with the role"
 
-#: templates/map_view.html:698
+#: templates/map_view.html:730
 msgid "Роль для операторов"
 msgstr "Role for operators"
 
-#: templates/map_view.html:706
+#: templates/map_view.html:738
 msgid "Добавить для операторов"
 msgstr "Add for operators"
 
@@ -1007,7 +1419,9 @@ msgstr "No maps available"
 msgid ""
 "В системе пока нет ни одной карты. Обратитесь к администратору для "
 "создания карты."
-msgstr "There are no maps in the system yet. Contact the administrator to create one."
+msgstr ""
+"There are no maps in the system yet. Contact the administrator to create "
+"one."
 
 #: templates/no_maps.html:7
 msgid "Вы можете вернуться на главную страницу позже."
@@ -1029,7 +1443,7 @@ msgstr "Sign up"
 msgid "Уже есть аккаунт? Войти"
 msgstr "Already have an account? Sign in"
 
-#: templates/admin/backups.html:4 templates/admin/settings.html:35
+#: templates/admin/backups.html:4 templates/admin/settings.html:189
 msgid "Резервное копирование"
 msgstr "Backup"
 
@@ -1037,19 +1451,19 @@ msgstr "Backup"
 msgid "Текущая база данных"
 msgstr "Current database"
 
-#: templates/admin/backups.html:11 templates/admin/settings.html:38
+#: templates/admin/backups.html:11 templates/admin/settings.html:192
 msgid "Размер:"
 msgstr "Size:"
 
-#: templates/admin/backups.html:12 templates/admin/settings.html:39
+#: templates/admin/backups.html:12 templates/admin/settings.html:193
 msgid "Последнее изменение:"
 msgstr "Last modified:"
 
-#: templates/admin/backups.html:12 templates/admin/settings.html:39
+#: templates/admin/backups.html:12 templates/admin/settings.html:193
 msgid "Неизвестно"
 msgstr "Unknown"
 
-#: templates/admin/backups.html:15 templates/admin/settings.html:42
+#: templates/admin/backups.html:15 templates/admin/settings.html:196
 msgid "Скачать базу данных"
 msgstr "Download database"
 
@@ -1057,17 +1471,19 @@ msgstr "Download database"
 msgid "Восстановление из файла"
 msgstr "Restore from file"
 
-#: templates/admin/backups.html:26 templates/admin/settings.html:46
+#: templates/admin/backups.html:26 templates/admin/settings.html:200
 msgid ""
 "Внимание! Восстановление заменит текущую базу данных. Все текущие данные "
 "будут потеряны. Рекомендуется предварительно сделать резервную копию."
-msgstr "Warning! Restoring will replace the current database. All current data will be lost. It is recommended to make a backup first."
+msgstr ""
+"Warning! Restoring will replace the current database. All current data "
+"will be lost. It is recommended to make a backup first."
 
-#: templates/admin/backups.html:29 templates/admin/settings.html:51
+#: templates/admin/backups.html:29 templates/admin/settings.html:205
 msgid "Выберите файл базы данных (.db)"
 msgstr "Select a database file (.db)"
 
-#: templates/admin/backups.html:33 templates/admin/settings.html:55
+#: templates/admin/backups.html:33 templates/admin/settings.html:209
 msgid "Восстановить"
 msgstr "Restore"
 
@@ -1107,21 +1523,132 @@ msgstr "Polling interval (seconds)"
 msgid "Как часто проверять доступность устройств"
 msgstr "How often to check device availability"
 
-#: templates/admin/settings.html:25
+#: templates/admin/settings.html:24
+msgid "Timeout ICMP (секунды)"
+msgstr "ICMP timeout (seconds)"
+
+#: templates/admin/settings.html:26
+msgid "Максимальное время ожидания ответа одного ICMP-пакета"
+msgstr "Maximum wait time for a single ICMP packet reply"
+
+#: templates/admin/settings.html:29
+msgid "Хранить историю мониторинга (дни)"
+msgstr "Keep monitoring history (days)"
+
+#: templates/admin/settings.html:31
+msgid ""
+"Хранится история UP/DOWN и пятиминутные агрегаты качества ICMP. По "
+"умолчанию — 7 дней."
+msgstr ""
+"UP/DOWN history and five-minute ICMP quality aggregates are kept here. "
+"Default is 7 days."
+
+#: templates/admin/settings.html:35
 msgid "Сохранить настройки"
 msgstr "Save settings"
 
-#: templates/admin/settings.html:63
+#: templates/admin/settings.html:45
+msgid "Профили качества связи"
+msgstr "Connection quality profiles"
+
+#: templates/admin/settings.html:49
+msgid ""
+"Пороги, при которых устройство считается \"снижено\" (degraded) или "
+"\"плохо\" (bad) по потерям/задержке/джиттеру. Профиль \"По умолчанию\" "
+"действует на все устройства без явно назначенного профиля — назначить "
+"другой профиль конкретному устройству можно в его карточке."
+msgstr ""
+"Thresholds at which a device is considered \"degraded\" or \"bad\" by "
+"loss/latency/jitter. The \"Default\" profile applies to all devices "
+"without an explicitly assigned profile — a different profile can be "
+"assigned to a specific device from its card."
+
+#: templates/admin/settings.html:52 templates/admin/settings.html:84
+#: templates/admin/settings.html:85 templates/admin/settings.html:93
+#: templates/admin/settings.html:94 templates/admin/settings.html:102
+#: templates/admin/settings.html:103 templates/admin/settings.html:148
+#: templates/admin/settings.html:149 templates/admin/settings.html:158
+#: templates/admin/settings.html:159 templates/admin/settings.html:168
+#: templates/admin/settings.html:169
+msgid "Снижено"
+msgstr "Degraded"
+
+#: templates/admin/settings.html:52
+msgid "такой же оранжевый ободок, как у устройства на карте"
+msgstr "same orange ring as a device on the map"
+
+#: templates/admin/settings.html:53 templates/admin/settings.html:87
+#: templates/admin/settings.html:88 templates/admin/settings.html:96
+#: templates/admin/settings.html:97 templates/admin/settings.html:105
+#: templates/admin/settings.html:106 templates/admin/settings.html:151
+#: templates/admin/settings.html:152 templates/admin/settings.html:161
+#: templates/admin/settings.html:162 templates/admin/settings.html:171
+#: templates/admin/settings.html:172
+msgid "Плохо"
+msgstr "Bad"
+
+#: templates/admin/settings.html:53
+msgid "такой же фиолетовый ободок, как у устройства на карте"
+msgstr "same purple ring as a device on the map"
+
+#: templates/admin/settings.html:59
+msgid "Профиль"
+msgstr "Profile"
+
+#: templates/admin/settings.html:60 templates/admin/settings.html:146
+#, python-format
+msgid "Потери, %%"
+msgstr "Loss, %%"
+
+#: templates/admin/settings.html:60 templates/admin/settings.html:61
+#: templates/admin/settings.html:62 templates/admin/settings.html:146
+#: templates/admin/settings.html:156 templates/admin/settings.html:166
+msgid "снижено / плохо"
+msgstr "degraded / bad"
+
+#: templates/admin/settings.html:61 templates/admin/settings.html:156
+msgid "Задержка, мс"
+msgstr "Latency, ms"
+
+#: templates/admin/settings.html:62 templates/admin/settings.html:166
+msgid "Джиттер, мс"
+msgstr "Jitter, ms"
+
+#: templates/admin/settings.html:74
+msgid "Профиль по умолчанию для всех устройств без явно назначенного профиля"
+msgstr "Default profile for all devices without an explicitly assigned profile"
+
+#: templates/admin/settings.html:75
+msgid "По умолчанию"
+msgstr "Default"
+
+#: templates/admin/settings.html:117
+msgid "Сделать профилем по умолчанию"
+msgstr "Set as default profile"
+
+#: templates/admin/settings.html:122
+msgid ""
+"Удалить профиль? Устройства с этим профилем вернутся на профиль по "
+"умолчанию."
+msgstr "Delete profile? Devices using it will fall back to the default profile."
+
+#: templates/admin/settings.html:138
+msgid "Новый профиль"
+msgstr "New profile"
+
+#: templates/admin/settings.html:217
 msgid "Сброс ограничений"
 msgstr "Reset limits"
 
-#: templates/admin/settings.html:66
+#: templates/admin/settings.html:220
 msgid ""
 "Если пользователи жалуются на «Слишком много запросов» (ошибка 429), "
 "нажмите кнопку ниже для сброса счётчиков."
-msgstr "If users complain about \"Too many requests\" (error 429), click the button below to reset the counters."
+msgstr ""
+"If users complain about \"Too many requests\" (error 429), click the "
+"button below to reset the counters."
 
-#: templates/admin/settings.html:71
+#: templates/admin/settings.html:225
 msgid "Сбросить счётчики"
 msgstr "Reset counters"
 
@@ -1144,10 +1671,6 @@ msgstr "Current icon:"
 #: templates/admin/types.html:40
 msgid "Обновить"
 msgstr "Update"
-
-#: templates/admin/types.html:40 templates/admin/users.html:31
-msgid "Добавить"
-msgstr "Add"
 
 #: templates/admin/types.html:48
 msgid "Удалить тип? Все устройства этого типа потеряют иконку."
@@ -1218,131 +1741,35 @@ msgstr "No"
 msgid "Новый пароль (оставьте пустым, чтобы не менять)"
 msgstr "New password (leave empty to keep unchanged)"
 
-#: templates/base.html
-msgid "Переместить карту"
-msgstr "Move map"
+#: templates/auth/change_password.html:180
+msgid "Смена пароля"
+msgstr "Change password"
 
-#: templates/base.html
-msgid "Переместить"
-msgstr "Move"
+#: templates/auth/change_password.html:187
+msgid "Введите текущий пароль"
+msgstr "Enter current password"
 
-#: templates/base.html
-msgid "Права на папку"
-msgstr "Folder permissions"
+#: templates/auth/change_password.html:196
+msgid "Введите новый пароль"
+msgstr "Enter new password"
 
-#: templates/base.html
-msgid "— Корень (без папки) —"
-msgstr "— Root (no folder) —"
-#: templates/base.html
-msgid "Название папки"
-msgstr "Folder name"
+#: templates/auth/change_password.html:205
+msgid "Повторите новый пароль"
+msgstr "Repeat new password"
 
+#: templates/auth/change_password.html:211
+msgid "Сменить пароль"
+msgstr "Change password"
 
-#: blueprints/admin.py
-msgid "Файл базы данных повреждён или не является корректной SQLite-базой."
-msgstr "The database file is corrupted or is not a valid SQLite database."
+#~ msgid "Джиттер, мс (снижено/плохо)"
+#~ msgstr "Jitter, ms (degraded/bad)"
 
-#: blueprints/admin.py
-msgid "Резервная копия несовместима с текущей версией LinkVision: отсутствуют таблицы ({tables}). Текущая база данных не изменена."
-msgstr "The backup is incompatible with the current LinkVision version: missing tables ({tables}). The current database was not changed."
+#~ msgid "Задержка, мс (снижено/плохо)"
+#~ msgstr "Latency, ms (degraded/bad)"
 
-#: blueprints/admin.py
-msgid "Резервная копия создана в несовместимой версии LinkVision. Отсутствуют поля: {fields}. Текущая база данных не изменена."
-msgstr "The backup was created by an incompatible LinkVision version. Missing fields: {fields}. The current database was not changed."
+#~ msgid "Потери, %% (плохо)"
+#~ msgstr "Loss, %% (bad)"
 
-#: blueprints/admin.py
-msgid "Не удалось проверить файл базы данных. Текущая база данных не изменена."
-msgstr "The database file could not be validated. The current database was not changed."
+#~ msgid "Потери, %% (снижено)"
+#~ msgstr "Loss, %% (degraded)"
 
-#: blueprints/admin.py
-msgid "Восстановление файла .db доступно только для SQLite."
-msgstr "Restoring .db files is available only for SQLite."
-
-#: blueprints/admin.py
-msgid "База данных успешно восстановлена. Резервная копия предыдущей БД сохранена как .bak."
-msgstr "The database was restored successfully. A backup of the previous database was saved as .bak."
-
-#: blueprints/admin.py
-msgid "Ошибка при восстановлении базы данных. Текущая база данных не изменена."
-msgstr "Database restore failed. The current database was not changed."
-#: templates/admin/settings.html
-msgid "Джиттер, мс"
-msgstr "Jitter, ms"
-
-#: templates/admin/settings.html
-msgid "Джиттер, мс (снижено/плохо)"
-msgstr "Jitter, ms (degraded/bad)"
-
-#: templates/admin/settings.html
-msgid "Задержка, мс"
-msgstr "Latency, ms"
-
-#: templates/admin/settings.html
-msgid "Задержка, мс (снижено/плохо)"
-msgstr "Latency, ms (degraded/bad)"
-
-#: templates/admin/settings.html
-msgid "Новый профиль"
-msgstr "New profile"
-
-#: templates/admin/settings.html
-msgid "По умолчанию"
-msgstr "Default"
-
-#: templates/admin/settings.html
-msgid "Потери, %%"
-msgstr "Loss, %%"
-
-#: templates/admin/settings.html
-msgid "Потери, %% (плохо)"
-msgstr "Loss, %% (bad)"
-
-#: templates/admin/settings.html
-msgid "Потери, %% (снижено)"
-msgstr "Loss, %% (degraded)"
-
-#: templates/admin/settings.html
-msgid "Профили качества связи"
-msgstr "Connection quality profiles"
-
-#: templates/admin/settings.html
-msgid "Профиль"
-msgstr "Profile"
-
-#: templates/admin/settings.html
-msgid "Сделать профилем по умолчанию"
-msgstr "Set as default profile"
-
-#: templates/admin/settings.html
-msgid "Удалить профиль? Устройства с этим профилем вернутся на профиль по умолчанию."
-msgstr "Delete profile? Devices using it will fall back to the default profile."
-
-#: templates/admin/settings.html
-msgid "снижено / плохо"
-msgstr "degraded / bad"
-
-#: templates/admin/settings.html
-msgid "Пороги, при которых устройство считается \"снижено\" (degraded) или \"плохо\" (bad) по потерям/задержке/джиттеру. Профиль \"По умолчанию\" действует на все устройства без явно назначенного профиля — назначить другой профиль конкретному устройству можно в его карточке."
-msgstr "Thresholds at which a device is considered \"degraded\" or \"bad\" by loss/latency/jitter. The \"Default\" profile applies to all devices without an explicitly assigned profile — a different profile can be assigned to a specific device from its card."
-#: templates/map_view.html
-msgid "Профиль качества связи"
-msgstr "Connection quality profile"
-
-#: templates/map_view.html
-msgid "Пороги потерь/задержки/джиттера, при которых устройство считается \"снижено\" или \"плохо\". Управляются в Настройках."
-msgstr "Loss/latency/jitter thresholds at which a device is considered \"degraded\" or \"bad\". Managed in Settings."
-#: templates/admin/settings.html
-msgid "Снижено"
-msgstr "Degraded"
-
-#: templates/admin/settings.html
-msgid "Плохо"
-msgstr "Bad"
-
-#: templates/admin/settings.html
-msgid "такой же оранжевый ободок, как у устройства на карте"
-msgstr "same orange ring as a device on the map"
-
-#: templates/admin/settings.html
-msgid "такой же фиолетовый ободок, как у устройства на карте"
-msgstr "same purple ring as a device on the map"

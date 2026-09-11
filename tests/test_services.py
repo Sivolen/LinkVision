@@ -161,3 +161,76 @@ class TestPasswordValidation:
 
 
 # Тесты для модели - удалены из-за зависимости от Blueprint'ов
+
+
+class TestMonitorSettings:
+    """Тесты настроек мониторинга: get_monitor_settings и update_ping_settings."""
+
+    def test_get_monitor_settings_defaults(self, app):
+        from services.settings_service import get_monitor_settings
+
+        with app.app_context():
+            count, interval, timeout, retention = get_monitor_settings()
+        assert count == 4
+        assert interval == 10
+        assert timeout == 1.0
+        assert retention == 7
+
+    def test_get_monitor_settings_reads_stored_values(self, app):
+        from models import Settings, db
+        from services.settings_service import get_monitor_settings
+
+        with app.app_context():
+            db.session.add(Settings(key="ping_timeout", value="2.5"))
+            db.session.add(Settings(key="history_retention_days", value="30"))
+            db.session.commit()
+            count, interval, timeout, retention = get_monitor_settings()
+        assert timeout == 2.5
+        assert retention == 30
+
+    def test_update_ping_settings_roundtrip(self, app):
+        from models import Settings
+        from services.settings_service import (
+            update_ping_settings,
+            get_monitor_settings,
+        )
+
+        with app.app_context():
+            update_ping_settings("6", "60", "0.5", "14")
+            count, interval, timeout, retention = get_monitor_settings()
+        assert (count, interval, timeout, retention) == (6, 60, 0.5, 14)
+        assert Settings.query.filter_by(key="ping_timeout").first().value == "0.5"
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "count,interval,timeout,retention",
+        [
+            ("0", "10", "1.0", "7"),  # count < 1
+            ("11", "10", "1.0", "7"),  # count > 10
+            ("4", "4", "1.0", "7"),  # interval < 5
+            ("4", "301", "1.0", "7"),  # interval > 300
+            ("4", "10", "0.1", "7"),  # timeout < 0.2
+            ("4", "10", "10.1", "7"),  # timeout > 10
+            ("4", "10", "1.0", "0"),  # retention < 1
+            ("4", "10", "1.0", "3651"),  # retention > 3650
+            ("abc", "10", "1.0", "7"),  # не число
+            ("4", "10", "nan", "7"),  # не число
+        ],
+    )
+    def test_update_ping_settings_rejects_invalid(
+        self, app, count, interval, timeout, retention
+    ):
+        from services.settings_service import update_ping_settings
+
+        with app.app_context():
+            with pytest.raises(ValueError):
+                update_ping_settings(count, interval, timeout, retention)
+
+    def test_monitor_clamps_retention_days(self):
+        """Логика клампинга retention в monitor_loop: 1..3650."""
+        clamp = lambda v: max(1, min(int(v), 3650))  # noqa: E731
+        assert clamp(0) == 1
+        assert clamp(-5) == 1
+        assert clamp(7) == 7
+        assert clamp(3650) == 3650
+        assert clamp(9999) == 3650

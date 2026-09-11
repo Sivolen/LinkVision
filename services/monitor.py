@@ -29,8 +29,8 @@ settings_cache = TTLCache(maxsize=10, ttl=2)
 _quality_windows = {}
 _quality_last_persist = {}
 QUALITY_PERSIST_SECONDS = 300
-QUALITY_RETENTION_DAYS = 30
-_last_quality_cleanup = 0
+QUALITY_RETENTION_DAYS = 7
+_last_history_cleanup = 0
 QUALITY_LIVE_MIN_SAMPLES = 8
 
 
@@ -76,7 +76,7 @@ def stop_monitor():
         monitor_logger.info("Monitor stopped")
 
 
-def ping_host(ip, count=1):
+def ping_host(ip, count=1, timeout_seconds=1.0):
     """Выполнить ICMP-проверку и вернуть RTT каждого успешного пакета в мс."""
     latencies = []
     if PING3_AVAILABLE:
@@ -85,7 +85,7 @@ def ping_host(ip, count=1):
         # Последовательные RTT по-прежнему используются для расчёта jitter.
         for i in range(count):
             try:
-                response_time = ping(ip, timeout=2)
+                response_time = ping(ip, timeout=timeout_seconds)
                 if response_time is not None:
                     latencies.append(float(response_time) * 1000.0)
             except Exception:
@@ -93,10 +93,16 @@ def ping_host(ip, count=1):
         return latencies, count
 
     param = "-n" if platform.system().lower() == "windows" else "-c"
-    timeout_seconds = 2
     try:
         if platform.system().lower() == "windows":
-            cmd = ["ping", param, str(count), "-w", str(timeout_seconds * 1000), ip]
+            cmd = [
+                "ping",
+                param,
+                str(count),
+                "-w",
+                str(int(timeout_seconds * 1000)),
+                ip,
+            ]
         else:
             cmd = ["ping", param, str(count), "-W", str(timeout_seconds), ip]
         output = subprocess.run(
@@ -126,6 +132,19 @@ def get_setting(key, default):
             settings_cache[cache_key] = value
             return value
     return default
+
+
+def get_float_setting(key, default):
+    cache_key = f"setting_{key}"
+    if cache_key in settings_cache:
+        return float(settings_cache[cache_key])
+    if app_instance:
+        with app_instance.app_context():
+            s = Settings.query.filter_by(key=key).first()
+            value = float(s.value) if s else float(default)
+            settings_cache[cache_key] = value
+            return value
+    return float(default)
 
 
 def _quality_from_metrics(metrics, thresholds=None):
@@ -195,15 +214,6 @@ def _record_quality_sample(device_id, metrics, now, thresholds=None):
             quality=quality,
         )
     )
-    global _last_quality_cleanup
-    if now - _last_quality_cleanup >= 3600:
-        cutoff = datetime.datetime.now() - datetime.timedelta(
-            days=QUALITY_RETENTION_DAYS
-        )
-        db.session.query(DeviceQualityHistory).filter(
-            DeviceQualityHistory.timestamp < cutoff
-        ).delete(synchronize_session=False)
-        _last_quality_cleanup = now
     _quality_windows[device_id] = {
         "sent": 0,
         "received": 0,
@@ -297,6 +307,10 @@ def monitor_loop():
 
                 ping_count = get_setting("ping_count", 4)
                 ping_interval = get_setting("ping_interval", 10)
+                ping_timeout = get_float_setting("ping_timeout", 1.0)
+                history_retention_days = get_setting(
+                    "history_retention_days", QUALITY_RETENTION_DAYS
+                )
 
             # ---- ФУНКЦИЯ ПРОВЕРКИ ----
             def _check_device(dev_id, ips, pcnt):
@@ -315,7 +329,7 @@ def monitor_loop():
 
                 address_results = []
                 for ip in ips:
-                    latencies, sent = ping_host(ip, pcnt)
+                    latencies, sent = ping_host(ip, pcnt, ping_timeout)
                     address_results.append(
                         {"ip": ip, "latencies": latencies, "sent": sent}
                     )
@@ -411,24 +425,14 @@ def monitor_loop():
                             )
                         continue
 
-                for future in concurrent.futures.as_completed(
-                    futures, timeout=ping_interval * 2
-                ):
+                for future in concurrent.futures.as_completed(futures):
                     try:
-                        dev_id, new_status, metrics = future.result(timeout=10)
+                        dev_id, new_status, metrics = future.result()
                         results.append((dev_id, new_status, metrics))
-                    except concurrent.futures.TimeoutError:
-                        dev_id = futures.get(future, "unknown")
-                        monitor_logger.warning(
-                            f"Timeout checking device {dev_id}, marking as down"
-                        )
-                        results.append((dev_id, "down", {}))
                     except Exception as e:
                         dev_id = futures.get(future, "unknown")
                         monitor_logger.error(f"Error checking device {dev_id}: {e}")
                         results.append((dev_id, "down", {}))
-
-                time.sleep(0.5)
 
             # ---- ОБРАБОТКА ИЗМЕНЕНИЙ ----
             current_time = time.time()
@@ -436,6 +440,23 @@ def monitor_loop():
             emits_by_room = {}
 
             with _lock, app_instance.app_context():
+                global _last_history_cleanup
+                if current_time - _last_history_cleanup >= 3600:
+                    retention_days = max(1, min(int(history_retention_days), 3650))
+                    cutoff = datetime.datetime.now() - datetime.timedelta(
+                        days=retention_days
+                    )
+                    db.session.query(DeviceHistory).filter(
+                        DeviceHistory.timestamp < cutoff
+                    ).delete(synchronize_session=False)
+                    db.session.query(DeviceQualityHistory).filter(
+                        DeviceQualityHistory.timestamp < cutoff
+                    ).delete(synchronize_session=False)
+                    _last_history_cleanup = current_time
+                    monitor_logger.info(
+                        f"History cleanup completed: retention={retention_days} days"
+                    )
+
                 # Сначала считаем, кому вообще нужна запись в БД — БЕЗ единого
                 # похода в БД, сравнивая с prev_status_by_id/prev_quality_by_id,
                 # снятыми в начале ЭТОГО ЖЕ цикла. Раньше вместо этого
@@ -507,7 +528,9 @@ def monitor_loop():
                             # намеренно игнорируем, чтобы 1 потерянный пакет из 4
                             # не давал ложный alarm.
                             warmup_metrics = dict(metrics)
-                            warmup_metrics["samples"] = len(metrics.get("latencies", []))
+                            warmup_metrics["samples"] = len(
+                                metrics.get("latencies", [])
+                            )
                             warmup_quality = _quality_from_metrics(
                                 warmup_metrics, thresholds
                             )

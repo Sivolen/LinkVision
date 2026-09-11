@@ -256,6 +256,8 @@ class TestBatch5Admin:
                     "admin/settings.html",
                     count=4,
                     interval=10,
+                    timeout=1.0,
+                    history_retention_days=7,
                     db_size=0,
                     db_mtime=None,
                     # Реальный роут (blueprints/admin.py::settings) всегда передаёт
@@ -267,6 +269,8 @@ class TestBatch5Admin:
         assert "Unknown" in html  # db_mtime=None → «Неизвестно»
         assert "Reset limits" in html
         assert "Connection quality profiles" in html  # заголовок нового блока
+        assert "ICMP timeout" in html  # поле ping_timeout
+        assert "Keep monitoring history" in html  # поле history_retention_days
 
 
 class TestCatalogIntegrity:
