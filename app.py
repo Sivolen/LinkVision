@@ -205,6 +205,10 @@ def create_app():
             db.session.add(Settings(key="ping_count", value="4"))
         if not db.session.get(Settings, "ping_interval"):
             db.session.add(Settings(key="ping_interval", value="10"))
+        if not db.session.get(Settings, "ping_timeout"):
+            db.session.add(Settings(key="ping_timeout", value="1.0"))
+        if not db.session.get(Settings, "history_retention_days"):
+            db.session.add(Settings(key="history_retention_days", value="7"))
 
         # --- Дефолтные типы устройств, если таблица пуста ---
         if not DeviceType.query.first():
