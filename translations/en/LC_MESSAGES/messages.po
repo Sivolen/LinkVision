@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: LinkVision 2.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-11 10:48+1100\n"
+"POT-Creation-Date: 2026-09-14 09:55+1100\n"
 "PO-Revision-Date: 2026-07-09 14:24+1100\n"
 "Last-Translator: LinkVision\n"
 "Language: en\n"
@@ -16,54 +16,6 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
-
-#: forms.py:14 forms.py:20
-#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:14
-#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:20
-#: future/fix4/extracted/LinkVision-ver2/forms.py:14
-#: future/fix4/extracted/LinkVision-ver2/forms.py:20
-#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:14
-#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:20
-#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:14
-#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:20
-#: templates/admin/users.html:14 templates/admin/users.html:42
-#: templates/admin/users.html:97
-msgid "Имя пользователя"
-msgstr "Username"
-
-#: forms.py:15 forms.py:23
-#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:15
-#: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:23
-#: future/fix4/extracted/LinkVision-ver2/forms.py:15
-#: future/fix4/extracted/LinkVision-ver2/forms.py:23
-#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:15
-#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:23
-#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:15
-#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:23
-#: templates/admin/users.html:18
-msgid "Пароль"
-msgstr "Password"
-
-#: forms.py:29 future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:29
-#: future/fix4/extracted/LinkVision-ver2/forms.py:29
-#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:29
-#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:29
-msgid "Пароль должен содержать хотя бы одну букву и одну цифру"
-msgstr "Password must contain at least one letter and one digit"
-
-#: forms.py:34 future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:34
-#: future/fix4/extracted/LinkVision-ver2/forms.py:34
-#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:34
-#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:34
-msgid "Подтверждение пароля"
-msgstr "Password confirmation"
-
-#: forms.py:37 future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/forms.py:37
-#: future/fix4/extracted/LinkVision-ver2/forms.py:37
-#: future/fix4/extracted_fixed/LinkVision-ver2/forms.py:37
-#: future/fix4/extracted_reload/LinkVision-ver2/forms.py:37
-msgid "Пароли не совпадают"
-msgstr "Passwords do not match"
 
 #: blueprints/admin.py:38 future/blueprints/admin.py:31
 #: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:29
@@ -261,7 +213,7 @@ msgstr "Device type deleted"
 msgid "Ошибка при удалении типа"
 msgstr "Error deleting type"
 
-#: blueprints/admin.py:232 future/blueprints/admin.py:221
+#: blueprints/admin.py:237 future/blueprints/admin.py:221
 #: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:219
 #: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:219
 #: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:219
@@ -271,7 +223,7 @@ msgstr "Error deleting type"
 msgid "Настройки сохранены"
 msgstr "Settings saved"
 
-#: blueprints/admin.py:235 future/blueprints/admin.py:224
+#: blueprints/admin.py:240 future/blueprints/admin.py:224
 #: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:222
 #: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:222
 #: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:222
@@ -281,7 +233,7 @@ msgstr "Settings saved"
 msgid "Ошибка при сохранении настроек"
 msgstr "Error saving settings"
 
-#: blueprints/admin.py:241 future/blueprints/admin.py:230
+#: blueprints/admin.py:246 future/blueprints/admin.py:230
 #: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:228
 #: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:228
 #: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:228
@@ -291,23 +243,23 @@ msgstr "Error saving settings"
 msgid "Счётчики rate limit успешно сброшены"
 msgstr "Rate limit counters reset successfully"
 
-#: blueprints/admin.py:294
+#: blueprints/admin.py:304
 msgid "Профиль качества создан"
 msgstr "Quality profile created"
 
-#: blueprints/admin.py:307
+#: blueprints/admin.py:317
 msgid "Профиль качества сохранён"
 msgstr "Quality profile saved"
 
-#: blueprints/admin.py:317
+#: blueprints/admin.py:327
 msgid "Профиль назначен профилем по умолчанию"
 msgstr "Profile set as the default profile"
 
-#: blueprints/admin.py:329
+#: blueprints/admin.py:339
 msgid "Профиль удалён, затронутые устройства переведены на профиль по умолчанию"
 msgstr "Profile deleted; affected devices switched to the default profile"
 
-#: blueprints/admin.py:354 future/blueprints/admin.py:259
+#: blueprints/admin.py:364 future/blueprints/admin.py:259
 #: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:257
 #: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:257
 #: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:257
@@ -317,7 +269,7 @@ msgstr "Profile deleted; affected devices switched to the default profile"
 msgid "Карта удалена"
 msgstr "Map deleted"
 
-#: blueprints/admin.py:357 future/blueprints/admin.py:262
+#: blueprints/admin.py:367 future/blueprints/admin.py:262
 #: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:260
 #: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:260
 #: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:260
@@ -327,17 +279,16 @@ msgstr "Map deleted"
 msgid "Ошибка при удалении карты"
 msgstr "Error deleting map"
 
-#: blueprints/admin.py:375
+#: blueprints/admin.py:385
 msgid "Структура базы данных несовместима с текущей версией."
 msgstr "Database structure is incompatible with the current version."
 
-#: blueprints/admin.py:378
+#: blueprints/admin.py:388
 #, python-brace-format
 msgid "Резервная копия отклонена. {details} Текущая база данных не изменена."
-msgstr ""
-"Backup rejected. {details} The current database was not changed."
+msgstr "Backup rejected. {details} The current database was not changed."
 
-#: blueprints/admin.py:384 future/blueprints/admin.py:324
+#: blueprints/admin.py:394 future/blueprints/admin.py:324
 #: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:269
 #: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:269
 #: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:269
@@ -347,7 +298,7 @@ msgstr ""
 msgid "Файл не выбран"
 msgstr "No file selected"
 
-#: blueprints/admin.py:389 future/blueprints/admin.py:329
+#: blueprints/admin.py:399 future/blueprints/admin.py:329
 #: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:274
 #: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:274
 #: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:274
@@ -357,7 +308,7 @@ msgstr "No file selected"
 msgid "Пустой файл"
 msgstr "Empty file"
 
-#: blueprints/admin.py:393 future/blueprints/admin.py:333
+#: blueprints/admin.py:403 future/blueprints/admin.py:333
 #: future/fix2/LinkVision-ver2-fixed/LinkVision-ver2/blueprints/admin.py:278
 #: future/fix4/extracted/LinkVision-ver2/blueprints/admin.py:278
 #: future/fix4/extracted_fixed/LinkVision-ver2/blueprints/admin.py:278
@@ -367,12 +318,12 @@ msgstr "Empty file"
 msgid "Допустимы только файлы .db"
 msgstr "Only .db files are allowed"
 
-#: blueprints/admin.py:398 future/blueprints/admin.py:338
+#: blueprints/admin.py:408 future/blueprints/admin.py:338
 #: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:338
 msgid "Восстановление файла .db доступно только для SQLite."
 msgstr "Restoring .db files is available only for SQLite."
 
-#: blueprints/admin.py:458 future/blueprints/admin.py:375
+#: blueprints/admin.py:468 future/blueprints/admin.py:375
 #: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:375
 msgid ""
 "База данных успешно восстановлена. Резервная копия предыдущей БД "
@@ -381,7 +332,7 @@ msgstr ""
 "The database was restored successfully. A backup of the previous database"
 " was saved as .bak."
 
-#: blueprints/admin.py:466 future/blueprints/admin.py:381
+#: blueprints/admin.py:476 future/blueprints/admin.py:381
 #: future/fix8/LinkVision-fixed-import-restore/blueprints/admin.py:381
 msgid "Ошибка при восстановлении базы данных. Текущая база данных не изменена."
 msgstr "Database restore failed. The current database was not changed."
@@ -640,7 +591,7 @@ msgstr "Folder name"
 msgid "Отмена"
 msgstr "Cancel"
 
-#: templates/admin/settings.html:111 templates/admin/users.html:125
+#: templates/admin/settings.html:116 templates/admin/users.html:125
 #: templates/base.html:173 templates/base.html:291 templates/map_view.html:298
 #: templates/map_view.html:391 templates/map_view.html:673
 msgid "Сохранить"
@@ -701,7 +652,7 @@ msgstr "Map name"
 msgid "Например: Офис Москва"
 msgstr "For example: Moscow Office"
 
-#: templates/admin/settings.html:178 templates/base.html:257
+#: templates/admin/settings.html:183 templates/base.html:257
 #: templates/dashboard.html:53
 msgid "Создать"
 msgstr "Create"
@@ -734,7 +685,7 @@ msgstr "Confirmation"
 msgid "Вы уверены?"
 msgstr "Are you sure?"
 
-#: templates/admin/maps.html:29 templates/admin/settings.html:124
+#: templates/admin/maps.html:29 templates/admin/settings.html:129
 #: templates/admin/types.html:91 templates/admin/users.html:76
 #: templates/base.html:310 templates/dashboard.html:22
 #: templates/map_view.html:303 templates/map_view.html:389
@@ -1259,7 +1210,7 @@ msgstr "Existing groups"
 msgid "Поиск по названию..."
 msgstr "Search by name..."
 
-#: templates/admin/maps.html:9 templates/admin/settings.html:142
+#: templates/admin/maps.html:9 templates/admin/settings.html:147
 #: templates/admin/types.html:61 templates/map_view.html:519
 msgid "Название"
 msgstr "Name"
@@ -1443,7 +1394,7 @@ msgstr "Sign up"
 msgid "Уже есть аккаунт? Войти"
 msgstr "Already have an account? Sign in"
 
-#: templates/admin/backups.html:4 templates/admin/settings.html:189
+#: templates/admin/backups.html:4 templates/admin/settings.html:194
 msgid "Резервное копирование"
 msgstr "Backup"
 
@@ -1451,19 +1402,19 @@ msgstr "Backup"
 msgid "Текущая база данных"
 msgstr "Current database"
 
-#: templates/admin/backups.html:11 templates/admin/settings.html:192
+#: templates/admin/backups.html:11 templates/admin/settings.html:197
 msgid "Размер:"
 msgstr "Size:"
 
-#: templates/admin/backups.html:12 templates/admin/settings.html:193
+#: templates/admin/backups.html:12 templates/admin/settings.html:198
 msgid "Последнее изменение:"
 msgstr "Last modified:"
 
-#: templates/admin/backups.html:12 templates/admin/settings.html:193
+#: templates/admin/backups.html:12 templates/admin/settings.html:198
 msgid "Неизвестно"
 msgstr "Unknown"
 
-#: templates/admin/backups.html:15 templates/admin/settings.html:196
+#: templates/admin/backups.html:15 templates/admin/settings.html:201
 msgid "Скачать базу данных"
 msgstr "Download database"
 
@@ -1471,7 +1422,7 @@ msgstr "Download database"
 msgid "Восстановление из файла"
 msgstr "Restore from file"
 
-#: templates/admin/backups.html:26 templates/admin/settings.html:200
+#: templates/admin/backups.html:26 templates/admin/settings.html:205
 msgid ""
 "Внимание! Восстановление заменит текущую базу данных. Все текущие данные "
 "будут потеряны. Рекомендуется предварительно сделать резервную копию."
@@ -1479,11 +1430,11 @@ msgstr ""
 "Warning! Restoring will replace the current database. All current data "
 "will be lost. It is recommended to make a backup first."
 
-#: templates/admin/backups.html:29 templates/admin/settings.html:205
+#: templates/admin/backups.html:29 templates/admin/settings.html:210
 msgid "Выберите файл базы данных (.db)"
 msgstr "Select a database file (.db)"
 
-#: templates/admin/backups.html:33 templates/admin/settings.html:209
+#: templates/admin/backups.html:33 templates/admin/settings.html:214
 msgid "Восстановить"
 msgstr "Restore"
 
@@ -1532,10 +1483,22 @@ msgid "Максимальное время ожидания ответа одн�
 msgstr "Maximum wait time for a single ICMP packet reply"
 
 #: templates/admin/settings.html:29
+msgid "Потоки мониторинга"
+msgstr "Monitoring threads"
+
+#: templates/admin/settings.html:31
+msgid ""
+"Количество параллельных проверок устройств. Применяется со следующего "
+"цикла. По умолчанию — 150, максимум — 300."
+msgstr ""
+"Number of devices checked in parallel. Takes effect from the next cycle. "
+"Default 150, maximum 300."
+
+#: templates/admin/settings.html:34
 msgid "Хранить историю мониторинга (дни)"
 msgstr "Keep monitoring history (days)"
 
-#: templates/admin/settings.html:31
+#: templates/admin/settings.html:36
 msgid ""
 "Хранится история UP/DOWN и пятиминутные агрегаты качества ICMP. По "
 "умолчанию — 7 дней."
@@ -1543,15 +1506,15 @@ msgstr ""
 "UP/DOWN history and five-minute ICMP quality aggregates are kept here. "
 "Default is 7 days."
 
-#: templates/admin/settings.html:35
+#: templates/admin/settings.html:40
 msgid "Сохранить настройки"
 msgstr "Save settings"
 
-#: templates/admin/settings.html:45
+#: templates/admin/settings.html:50
 msgid "Профили качества связи"
 msgstr "Connection quality profiles"
 
-#: templates/admin/settings.html:49
+#: templates/admin/settings.html:54
 msgid ""
 "Пороги, при которых устройство считается \"снижено\" (degraded) или "
 "\"плохо\" (bad) по потерям/задержке/джиттеру. Профиль \"По умолчанию\" "
@@ -1563,84 +1526,84 @@ msgstr ""
 "without an explicitly assigned profile — a different profile can be "
 "assigned to a specific device from its card."
 
-#: templates/admin/settings.html:52 templates/admin/settings.html:84
-#: templates/admin/settings.html:85 templates/admin/settings.html:93
-#: templates/admin/settings.html:94 templates/admin/settings.html:102
-#: templates/admin/settings.html:103 templates/admin/settings.html:148
-#: templates/admin/settings.html:149 templates/admin/settings.html:158
-#: templates/admin/settings.html:159 templates/admin/settings.html:168
-#: templates/admin/settings.html:169
+#: templates/admin/settings.html:57 templates/admin/settings.html:89
+#: templates/admin/settings.html:90 templates/admin/settings.html:98
+#: templates/admin/settings.html:99 templates/admin/settings.html:107
+#: templates/admin/settings.html:108 templates/admin/settings.html:153
+#: templates/admin/settings.html:154 templates/admin/settings.html:163
+#: templates/admin/settings.html:164 templates/admin/settings.html:173
+#: templates/admin/settings.html:174
 msgid "Снижено"
 msgstr "Degraded"
 
-#: templates/admin/settings.html:52
+#: templates/admin/settings.html:57
 msgid "такой же оранжевый ободок, как у устройства на карте"
 msgstr "same orange ring as a device on the map"
 
-#: templates/admin/settings.html:53 templates/admin/settings.html:87
-#: templates/admin/settings.html:88 templates/admin/settings.html:96
-#: templates/admin/settings.html:97 templates/admin/settings.html:105
-#: templates/admin/settings.html:106 templates/admin/settings.html:151
-#: templates/admin/settings.html:152 templates/admin/settings.html:161
-#: templates/admin/settings.html:162 templates/admin/settings.html:171
-#: templates/admin/settings.html:172
+#: templates/admin/settings.html:58 templates/admin/settings.html:92
+#: templates/admin/settings.html:93 templates/admin/settings.html:101
+#: templates/admin/settings.html:102 templates/admin/settings.html:110
+#: templates/admin/settings.html:111 templates/admin/settings.html:156
+#: templates/admin/settings.html:157 templates/admin/settings.html:166
+#: templates/admin/settings.html:167 templates/admin/settings.html:176
+#: templates/admin/settings.html:177
 msgid "Плохо"
 msgstr "Bad"
 
-#: templates/admin/settings.html:53
+#: templates/admin/settings.html:58
 msgid "такой же фиолетовый ободок, как у устройства на карте"
 msgstr "same purple ring as a device on the map"
 
-#: templates/admin/settings.html:59
+#: templates/admin/settings.html:64
 msgid "Профиль"
 msgstr "Profile"
 
-#: templates/admin/settings.html:60 templates/admin/settings.html:146
+#: templates/admin/settings.html:65 templates/admin/settings.html:151
 #, python-format
 msgid "Потери, %%"
 msgstr "Loss, %%"
 
-#: templates/admin/settings.html:60 templates/admin/settings.html:61
-#: templates/admin/settings.html:62 templates/admin/settings.html:146
-#: templates/admin/settings.html:156 templates/admin/settings.html:166
+#: templates/admin/settings.html:65 templates/admin/settings.html:66
+#: templates/admin/settings.html:67 templates/admin/settings.html:151
+#: templates/admin/settings.html:161 templates/admin/settings.html:171
 msgid "снижено / плохо"
 msgstr "degraded / bad"
 
-#: templates/admin/settings.html:61 templates/admin/settings.html:156
+#: templates/admin/settings.html:66 templates/admin/settings.html:161
 msgid "Задержка, мс"
 msgstr "Latency, ms"
 
-#: templates/admin/settings.html:62 templates/admin/settings.html:166
+#: templates/admin/settings.html:67 templates/admin/settings.html:171
 msgid "Джиттер, мс"
 msgstr "Jitter, ms"
 
-#: templates/admin/settings.html:74
+#: templates/admin/settings.html:79
 msgid "Профиль по умолчанию для всех устройств без явно назначенного профиля"
 msgstr "Default profile for all devices without an explicitly assigned profile"
 
-#: templates/admin/settings.html:75
+#: templates/admin/settings.html:80
 msgid "По умолчанию"
 msgstr "Default"
 
-#: templates/admin/settings.html:117
+#: templates/admin/settings.html:122
 msgid "Сделать профилем по умолчанию"
 msgstr "Set as default profile"
 
-#: templates/admin/settings.html:122
+#: templates/admin/settings.html:127
 msgid ""
 "Удалить профиль? Устройства с этим профилем вернутся на профиль по "
 "умолчанию."
 msgstr "Delete profile? Devices using it will fall back to the default profile."
 
-#: templates/admin/settings.html:138
+#: templates/admin/settings.html:143
 msgid "Новый профиль"
 msgstr "New profile"
 
-#: templates/admin/settings.html:217
+#: templates/admin/settings.html:222
 msgid "Сброс ограничений"
 msgstr "Reset limits"
 
-#: templates/admin/settings.html:220
+#: templates/admin/settings.html:225
 msgid ""
 "Если пользователи жалуются на «Слишком много запросов» (ошибка 429), "
 "нажмите кнопку ниже для сброса счётчиков."
@@ -1648,7 +1611,7 @@ msgstr ""
 "If users complain about \"Too many requests\" (error 429), click the "
 "button below to reset the counters."
 
-#: templates/admin/settings.html:225
+#: templates/admin/settings.html:230
 msgid "Сбросить счётчики"
 msgstr "Reset counters"
 
@@ -1712,6 +1675,15 @@ msgstr "User management"
 msgid "Добавить нового пользователя"
 msgstr "Add a new user"
 
+#: templates/admin/users.html:14 templates/admin/users.html:42
+#: templates/admin/users.html:97
+msgid "Имя пользователя"
+msgstr "Username"
+
+#: templates/admin/users.html:18
+msgid "Пароль"
+msgstr "Password"
+
 #: templates/admin/users.html:25 templates/admin/users.html:44
 #: templates/admin/users.html:115
 msgid "Оператор"
@@ -1772,4 +1744,23 @@ msgstr "Change password"
 
 #~ msgid "Потери, %% (снижено)"
 #~ msgstr "Loss, %% (degraded)"
+
+#~ msgid "Пароль должен содержать хотя бы одну букву и одну цифру"
+#~ msgstr "Password must contain at least one letter and one digit"
+
+#~ msgid "Подтверждение пароля"
+#~ msgstr "Password confirmation"
+
+#~ msgid "Пароли не совпадают"
+#~ msgstr "Passwords do not match"
+
+#~ msgid "Воркеров мониторинга"
+#~ msgstr "Monitoring workers"
+
+#~ msgid ""
+#~ "Одновременных ICMP-проверок. Применяется после "
+#~ "перезапуска сервиса. По умолчанию — 150."
+#~ msgstr ""
+#~ "Concurrent ICMP checks. Applied after "
+#~ "restarting the service. Default is 150."
 

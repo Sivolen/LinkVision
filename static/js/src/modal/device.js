@@ -108,6 +108,69 @@ function loadQualityProfiles(selectEl, selectedProfileId) {
 /**
  * Открыть модальное окно устройства
  */
+/**
+ * Применить свежие status/quality_* из /api/device/<id>/details к ноде на
+ * карте. Раньше эти поля из ответа details использовались ТОЛЬКО для
+ * рендера самой карточки (loadDeviceQuality), а на cy-ноду не попадали —
+ * из-за этого при открытии карточки можно было увидеть "зелёное" состояние
+ * в карточке (данные из БД свежие), пока сама нода на карте оставалась
+ * старого цвета, если конкретный socket-эмит device_status_batch был
+ * пропущен клиентом (сетевое моргание без формального disconnect/reconnect
+ * у Socket.IO — сервер не узнаёт, что клиент что-то не получил, и повторно
+ * ничего не шлёт). Открытие карточки — дешёвый и надёжный момент, чтобы
+ * заодно починить это расхождение для конкретной ноды.
+ */
+function syncNodeFromDetails(node, data) {
+    if (!node || !node.length || !window.cy) return;
+
+    const monitoringEnabled = !!data.monitoring_enabled;
+    if (!monitoringEnabled) {
+        if (typeof window.removePulsingNode === 'function') window.removePulsingNode(window.cy, node);
+        node.data({
+            status: 'up',
+            quality_status: 'unknown',
+            quality_latency_ms: null,
+            quality_jitter_ms: null,
+            quality_loss_percent: null,
+        });
+        window.cy.style().update();
+        return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(data, 'quality_status')) {
+        node.data({
+            quality_status: data.quality_status || 'unknown',
+            quality_latency_ms: data.quality_latency_ms ?? null,
+            quality_jitter_ms: data.quality_jitter_ms ?? null,
+            quality_loss_percent: data.quality_loss_percent ?? null,
+        });
+    }
+
+    if (data.status && node.data('status') !== data.status) {
+        const oldStatus = node.data('status');
+        node.data('status', data.status);
+        if (typeof window.removePulsingNode === 'function') window.removePulsingNode(window.cy, node);
+        if (data.status === 'down' && typeof window.addPulsingNode === 'function') {
+            window.addPulsingNode(window.cy, node, 'down');
+        } else if (data.status === 'partial' && typeof window.addPulsingNode === 'function') {
+            window.addPulsingNode(window.cy, node, 'partial');
+        }
+        // Счётчик в сайдбаре считается дельтами (+1/-1 на переход), поэтому
+        // пропущенный эмит роняет и его. Те же условия, что в обработчике
+        // device_status_batch (map/index.js): down/partial считаются
+        // проблемными, up — нет.
+        if (typeof window.updateSidebarCounter === 'function' && window.currentMapId) {
+            const becameDown = (data.status === 'down' || data.status === 'partial') && oldStatus === 'up';
+            const becameUp = data.status === 'up' && (oldStatus === 'down' || oldStatus === 'partial');
+            if (becameDown) window.updateSidebarCounter(window.currentMapId, true);
+            if (becameUp) window.updateSidebarCounter(window.currentMapId, false);
+        }
+    }
+
+    window.cy.style().update();
+    if (typeof window.refreshAllCollapsedStatuses === 'function') window.refreshAllCollapsedStatuses();
+}
+
 export function openDeviceModal(node) {
     if (!deviceModal) {
         const el = document.getElementById('deviceModal');
@@ -174,6 +237,7 @@ export function openDeviceModal(node) {
                 loadGroups(devGroup, data.group_id);
                 loadQualityProfiles(document.getElementById('dev_quality_profile'), data.quality_profile_id);
                 loadDeviceQuality(node.id(), 24, data, data.quality_history);
+                syncNodeFromDetails(node, data);
             })
             .catch(err => {
                 Logger.error('Ошибка загрузки деталей:', err);

@@ -258,6 +258,7 @@ class TestBatch5Admin:
                     interval=10,
                     timeout=1.0,
                     history_retention_days=7,
+                    monitor_max_workers=150,
                     db_size=0,
                     db_mtime=None,
                     # Реальный роут (blueprints/admin.py::settings) всегда передаёт
@@ -271,6 +272,7 @@ class TestBatch5Admin:
         assert "Connection quality profiles" in html  # заголовок нового блока
         assert "ICMP timeout" in html  # поле ping_timeout
         assert "Keep monitoring history" in html  # поле history_retention_days
+        assert "Monitoring threads" in html  # поле monitor_max_workers
 
 
 class TestCatalogIntegrity:
