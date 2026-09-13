@@ -447,6 +447,11 @@ window.updateAllEdgeLabels = updateAllEdgeLabels;
 window.updateEdgeCurves = updateEdgeCurves;
 window.addPulsingNode = addPulsingNode;
 window.removePulsingNode = removePulsingNode;
+// Счётчик проблемных устройств в сайдбаре нужен и modal-бандлу: при открытии
+// карточки устройства нода может синхронизироваться из details (см.
+// syncNodeFromDetails в modal/device.js), и вместе со статусом надо поправить
+// счётчик, иначе он останется с устаревшим значением до перезагрузки страницы.
+window.updateSidebarCounter = updateSidebarCounter;
 window.withViewportRestore = withViewportRestore;
 window.collapseGroup = collapseGroup;
 window.expandGroup = expandGroup;

@@ -98,3 +98,78 @@ def test_single_realtime_status_event_can_update_quality():
     source = (ROOT / "static/js/src/map/index.js").read_text(encoding="utf-8")
     assert "quality_status: data.quality_status || 'unknown'" in source
     assert "if (node.data('status') === newStatus)" in source
+
+
+def test_tab_focus_resync_and_card_node_sync_present():
+    """Реальные потери volatile-эмитов лечатся двумя путями ресинка.
+
+    visibilitychange ловит случай «вкладка свёрнута, сокет формально жив»
+    (socket 'reconnect' при этом не срабатывает вообще), syncNodeFromDetails
+    чинит уже раскрывшуюся расхождение ноды с БД в момент открытия карточки.
+    """
+    base = (ROOT / "static/js/base.js").read_text(encoding="utf-8")
+    assert "visibilitychange" in base
+    assert "document.visibilityState === 'visible'" in base
+
+    device = (ROOT / "static/js/src/modal/device.js").read_text(encoding="utf-8")
+    assert "function syncNodeFromDetails(node, data)" in device
+    assert "syncNodeFromDetails(node, data);" in device
+    # Счётчик сайдбара дельтовый, поэтому синк ноды обязан править и его.
+    assert "window.updateSidebarCounter" in device
+    # updateSidebarCounter живёт в map-бандле — без экспорта на window modal
+    # -бандл до него не достанет.
+    map_index = (ROOT / "static/js/src/map/index.js").read_text(encoding="utf-8")
+    assert "window.updateSidebarCounter = updateSidebarCounter;" in map_index
+
+
+def test_bundles_are_not_stale_relative_to_sources():
+    """Ловит «поправил src, забыл npm run build»: шаблоны грузят только dist/.
+
+    Мокрый тест на поведение здесь неуместен (нет браузерного рантайма), а
+    именно эта ошибка уже приводила к тому, что смерженный JS-код не работал
+    в проде, хотя все тесты были зелёные.
+
+    Окно исходников совпадает с тем, что реально заходит в бандл: base/common
+    минифицируются из одного файла без --bundle, modal/map бандлятся из своих
+    каталогов. Иначе тест валил бы сборку без всякого основания.
+    """
+    cases = [
+        ("static/js/dist/base.min.js", [ROOT / "static/js/base.js"]),
+        ("static/js/dist/common.min.js", [ROOT / "static/js/common.js"]),
+        (
+            "static/js/dist/modal.min.js",
+            sorted((ROOT / "static/js/src/modal").glob("*.js")),
+        ),
+        (
+            "static/js/dist/map.min.js",
+            sorted((ROOT / "static/js/src/map").glob("*.js")),
+        ),
+    ]
+    for bundle_rel, sources in cases:
+        bundle = ROOT / bundle_rel
+        assert bundle.is_file(), f"Missing bundle: {bundle_rel}"
+        newest = max((p.stat().st_mtime for p in sources), default=0.0)
+        assert (
+            bundle.stat().st_mtime >= newest
+        ), f"{bundle_rel} is older than its sources — run `npm run build`"
+
+
+def test_monitor_pool_size_is_configurable_not_cpu_bound():
+    """Размер пула мониторинга настраивается и не привязан к числу ядер."""
+    monitor = (ROOT / "services/monitor.py").read_text(encoding="utf-8")
+    assert "def _compute_max_workers()" in monitor
+    assert 'get_setting("monitor_max_workers"' in monitor
+    assert "MONITOR_MAX_WORKERS_HARD_CAP = 300" in monitor
+    assert "min(50, (os.cpu_count() or 1) * 4)" not in monitor
+    # Батч-барьер убран: он заставлял простаивать весь пул из-за одного
+    # недоступного устройства в батче.
+    assert "batch_size = 50" not in monitor
+
+    for setting_key, where in (
+        ("monitor_max_workers", ROOT / "app.py"),
+        ("monitor_max_workers", ROOT / "templates/admin/settings.html"),
+        ("monitor_max_workers", ROOT / "services/settings_service.py"),
+    ):
+        assert setting_key in where.read_text(
+            encoding="utf-8"
+        ), f"{setting_key} missing in {where}"

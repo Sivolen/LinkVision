@@ -2,6 +2,8 @@
 Unit tests for LinkVision services.
 """
 
+import errno
+
 import pytest
 from models import User, Map, Device, DeviceType, DeviceIP
 from services.validators import (
@@ -170,11 +172,12 @@ class TestMonitorSettings:
         from services.settings_service import get_monitor_settings
 
         with app.app_context():
-            count, interval, timeout, retention = get_monitor_settings()
+            count, interval, timeout, retention, workers = get_monitor_settings()
         assert count == 4
         assert interval == 10
         assert timeout == 1.0
         assert retention == 7
+        assert workers == 150
 
     def test_get_monitor_settings_reads_stored_values(self, app):
         from models import Settings, db
@@ -183,10 +186,12 @@ class TestMonitorSettings:
         with app.app_context():
             db.session.add(Settings(key="ping_timeout", value="2.5"))
             db.session.add(Settings(key="history_retention_days", value="30"))
+            db.session.add(Settings(key="monitor_max_workers", value="64"))
             db.session.commit()
-            count, interval, timeout, retention = get_monitor_settings()
+            count, interval, timeout, retention, workers = get_monitor_settings()
         assert timeout == 2.5
         assert retention == 30
+        assert workers == 64
 
     def test_update_ping_settings_roundtrip(self, app):
         from models import Settings
@@ -196,35 +201,39 @@ class TestMonitorSettings:
         )
 
         with app.app_context():
-            update_ping_settings("6", "60", "0.5", "14")
-            count, interval, timeout, retention = get_monitor_settings()
-        assert (count, interval, timeout, retention) == (6, 60, 0.5, 14)
+            update_ping_settings("6", "60", "0.5", "14", "80")
+            count, interval, timeout, retention, workers = get_monitor_settings()
+        assert (count, interval, timeout, retention, workers) == (6, 60, 0.5, 14, 80)
         assert Settings.query.filter_by(key="ping_timeout").first().value == "0.5"
+        assert Settings.query.filter_by(key="monitor_max_workers").first().value == "80"
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
-        "count,interval,timeout,retention",
+        "count,interval,timeout,retention,workers",
         [
-            ("0", "10", "1.0", "7"),  # count < 1
-            ("11", "10", "1.0", "7"),  # count > 10
-            ("4", "4", "1.0", "7"),  # interval < 5
-            ("4", "301", "1.0", "7"),  # interval > 300
-            ("4", "10", "0.1", "7"),  # timeout < 0.2
-            ("4", "10", "10.1", "7"),  # timeout > 10
-            ("4", "10", "1.0", "0"),  # retention < 1
-            ("4", "10", "1.0", "3651"),  # retention > 3650
-            ("abc", "10", "1.0", "7"),  # не число
-            ("4", "10", "nan", "7"),  # не число
+            ("0", "10", "1.0", "7", "150"),  # count < 1
+            ("11", "10", "1.0", "7", "150"),  # count > 10
+            ("4", "4", "1.0", "7", "150"),  # interval < 5
+            ("4", "301", "1.0", "7", "150"),  # interval > 300
+            ("4", "10", "0.1", "7", "150"),  # timeout < 0.2
+            ("4", "10", "10.1", "7", "150"),  # timeout > 10
+            ("4", "10", "1.0", "0", "150"),  # retention < 1
+            ("4", "10", "1.0", "3651", "150"),  # retention > 3650
+            ("4", "10", "1.0", "7", "9"),  # workers < 10
+            ("4", "10", "1.0", "7", "301"),  # workers > 300
+            ("abc", "10", "1.0", "7", "150"),  # не число
+            ("4", "10", "nan", "7", "150"),  # не число
+            ("4", "10", "1.0", "7", None),  # поле не пришло из формы
         ],
     )
     def test_update_ping_settings_rejects_invalid(
-        self, app, count, interval, timeout, retention
+        self, app, count, interval, timeout, retention, workers
     ):
         from services.settings_service import update_ping_settings
 
         with app.app_context():
             with pytest.raises(ValueError):
-                update_ping_settings(count, interval, timeout, retention)
+                update_ping_settings(count, interval, timeout, retention, workers)
 
     def test_monitor_clamps_retention_days(self):
         """Логика клампинга retention в monitor_loop: 1..3650."""
@@ -234,3 +243,279 @@ class TestMonitorSettings:
         assert clamp(7) == 7
         assert clamp(3650) == 3650
         assert clamp(9999) == 3650
+
+
+class TestComputeMaxWorkers:
+    """_compute_max_workers: дефолт, клампинг и чтение настройки."""
+
+    @pytest.fixture
+    def monitor_with_app(self, app):
+        from services import monitor
+
+        previous = monitor.app_instance
+        monitor.app_instance = app
+        monitor.settings_cache.clear()
+        yield monitor
+        monitor.app_instance = previous
+        monitor.settings_cache.clear()
+
+    @pytest.mark.unit
+    def test_default_when_setting_absent(self, monitor_with_app):
+        assert monitor_with_app._compute_max_workers() == 150
+
+    @pytest.mark.unit
+    def test_configured_value_used(self, monitor_with_app, app):
+        from models import Settings, db
+
+        with app.app_context():
+            db.session.add(Settings(key="monitor_max_workers", value="42"))
+            db.session.commit()
+        monitor_with_app.settings_cache.clear()
+        assert monitor_with_app._compute_max_workers() == 42
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "stored,expected", [("5", 10), ("999", 300), ("10", 10), ("300", 300)]
+    )
+    def test_hard_cap_and_floor(self, monitor_with_app, app, stored, expected):
+        """Кламп 10..300 защищает от опечатки в настройке (сокетные дескрипторы)."""
+        from models import Settings, db
+
+        with app.app_context():
+            db.session.add(Settings(key="monitor_max_workers", value=stored))
+            db.session.commit()
+        monitor_with_app.settings_cache.clear()
+        assert monitor_with_app._compute_max_workers() == expected
+
+    @pytest.mark.unit
+    def test_no_cpu_count_dependency(self, monitor_with_app):
+        """Размер пула больше не привязан к числу ядер (I/O-bound нагрузка)."""
+        import inspect
+
+        from services import monitor
+
+        # cpu_count упоминается в docstring как историческая справка, поэтому
+        # проверяем именно отсутствие прежнего вызова во всём модуле, включая
+        # места пересоздания пула.
+        module_source = inspect.getsource(monitor)
+        assert "os.cpu_count" not in module_source
+
+    @pytest.mark.unit
+    def test_workers_recomputed_each_cycle(self):
+        """Настройка перечитывается на границе цикла — иначе hot-resize нет."""
+        import inspect
+
+        from services import monitor
+
+        source = inspect.getsource(monitor.monitor_loop)
+        assert "_compute_max_workers()" in source
+        assert "_sync_executor_size(" in source
+        # В теле цикла не должно остаться прежнего batch-барьера по 50 устройств
+        assert "batch_size = 50" not in source
+
+
+class TestPingHostBackend:
+    """Выбор бэкенда ICMP: ping3, системный ping и падение прав на сокет."""
+
+    @pytest.fixture
+    def monitor_mod(self):
+        from services import monitor
+
+        prev = monitor._ping3_unusable
+        yield monitor
+        monitor._ping3_unusable = prev
+
+    @pytest.mark.unit
+    def test_subprocess_helpers_imported_even_with_ping3(self, monitor_mod):
+        """subprocess/platform импортируются безусловно.
+
+        Раньше они импортировались только в except ImportError, и при
+        установленном ping3 любая попытка уйти в системный ping давала
+        NameError: name 'platform' is not defined (воспроизводилось вживую).
+        """
+        import inspect
+
+        source = inspect.getsource(monitor_mod)
+        head = source.split("def ", 1)[0]
+        assert "import subprocess" in head
+        assert "import platform" in head
+        assert "    import subprocess" not in head, "импорт остался условным"
+
+    @pytest.mark.unit
+    def test_permission_error_switches_backend_once(self, monitor_mod, monkeypatch):
+        """Запрещённый ICMP-сокет → один раз предупреждаем и уходим на ping.
+
+        Иначе ping3 молча терял бы все пакеты, и вся сеть стала бы DOWN.
+        """
+        monitor_mod._ping3_unusable = False
+        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+
+        def denied(*a, **k):
+            raise PermissionError(errno.EPERM, "Operation not permitted")
+
+        calls = []
+
+        def fake_subprocess(ip, count, timeout_seconds):
+            calls.append((ip, count, timeout_seconds))
+            return [1.0, 2.0], count
+
+        monkeypatch.setattr(monitor_mod, "ping", denied)
+        monkeypatch.setattr(monitor_mod, "ping_host_via_subprocess", fake_subprocess)
+
+        assert monitor_mod.ping_host("10.0.0.1", 4, 1.0) == ([1.0, 2.0], 4)
+        assert monitor_mod._ping3_unusable is True
+        assert calls == [("10.0.0.1", 4, 1.0)]
+
+        # Дальше ping3 уже не дёргаем — флаг снимает его с пути всего процесса
+        monkeypatch.setattr(monitor_mod, "ping", lambda *a, **k: 1 / 0)
+        assert monitor_mod.ping_host("10.0.0.2", 2, 0.5) == ([1.0, 2.0], 2)
+        assert calls[-1] == ("10.0.0.2", 2, 0.5)
+
+    @pytest.mark.unit
+    def test_network_oserror_is_packet_loss_not_backend_switch(
+        self, monitor_mod, monkeypatch
+    ):
+        """Ошибка конкретного адреса не должна отключать ping3 глобально."""
+        monitor_mod._ping3_unusable = False
+        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+
+        def unreachable(*a, **k):
+            raise OSError(errno.ENETUNREACH, "Network is unreachable")
+
+        monkeypatch.setattr(monitor_mod, "ping", unreachable)
+        assert monitor_mod.ping_host("10.255.255.1", 4, 1.0) == ([], 4)
+        assert monitor_mod._ping3_unusable is False
+
+    @pytest.mark.unit
+    def test_timeout_returns_none_counts_as_loss(self, monitor_mod, monkeypatch):
+        """ping3 при таймауте возвращает None (не бросает) — это потеря пакета."""
+        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monkeypatch.setattr(monitor_mod, "ping", lambda *a, **k: None)
+        assert monitor_mod.ping_host("192.0.2.1", 4, 1.0) == ([], 4)
+
+    @pytest.mark.unit
+    def test_latency_converted_to_milliseconds(self, monitor_mod, monkeypatch):
+        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monkeypatch.setattr(monitor_mod, "ping", lambda *a, **k: 0.0125)
+        assert monitor_mod.ping_host("127.0.0.1", 3, 1.0) == ([12.5] * 3, 3)
+
+    @pytest.mark.unit
+    def test_seq_unique_per_packet(self, monitor_mod, monkeypatch):
+        """Каждому пакету свой seq — иначе через SOCK_RAW считается чужой RTT."""
+        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        seqs = []
+        timeouts = []
+
+        def fake_ping(ip, timeout=None, seq=None):
+            seqs.append(seq)
+            timeouts.append(timeout)
+            return 0.001
+
+        monkeypatch.setattr(monitor_mod, "ping", fake_ping)
+        monitor_mod.ping_host("127.0.0.1", 4, 0.7)
+        assert seqs == [0, 1, 2, 3]
+        assert timeouts == [0.7] * 4, "timeout передаётся на каждый пакет"
+
+
+class TestExecutorPoolSizing:
+    """_sync_executor_size: создание, пересборка по настройке, без простоя."""
+
+    @pytest.fixture
+    def pool(self, monkeypatch):
+        """Изолированный пул; все созданные экземпляры останавливаются после."""
+        import concurrent.futures as cf
+
+        from services import monitor
+
+        prev_executor = monitor._executor
+        prev_count = monitor._executor_worker_count
+        monitor._executor = None
+        monitor._executor_worker_count = 0
+
+        created = []
+        real_executor = cf.ThreadPoolExecutor
+
+        def recording(*args, **kwargs):
+            ex = real_executor(*args, **kwargs)
+            created.append(ex)
+            return ex
+
+        monkeypatch.setattr(cf, "ThreadPoolExecutor", recording)
+        try:
+            yield monitor, created
+        finally:
+            monitor._executor = prev_executor
+            monitor._executor_worker_count = prev_count
+            for ex in created:
+                ex.shutdown(wait=False)
+
+    @pytest.mark.unit
+    def test_creates_pool_when_absent(self, pool):
+        monitor, created = pool
+        assert monitor._sync_executor_size(20) == 20
+        assert monitor._executor is not None
+        assert monitor._executor_worker_count == 20
+        assert len(created) == 1
+
+    @pytest.mark.unit
+    def test_resizes_when_setting_changed(self, pool):
+        """Изменение monitor_max_workers применяется без перезапуска процесса."""
+        monitor, created = pool
+        monitor._sync_executor_size(20)
+        first = monitor._executor
+
+        assert monitor._sync_executor_size(45) == 45
+        assert monitor._executor is not first, "пул обязан пересоздаться"
+        assert monitor._executor_worker_count == 45
+        assert len(created) == 2
+
+    @pytest.mark.unit
+    def test_keeps_pool_when_size_unchanged(self, pool):
+        """При неизменной настройке пул НЕ пересоздаётся каждым циклом.
+
+        Иначе на каждом цикле убивались бы ~150 потоков с их сокетами, а
+        часть проверок терялась бы в shutdown.
+        """
+        monitor, created = pool
+        monitor._sync_executor_size(25)
+        first = monitor._executor
+
+        for _ in range(3):
+            assert monitor._sync_executor_size(25) == 25
+        assert monitor._executor is first, "лишняя пересборка пула каждый цикл"
+        assert len(created) == 1
+
+    @pytest.mark.unit
+    def test_loop_reports_cycle_against_interval(self):
+        """Длительность цикла сравнивается с ping_interval и логируется.
+
+        Без этого мониторинг мог отставать от расписания молча: при
+        LOG_LEVEL=INFO длительность цикла нигде не фиксировалась.
+        """
+        import inspect
+
+        from services import monitor
+
+        source = inspect.getsource(monitor.monitor_loop)
+        assert "interval_ratio" in source
+        assert "peak_active_checks" in source
+        assert "exceeded interval" in source
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "name",
+        ["_peak_active_checks", "_active_checks", "_executor", "_monitor_stop_flag"],
+    )
+    def test_loop_declares_module_state_as_global(self, name):
+        """Присваивание модульного состояния в monitor_loop требует global.
+
+        Без global имя становится локальным, и его чтение до присваивания
+        даёт UnboundLocalError. Блок телеметрии лежит ВНЕ try, поэтому такая
+        ошибка убивала поток мониторинга после первого цикла — реально
+        воспроизводилось при проверке патча.
+        """
+        from services import monitor
+
+        assert (
+            name not in monitor.monitor_loop.__code__.co_varnames
+        ), f"{name} присваивается в monitor_loop без global"

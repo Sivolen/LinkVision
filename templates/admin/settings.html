@@ -26,6 +26,11 @@
                 <small class="text-muted">{{ _('Максимальное время ожидания ответа одного ICMP-пакета') }}</small>
             </div>
             <div class="mb-3">
+                <label class="form-label">{{ _('Потоки мониторинга') }}</label>
+                <input type="number" name="monitor_max_workers" class="form-control" value="{{ monitor_max_workers }}" min="10" max="300">
+                <small class="text-muted">{{ _('Количество параллельных проверок устройств. Применяется со следующего цикла. По умолчанию — 150, максимум — 300.') }}</small>
+            </div>
+            <div class="mb-3">
                 <label class="form-label">{{ _('Хранить историю мониторинга (дни)') }}</label>
                 <input type="number" name="history_retention_days" class="form-control" value="{{ history_retention_days }}" min="1" max="3650">
                 <small class="text-muted">{{ _('Хранится история UP/DOWN и пятиминутные агрегаты качества ICMP. По умолчанию — 7 дней.') }}</small>

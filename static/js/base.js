@@ -1176,6 +1176,24 @@ let wasDisconnected = false;
                 Logger.warn('Socket connection error:', error);
                 updateBackendStatus(false);
             });
+
+            // Ресинк по возврату вкладки в фокус — не только по socket
+            // 'reconnect'. Socket.IO переподключается только если формально
+            // словил disconnect (истёк pingTimeout, ~20-40с). Свёрнутая
+            // вкладка/уснувший ноутбук часто переживают недолгое сетевое
+            // моргание БЕЗ формального disconnect: соединение с точки зрения
+            // Socket.IO живо, а конкретные эмиты (device_status_batch),
+            // отправленные сервером в этот момент, тихо теряются — реального
+            // подтверждения доставки у volatile-эмитов нет. В таком случае
+            // 'reconnect' не срабатывает вообще, и request_status там не
+            // помогает. visibilitychange — дешёвый дополнительный триггер:
+            // при возврате на вкладку просто просим текущее состояние карты
+            // заново, независимо от того, считает ли сокет себя живым.
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && window.currentMapId && window.socket && window.socket.connected) {
+                    window.socket.emit('request_status', { map_id: window.currentMapId });
+                }
+            });
         })();
     }
 })();

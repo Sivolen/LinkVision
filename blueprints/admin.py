@@ -225,9 +225,14 @@ def settings():
             ping_interval = request.form.get("ping_interval")
             ping_timeout = request.form.get("ping_timeout")
             history_retention_days = request.form.get("history_retention_days")
+            monitor_max_workers = request.form.get("monitor_max_workers")
             try:
                 settings_service.update_ping_settings(
-                    ping_count, ping_interval, ping_timeout, history_retention_days
+                    ping_count,
+                    ping_interval,
+                    ping_timeout,
+                    history_retention_days,
+                    monitor_max_workers,
                 )
                 flash(_("Настройки сохранены"))
             except Exception as e:
@@ -241,15 +246,20 @@ def settings():
             flash(_("Счётчики rate limit успешно сброшены"), "success")
             return redirect(url_for("admin.settings"))
 
-    ping_count, ping_interval, ping_timeout, history_retention_days = (
-        settings_service.get_monitor_settings()
-    )
+    (
+        ping_count,
+        ping_interval,
+        ping_timeout,
+        history_retention_days,
+        monitor_max_workers,
+    ) = settings_service.get_monitor_settings()
     return render_template(
         "admin/settings.html",
         count=ping_count,
         interval=ping_interval,
         timeout=ping_timeout,
         history_retention_days=history_retention_days,
+        monitor_max_workers=monitor_max_workers,
         db_size=db_size,
         db_mtime=db_mtime,
         quality_profiles=quality_service.get_all_quality_profiles(),

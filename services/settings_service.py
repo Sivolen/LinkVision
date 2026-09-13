@@ -29,34 +29,43 @@ def get_ping_settings():
 
 
 def get_monitor_settings():
-    """Получить настройки мониторинга (count, interval, timeout, retention).
+    """Получить настройки мониторинга.
 
     Используется роутом /admin/settings для рендера формы. Значения
     возвращаются приведёнными к типам, в которых их ожидают шаблон и
-    services/monitor.py (int/int/float/int).
+    services/monitor.py (int/int/float/int/int).
     """
     count = get_setting("ping_count", "4")
     interval = get_setting("ping_interval", "10")
     timeout = get_setting("ping_timeout", "1.0")
     retention = get_setting("history_retention_days", "7")
-    return int(count), int(interval), float(timeout), int(retention)
+    max_workers = get_setting("monitor_max_workers", "150")
+    return (
+        int(count),
+        int(interval),
+        float(timeout),
+        int(retention),
+        int(max_workers),
+    )
 
 
 def update_ping_settings(
-    ping_count, ping_interval, ping_timeout, history_retention_days
+    ping_count, ping_interval, ping_timeout, history_retention_days, monitor_max_workers
 ):
     """Обновить настройки мониторинга с валидацией диапазонов.
 
     ping_count: 1-10 пакетов на адрес; ping_interval: 5-300 секунд;
     ping_timeout: 0.2-10 секунд на один ICMP-пакет;
     history_retention_days: 1-3650 дней хранения истории UP/DOWN
-    и агрегатов качества.
+    и агрегатов качества; monitor_max_workers: 10-300 потоков пула
+    мониторинга (применяется со следующего цикла, без перезапуска).
     """
     try:
         count = int(ping_count)
         interval = int(ping_interval)
         timeout = float(ping_timeout)
         retention = int(history_retention_days)
+        workers = int(monitor_max_workers)
     except (TypeError, ValueError):
         raise ValueError("Настройки мониторинга должны быть числами")
     if not 1 <= count <= 10:
@@ -67,7 +76,10 @@ def update_ping_settings(
         raise ValueError("Таймаут ICMP должен быть от 0.2 до 10 секунд")
     if not 1 <= retention <= 3650:
         raise ValueError("Срок хранения истории должен быть от 1 до 3650 дней")
+    if not 10 <= workers <= 300:
+        raise ValueError("Количество потоков мониторинга должно быть от 10 до 300")
     update_setting("ping_count", str(count))
     update_setting("ping_interval", str(interval))
     update_setting("ping_timeout", str(timeout))
     update_setting("history_retention_days", str(retention))
+    update_setting("monitor_max_workers", str(workers))

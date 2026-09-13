@@ -1,8 +1,10 @@
+import errno
+import platform
+import subprocess
 import time
 import datetime
 import threading
 import concurrent.futures
-import os
 import re
 from extensions import db, socketio
 from models import Device, Settings, DeviceHistory, DeviceQualityHistory
@@ -17,15 +19,20 @@ try:
     PING3_AVAILABLE = True
 except ImportError:
     PING3_AVAILABLE = False
-    import subprocess
-    import platform
 
 app_instance = None
 _monitor_thread = None
 _monitor_stop_flag = False
 _executor = None
+_executor_worker_count = 0
 _lock = threading.Lock()
+_active_checks = 0
+_peak_active_checks = 0
+_active_checks_lock = threading.Lock()
 settings_cache = TTLCache(maxsize=10, ttl=2)
+_ping3_unusable = False
+MONITOR_MAX_WORKERS_HARD_CAP = 300
+MONITOR_MAX_WORKERS_DEFAULT = 150
 _quality_windows = {}
 _quality_last_persist = {}
 QUALITY_PERSIST_SECONDS = 300
@@ -35,7 +42,7 @@ QUALITY_LIVE_MIN_SAMPLES = 8
 
 
 def init_monitor(app):
-    global app_instance, _executor
+    global app_instance, _executor, _executor_worker_count
     with _lock:
         if _executor is not None:
             try:
@@ -43,8 +50,9 @@ def init_monitor(app):
             except Exception:
                 pass
         app_instance = app
-        max_workers = min(50, (os.cpu_count() or 1) * 4)
+        max_workers = _compute_max_workers()
         _executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+        _executor_worker_count = max_workers
         monitor_logger.info(f"Monitor initialized with {max_workers} workers")
 
 
@@ -64,7 +72,7 @@ def start_monitor():
 
 
 def stop_monitor():
-    global _monitor_stop_flag, _monitor_thread, _executor
+    global _monitor_stop_flag, _monitor_thread, _executor, _executor_worker_count
     with _lock:
         _monitor_stop_flag = True
         if _monitor_thread and _monitor_thread.is_alive():
@@ -72,26 +80,59 @@ def stop_monitor():
         if _executor:
             _executor.shutdown(wait=True)
             _executor = None
+            _executor_worker_count = 0
         _monitor_thread = None
         monitor_logger.info("Monitor stopped")
 
 
 def ping_host(ip, count=1, timeout_seconds=1.0):
     """Выполнить ICMP-проверку и вернуть RTT каждого успешного пакета в мс."""
+    global _ping3_unusable
     latencies = []
-    if PING3_AVAILABLE:
+    if PING3_AVAILABLE and not _ping3_unusable:
         # Не делаем искусственную паузу между ICMP-пакетами: при большом
         # количестве устройств это заметно увеличивает длительность цикла.
         # Последовательные RTT по-прежнему используются для расчёта jitter.
         for i in range(count):
             try:
-                response_time = ping(ip, timeout=timeout_seconds)
-                if response_time is not None:
-                    latencies.append(float(response_time) * 1000.0)
+                # seq уникален для пакета внутри одной проверки: под root
+                # ping3 работает через SOCK_RAW и получает ВСЕ ICMP-ответы
+                # хоста, а разбор по (icmp_id, seq) остаётся единственным
+                # способом не принять запоздавший ответ предыдущего пакета за
+                # текущий. id у нас и так уникален (ping3 берёт crc32 от
+                # PID+TID), а seq по умолчанию был константой 0 — из-за этого
+                # RTT и jitter могли считаться по чужому пакету.
+                response_time = ping(ip, timeout=timeout_seconds, seq=i)
+            except OSError as exc:
+                # ping3 сам переводит PingError (таймаут и прочее) в None, так
+                # что наружу выходит только настоящий сбой сокета. EPERM/EACCES
+                # означают, что ICMP-сокет запрещён политикой (нет root/
+                # CAP_NET_RAW, а net.ipv4.ping_group_range не настроен) — это
+                # касается всего процесса, а не одного адреса. Без флага каждая
+                # проверка давала бы 100% потерь, то есть все устройства
+                # стали бы DOWN; системный ping обычно имеет setuid/cap и
+                # работает, поэтому разворачиваемся на него.
+                if exc.errno in (errno.EPERM, errno.EACCES):
+                    _ping3_unusable = True
+                    monitor_logger.warning(
+                        f"ping3 недоступен без привилегий ({exc}); "
+                        f"дальше используем системный ping"
+                    )
+                    return ping_host_via_subprocess(ip, count, timeout_seconds)
+                # Сетевая ошибка конкретного адреса (например, сеть недоступна)
+                # — считаем её потерей пакета, пул менять не нужно.
+                continue
             except Exception:
-                pass
+                continue
+            if response_time is not None:
+                latencies.append(float(response_time) * 1000.0)
         return latencies, count
 
+    return ping_host_via_subprocess(ip, count, timeout_seconds)
+
+
+def ping_host_via_subprocess(ip, count=1, timeout_seconds=1.0):
+    """Проверка через системный `ping` — запасной путь без ICMP-сокетов."""
     param = "-n" if platform.system().lower() == "windows" else "-c"
     try:
         if platform.system().lower() == "windows":
@@ -105,6 +146,15 @@ def ping_host(ip, count=1, timeout_seconds=1.0):
             ]
         else:
             cmd = ["ping", param, str(count), "-W", str(timeout_seconds), ip]
+        # Запас здесь обязателен, в отличие от ветки ping3: iputils шлёт
+        # пакеты раз в секунду НЕЗАВИСИМО от -W, поэтому минимальная
+        # длительность процесса = (count - 1) секунд даже на localhost
+        # (замер: ping -c 4 -W 1 127.0.0.1 = 3.07с). Без запаса бюджет
+        # timeout_seconds * count при малом ping_timeout (допускается 0.2)
+        # меньше фактической длительности — TimeoutExpired ловится ниже как
+        # пустой список, и ВСЕ устройства гарантированно становятся DOWN.
+        # ping3 же считает timeout на один пакет, поэтому там такой запас не
+        # нужен и он только удлинял бы цикл.
         output = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,
@@ -145,6 +195,24 @@ def get_float_setting(key, default):
             settings_cache[cache_key] = value
             return value
     return float(default)
+
+
+def _compute_max_workers():
+    """
+    Число воркеров пула для ICMP-проверок.
+
+    Раньше было min(50, cpu_count * 4) — то есть на 4-ядерной VM всего 16
+    потоков. Проверка устройства — это ожидание сетевого ответа (I/O-bound),
+    а не счёт на CPU, так что привязка к числу ядер не имеет смысла и на
+    больших инсталляциях (тысячи устройств) искусственно душит пропускную
+    способность цикла мониторинга. Значение теперь настраивается через
+    Settings (monitor_max_workers), с прежним поведением "по умолчанию" —
+    разумный дефолт вместо привязки к cpu_count — и жёстким потолком, чтобы
+    ошибка в настройке не открыла необоснованно много сокетов/дескрипторов
+    одновременно.
+    """
+    configured = get_setting("monitor_max_workers", MONITOR_MAX_WORKERS_DEFAULT)
+    return max(10, min(MONITOR_MAX_WORKERS_HARD_CAP, configured))
 
 
 def _quality_from_metrics(metrics, thresholds=None):
@@ -252,10 +320,61 @@ def _live_quality_from_window(device_id, metrics, thresholds=None):
     )
 
 
+def _pop_peak_active_checks():
+    """Вернуть (пик одновременных проверок, текущее число) и сбросить пик.
+
+    Сброс сделан отдельной функцией, а не прямо в monitor_loop: присваивание
+    `_peak_active_checks = 0` в теле monitor_loop без global превратило бы его
+    в локальную переменную, и чтение до присваивания дало бы UnboundLocalError
+    ВНЕ try — поток мониторинга умерал бы после первого же цикла.
+    """
+    global _peak_active_checks
+    with _active_checks_lock:
+        peak = _peak_active_checks
+        now = _active_checks
+        _peak_active_checks = 0
+    return peak, now
+
+
+def _sync_executor_size(desired_workers):
+    """Создать или пересобрать пул под желаемое число воркеров.
+
+    Возвращает актуальное число воркеров. Пересоздание по изменению настройки
+    безопасно только на границе цикла: к этому моменту as_completed() уже
+    дождался всех Future предыдущего цикла, поэтому shutdown(wait=False) не
+    обрывает живые проверки. Благодаря этому monitor_max_workers применяется
+    без перезапуска процесса.
+    """
+    global _executor, _executor_worker_count
+    with _lock:
+        if _executor is None:
+            _executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=desired_workers
+            )
+            _executor_worker_count = desired_workers
+            monitor_logger.info(f"Executor created with {desired_workers} workers")
+        elif _executor_worker_count != desired_workers:
+            old_workers = _executor_worker_count
+            _executor.shutdown(wait=False)
+            _executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=desired_workers
+            )
+            _executor_worker_count = desired_workers
+            monitor_logger.info(
+                f"Executor resized: {old_workers} -> {desired_workers} workers"
+            )
+    return _executor_worker_count
+
+
 def monitor_loop():
-    global _monitor_stop_flag, _executor
+    global _monitor_stop_flag, _executor, _executor_worker_count
     monitor_logger.debug("Monitor loop started")
     cycle_count = 0
+    # ping_interval инициализируется до цикла: он используется и в теле try, и
+    # в вычислении sleep_time вне его. Без инициализации исключение в первом
+    # цикле (до чтения настроек) давало NameError ВНЕ try — то есть тихо
+    # убивало поток мониторинга целиком.
+    ping_interval = 10
     while not _monitor_stop_flag:
         cycle_count += 1
         start_time = time.time()
@@ -379,60 +498,84 @@ def monitor_loop():
                     },
                 )
 
-            # ---- РАЗБИЕНИЕ НА БАТЧИ ДЛЯ ИЗБЕЖАНИЯ ПЕРЕГРУЗКИ ----
-            batch_size = 50
+            # ---- ОТПРАВКА ВСЕХ ПРОВЕРОК В ПУЛ ОДНИМ ПОТОКОМ ЗАДАЧ ----
+            # Раньше устройства резались на батчи по 50 с барьером: следующий
+            # батч не сабмитился в пул, пока СВЕСЬ текущий не завершится
+            # через as_completed. Down/недоступное устройство блокируется у
+            # ping3 почти на ping_timeout на КАЖДЫЙ из ping_count пакетов
+            # (сериализация внутри _check_device) — то есть ~4с при timeout=1с
+            # и 4 пакетах. Если в батче из 50 попадался хотя бы один такой
+            # хост, весь батч ждал эти ~4с, и ВСЕ уже свободные воркеры
+            # простаивали: новая работа не сабмитилась, пока не закроется
+            # текущий батч. На инсталляциях с тысячами устройств и даже
+            # небольшим % недоступных это удлиняло цикл в разы относительно
+            # ping_interval, и мониторинг начинал постоянно отставать от
+            # расписания. Сабмитим все проверки сразу — пул сам держит себя
+            # загруженным по _compute_max_workers(), простоев между
+            # "батчами" больше нет.
             all_device_checks = [
                 (dev.id, device_ips[dev.id], ping_count) for dev in devices
             ]
 
-            results = []
-            for batch_start in range(0, len(all_device_checks), batch_size):
-                batch_checks = all_device_checks[batch_start : batch_start + batch_size]
+            # desired_workers считаем ДО взятия _lock: get_setting при
+            # истёкшем TTL-кэше идёт в БД, а этот же _lock удерживает
+            # stop_monitor() — держать в нём запрос к БД незачем.
+            _sync_executor_size(_compute_max_workers())
 
-                # Проверка состояния пула перед отправкой задач
-                with _lock:
-                    if _executor is None:
-                        max_workers = min(50, (os.cpu_count() or 1) * 4)
+            def _tracked_check(dev_id, ips, pcnt):
+                """_check_device с учётом фактической параллельности.
+
+                Нужен для диагностики: peak_active_checks показывает, сколько
+                проверок реально шло одновременно. Если пик заметно ниже
+                _executor_worker_count, узкое место не в размере пула, а в
+                чём-то ещё (например, все воркеры ждут один недоступный хост).
+                """
+                global _active_checks, _peak_active_checks
+                with _active_checks_lock:
+                    _active_checks += 1
+                    if _active_checks > _peak_active_checks:
+                        _peak_active_checks = _active_checks
+                try:
+                    return _check_device(dev_id, ips, pcnt)
+                finally:
+                    with _active_checks_lock:
+                        _active_checks -= 1
+
+            results = []
+            futures = {}
+            for dev_id, ips, pcnt in all_device_checks:
+                try:
+                    future = _executor.submit(_tracked_check, dev_id, ips, pcnt)
+                    futures[future] = dev_id
+                except RuntimeError as e:
+                    monitor_logger.error(
+                        f"Failed to submit check for device {dev_id}: {e}"
+                    )
+                    # Попытка переинициализировать пул
+                    with _lock:
+                        try:
+                            if _executor is not None:
+                                _executor.shutdown(wait=False)
+                        except Exception:
+                            pass
+                        max_workers = _compute_max_workers()
                         _executor = concurrent.futures.ThreadPoolExecutor(
                             max_workers=max_workers
                         )
+                        _executor_worker_count = max_workers
                         monitor_logger.info(
-                            f"Executor recreated with {max_workers} workers"
+                            f"Executor recreated after error with {max_workers} workers"
                         )
+                    continue
 
-                futures = {}
-                for dev_id, ips, pcnt in batch_checks:
-                    try:
-                        future = _executor.submit(_check_device, dev_id, ips, pcnt)
-                        futures[future] = dev_id
-                    except RuntimeError as e:
-                        monitor_logger.error(
-                            f"Failed to submit check for device {dev_id}: {e}"
-                        )
-                        # Попытка переинициализировать пул
-                        with _lock:
-                            try:
-                                if _executor is not None:
-                                    _executor.shutdown(wait=False)
-                            except Exception:
-                                pass
-                            max_workers = min(50, (os.cpu_count() or 1) * 4)
-                            _executor = concurrent.futures.ThreadPoolExecutor(
-                                max_workers=max_workers
-                            )
-                            monitor_logger.info(
-                                f"Executor recreated after error with {max_workers} workers"
-                            )
-                        continue
-
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        dev_id, new_status, metrics = future.result()
-                        results.append((dev_id, new_status, metrics))
-                    except Exception as e:
-                        dev_id = futures.get(future, "unknown")
-                        monitor_logger.error(f"Error checking device {dev_id}: {e}")
-                        results.append((dev_id, "down", {}))
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    dev_id, new_status, metrics = future.result()
+                    results.append((dev_id, new_status, metrics))
+                except Exception as e:
+                    dev_id = futures.get(future, "unknown")
+                    monitor_logger.error(f"Error checking device {dev_id}: {e}")
+                    results.append((dev_id, "down", {}))
 
             # ---- ОБРАБОТКА ИЗМЕНЕНИЙ ----
             current_time = time.time()
@@ -648,9 +791,37 @@ def monitor_loop():
 
         elapsed = time.time() - start_time
         sleep_time = max(0, ping_interval - elapsed)
-        monitor_logger.debug(
-            f"Cycle completed in {elapsed:.2f}s, sleeping {sleep_time:.2f}s"
+        interval_ratio = (elapsed / ping_interval * 100.0) if ping_interval > 0 else 0.0
+        peak_active_checks, active_checks_now = _pop_peak_active_checks()
+        # devices может не существовать, если цикл упал в начале (до запроса
+        # устройств), поэтому проверяем locals(), а не полагаемся на то, что
+        # прошлый цикл оставил значение.
+        monitored_count = len(devices) if "devices" in locals() and devices else 0
+        workers_now = _executor_worker_count or _compute_max_workers()
+        stats = (
+            f"devices={monitored_count}, workers={workers_now}, "
+            f"peak_active_checks={peak_active_checks}"
         )
+        # Один текст и разный уровень: 100%+ означает, что мониторинг не
+        # успевает за расписанием и статусы на картах устаревают, 80% — что
+        # до этого близко. Ниже 80% запас штатный, и warning на каждый цикл
+        # только залил бы лог (на этой машине цикл и так ~180% интервала).
+        if interval_ratio > 100.0:
+            monitor_logger.warning(
+                f"Monitor cycle {cycle_count} exceeded interval: "
+                f"{elapsed:.2f}s > {ping_interval}s ({interval_ratio:.0f}%); "
+                f"{stats}, active_now={active_checks_now}"
+            )
+        elif interval_ratio >= 80.0:
+            monitor_logger.warning(
+                f"Monitor cycle {cycle_count} is near interval limit: "
+                f"{elapsed:.2f}s / {ping_interval}s ({interval_ratio:.0f}%); {stats}"
+            )
+        else:
+            monitor_logger.debug(
+                f"Cycle completed in {elapsed:.2f}s / {ping_interval}s "
+                f"({interval_ratio:.0f}%), {stats}, sleeping {sleep_time:.2f}s"
+            )
         time.sleep(sleep_time)
 
     monitor_logger.info("Monitor loop terminated")
