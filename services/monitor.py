@@ -1,11 +1,18 @@
-import errno
-import platform
-import subprocess
 import time
 import datetime
 import threading
 import concurrent.futures
 import re
+import errno
+
+# Раньше были условными (только в except ImportError). Если ping3
+# ИМПОРТИРУЕТСЯ успешно, но потом на этом хосте выясняется, что ICMP-сокет
+# запрещён целиком (EPERM/EACCES — см. _ping3_unusable ниже), нужен переход
+# на системный ping прямо в рантайме — а platform/subprocess в этом случае
+# никогда не импортировались, и переход падал NameError. Импорт теперь
+# безусловный, стоит копейки при старте процесса.
+import subprocess
+import platform
 from extensions import db, socketio
 from models import Device, Settings, DeviceHistory, DeviceQualityHistory
 from utils.logger import monitor_logger
@@ -29,8 +36,14 @@ _lock = threading.Lock()
 _active_checks = 0
 _peak_active_checks = 0
 _active_checks_lock = threading.Lock()
-settings_cache = TTLCache(maxsize=10, ttl=2)
+# Если на этом хосте раздача ICMP-сокетов запрещена целиком (не отдельный
+# адрес, а бэкенд как таковой — EPERM/EACCES при создании сокета), ping3
+# будет молча "терять" 100% пакетов на КАЖДОМ устройстве. Это отказ
+# механизма проверки, а не сети — переключаем процесс на системный ping и
+# логируем один раз, а не проваливаем в тишину все карты сразу.
 _ping3_unusable = False
+_ping3_unusable_lock = threading.Lock()
+settings_cache = TTLCache(maxsize=10, ttl=2)
 MONITOR_MAX_WORKERS_HARD_CAP = 300
 MONITOR_MAX_WORKERS_DEFAULT = 150
 _quality_windows = {}
@@ -88,50 +101,50 @@ def stop_monitor():
 def ping_host(ip, count=1, timeout_seconds=1.0):
     """Выполнить ICMP-проверку и вернуть RTT каждого успешного пакета в мс."""
     global _ping3_unusable
-    latencies = []
     if PING3_AVAILABLE and not _ping3_unusable:
+        latencies = []
         # Не делаем искусственную паузу между ICMP-пакетами: при большом
         # количестве устройств это заметно увеличивает длительность цикла.
         # Последовательные RTT по-прежнему используются для расчёта jitter.
         for i in range(count):
             try:
-                # seq уникален для пакета внутри одной проверки: под root
-                # ping3 работает через SOCK_RAW и получает ВСЕ ICMP-ответы
-                # хоста, а разбор по (icmp_id, seq) остаётся единственным
-                # способом не принять запоздавший ответ предыдущего пакета за
-                # текущий. id у нас и так уникален (ping3 берёт crc32 от
-                # PID+TID), а seq по умолчанию был константой 0 — из-за этого
-                # RTT и jitter могли считаться по чужому пакету.
+                # seq=i: ping3 по умолчанию шлёт seq=0 в КАЖДОМ пакете.
+                # icmp_id у ping3 берётся из PID+TID процесса — под root
+                # (сервис работает от root) через SOCK_RAW процесс видит ВСЕ
+                # ICMP-ответы хоста с этим id, и матчинг идёт по (id, seq).
+                # С константным seq=0 опоздавший ответ на пакет №1 может
+                # быть засчитан как ответ на пакет №2 → неверные RTT и,
+                # как следствие, неверный jitter.
                 response_time = ping(ip, timeout=timeout_seconds, seq=i)
-            except OSError as exc:
-                # ping3 сам переводит PingError (таймаут и прочее) в None, так
-                # что наружу выходит только настоящий сбой сокета. EPERM/EACCES
-                # означают, что ICMP-сокет запрещён политикой (нет root/
-                # CAP_NET_RAW, а net.ipv4.ping_group_range не настроен) — это
-                # касается всего процесса, а не одного адреса. Без флага каждая
-                # проверка давала бы 100% потерь, то есть все устройства
-                # стали бы DOWN; системный ping обычно имеет setuid/cap и
-                # работает, поэтому разворачиваемся на него.
-                if exc.errno in (errno.EPERM, errno.EACCES):
-                    _ping3_unusable = True
-                    monitor_logger.warning(
-                        f"ping3 недоступен без привилегий ({exc}); "
-                        f"дальше используем системный ping"
-                    )
-                    return ping_host_via_subprocess(ip, count, timeout_seconds)
-                # Сетевая ошибка конкретного адреса (например, сеть недоступна)
-                # — считаем её потерей пакета, пул менять не нужно.
-                continue
+                if response_time is not None:
+                    latencies.append(float(response_time) * 1000.0)
+            except OSError as e:
+                if e.errno in (errno.EPERM, errno.EACCES):
+                    # Не потеря конкретного пакета, а отказ самого механизма
+                    # проверки (raw- и dgram-ICMP сокеты запрещены на этом
+                    # хосте целиком). Если продолжать звать ping3 как ни в
+                    # чём не бывало, ВСЕ устройства на ВСЕХ картах тихо
+                    # станут 100%-down. Переключаем процесс на системный
+                    # ping один раз и громко логируем это.
+                    with _ping3_unusable_lock:
+                        if not _ping3_unusable:
+                            _ping3_unusable = True
+                            monitor_logger.error(
+                                f"ping3 unusable on this host (OSError errno={e.errno}: {e}); "
+                                f"falling back to system ping for ALL devices until restart"
+                            )
+                    return _ping_host_subprocess(ip, count, timeout_seconds)
+                # Обычная сетевая ошибка (ENETUNREACH, EHOSTUNREACH и т.п.) —
+                # это потеря именно ЭТОГО пакета/адреса, не отказ бэкенда.
+                # На ping3 не переключаемся.
             except Exception:
-                continue
-            if response_time is not None:
-                latencies.append(float(response_time) * 1000.0)
+                pass
         return latencies, count
 
-    return ping_host_via_subprocess(ip, count, timeout_seconds)
+    return _ping_host_subprocess(ip, count, timeout_seconds)
 
 
-def ping_host_via_subprocess(ip, count=1, timeout_seconds=1.0):
+def _ping_host_subprocess(ip, count=1, timeout_seconds=1.0):
     """Проверка через системный `ping` — запасной путь без ICMP-сокетов."""
     param = "-n" if platform.system().lower() == "windows" else "-c"
     try:
@@ -146,19 +159,18 @@ def ping_host_via_subprocess(ip, count=1, timeout_seconds=1.0):
             ]
         else:
             cmd = ["ping", param, str(count), "-W", str(timeout_seconds), ip]
-        # Запас здесь обязателен, в отличие от ветки ping3: iputils шлёт
-        # пакеты раз в секунду НЕЗАВИСИМО от -W, поэтому минимальная
-        # длительность процесса = (count - 1) секунд даже на localhost
-        # (замер: ping -c 4 -W 1 127.0.0.1 = 3.07с). Без запаса бюджет
-        # timeout_seconds * count при малом ping_timeout (допускается 0.2)
-        # меньше фактической длительности — TimeoutExpired ловится ниже как
-        # пустой список, и ВСЕ устройства гарантированно становятся DOWN.
-        # ping3 же считает timeout на один пакет, поэтому там такой запас не
-        # нужен и он только удлинял бы цикл.
         output = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            # iputils шлёт пакеты с интервалом ~1с НЕЗАВИСИМО от -W: замер
+            # `ping -c 4 -W 1 127.0.0.1` = 3,07с (не 4×1с и не 1с). При
+            # низком ping_timeout (валидация допускает от 0.2с) формула без
+            # запаса — timeout_seconds*count — даёт бюджет МЕНЬШЕ реального
+            # времени выполнения (0.2*4=0.8с против фактических ~3с) →
+            # TimeoutExpired → [] → ложный 100%-loss на КАЖДОМ устройстве,
+            # как только сработал этот фолбэк. +5с — намеренный запас поверх
+            # худшего случая, не точный расчёт по count.
             timeout=timeout_seconds * count + 5,
             text=True,
         )
@@ -320,22 +332,6 @@ def _live_quality_from_window(device_id, metrics, thresholds=None):
     )
 
 
-def _pop_peak_active_checks():
-    """Вернуть (пик одновременных проверок, текущее число) и сбросить пик.
-
-    Сброс сделан отдельной функцией, а не прямо в monitor_loop: присваивание
-    `_peak_active_checks = 0` в теле monitor_loop без global превратило бы его
-    в локальную переменную, и чтение до присваивания дало бы UnboundLocalError
-    ВНЕ try — поток мониторинга умерал бы после первого же цикла.
-    """
-    global _peak_active_checks
-    with _active_checks_lock:
-        peak = _peak_active_checks
-        now = _active_checks
-        _peak_active_checks = 0
-    return peak, now
-
-
 def _sync_executor_size(desired_workers):
     """Создать или пересобрать пул под желаемое число воркеров.
 
@@ -344,6 +340,10 @@ def _sync_executor_size(desired_workers):
     дождался всех Future предыдущего цикла, поэтому shutdown(wait=False) не
     обрывает живые проверки. Благодаря этому monitor_max_workers применяется
     без перезапуска процесса.
+
+    Вынесено из monitor_loop отдельной функцией: иначе hot-resize нельзя
+    проверить без прогона всего цикла, и остаётся незакрытым риск лишней
+    пересборки пула каждым циклом (150 потоков с их сокетами на каждый цикл).
     """
     global _executor, _executor_worker_count
     with _lock:
@@ -367,13 +367,14 @@ def _sync_executor_size(desired_workers):
 
 
 def monitor_loop():
-    global _monitor_stop_flag, _executor, _executor_worker_count
+    # _peak_active_checks обязателен в этом списке: он читается и тут же
+    # обнуляется ниже (блок телеметрии), причём ВНЕ try/except. Присваивание
+    # без global делает имя локальным на всю функцию ещё на этапе компиляции,
+    # поэтому чтение падает UnboundLocalError до присваивания — и daemon-поток
+    # монитора умирает после первого же цикла, молча и без перезапуска.
+    global _monitor_stop_flag, _executor, _executor_worker_count, _peak_active_checks
     monitor_logger.debug("Monitor loop started")
     cycle_count = 0
-    # ping_interval инициализируется до цикла: он используется и в теле try, и
-    # в вычислении sleep_time вне его. Без инициализации исключение в первом
-    # цикле (до чтения настроек) давало NameError ВНЕ try — то есть тихо
-    # убивало поток мониторинга целиком.
     ping_interval = 10
     while not _monitor_stop_flag:
         cycle_count += 1
@@ -517,18 +518,19 @@ def monitor_loop():
                 (dev.id, device_ips[dev.id], ping_count) for dev in devices
             ]
 
-            # desired_workers считаем ДО взятия _lock: get_setting при
-            # истёкшем TTL-кэше идёт в БД, а этот же _lock удерживает
-            # stop_monitor() — держать в нём запрос к БД незачем.
+            # _compute_max_workers() может сходить в БД (промах 2-секундного
+            # TTL-кэша settings_cache) — аргумент вычисляется ДО взятия _lock
+            # внутри _sync_executor_size, чтобы не держать лок, за который
+            # также борется stop_monitor(), на время запроса к БД.
             _sync_executor_size(_compute_max_workers())
 
             def _tracked_check(dev_id, ips, pcnt):
                 """_check_device с учётом фактической параллельности.
 
-                Нужен для диагностики: peak_active_checks показывает, сколько
-                проверок реально шло одновременно. Если пик заметно ниже
-                _executor_worker_count, узкое место не в размере пула, а в
-                чём-то ещё (например, все воркеры ждут один недоступный хост).
+                peak_active_checks показывает, сколько проверок шло одновременно.
+                Если пик заметно ниже числа воркеров, узкое место не в размере
+                пула, а в том, что все потоки ждут одни и те же недоступные
+                хосты.
                 """
                 global _active_checks, _peak_active_checks
                 with _active_checks_lock:
@@ -790,38 +792,43 @@ def monitor_loop():
             monitor_logger.exception("Monitor error")
 
         elapsed = time.time() - start_time
-        sleep_time = max(0, ping_interval - elapsed)
         interval_ratio = (elapsed / ping_interval * 100.0) if ping_interval > 0 else 0.0
-        peak_active_checks, active_checks_now = _pop_peak_active_checks()
-        # devices может не существовать, если цикл упал в начале (до запроса
-        # устройств), поэтому проверяем locals(), а не полагаемся на то, что
-        # прошлый цикл оставил значение.
+        with _active_checks_lock:
+            peak_active_checks = _peak_active_checks
+            active_checks_now = _active_checks
+            _peak_active_checks = 0
+
         monitored_count = len(devices) if "devices" in locals() and devices else 0
         workers_now = _executor_worker_count or _compute_max_workers()
-        stats = (
-            f"devices={monitored_count}, workers={workers_now}, "
-            f"peak_active_checks={peak_active_checks}"
-        )
-        # Один текст и разный уровень: 100%+ означает, что мониторинг не
-        # успевает за расписанием и статусы на картах устаревают, 80% — что
-        # до этого близко. Ниже 80% запас штатный, и warning на каждый цикл
-        # только залил бы лог (на этой машине цикл и так ~180% интервала).
         if interval_ratio > 100.0:
             monitor_logger.warning(
                 f"Monitor cycle {cycle_count} exceeded interval: "
                 f"{elapsed:.2f}s > {ping_interval}s ({interval_ratio:.0f}%); "
-                f"{stats}, active_now={active_checks_now}"
+                f"devices={monitored_count}, workers={workers_now}, "
+                f"peak_active_checks={peak_active_checks}, active_now={active_checks_now}"
             )
         elif interval_ratio >= 80.0:
             monitor_logger.warning(
                 f"Monitor cycle {cycle_count} is near interval limit: "
-                f"{elapsed:.2f}s / {ping_interval}s ({interval_ratio:.0f}%); {stats}"
+                f"{elapsed:.2f}s / {ping_interval}s ({interval_ratio:.0f}%); "
+                f"devices={monitored_count}, workers={workers_now}, "
+                f"peak_active_checks={peak_active_checks}"
+            )
+        elif interval_ratio >= 50.0:
+            monitor_logger.warning(
+                f"Monitor cycle {cycle_count} took {elapsed:.2f}s / "
+                f"{ping_interval}s ({interval_ratio:.0f}%); devices={monitored_count}, "
+                f"workers={workers_now}, peak_active_checks={peak_active_checks}"
             )
         else:
             monitor_logger.debug(
                 f"Cycle completed in {elapsed:.2f}s / {ping_interval}s "
-                f"({interval_ratio:.0f}%), {stats}, sleeping {sleep_time:.2f}s"
+                f"({interval_ratio:.0f}%), devices={monitored_count}, "
+                f"workers={workers_now}, peak_active_checks={peak_active_checks}, "
+                f"sleeping {max(0, ping_interval - elapsed):.2f}s"
             )
+
+        sleep_time = max(0, ping_interval - elapsed)
         time.sleep(sleep_time)
 
     monitor_logger.info("Monitor loop terminated")

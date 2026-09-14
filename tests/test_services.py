@@ -360,7 +360,7 @@ class TestPingHostBackend:
             return [1.0, 2.0], count
 
         monkeypatch.setattr(monitor_mod, "ping", denied)
-        monkeypatch.setattr(monitor_mod, "ping_host_via_subprocess", fake_subprocess)
+        monkeypatch.setattr(monitor_mod, "_ping_host_subprocess", fake_subprocess)
 
         assert monitor_mod.ping_host("10.0.0.1", 4, 1.0) == ([1.0, 2.0], 4)
         assert monitor_mod._ping3_unusable is True
@@ -398,6 +398,50 @@ class TestPingHostBackend:
         monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
         monkeypatch.setattr(monitor_mod, "ping", lambda *a, **k: 0.0125)
         assert monitor_mod.ping_host("127.0.0.1", 3, 1.0) == ([12.5] * 3, 3)
+
+    @pytest.mark.unit
+    def test_permission_error_logs_once_under_concurrency(
+        self, monitor_mod, monkeypatch
+    ):
+        """При гонке воркеров сообщение пишется один раз, а не по разу на поток.
+
+        Пул мониторинга — это ~150 потоков; без _ping3_unusable_lock все они,
+        поймавшие EPERM в одном цикле, написали бы в лог 150 одинаковых
+        ошибок и залили его на каждом цикле.
+        """
+        import threading as th
+
+        monitor_mod._ping3_unusable = False
+        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+
+        barrier = th.Barrier(8)
+
+        def denied(*a, **k):
+            barrier.wait(timeout=5)
+            raise PermissionError(errno.EPERM, "Operation not permitted")
+
+        monkeypatch.setattr(monitor_mod, "ping", denied)
+        monkeypatch.setattr(
+            monitor_mod, "_ping_host_subprocess", lambda ip, c, t: ([1.0], c)
+        )
+
+        errors = []
+        monkeypatch.setattr(
+            monitor_mod.monitor_logger,
+            "error",
+            lambda *a, **k: errors.append(a),
+        )
+
+        threads = [
+            th.Thread(target=monitor_mod.ping_host, args=("10.0.0.1", 4, 1.0))
+            for _ in range(8)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=10)
+
+        assert len(errors) == 1, f"сообщение продублировано {len(errors)} раз"
 
     @pytest.mark.unit
     def test_seq_unique_per_packet(self, monitor_mod, monkeypatch):
