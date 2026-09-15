@@ -22,6 +22,200 @@ def _db_path():
     return path if os.path.isabs(path) else os.path.join(Config.BASE_DIR, path)
 
 
+def _table_names(conn):
+    return {
+        row[0]
+        for row in conn.execute(
+            text(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            )
+        )
+    }
+
+
+def _columns(conn, table):
+    return {row[1] for row in conn.execute(text(f'PRAGMA table_info("{table}")'))}
+
+
+def _index_names(conn, table):
+    return {row[1] for row in conn.execute(text(f'PRAGMA index_list("{table}")'))}
+
+
+def _create_empty_schema(engine):
+    """Create the current ORM schema for a brand-new SQLite database."""
+    from models import db
+
+    db.metadata.create_all(engine)
+    print("Создана новая SQLite-база по текущей ORM-схеме.")
+
+
+def _ensure_map_folder(conn):
+    """Create/complete map_folder before any map.folder_id migration."""
+    if "map_folder" not in _table_names(conn):
+        print("Создание map_folder")
+        conn.execute(text("""
+            CREATE TABLE map_folder (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name VARCHAR(128) NOT NULL,
+                parent_id INTEGER,
+                owner_id INTEGER NOT NULL,
+                created_at TIMESTAMP,
+                position INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(parent_id) REFERENCES map_folder(id),
+                FOREIGN KEY(owner_id) REFERENCES user(id)
+            )
+        """))
+        conn.execute(
+            text("CREATE INDEX ix_map_folder_parent_id ON map_folder(parent_id)")
+        )
+        return
+
+    columns = _columns(conn, "map_folder")
+    if "name" not in columns:
+        row_count = conn.execute(text("SELECT COUNT(*) FROM map_folder")).scalar_one()
+        if row_count:
+            raise RuntimeError(
+                "map_folder.name отсутствует в непустой таблице; "
+                "невозможно безопасно восстановить названия старых папок автоматически."
+            )
+        conn.execute(
+            text("ALTER TABLE map_folder ADD COLUMN name VARCHAR(128) NOT NULL")
+        )
+    if "parent_id" not in columns:
+        conn.execute(
+            text(
+                "ALTER TABLE map_folder ADD COLUMN parent_id INTEGER REFERENCES map_folder(id)"
+            )
+        )
+    if "owner_id" not in columns:
+        row_count = conn.execute(text("SELECT COUNT(*) FROM map_folder")).scalar_one()
+        if row_count:
+            raise RuntimeError(
+                "map_folder.owner_id отсутствует в непустой таблице; "
+                "невозможно безопасно определить владельцев старых папок автоматически."
+            )
+        conn.execute(
+            text(
+                "ALTER TABLE map_folder ADD COLUMN owner_id INTEGER NOT NULL REFERENCES user(id)"
+            )
+        )
+    if "created_at" not in columns:
+        conn.execute(text("ALTER TABLE map_folder ADD COLUMN created_at TIMESTAMP"))
+    if "position" not in columns:
+        conn.execute(
+            text(
+                "ALTER TABLE map_folder ADD COLUMN position INTEGER NOT NULL DEFAULT 0"
+            )
+        )
+    if "ix_map_folder_parent_id" not in _index_names(conn, "map_folder"):
+        conn.execute(
+            text("CREATE INDEX ix_map_folder_parent_id ON map_folder(parent_id)")
+        )
+
+
+def _ensure_map_columns(conn):
+    """Add map columns introduced with folders/order without replacing data."""
+    _require_tables(conn, ("map",))
+    columns = _columns(conn, "map")
+    if "folder_id" not in columns:
+        conn.execute(
+            text(
+                "ALTER TABLE map ADD COLUMN folder_id INTEGER REFERENCES map_folder(id)"
+            )
+        )
+    if "position" not in columns:
+        conn.execute(
+            text("ALTER TABLE map ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+        )
+    if "ix_map_folder_id" not in _index_names(conn, "map"):
+        conn.execute(text("CREATE INDEX ix_map_folder_id ON map(folder_id)"))
+
+
+def _ensure_permission_tables(conn):
+    """Create folder/map permission tables when upgrading older databases."""
+    tables = _table_names(conn)
+    if "folder_permission" not in tables:
+        print("Создание folder_permission")
+        conn.execute(text("""
+            CREATE TABLE folder_permission (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                folder_id INTEGER NOT NULL,
+                user_id INTEGER,
+                role VARCHAR(20),
+                FOREIGN KEY(folder_id) REFERENCES map_folder(id),
+                FOREIGN KEY(user_id) REFERENCES user(id),
+                CONSTRAINT check_folder_user_or_role
+                    CHECK ((user_id IS NOT NULL) OR (role IS NOT NULL)),
+                CONSTRAINT uq_folder_user UNIQUE (folder_id, user_id)
+            )
+        """))
+        conn.execute(
+            text(
+                "CREATE INDEX ix_folder_permission_folder_id ON folder_permission(folder_id)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX ix_folder_permission_user_id ON folder_permission(user_id)"
+            )
+        )
+
+    if "map_permission" not in tables:
+        print("Создание map_permission")
+        conn.execute(text("""
+            CREATE TABLE map_permission (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                map_id INTEGER NOT NULL,
+                user_id INTEGER,
+                role VARCHAR(20),
+                FOREIGN KEY(map_id) REFERENCES map(id),
+                FOREIGN KEY(user_id) REFERENCES user(id),
+                CONSTRAINT check_user_or_role
+                    CHECK ((user_id IS NOT NULL) OR (role IS NOT NULL)),
+                CONSTRAINT uq_map_user UNIQUE (map_id, user_id),
+                CONSTRAINT uq_map_role UNIQUE (map_id, role)
+            )
+        """))
+        conn.execute(
+            text("CREATE INDEX ix_map_permission_map_id ON map_permission(map_id)")
+        )
+        conn.execute(
+            text("CREATE INDEX ix_map_permission_user_id ON map_permission(user_id)")
+        )
+
+
+def _migrate_user_locale(conn):
+    _require_tables(conn, ("user",))
+    if "locale" not in _columns(conn, "user"):
+        print("Добавление user.locale")
+        conn.execute(text('ALTER TABLE "user" ADD COLUMN locale VARCHAR(8)'))
+
+
+def _migrate_nested_groups(conn):
+    _require_tables(conn, ("group",))
+    if "parent_group_id" not in _columns(conn, "group"):
+        print("Добавление group.parent_group_id")
+        conn.execute(
+            text(
+                'ALTER TABLE "group" ADD COLUMN parent_group_id INTEGER REFERENCES "group"(id)'
+            )
+        )
+    if "ix_group_parent_group_id" not in _index_names(conn, "group"):
+        conn.execute(
+            text('CREATE INDEX ix_group_parent_group_id ON "group"(parent_group_id)')
+        )
+
+
+def _ensure_supported_schema_objects(conn):
+    """Apply all structural migrations required by the current ORM schema."""
+    _require_base_tables(conn)
+    _ensure_map_folder(conn)
+    _ensure_map_columns(conn)
+    _migrate_user_locale(conn)
+    _migrate_nested_groups(conn)
+    _ensure_permission_tables(conn)
+
+
 def _require_base_tables(conn):
     required = {"user", "device", "map"}
     existing = {
@@ -41,18 +235,10 @@ def _require_base_tables(conn):
 
 
 def _add_ordering_columns(conn):
-    _require_tables(conn, ("map", "map_folder"))
-    for table in ("map", "map_folder"):
-        columns = {
-            row[1] for row in conn.execute(text(f'PRAGMA table_info("{table}")'))
-        }
-        if "position" not in columns:
-            print(f"Добавляем {table}.position...")
-            conn.execute(
-                text(
-                    f'ALTER TABLE "{table}" ADD COLUMN position INTEGER NOT NULL DEFAULT 0'
-                )
-            )
+    # Kept as a compatibility helper; the folder/map prerequisites are now
+    # created by _ensure_supported_schema_objects().
+    _ensure_map_folder(conn)
+    _ensure_map_columns(conn)
     print("Миграция ordering завершена успешно.")
 
 
@@ -203,18 +389,29 @@ def _migrate_indexes(conn):
         print("Создан idx_group_map_id")
 
 
+def _sqlite_has_application_tables(engine):
+    with engine.connect() as conn:
+        return bool(_table_names(conn))
+
+
 def run_migration():
     db_path = _db_path()
-    if not os.path.exists(db_path):
-        raise RuntimeError(f"База данных не найдена: {db_path}")
+    database_exists = os.path.exists(db_path)
+    engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
 
-    backup_path = (
-        f"{db_path}.migration_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    )
+    if not database_exists or not _sqlite_has_application_tables(engine):
+        _create_empty_schema(engine)
+        return
+
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = f"{db_path}.migration_backup_{stamp}"
+    suffix = 1
+    while os.path.exists(backup_path):
+        backup_path = f"{db_path}.migration_backup_{stamp}_{suffix}"
+        suffix += 1
     shutil.copy2(db_path, backup_path)
     print(f"Резервная копия перед миграцией: {backup_path}")
 
-    engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
     inspector = inspect(engine)
 
     with engine.begin() as conn:
@@ -227,7 +424,8 @@ def run_migration():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     device_id INTEGER NOT NULL,
                     ip_address VARCHAR(45) NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(device_id) REFERENCES device(id) ON DELETE CASCADE
                 )
             """))
         else:
@@ -324,6 +522,7 @@ def run_migration():
         else:
             print("Table device_history does not exist, skipping.")
 
+        _ensure_supported_schema_objects(conn)
         _add_ordering_columns(conn)
         _migrate_quality(conn)
         _migrate_quality_profiles(conn)

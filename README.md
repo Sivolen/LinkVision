@@ -1,7 +1,7 @@
-# LinkVision v2.0
+# LinkVision v2.2.2
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
-![Flask](https://img.shields.io/badge/Flask-3.3.0-green?logo=flask)
+![Flask](https://img.shields.io/badge/Flask-3.1.3-green?logo=flask)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 LinkVision — веб-приложение для визуализации и мониторинга сетевой инфраструктуры. Предоставляет инструменты для создания интерактивных карт сети, управления устройствами и их соединениями, а также отслеживания доступности узлов в реальном времени.
@@ -79,6 +79,15 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Для разработки фронтенда также нужен Node.js/npm:
+
+```bash
+npm install
+npm run build
+```
+
+В production используются только собранные `static/js/dist/*.min.js`. Исходники `static/js/` автоматически пересобираются watcher'ом в dev-режиме.
+
 ### 4. Конфигурация
 
 `config.py` — трекаемый файл репозитория, руками его редактировать не нужно почти никогда. Секреты и параметры окружения читаются из `.env` в корне проекта.
@@ -100,18 +109,34 @@ cp .env.example .env
 | `REDIS_URL` | Backend для rate limiting вместо in-memory. | не задано |
 | `SENTRY_DSN` | Мониторинг ошибок. | не задано |
 
-### 5. База данных
+### 5. База данных и миграции
+
+В текущей версии проекта **нет checked-in Alembic/Flask-Migrate цепочки**. Единственная поддерживаемая точка входа для структурных миграций SQLite — `apply_migrations.sh`. Приложение не изменяет схему существующей БД при старте.
+
+Для новой или существующей SQLite-базы:
 
 ```bash
-flask db upgrade
+./apply_migrations.sh
 ```
 
-Если папки `migrations/` ещё нет:
-```bash
-flask db init
-flask db migrate -m "Initial migration"
-flask db upgrade
-```
+Скрипт делает резервную копию существующей БД, применяет идемпотентные структурные изменения одной транзакцией, проверяет фактическую схему и только после успешной проверки обновляет `linkvision_schema.schema_version`. Маркер — это **маркер совместимости, а не номер миграции**.
+
+В миграционный набор входят, в частности:
+- `user.locale`;
+- `group.parent_group_id`;
+- `map.folder_id` и `map.position`;
+- `map_folder`;
+- `folder_permission` и `map_permission`;
+- множественные IP, статусы, quality-поля, quality profiles и history;
+- необходимые индексы.
+
+`fix_db.py`, `migrate_ordering.py` и `migrate_quality.py` сохранены только как совместимые старые entrypoint'ы; новый код должен использовать `apply_migrations.sh`.
+
+#### PostgreSQL
+
+Для PostgreSQL `create_all()` используется **только для действительно пустой базы**. Если база уже содержит таблицы, приложение сначала проверяет наличие всех таблиц и полей текущей ORM-схемы и при несовместимости останавливается. Это сделано специально: `create_all()` не является безопасной миграцией существующей PostgreSQL-схемы.
+
+Поэтому существующую PostgreSQL-базу нельзя обновлять запуском приложения в надежде, что схема «сама достроится». Перед запуском необходимо применить поддерживаемую миграцию для вашей схемы. Автоматической PostgreSQL-миграции в текущей версии нет.
 
 ### 6. Запуск для разработки
 
@@ -197,17 +222,17 @@ linkvision/
 ├── app.py                       # точка входа; порядок важен — .env грузится ДО импорта config/logger
 ├── wsgi.py                      # WSGI для production
 ├── config.py                    # секретный ключ, БД, CSP, i18n, версия
-├── extensions.py                 # SQLAlchemy, LoginManager, SocketIO, Migrate, Babel
+├── extensions.py                 # SQLAlchemy, LoginManager, SocketIO, Babel
 ├── models.py                    # User, Map, Device, Link, Group (+parent_group_id), Settings
 ├── forms.py
 ├── requirements.txt
 ├── babel.cfg                    # извлечение строк для перевода (Flask-Babel)
-├── fix_db.py                    # исправление миграций БД
+├── apply_migrations.sh           # единая точка входа миграций SQLite
+├── fix_db.py                    # совместимый старый entrypoint
 ├── install.sh
 ├── linkvision.service
 ├── .env.example
 ├── translations/                 # .po/.mo переводов интерфейса (ru/en)
-├── migrations/                   # Alembic
 ├── blueprints/
 │   ├── auth.py                  # вход/регистрация/выход/смена пароля
 │   ├── admin.py                  # пользователи/типы/настройки/резервные копии
@@ -236,7 +261,11 @@ linkvision/
 ├── static/
 │   ├── css/
 │   └── js/
-│       ├── base.js / modal.js / map.js       # собранные бандлы
+│       ├── base.js / common.js               # исходники
+│       ├── dist/                             # собранные *.min.js
+│       │   ├── base.min.js / common.min.js
+│       │   ├── map.min.js / modal.min.js
+│       │   └── ...
 │       └── src/
 │           ├── map/
 │           │   ├── core.js                   # ядро карты, реестр cleanup-модулей
@@ -270,51 +299,33 @@ linkvision/
 
 ### Обновление через systemd
 
+Для SQLite порядок обновления такой:
+
 ```bash
 sudo systemctl stop linkvision.service
 cd /opt/linkvision && sudo git pull
 sudo /opt/linkvision/venv/bin/pip install -r requirements.txt
-sudo /opt/linkvision/venv/bin/flask db upgrade
+sudo /opt/linkvision/apply_migrations.sh
 sudo systemctl start linkvision.service
 sudo journalctl -u linkvision.service -n 20
 ```
 
-### Обновление структуры БД до вложенных групп
+`apply_migrations.sh` должен завершиться успешно **до** запуска приложения. Если схема старая или повреждена, приложение не будет пытаться менять её самостоятельно.
 
-Если обновляетесь с версии без поддержки вложенности, у таблицы `group` должна появиться `parent_group_id`:
+### Обновление старых баз
 
-```bash
-flask db upgrade
-```
-
-Либо вручную (сначала бэкап `webnetmap.db`):
-```bash
-sqlite3 webnetmap.db "ALTER TABLE \"group\" ADD COLUMN parent_group_id INTEGER REFERENCES \"group\"(id);"
-sqlite3 webnetmap.db "CREATE INDEX IF NOT EXISTS ix_group_parent_group_id ON \"group\" (parent_group_id);"
-```
-
-### Исправление миграций БД (SQLite)
+Для SQLite не нужно вручную добавлять `parent_group_id`, `locale`, `map_folder` или permission-таблицы. Все поддерживаемые структурные изменения выполняет единый миграционный набор:
 
 ```bash
 cd /opt/linkvision
-git pull
-./fix_db.py
+sudo systemctl stop linkvision.service
+sudo ./apply_migrations.sh
+sudo systemctl start linkvision.service
 ```
 
-Ручной вариант, если скрипт не помог:
-```bash
-sqlite3 webnetmap.db ".tables"
-python3 -c "
-import sqlite3
-conn = sqlite3.connect('webnetmap.db')
-conn.execute('DELETE FROM alembic_version')
-conn.commit()
-print('alembic_version сброшен')
-"
-pkill -f gunicorn
-sleep 2
-gunicorn -k eventlet -w 1 -b 0.0.0.0:8005 wsgi:app
-```
+Перед миграцией создаётся файл резервной копии вида `webnetmap.db.migration_backup_YYYYMMDD_HHMMSS`.
+
+Если миграция завершается ошибкой, приложение запускать не следует: сначала исправьте причину или восстановите резервную копию.
 
 ### Логи
 

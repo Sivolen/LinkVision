@@ -4,12 +4,10 @@ from pathlib import Path
 
 from flask import Flask, request, render_template, jsonify, send_from_directory
 from flask_login import current_user, login_required
-from flask_migrate import Migrate
 from flask_socketio import join_room
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_babel import get_locale
-from sqlalchemy import event, inspect as sa_inspect, text
-from sqlalchemy.exc import NoSuchTableError
+from sqlalchemy import event, inspect as sa_inspect
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.exceptions import HTTPException
 
@@ -28,6 +26,7 @@ from services.db.schema_service import (
     mark_sqlite_schema,
     sqlite_database_is_empty,
     validate_sqlite_database,
+    validate_database_schema,
 )
 from utils.logger import app_logger
 from dotenv import load_dotenv
@@ -74,28 +73,6 @@ def ensure_env_file():
 ensure_env_file()
 
 
-def _ensure_user_locale_column():
-    """Идемпотентно добавляет колонку user.locale, если её ещё нет.
-
-    Нужно, потому что db.create_all() в проекте отключён и папки migrations/ нет:
-    у существующих БД (SQLite/PostgreSQL) новой колонки не будет, а модель её уже
-    объявляет — без ALTER первый же SELECT по User упал бы. Вызывается один раз
-    при старте, внутри app_context.
-    """
-    inspector = sa_inspect(db.engine)
-    try:
-        columns = {col["name"] for col in inspector.get_columns("user")}
-    except NoSuchTableError:
-        # Таблицы ещё нет (напр. чистая БД) — мигрировать нечего; когда таблица
-        # создастся из модели, колонка locale уже будет в ней.
-        return
-    if "locale" in columns:
-        return
-    db.session.execute(text('ALTER TABLE "user" ADD COLUMN locale VARCHAR(8)'))
-    db.session.commit()
-    app_logger.info("Добавлена колонка user.locale (i18n)")
-
-
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -109,8 +86,6 @@ def create_app():
 
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     init_extensions(app)
-
-    migrate = Migrate(app, db)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
@@ -136,14 +111,6 @@ def create_app():
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
-
-        # --- i18n: гарантируем колонку user.locale ---
-        # db.create_all() в проекте отключён, миграций (migrations/) нет, поэтому
-        # для существующих БД добавляем новую nullable-колонку разово и идемпотентно.
-        # ALTER TABLE ... ADD COLUMN работает и в SQLite, и в PostgreSQL; "user"
-        # закавычен, т.к. в PostgreSQL это зарезервированное слово. Должно идти ДО
-        # первого запроса к User (иначе SELECT по несуществующей колонке упадёт).
-        _ensure_user_locale_column()
 
         # --- Контроль схемы БД ---
         # Для существующей БД запрещаем тихое создание недостающих таблиц:
@@ -173,10 +140,25 @@ def create_app():
                         "Запустите поддерживаемую миграцию или восстановите совместимую резервную копию."
                     )
         else:
-            # PostgreSQL: Flask-SQLAlchemy может создавать отсутствующие таблицы
-            # только для действительно новой базы. Проверка существующей схемы
-            # будет отдельным шагом после появления полноценной Alembic-цепочки.
-            db.create_all()
+            # PostgreSQL: create_all() допустим только для действительно новой
+            # базы. Для существующей схемы он НЕ является миграцией: проверяем
+            # структуру и останавливаем запуск при несовместимости.
+            inspector = sa_inspect(db.engine)
+            if not inspector.get_table_names():
+                db.create_all()
+            else:
+                schema_result = validate_database_schema(db.engine, db.metadata)
+                if not schema_result.valid:
+                    app_logger.critical(
+                        "Database schema is incompatible with this LinkVision version: %s",
+                        schema_result.message,
+                    )
+                    raise RuntimeError(
+                        "Несовместимая схема PostgreSQL. "
+                        f"{schema_result.message}. "
+                        "Автоматическое изменение существующей PostgreSQL-схемы отключено; "
+                        "примените поддерживаемую миграцию перед запуском приложения."
+                    )
 
         # После успешной проверки/создания фиксируем версию схемы SQLite.
         if database_uri.startswith("sqlite:///") and sqlite_path:

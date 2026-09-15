@@ -121,22 +121,15 @@ echo -e "${GREEN}config.py found.${NC}"
 # ensure_env_file() в app.py) — здесь ничего вручную генерировать не нужно.
 
 
-# Initialize database
-echo -e "
-${GREEN}Initializing database...${NC}"
-export FLASK_APP=app.py
-if [ -d "migrations" ]; then
-    flask db upgrade || echo -e "${YELLOW}Flask-Migrate not configured, skipping.${NC}"
+# Initialize / upgrade database
+echo -e "\n${GREEN}Initializing database...${NC}"
+if [[ "${DATABASE_URL:-}" == postgresql://* || "${DATABASE_URL:-}" == postgres://* ]]; then
+    echo -e "${YELLOW}PostgreSQL detected.${NC}"
+    echo -e "${YELLOW}Existing PostgreSQL schemas are validated at application startup; this installer does not mutate them.${NC}"
+    echo -e "${YELLOW}For an existing PostgreSQL database, apply a supported schema migration before starting LinkVision.${NC}"
 else
-    echo -e "${YELLOW}No migrations folder found. Database will be created on first run.${NC}"
-fi
-
-# Fix database migrations for v2.0
-echo -e "\n${GREEN}Applying v2.0 database migrations...${NC}"
-if [ -f "fix_db.py" ]; then
-    python fix_db.py || echo -e "${YELLOW}Migration script failed, trying manual migration...${NC}"
-else
-    echo -e "${YELLOW}fix_db.py not found. Database migration may fail.${NC}"
+    chmod +x ./apply_migrations.sh
+    ./apply_migrations.sh
 fi
 
 # Create upload directories
