@@ -333,7 +333,7 @@ async function loadGroupsList() {
 
     } catch (err) {
         Logger.error('Load groups error:', err);
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">${t('modal.group.loadError', { msg: err.message })}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">${escapeHtml(t('modal.group.loadError', { msg: err.message }))}</td></tr>`;
         showToast(t('toast.errorTitle'), t('modal.group.loadFail'), 'error');
     } finally {
         skeleton?.classList.add('d-none');

@@ -5,6 +5,7 @@
 import { showToast } from '../utils/toast.js';
 import { t } from '../i18n/i18n.js';
 import { http } from '../utils/http.js';
+import { escapeHtml } from './utils.js';
 
 let currentMapId = null;
 
@@ -70,7 +71,7 @@ async function loadPermissions(mapId) {
             
             html += `<tr data-perm-id="${perm.id}">`;
             html += `<td><span class="badge bg-secondary">${typeLabel}</span></td>`;
-            html += `<td>${nameLabel}</td>`;
+            html += `<td>${escapeHtml(nameLabel)}</td>`;
             html += `<td>${roleBadge}</td>`;
             html += `<td>`;
             

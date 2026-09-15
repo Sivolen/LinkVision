@@ -220,6 +220,25 @@ let wasDisconnected = false;
         return div.innerHTML;
     }
 
+    // Значение используется внутри одинарного JS-литерала в inline onclick.
+    // HTML-экранирования недостаточно: апостроф из имени карты/папки может
+    // закрыть строку и превратить имя в исполняемый JS.
+    // Порядок применения на месте использования: escapeJsString -> escapeHtml
+    // -> замена ". escapeHtml построен на textContent/innerHTML и кавычки НЕ
+    // экранирует, а двойная кавычка закрыла бы сам HTML-атрибут onclick
+    // (проверено парсером: имя x" onmouseover="... превращалось в новый
+    // атрибут). Замена "&quot;" идёт последней, чтобы её & не был
+    // заэкранирован вторично.
+    function escapeJsString(str) {
+        return String(str == null ? '' : str)
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029');
+    }
+
     function getExpandedFolderIds() {
         try {
             const raw = localStorage.getItem('sidebarExpandedFolders');
@@ -417,7 +436,7 @@ let wasDisconnected = false;
         const canManage = map.owner_id == currentUserId || isAdmin;
         let actionsHtml = '';
         if (canManage) {
-            const safeName = escapeHtml(map.name).replace(/'/g, "\'");
+            const safeName = escapeHtml(escapeJsString(map.name)).replace(/"/g, '&quot;');
             actionsHtml = `
                 <button class="btn-map-action" onclick="editMap(event, ${map.id}, '${safeName}')" title="${escapeHtml(t('contextMenu.edit') || 'Edit')}">
                     <i class="fas fa-edit"></i>
@@ -463,7 +482,7 @@ let wasDisconnected = false;
 
         let actionsHtml = '';
         if (canManage) {
-            const safeName = escapeHtml(folder.name).replace(/'/g, "\'");
+            const safeName = escapeHtml(escapeJsString(folder.name)).replace(/"/g, '&quot;');
             actionsHtml = `
                 <button class="btn-map-action" onclick="renameFolderPrompt(event, ${folder.id}, '${safeName}')" title="${escapeHtml(t('contextMenu.edit') || 'Rename')}">
                     <i class="fas fa-edit"></i>
@@ -777,7 +796,7 @@ let wasDisconnected = false;
                 container.innerHTML = html;
             })
             .catch(err => {
-                container.innerHTML = '<div class="alert alert-danger">' + err.message + '</div>';
+                container.innerHTML = '<div class="alert alert-danger">' + escapeHtml(err.message) + '</div>';
             });
     }
 
