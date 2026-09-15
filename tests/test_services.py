@@ -245,6 +245,86 @@ class TestMonitorSettings:
         assert clamp(9999) == 3650
 
 
+class TestMonitorLifecycle:
+    """Проверки жизненного цикла monitor без привязки к исходному тексту."""
+
+    @pytest.mark.unit
+    def test_init_monitor_reads_workers_before_lock(self, app, monkeypatch):
+        from services import monitor
+        from models import Settings, db
+
+        with app.app_context():
+            db.session.add(Settings(key="monitor_max_workers", value="42"))
+            db.session.commit()
+
+        previous_app = monitor.app_instance
+        previous_executor = monitor._executor
+        previous_count = monitor._executor_worker_count
+        created = []
+
+        class FakeExecutor:
+            def __init__(self, max_workers):
+                created.append(max_workers)
+
+            def shutdown(self, wait=False):
+                pass
+
+        monkeypatch.setattr(
+            monitor.concurrent.futures, "ThreadPoolExecutor", FakeExecutor
+        )
+        monitor.app_instance = None
+        monitor._executor = None
+        monitor._executor_worker_count = 0
+        monitor.settings_cache.clear()
+        try:
+            monitor.init_monitor(app)
+            assert created == [42]
+            assert monitor._executor_worker_count == 42
+        finally:
+            monitor.app_instance = previous_app
+            monitor._executor = previous_executor
+            monitor._executor_worker_count = previous_count
+            monitor.settings_cache.clear()
+
+    @pytest.mark.unit
+    def test_stop_monitor_joins_thread_without_holding_lock(self, monkeypatch):
+        from services import monitor
+
+        class TrackingLock:
+            def __init__(self):
+                self.depth = 0
+
+            def __enter__(self):
+                self.depth += 1
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                self.depth -= 1
+
+        class FakeThread:
+            def __init__(self, lock):
+                self.lock = lock
+                self.join_lock_depth = None
+
+            def is_alive(self):
+                return True
+
+            def join(self, timeout=None):
+                self.join_lock_depth = self.lock.depth
+
+        lock = TrackingLock()
+        thread = FakeThread(lock)
+        monkeypatch.setattr(monitor, "_lock", lock)
+        monkeypatch.setattr(monitor, "_monitor_thread", thread)
+        monkeypatch.setattr(monitor, "_monitor_stop_flag", False)
+        monkeypatch.setattr(monitor, "_executor", None)
+        monkeypatch.setattr(monitor, "_executor_worker_count", 0)
+
+        monitor.stop_monitor()
+
+        assert thread.join_lock_depth == 0
+
+
 class TestComputeMaxWorkers:
     """_compute_max_workers: дефолт, клампинг и чтение настройки."""
 

@@ -87,3 +87,8 @@ webnetmap.db.save
 
 # Stakpak session files
 .stakpak/session*
+/.coverage
+/.pycharmignore
+/vtcode.toml
+/.vtcode/
+/.zed/
