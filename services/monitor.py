@@ -56,14 +56,18 @@ QUALITY_LIVE_MIN_SAMPLES = 8
 
 def init_monitor(app):
     global app_instance, _executor, _executor_worker_count
+    # app_instance присваивается ДО _compute_max_workers(): get_setting без
+    # него молча возвращает дефолт, и monitor_max_workers из БД игнорировался
+    # бы до первого цикла. Расчёт — до _lock: при холодном TTL-кэше это
+    # запрос к БД, а _lock делится с stop_monitor().
+    app_instance = app
+    max_workers = _compute_max_workers()
     with _lock:
         if _executor is not None:
             try:
                 _executor.shutdown(wait=False)
             except Exception:
                 pass
-        app_instance = app
-        max_workers = _compute_max_workers()
         _executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
         _executor_worker_count = max_workers
         monitor_logger.info(f"Monitor initialized with {max_workers} workers")
@@ -88,8 +92,15 @@ def stop_monitor():
     global _monitor_stop_flag, _monitor_thread, _executor, _executor_worker_count
     with _lock:
         _monitor_stop_flag = True
-        if _monitor_thread and _monitor_thread.is_alive():
-            _monitor_thread.join(timeout=5)
+        monitor_thread = _monitor_thread
+
+    # join() вне _lock: поток монитора берёт этот же лок на границе цикла
+    # (_sync_executor_size), поэтому, держи мы его здесь, монитор не дошёл бы
+    # до проверки _monitor_stop_flag и join истёк бы по таймауту впустую.
+    if monitor_thread and monitor_thread.is_alive():
+        monitor_thread.join(timeout=5)
+
+    with _lock:
         if _executor:
             _executor.shutdown(wait=True)
             _executor = None
