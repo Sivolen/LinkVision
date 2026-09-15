@@ -1,7 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
 from flask_socketio import SocketIO
-from flask_migrate import Migrate
 from flask_babel import Babel
 from flask import request, session, current_app
 
@@ -20,7 +19,6 @@ socketio = SocketIO(
     ping_timeout=100,
     max_http_buffer_size=100_000_000,
 )
-migrate = Migrate()
 babel = Babel()
 
 
@@ -28,7 +26,6 @@ def init_extensions(app):
     db.init_app(app)
     login_manager.init_app(app)
     socketio.init_app(app)
-    migrate.init_app(app, db)
     # locale_selector — API Flask-Babel 3.x+/4.x (передаётся в init_app,
     # а не декоратором @babel.localeselector, как было в 2.x).
     babel.init_app(app, locale_selector=select_locale)

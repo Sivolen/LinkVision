@@ -6,6 +6,8 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config:
+    BASE_DIR = BASE_DIR
+
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-me"
 
     # Проверка SECRET_KEY в production

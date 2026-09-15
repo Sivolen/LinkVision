@@ -276,3 +276,27 @@ def test_monitor_pool_size_is_configurable_not_cpu_bound():
         assert setting_key in where.read_text(
             encoding="utf-8"
         ), f"{setting_key} missing in {where}"
+
+
+def test_startup_does_not_mutate_existing_schema():
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert "_ensure_user_locale_column" not in app
+    assert 'ALTER TABLE "user" ADD COLUMN locale' not in app
+    assert "validate_database_schema(db.engine, db.metadata)" in app
+    assert "if not inspector.get_table_names():" in app
+
+
+def test_flask_migrate_is_not_advertised_as_the_project_migration_engine():
+    requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+    extensions = (ROOT / "extensions.py").read_text(encoding="utf-8")
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert "Flask-Migrate" not in requirements
+    assert "flask_migrate" not in extensions
+    assert "flask_migrate" not in app
+
+
+def test_install_uses_single_migration_entrypoint():
+    install = (ROOT / "install.sh").read_text(encoding="utf-8")
+    assert "apply_migrations.sh" in install
+    assert "flask db upgrade" not in install
+    assert "fix_db.py" not in install

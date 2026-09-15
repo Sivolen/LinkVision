@@ -1,15 +1,17 @@
-"""Database schema validation and lightweight version marker support.
+"""Database schema validation and the SQLite compatibility marker.
 
-The application does not use a checked-in Alembic migration chain yet, so a
-backup cannot be safely upgraded just by opening it. This module provides a
-single, conservative compatibility check used by restore and startup code.
+LinkVision currently uses ``apply_migrations.sh`` as its only supported
+migration entrypoint.  There is intentionally no checked-in Alembic revision
+chain, so application startup must never silently mutate an existing database.
 """
 
 from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from typing import Iterable, Mapping
+from typing import Mapping
+
+from sqlalchemy import inspect
 
 SCHEMA_TABLE = "linkvision_schema"
 SCHEMA_KEY = "schema_version"
@@ -79,6 +81,50 @@ def write_schema_version(conn: sqlite3.Connection, version: str) -> None:
     )
 
 
+def _validate_sqlalchemy_schema(engine, metadata) -> SchemaValidationResult:
+    """Validate tables/columns for an existing non-SQLite database.
+
+    This is deliberately structural only.  It does not claim to be a migration
+    engine and therefore never changes the database.
+    """
+    inspector = inspect(engine)
+    schema = _metadata_schema(metadata)
+    existing_tables = set(inspector.get_table_names())
+    missing_tables = tuple(sorted(set(schema) - existing_tables))
+    if missing_tables:
+        return SchemaValidationResult(
+            False,
+            "Отсутствуют обязательные таблицы: " + ", ".join(missing_tables),
+            missing_tables=missing_tables,
+        )
+
+    missing_columns: list[str] = []
+    for table_name in schema:
+        actual = {column["name"] for column in inspector.get_columns(table_name)}
+        for column_name in schema[table_name]:
+            if column_name not in actual:
+                missing_columns.append(f"{table_name}.{column_name}")
+
+    if missing_columns:
+        return SchemaValidationResult(
+            False,
+            "Отсутствуют обязательные поля: " + "; ".join(missing_columns),
+            missing_columns=tuple(missing_columns),
+        )
+
+    return SchemaValidationResult(True)
+
+
+def validate_database_schema(engine, metadata) -> SchemaValidationResult:
+    """Validate an existing SQLAlchemy database without modifying it."""
+    try:
+        return _validate_sqlalchemy_schema(engine, metadata)
+    except Exception as exc:  # SQLAlchemy dialect-specific inspector errors.
+        return SchemaValidationResult(
+            False, f"Не удалось проверить структуру базы данных: {exc}"
+        )
+
+
 def validate_sqlite_database(
     path: str,
     metadata,
@@ -87,9 +133,7 @@ def validate_sqlite_database(
     """Validate a SQLite file without modifying it.
 
     Extra tables/columns are allowed. Missing ORM tables/columns are not.
-    If a LinkVision schema marker exists, its version must match the expected
-    application version. Marker-less legacy databases are accepted when their
-    actual structure is compatible; they will receive a marker on next startup.
+    The schema marker is a compatibility marker, not a migration revision.
     """
     try:
         conn = sqlite3.connect(path)
@@ -130,9 +174,6 @@ def validate_sqlite_database(
                 if name not in actual:
                     missing_columns.append(f"{table_name}.{name}")
                     continue
-                # Compare only broad SQLite affinity. This catches a genuinely
-                # incompatible schema without rejecting harmless VARCHAR length
-                # differences between SQLite/SQLAlchemy versions.
                 model_type = _sqlite_type_affinity(
                     getattr(
                         model_column.type, "compile", lambda **_: str(model_column.type)
