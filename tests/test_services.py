@@ -778,3 +778,162 @@ class TestExecutorPoolSizing:
         assert (
             name not in monitor.monitor_loop.__code__.co_varnames
         ), f"{name} присваивается в monitor_loop без global"
+
+
+class TestQualityMonitoring:
+    """Проверки rolling quality window, профилей и live snapshot."""
+
+    @pytest.mark.unit
+    def test_calculate_quality_uses_loss_latency_and_jitter_boundaries(self):
+        from services.quality_service import calculate_quality
+
+        thresholds = {
+            "loss_degraded_percent": 10,
+            "loss_bad_percent": 25,
+            "latency_degraded_ms": 20,
+            "latency_bad_ms": 40,
+            "jitter_degraded_ms": 5,
+            "jitter_bad_ms": 15,
+        }
+        assert (
+            calculate_quality(
+                {
+                    "samples": 4,
+                    "latencies": [25, 25, 25, 25],
+                    "jitter_values": [1, 1, 1],
+                },
+                thresholds,
+            )[0]
+            == "degraded"
+        )
+        assert (
+            calculate_quality(
+                {"samples": 4, "latencies": [10, 10, 10], "jitter_values": [1, 1]},
+                thresholds,
+            )[0]
+            == "bad"
+        )  # 25% loss == loss_bad_percent (>=)
+        assert (
+            calculate_quality(
+                {
+                    "samples": 4,
+                    "latencies": [10, 10, 10, 10],
+                    "jitter_values": [15, 15],
+                },
+                thresholds,
+            )[0]
+            == "bad"
+        )
+
+    @pytest.mark.unit
+    def test_quality_history_window_waits_full_five_minutes(self, app):
+        from models import Device, DeviceQualityHistory, db
+        from services import monitor
+
+        with app.app_context():
+            device = Device.query.filter_by(name="Own Device").first()
+            assert device is not None
+            monitor._quality_windows.clear()
+            monitor._quality_last_persist.clear()
+            metrics = {
+                "samples": 4,
+                "latencies": [10, 11, 12, 13],
+                "jitter_values": [1, 2, 1],
+            }
+            thresholds = {
+                "loss_degraded_percent": 1,
+                "loss_bad_percent": 5,
+                "latency_degraded_ms": 50,
+                "latency_bad_ms": 100,
+                "jitter_degraded_ms": 10,
+                "jitter_bad_ms": 30,
+            }
+            assert (
+                monitor._record_quality_sample(device.id, metrics, 1000, thresholds)
+                is False
+            )
+            assert (
+                DeviceQualityHistory.query.filter_by(device_id=device.id).count() == 0
+            )
+            assert (
+                monitor._record_quality_sample(device.id, metrics, 1299, thresholds)
+                is False
+            )
+            assert (
+                DeviceQualityHistory.query.filter_by(device_id=device.id).count() == 0
+            )
+            assert (
+                monitor._record_quality_sample(device.id, metrics, 1300, thresholds)
+                is True
+            )
+            row = DeviceQualityHistory.query.filter_by(device_id=device.id).first()
+            assert row is not None
+            assert row.samples == 12
+            assert row.loss_percent == 0
+            monitor._quality_windows.clear()
+            monitor._quality_last_persist.clear()
+            db.session.rollback()
+
+    @pytest.mark.unit
+    def test_quality_window_resets_on_full_outage(self):
+        from services import monitor
+
+        monitor._quality_windows[123] = {
+            "sent": 100,
+            "received": 80,
+            "latencies": [10],
+            "jitter": [1],
+        }
+        monitor._quality_last_persist[123] = 1000
+        monitor._reset_quality_window(123)
+        assert 123 not in monitor._quality_windows
+        assert 123 not in monitor._quality_last_persist
+
+    @pytest.mark.unit
+    def test_monitor_down_branch_resets_quality_window_before_recording(self):
+        import inspect
+        from services import monitor
+
+        source = inspect.getsource(monitor.monitor_loop)
+        down = source.index('if new_status == "down":')
+        reset = source.index("_reset_quality_window(dev_id)", down)
+        record = source.index("_record_quality_sample(", down)
+        assert reset < record
+        assert "history_persisted = False" in source[reset : record + 100]
+
+    @pytest.mark.unit
+    def test_device_explicit_quality_profile_is_used(self, app):
+        from models import Device, QualityProfile, db
+        from services.quality_service import (
+            ensure_default_quality_profile,
+            get_device_quality_snapshot,
+            get_device_thresholds_map,
+        )
+
+        with app.app_context():
+            default = ensure_default_quality_profile()
+            device = Device.query.filter_by(name="Own Device").first()
+            assert device is not None
+            explicit = QualityProfile(
+                name="Test explicit",
+                is_default=False,
+                loss_degraded_percent=2,
+                loss_bad_percent=8,
+                latency_degraded_ms=20,
+                latency_bad_ms=40,
+                jitter_degraded_ms=5,
+                jitter_bad_ms=15,
+            )
+            db.session.add(explicit)
+            db.session.commit()
+            device.quality_profile_id = explicit.id
+            db.session.commit()
+
+            profiles_by_id, default_thresholds = get_device_thresholds_map([device.id])
+            assert default_thresholds["latency_bad_ms"] == default.latency_bad_ms
+            assert profiles_by_id[explicit.id]["latency_bad_ms"] == 40
+            snapshot = get_device_quality_snapshot(device)
+            assert snapshot["quality_profile_id"] == explicit.id
+            assert snapshot["quality_metric_status"]["latency"] == "unknown"
+            device.quality_profile_id = None
+            db.session.commit()

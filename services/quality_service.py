@@ -44,9 +44,15 @@ def get_metric_statuses(
 ) -> Dict[str, str]:
     t = thresholds or FALLBACK_THRESHOLDS
     return {
-        "latency": _metric_status(latency_avg_ms, t["latency_degraded_ms"], t["latency_bad_ms"]),
-        "jitter": _metric_status(jitter_ms, t["jitter_degraded_ms"], t["jitter_bad_ms"]),
-        "loss": _metric_status(loss_percent, t["loss_degraded_percent"], t["loss_bad_percent"]),
+        "latency": _metric_status(
+            latency_avg_ms, t["latency_degraded_ms"], t["latency_bad_ms"]
+        ),
+        "jitter": _metric_status(
+            jitter_ms, t["jitter_degraded_ms"], t["jitter_bad_ms"]
+        ),
+        "loss": _metric_status(
+            loss_percent, t["loss_degraded_percent"], t["loss_bad_percent"]
+        ),
     }
 
 
@@ -61,6 +67,31 @@ def get_device_quality_thresholds(device_id: int) -> Dict[str, float]:
     if profile is None:
         profile = QualityProfile.query.filter_by(is_default=True).first()
     return profile_to_thresholds(profile) if profile else dict(FALLBACK_THRESHOLDS)
+
+
+def get_device_quality_snapshot(device: Device) -> Dict[str, Any]:
+    """Return the canonical live quality payload for a device.
+
+    Both API/device details and realtime consumers should use the same stored
+    quality fields and the same profile-aware metric classification.
+    """
+    thresholds = get_device_quality_thresholds(device.id)
+    return {
+        "quality_profile_id": device.quality_profile_id,
+        "quality_status": device.quality_status,
+        "quality_latency_ms": device.quality_latency_ms,
+        "quality_jitter_ms": device.quality_jitter_ms,
+        "quality_loss_percent": device.quality_loss_percent,
+        "quality_last_check": (
+            device.quality_last_check.isoformat() if device.quality_last_check else None
+        ),
+        "quality_metric_status": get_metric_statuses(
+            device.quality_latency_ms,
+            device.quality_jitter_ms,
+            device.quality_loss_percent,
+            thresholds,
+        ),
+    }
 
 
 def get_device_quality_history(device_id: int, hours: int = 24) -> Dict[str, Any]:
@@ -84,20 +115,22 @@ def get_device_quality_history(device_id: int, hours: int = 24) -> Dict[str, Any
 
     records = []
     for item in items:
-        records.append({
-            "id": item.id,
-            "timestamp": item.timestamp.isoformat(),
-            "samples": item.samples,
-            "loss_percent": item.loss_percent,
-            "latency_min_ms": item.latency_min_ms,
-            "latency_avg_ms": item.latency_avg_ms,
-            "latency_max_ms": item.latency_max_ms,
-            "jitter_ms": item.jitter_ms,
-            "quality": item.quality,
-            "metric_status": get_metric_statuses(
-                item.latency_avg_ms, item.jitter_ms, item.loss_percent, thresholds
-            ),
-        })
+        records.append(
+            {
+                "id": item.id,
+                "timestamp": item.timestamp.isoformat(),
+                "samples": item.samples,
+                "loss_percent": item.loss_percent,
+                "latency_min_ms": item.latency_min_ms,
+                "latency_avg_ms": item.latency_avg_ms,
+                "latency_max_ms": item.latency_max_ms,
+                "jitter_ms": item.jitter_ms,
+                "quality": item.quality,
+                "metric_status": get_metric_statuses(
+                    item.latency_avg_ms, item.jitter_ms, item.loss_percent, thresholds
+                ),
+            }
+        )
 
     # Live snapshot is deliberately separate from persisted 5-minute history.
     # This lets the UI draw the current point even when the first history
@@ -131,6 +164,7 @@ def get_device_quality_history(device_id: int, hours: int = 24) -> Dict[str, Any
         "live": live,
         "thresholds": thresholds,
     }
+
 
 def calculate_quality(
     metrics: Optional[Dict[str, Any]], thresholds: Optional[Dict[str, float]] = None
@@ -201,9 +235,7 @@ def validate_quality_thresholds(thresholds: Dict[str, float]) -> None:
     )
     for degraded, bad in pairs:
         if float(thresholds[degraded]) >= float(thresholds[bad]):
-            raise ValueError(
-                f"Порог «{degraded}» должен быть меньше порога «{bad}»"
-            )
+            raise ValueError(f"Порог «{degraded}» должен быть меньше порога «{bad}»")
 
 
 def profile_to_thresholds(profile: QualityProfile) -> Dict[str, float]:
