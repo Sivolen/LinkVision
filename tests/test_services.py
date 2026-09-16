@@ -245,86 +245,6 @@ class TestMonitorSettings:
         assert clamp(9999) == 3650
 
 
-class TestMonitorLifecycle:
-    """Проверки жизненного цикла monitor без привязки к исходному тексту."""
-
-    @pytest.mark.unit
-    def test_init_monitor_reads_workers_before_lock(self, app, monkeypatch):
-        from services import monitor
-        from models import Settings, db
-
-        with app.app_context():
-            db.session.add(Settings(key="monitor_max_workers", value="42"))
-            db.session.commit()
-
-        previous_app = monitor.app_instance
-        previous_executor = monitor._executor
-        previous_count = monitor._executor_worker_count
-        created = []
-
-        class FakeExecutor:
-            def __init__(self, max_workers):
-                created.append(max_workers)
-
-            def shutdown(self, wait=False):
-                pass
-
-        monkeypatch.setattr(
-            monitor.concurrent.futures, "ThreadPoolExecutor", FakeExecutor
-        )
-        monitor.app_instance = None
-        monitor._executor = None
-        monitor._executor_worker_count = 0
-        monitor.settings_cache.clear()
-        try:
-            monitor.init_monitor(app)
-            assert created == [42]
-            assert monitor._executor_worker_count == 42
-        finally:
-            monitor.app_instance = previous_app
-            monitor._executor = previous_executor
-            monitor._executor_worker_count = previous_count
-            monitor.settings_cache.clear()
-
-    @pytest.mark.unit
-    def test_stop_monitor_joins_thread_without_holding_lock(self, monkeypatch):
-        from services import monitor
-
-        class TrackingLock:
-            def __init__(self):
-                self.depth = 0
-
-            def __enter__(self):
-                self.depth += 1
-                return self
-
-            def __exit__(self, exc_type, exc, tb):
-                self.depth -= 1
-
-        class FakeThread:
-            def __init__(self, lock):
-                self.lock = lock
-                self.join_lock_depth = None
-
-            def is_alive(self):
-                return True
-
-            def join(self, timeout=None):
-                self.join_lock_depth = self.lock.depth
-
-        lock = TrackingLock()
-        thread = FakeThread(lock)
-        monkeypatch.setattr(monitor, "_lock", lock)
-        monkeypatch.setattr(monitor, "_monitor_thread", thread)
-        monkeypatch.setattr(monitor, "_monitor_stop_flag", False)
-        monkeypatch.setattr(monitor, "_executor", None)
-        monkeypatch.setattr(monitor, "_executor_worker_count", 0)
-
-        monitor.stop_monitor()
-
-        assert thread.join_lock_depth == 0
-
-
 class TestComputeMaxWorkers:
     """_compute_max_workers: дефолт, клампинг и чтение настройки."""
 
@@ -480,6 +400,27 @@ class TestPingHostBackend:
         assert monitor_mod.ping_host("127.0.0.1", 3, 1.0) == ([12.5] * 3, 3)
 
     @pytest.mark.unit
+    def test_system_ping_uses_realistic_process_timeout(self, monitor_mod, monkeypatch):
+        calls = []
+
+        class Result:
+            stdout = "64 bytes from 192.0.2.1: time=0.42 ms\n"
+            stderr = ""
+
+        def fake_run(cmd, **kwargs):
+            calls.append((cmd, kwargs))
+            return Result()
+
+        monkeypatch.setattr(monitor_mod.subprocess, "run", fake_run)
+        monkeypatch.setattr(monitor_mod.platform, "system", lambda: "Linux")
+
+        latencies, sent = monitor_mod._ping_host_subprocess("192.0.2.1", 4, 0.2)
+
+        assert latencies == [0.42]
+        assert sent == 4
+        assert calls[0][1]["timeout"] == 5.8
+
+    @pytest.mark.unit
     def test_permission_error_logs_once_under_concurrency(
         self, monitor_mod, monkeypatch
     ):
@@ -539,6 +480,200 @@ class TestPingHostBackend:
         monitor_mod.ping_host("127.0.0.1", 4, 0.7)
         assert seqs == [0, 1, 2, 3]
         assert timeouts == [0.7] * 4, "timeout передаётся на каждый пакет"
+
+
+class TestMonitorLifecycle:
+    """Гонки init/start/stop и корректный restart."""
+
+    @pytest.mark.unit
+    def test_init_reads_settings_before_creating_pool(self, monkeypatch):
+        from services import monitor
+
+        class FakeExecutor:
+            def __init__(self, max_workers):
+                self.max_workers = max_workers
+
+            def shutdown(self, **kwargs):
+                return None
+
+        previous_app = monitor.app_instance
+        previous_executor = monitor._executor
+        previous_count = monitor._executor_worker_count
+        previous_thread = monitor._monitor_thread
+        try:
+            monitor.app_instance = None
+            monitor._executor = None
+            monitor._executor_worker_count = 0
+            monitor._monitor_thread = None
+
+            seen = []
+
+            def fake_compute():
+                seen.append(monitor.app_instance)
+                return 42
+
+            monkeypatch.setattr(monitor, "_compute_max_workers", fake_compute)
+            monkeypatch.setattr(
+                monitor.concurrent.futures, "ThreadPoolExecutor", FakeExecutor
+            )
+            app = object()
+
+            monitor.init_monitor(app)
+
+            assert seen == [app]
+            assert monitor._executor_worker_count == 42
+        finally:
+            monitor.app_instance = previous_app
+            monitor._executor = previous_executor
+            monitor._executor_worker_count = previous_count
+            monitor._monitor_thread = previous_thread
+
+    @pytest.mark.unit
+    def test_init_refuses_to_reinitialize_live_monitor(self, monkeypatch):
+        from services import monitor
+
+        class LiveThread:
+            def is_alive(self):
+                return True
+
+        previous_thread = monitor._monitor_thread
+        previous_app = monitor.app_instance
+        try:
+            monitor._monitor_thread = LiveThread()
+            with pytest.raises(RuntimeError, match="stop it before reinitializing"):
+                monitor.init_monitor(object())
+        finally:
+            monitor._monitor_thread = previous_thread
+            monitor.app_instance = previous_app
+
+
+class TestMonitorProductionSafety:
+    """Регрессии для жизненного цикла и масштаба мониторинга."""
+
+    @pytest.mark.unit
+    def test_device_checks_are_not_batched_and_support_3000_devices(self):
+        from types import SimpleNamespace
+        from services import monitor
+
+        devices = [SimpleNamespace(id=i) for i in range(3000)]
+        device_ips = {i: [f"192.0.2.{(i % 254) + 1}"] for i in range(3000)}
+
+        checks = monitor._build_device_checks(devices, device_ips, 4)
+
+        assert len(checks) == 3000
+        assert [item[0] for item in checks] == list(range(3000))
+        assert all(item[2] == 4 for item in checks)
+
+    @pytest.mark.unit
+    def test_stop_does_not_join_while_holding_monitor_lock(self, monkeypatch):
+        from services import monitor
+
+        class TrackingLock:
+            def __init__(self):
+                self.lock = monitor.threading.Lock()
+                self.held_during_join = None
+
+            def __enter__(self):
+                self.lock.acquire()
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                self.lock.release()
+
+            def acquire(self, *args, **kwargs):
+                return self.lock.acquire(*args, **kwargs)
+
+            def release(self):
+                return self.lock.release()
+
+            def __getattr__(self, name):
+                return getattr(self.lock, name)
+
+        tracking = TrackingLock()
+        monkeypatch.setattr(monitor, "_lock", tracking)
+
+        class FakeThread:
+            def is_alive(self):
+                return True
+
+            def join(self, timeout=None):
+                acquired = tracking.lock.acquire(timeout=0.5)
+                tracking.held_during_join = not acquired
+                if acquired:
+                    tracking.lock.release()
+
+        class FakeExecutor:
+            def shutdown(self, **kwargs):
+                return None
+
+        old_thread = monitor._monitor_thread
+        old_executor = monitor._executor
+        old_count = monitor._executor_worker_count
+        old_flag = monitor._monitor_stop_flag
+        old_event = monitor._monitor_stop_event.is_set()
+        try:
+            monitor._monitor_thread = FakeThread()
+            monitor._executor = FakeExecutor()
+            monitor._executor_worker_count = 10
+            monitor.stop_monitor()
+            assert tracking.held_during_join is False
+        finally:
+            monitor._monitor_thread = old_thread
+            monitor._executor = old_executor
+            monitor._executor_worker_count = old_count
+            # stop_monitor() переводит флаг и событие в "остановлен" — без
+            # отката весь остальной прогон крутился бы с уже установленным
+            # stop-событием (monitor_loop выходит на первом же проверке).
+            monitor._monitor_stop_flag = old_flag
+            if old_event:
+                monitor._monitor_stop_event.set()
+            else:
+                monitor._monitor_stop_event.clear()
+
+    @pytest.mark.unit
+    def test_stop_event_interrupts_interval_sleep(self):
+        from services import monitor
+
+        assert hasattr(monitor, "_monitor_stop_event")
+
+        class FakeThread:
+            def is_alive(self):
+                return True
+
+            def join(self, timeout=None):
+                return None
+
+        class FakeExecutor:
+            def shutdown(self, **kwargs):
+                return None
+
+        old_thread = monitor._monitor_thread
+        old_executor = monitor._executor
+        old_count = monitor._executor_worker_count
+        old_flag = monitor._monitor_stop_flag
+        old_event = monitor._monitor_stop_event.is_set()
+        try:
+            monitor._monitor_stop_event.clear()
+            monitor._monitor_stop_flag = False
+            monitor._monitor_thread = FakeThread()
+            monitor._executor = FakeExecutor()
+            monitor._executor_worker_count = 10
+
+            monitor.stop_monitor()
+
+            # Событием управляет stop_monitor: без set() цикл доспал бы
+            # межцикловую паузу и join ждал бы свои 5 секунд впустую.
+            assert monitor._monitor_stop_event.is_set()
+            assert monitor._monitor_stop_flag is True
+        finally:
+            monitor._monitor_thread = old_thread
+            monitor._executor = old_executor
+            monitor._executor_worker_count = old_count
+            monitor._monitor_stop_flag = old_flag
+            if old_event:
+                monitor._monitor_stop_event.set()
+            else:
+                monitor._monitor_stop_event.clear()
 
 
 class TestExecutorPoolSizing:
