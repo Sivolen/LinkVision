@@ -116,6 +116,23 @@ export function loadHistoryPage(newPage) {
 }
 
 /**
+ * Относительная навигация по страницам истории.
+ *
+ * Кнопки пагинации вешаются в index.js, которому не видны приватные
+ * currentHistoryPage/totalHistoryPages этого модуля. Раньше index.js держал
+ * собственную копию currentHistoryPage, которую никто не обновлял (навсегда 1):
+ * "Предыдущая" всегда звала loadHistoryPage(0) и молча упиралась в защиту
+ * newPage < 1, "Следующая" застревала на странице 2.
+ */
+export function historyPrev() {
+    loadHistoryPage(currentHistoryPage - 1);
+}
+
+export function historyNext() {
+    loadHistoryPage(currentHistoryPage + 1);
+}
+
+/**
  * Инициализация модуля истории
  */
 export function initHistoryModal() {
@@ -124,3 +141,5 @@ export function initHistoryModal() {
 
 // Экспорт для глобального доступа
 window.loadHistoryPage = loadHistoryPage;
+window.historyPrev = historyPrev;
+window.historyNext = historyNext;

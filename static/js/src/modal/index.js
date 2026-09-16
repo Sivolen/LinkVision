@@ -8,7 +8,7 @@ import { initDeviceModal, openDeviceModal, saveDevice, deleteDevice } from './de
 import { t } from '../i18n/i18n.js';
 import { initGroupModal, openGroupManager, editGroup, deleteGroup } from './group.js';
 import { initShapeModal, openShapeModal, saveShape, deleteShape } from './shape.js';
-import { initHistoryModal, loadHistory, loadHistoryPage } from './history.js';
+import { initHistoryModal, loadHistory, historyPrev, historyNext } from './history.js';
 import { initIpManagement, addIpRow, getIpsFromForm, setIpsInForm } from './ipManager.js';
 import { showToast, initToast } from '../utils/toast.js';
 import { initUtils, escapeHtml, getErrorMessage, formatDateTime, getStatusBadgeClass } from './utils.js';
@@ -28,17 +28,18 @@ window.deleteGroup = deleteGroup;
 window.openShapeModal = openShapeModal;
 window.saveShape = saveShape;
 window.deleteShape = deleteShape;
-window.loadHistoryPage = loadHistoryPage;
+// window.loadHistoryPage назначает сам history.js (переключатель страниц);
+// здесь не переназначаем, чтобы не затереть его загрузчиком истории.
+window.historyPrev = historyPrev;
+window.historyNext = historyNext;
 window.loadDeviceQuality = loadDeviceQuality;
 
 // Глобальные переменные (используем window для доступа из других модулей)
 let deviceModal = null;
 window.groupModal = null;
 let shapeModal = null;
-let currentHistoryPage = 1;
-let totalHistoryPages = 1;
-let currentDeviceId = null;
-let historyPerPage = 10;
+// Состояние истории (страница/устройство) живёт в history.js — здесь были
+// мёртвые дубли, из-за которых пагинация истории не работала.
 let currentGroupId = null;
 let currentShapeId = null;
 let _formHandlerAttached = false;
@@ -163,13 +164,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (prevBtn) {
         prevBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            window.loadHistoryPage(currentHistoryPage - 1);
+            // Относительная навигация: реальная страница живёт в history.js.
+            // Локальный currentHistoryPage здесь никогда не обновлялся (всегда 1),
+            // из-за чего "Предыдущая" молча упиралась в защиту newPage < 1.
+            historyPrev();
         });
     }
     if (nextBtn) {
         nextBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            window.loadHistoryPage(currentHistoryPage + 1);
+            historyNext();
         });
     }
 
