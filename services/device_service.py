@@ -25,7 +25,10 @@ from models import (
 from utils.logger import api_logger
 from services.validators import validate_ip_list
 from services.db.device_repository import device_repo
-from services.quality_service import get_device_quality_history, get_device_quality_thresholds, get_metric_statuses
+from services.quality_service import (
+    get_device_quality_history,
+    get_device_quality_snapshot,
+)
 
 
 def validate_device_type(type_id: int) -> DeviceType:
@@ -175,20 +178,7 @@ def get_device_details(device_id: int) -> Dict[str, Any]:
         "map_id": device.map_id,
         "group_id": device.group_id,
         "monitoring_enabled": device.monitoring_enabled,
-        "quality_profile_id": device.quality_profile_id,
-        "quality_status": device.quality_status,
-        "quality_latency_ms": device.quality_latency_ms,
-        "quality_jitter_ms": device.quality_jitter_ms,
-        "quality_loss_percent": device.quality_loss_percent,
-        "quality_last_check": (
-            device.quality_last_check.isoformat() if device.quality_last_check else None
-        ),
-        "quality_metric_status": get_metric_statuses(
-            device.quality_latency_ms,
-            device.quality_jitter_ms,
-            device.quality_loss_percent,
-            get_device_quality_thresholds(device_id),
-        ),
+        **get_device_quality_snapshot(device),
         "quality_history": get_device_quality_history(device_id),
         "history": history,
         "neighbors": neighbors,

@@ -60,8 +60,15 @@ def test_monitor_uses_rolling_quality_window_before_live_classification():
     assert "QUALITY_LIVE_MIN_SAMPLES = 8" in source
     # 8 пакетов = два цикла при типичной настройке 4 пакета/цикл;
     # latency/jitter при этом оцениваются сразу, а короткая потеря не флапает карту.
-    assert "_live_quality_from_window(dev_id, metrics, thresholds)" in source
-    assert "calculate_quality(metrics, thresholds)" in source
+    # Вызов ищем по нормализованному источнику: black переносит аргументы
+    # вызова на отдельные строки, и проверка сырой подстроки падала бы от
+    # одного форматирования (90-символьная строка на границе лимита).
+    # Схлопывание переносов оставляет пробелы вокруг скобок и запятых —
+    # убираем их, чтобы сравнение не зависело от раскладки вызова.
+    normalized = " ".join(source.split())
+    normalized = normalized.replace("( ", "(").replace(" )", ")").replace(", ", ",")
+    assert "_live_quality_from_window(dev_id,metrics,thresholds)" in normalized
+    assert "calculate_quality(metrics,thresholds)" in normalized
 
 
 def test_migrations_have_single_entrypoint():

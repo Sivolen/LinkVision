@@ -280,24 +280,20 @@ def _record_quality_sample(device_id, metrics, now, thresholds=None):
     """
     if not metrics or not metrics.get("samples"):
         return False
+    is_new_window = device_id not in _quality_windows
     window = _quality_windows.setdefault(
         device_id, {"sent": 0, "received": 0, "latencies": [], "jitter": []}
     )
+    if is_new_window:
+        # First sample opens the 5-minute aggregation window; it must not
+        # immediately create a history row from a single ping batch.
+        _quality_last_persist[device_id] = now
     window["sent"] += metrics.get("samples", 0)
     window["received"] += len(metrics.get("latencies", []))
     window["latencies"].extend(metrics.get("latencies", []))
     window["jitter"].extend(metrics.get("jitter_values", []))
-    # ВАЖНО: fallback здесь раньше был `now` (сам текущий момент) — значит
-    # `now - now = 0 < QUALITY_PERSIST_SECONDS` было ИСТИНОЙ на каждом вызове
-    # для устройства, у которого ключа ещё нет в _quality_last_persist. А
-    # ключ выставляется ТОЛЬКО внутри персиста ниже — то есть условие никогда
-    # не открывалось: окно не пересоздавалось НИКОГДА, копилось бесконечно с
-    # момента запуска процесса (или последнего рестарта). Отсюда и "фиолетовое
-    # устройство с 95% потерь", которое на самом деле уже часами отвечает
-    # нормально — просто накопленные когда-то давно неудачные пакеты навсегда
-    # тянут кумулятивный процент вниз, потому что сброс никогда не наступал.
-    # Правильный sentinel — None: тогда для НОВОГО device_id (ключа ещё нет)
-    # условие корректно False, и первый персист происходит сразу же.
+    # Первый сэмпл открывает окно через _quality_last_persist выше;
+    # до истечения QUALITY_PERSIST_SECONDS история не записывается.
     last_persist = _quality_last_persist.get(device_id)
     if last_persist is not None and now - last_persist < QUALITY_PERSIST_SECONDS:
         return False
@@ -333,6 +329,12 @@ def _record_quality_sample(device_id, metrics, now, thresholds=None):
     }
     _quality_last_persist[device_id] = now
     return True
+
+
+def _reset_quality_window(device_id):
+    """Drop all rolling quality state for a device."""
+    _quality_windows.pop(device_id, None)
+    _quality_last_persist.pop(device_id, None)
 
 
 def _live_quality_from_window(device_id, metrics, thresholds=None):
@@ -692,49 +694,52 @@ def monitor_loop():
                     quality_changed = False
                     history_persisted = False
                     if metrics:
-                        # Calculate before _record_quality_sample() because that
-                        # function resets the window when it persists the 5-minute
-                        # aggregate. This keeps live classification and persisted
-                        # history based on the same rolling data.
-                        current_quality = _quality_from_metrics(metrics, thresholds)
-                        # live = _live_quality_from_window(dev_id, metrics, thresholds)
-                        # (signature: _live_quality_from_window(dev_id, metrics))
-                        live = _live_quality_from_window(dev_id, metrics, thresholds)
-                        history_persisted = _record_quality_sample(
-                            dev_id, metrics, current_time, thresholds
-                        )
                         if new_status == "down":
-                            # Down is an availability state; do not leave a stale
-                            # bad/degraded quality alarm visible when every address
-                            # is currently unreachable.
+                            # Full outage is an availability state, not a quality
+                            # sample. Drop the old rolling window before it can
+                            # contaminate the post-recovery quality calculation.
+                            _reset_quality_window(dev_id)
                             quality = "unknown"
                             q_latency = q_jitter = q_loss = None
-                        elif live is not None:
-                            # После накопления окна качество считаем по полному
-                            # окну: так loss/jitter не реагируют на единичный
-                            # пакет.
-                            quality, q_latency, q_jitter, q_loss = live
+                            history_persisted = False
                         else:
-                            # До накопления 100 samples НЕ блокируем latency/jitter:
-                            # иначе после изменения профиля (например bad latency
-                            # = 20 ms) устройство с RTT 39 ms оставалось бы старым
-                            # "good" до 100-го пакета. Потери на коротком окне
-                            # намеренно игнорируем, чтобы 1 потерянный пакет из 4
-                            # не давал ложный alarm.
-                            warmup_metrics = dict(metrics)
-                            warmup_metrics["samples"] = len(
-                                metrics.get("latencies", [])
+                            # Calculate before _record_quality_sample() because that
+                            # function resets the window when it persists the 5-minute
+                            # aggregate. This keeps live classification and persisted
+                            # history based on the same rolling data.
+                            current_quality = _quality_from_metrics(metrics, thresholds)
+                            live = _live_quality_from_window(
+                                dev_id, metrics, thresholds
                             )
-                            warmup_quality = _quality_from_metrics(
-                                warmup_metrics, thresholds
+                            history_persisted = _record_quality_sample(
+                                dev_id, metrics, current_time, thresholds
                             )
-                            quality, q_latency, q_jitter, _ = warmup_quality
-                            q_loss = current_quality[3]
-                            if current_quality[0] == "good":
-                                quality = "good"
-                            elif warmup_quality[0] == "good":
-                                quality = prev_quality_by_id.get(dev_id, "unknown")
-                                q_latency = q_jitter = q_loss = None
+                            if live is not None:
+                                # После накопления окна качество считаем по полному
+                                # окну: так loss/jitter не реагируют на единичный
+                                # пакет.
+                                quality, q_latency, q_jitter, q_loss = live
+                            else:
+                                # До накопления 100 samples НЕ блокируем latency/jitter:
+                                # иначе после изменения профиля (например bad latency
+                                # = 20 ms) устройство с RTT 39 ms оставалось бы старым
+                                # "good" до 100-го пакета. Потери на коротком окне
+                                # намеренно игнорируем, чтобы 1 потерянный пакет из 4
+                                # не давал ложный alarm.
+                                warmup_metrics = dict(metrics)
+                                warmup_metrics["samples"] = len(
+                                    metrics.get("latencies", [])
+                                )
+                                warmup_quality = _quality_from_metrics(
+                                    warmup_metrics, thresholds
+                                )
+                                quality, q_latency, q_jitter, _ = warmup_quality
+                                q_loss = current_quality[3]
+                                if current_quality[0] == "good":
+                                    quality = "good"
+                                elif warmup_quality[0] == "good":
+                                    quality = prev_quality_by_id.get(dev_id, "unknown")
+                                    q_latency = q_jitter = q_loss = None
                         quality_changed = prev_quality_by_id.get(dev_id) != quality
 
                     # Пишем в саму Device (не в историю — та копится выше
