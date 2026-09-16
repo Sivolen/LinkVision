@@ -30,6 +30,7 @@ except ImportError:
 app_instance = None
 _monitor_thread = None
 _monitor_stop_flag = False
+_monitor_stop_event = threading.Event()
 _executor = None
 _executor_worker_count = 0
 _lock = threading.Lock()
@@ -55,11 +56,18 @@ QUALITY_LIVE_MIN_SAMPLES = 8
 
 
 def init_monitor(app):
-    global app_instance, _executor, _executor_worker_count
-    # app_instance присваивается ДО _compute_max_workers(): get_setting без
-    # него молча возвращает дефолт, и monitor_max_workers из БД игнорировался
-    # бы до первого цикла. Расчёт — до _lock: при холодном TTL-кэше это
-    # запрос к БД, а _lock делится с stop_monitor().
+    global app_instance, _monitor_stop_flag, _executor, _executor_worker_count
+    # Do not reinitialize a live monitor: clearing the stop event while its
+    # thread is still unwinding could resurrect the old loop against a new
+    # executor. A normal restart is stop_monitor() -> init_monitor() ->
+    # start_monitor().
+    with _lock:
+        if _monitor_thread and _monitor_thread.is_alive():
+            raise RuntimeError("Monitor is running; stop it before reinitializing")
+
+    # _compute_max_workers() may read Settings through app_instance, so the
+    # application must be published before calculating the initial pool size.
+    # Do not hold _lock while touching the database.
     app_instance = app
     max_workers = _compute_max_workers()
     with _lock:
@@ -70,6 +78,8 @@ def init_monitor(app):
                 pass
         _executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
         _executor_worker_count = max_workers
+        _monitor_stop_event.clear()
+        _monitor_stop_flag = False
         monitor_logger.info(f"Monitor initialized with {max_workers} workers")
 
 
@@ -82,6 +92,7 @@ def start_monitor():
         if _executor is None:
             monitor_logger.error("Monitor not initialized, call init_monitor first")
             return
+        _monitor_stop_event.clear()
         _monitor_stop_flag = False
         _monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
         _monitor_thread.start()
@@ -90,19 +101,28 @@ def start_monitor():
 
 def stop_monitor():
     global _monitor_stop_flag, _monitor_thread, _executor, _executor_worker_count
+    # Never join the monitor thread while holding _lock: the loop takes the
+    # same lock for executor changes and DB writes. Doing so can deadlock stop
+    # forever. The event also interrupts the normal interval sleep immediately.
     with _lock:
         _monitor_stop_flag = True
+        _monitor_stop_event.set()
         monitor_thread = _monitor_thread
 
-    # join() вне _lock: поток монитора берёт этот же лок на границе цикла
-    # (_sync_executor_size), поэтому, держи мы его здесь, монитор не дошёл бы
-    # до проверки _monitor_stop_flag и join истёк бы по таймауту впустую.
     if monitor_thread and monitor_thread.is_alive():
         monitor_thread.join(timeout=5)
 
     with _lock:
         if _executor:
-            _executor.shutdown(wait=True)
+            if monitor_thread and monitor_thread.is_alive():
+                # A check may still be blocked in an external ping command. Do
+                # not block application shutdown/restart indefinitely on it.
+                _executor.shutdown(wait=False, cancel_futures=True)
+                monitor_logger.warning(
+                    "Monitor thread did not stop within 5s; executor shutdown is non-blocking"
+                )
+            else:
+                _executor.shutdown(wait=True)
             _executor = None
             _executor_worker_count = 0
         _monitor_thread = None
@@ -343,6 +363,11 @@ def _live_quality_from_window(device_id, metrics, thresholds=None):
     )
 
 
+def _build_device_checks(devices, device_ips, ping_count):
+    """Build one future payload per monitored device, without artificial batches."""
+    return [(dev.id, device_ips[dev.id], ping_count) for dev in devices]
+
+
 def _sync_executor_size(desired_workers):
     """Создать или пересобрать пул под желаемое число воркеров.
 
@@ -387,14 +412,14 @@ def monitor_loop():
     monitor_logger.debug("Monitor loop started")
     cycle_count = 0
     ping_interval = 10
-    while not _monitor_stop_flag:
+    while not _monitor_stop_event.is_set() and not _monitor_stop_flag:
         cycle_count += 1
         start_time = time.time()
         monitor_logger.debug(f"Monitor cycle {cycle_count} starting")
         try:
             if app_instance is None or _executor is None:
                 monitor_logger.error("Monitor not properly initialized")
-                time.sleep(5)
+                _monitor_stop_event.wait(5)
                 continue
 
             # ---- ПОДГОТОВКА ДАННЫХ ДО ПОТОКОВ (ОДИН РАЗ ЗА ЦИКЛ) ----
@@ -408,7 +433,7 @@ def monitor_loop():
                     f"Found {len(devices)} devices with monitoring enabled"
                 )
                 if not devices:
-                    time.sleep(5)
+                    _monitor_stop_event.wait(5)
                     continue
 
                 device_ips = {}
@@ -525,9 +550,7 @@ def monitor_loop():
             # расписания. Сабмитим все проверки сразу — пул сам держит себя
             # загруженным по _compute_max_workers(), простоев между
             # "батчами" больше нет.
-            all_device_checks = [
-                (dev.id, device_ips[dev.id], ping_count) for dev in devices
-            ]
+            all_device_checks = _build_device_checks(devices, device_ips, ping_count)
 
             # _compute_max_workers() может сходить в БД (промах 2-секундного
             # TTL-кэша settings_cache) — аргумент вычисляется ДО взятия _lock
@@ -556,15 +579,30 @@ def monitor_loop():
 
             results = []
             futures = {}
+            # Snapshot the executor for this cycle. stop_monitor() may clear the
+            # global reference after its join timeout, but already-started loop
+            # code must not suddenly dereference None or recreate a pool while
+            # shutdown is in progress.
+            with _lock:
+                executor = _executor
+            if executor is None:
+                monitor_logger.error("Monitor executor disappeared before submit")
+                break
+
             for dev_id, ips, pcnt in all_device_checks:
+                if _monitor_stop_event.is_set():
+                    break
                 try:
-                    future = _executor.submit(_tracked_check, dev_id, ips, pcnt)
+                    future = executor.submit(_tracked_check, dev_id, ips, pcnt)
                     futures[future] = dev_id
                 except RuntimeError as e:
                     monitor_logger.error(
                         f"Failed to submit check for device {dev_id}: {e}"
                     )
-                    # Попытка переинициализировать пул
+                    if _monitor_stop_event.is_set():
+                        break
+                    # Executor failure unrelated to shutdown: recreate it once
+                    # and continue with the remaining devices.
                     with _lock:
                         try:
                             if _executor is not None:
@@ -576,10 +614,10 @@ def monitor_loop():
                             max_workers=max_workers
                         )
                         _executor_worker_count = max_workers
+                        executor = _executor
                         monitor_logger.info(
                             f"Executor recreated after error with {max_workers} workers"
                         )
-                    continue
 
             for future in concurrent.futures.as_completed(futures):
                 try:
@@ -840,6 +878,6 @@ def monitor_loop():
             )
 
         sleep_time = max(0, ping_interval - elapsed)
-        time.sleep(sleep_time)
+        _monitor_stop_event.wait(sleep_time)
 
     monitor_logger.info("Monitor loop terminated")
