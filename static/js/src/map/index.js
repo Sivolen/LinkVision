@@ -240,8 +240,13 @@ export function initMap(id) {
                 // такие устройства уже не пингует, но полагаться только на
                 // это со стороны фронтенда — хрупко). Та же логика уже есть
                 // в одиночном обработчике 'device_status' выше.
-                const monitoringRaw = node.data('monitoring_enabled');
+                const monitoringRaw = Object.prototype.hasOwnProperty.call(item, 'monitoring_enabled')
+                    ? item.monitoring_enabled
+                    : node.data('monitoring_enabled');
                 const monitoringEnabled = (monitoringRaw === true || monitoringRaw === 'true');
+                if (Object.prototype.hasOwnProperty.call(item, 'monitoring_enabled')) {
+                    node.data('monitoring_enabled', monitoringEnabled ? 'true' : 'false');
+                }
                 if (!monitoringEnabled) {
                     if (node.data('status') !== 'up') node.data('status', 'up');
                     node.data('quality_status', 'unknown');

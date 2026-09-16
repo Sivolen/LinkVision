@@ -301,9 +301,7 @@ def create_app():
             return
 
         with app.app_context():
-            devices = Device.query.filter_by(
-                map_id=map_id, monitoring_enabled=True
-            ).all()
+            devices = Device.query.filter_by(map_id=map_id).all()
             # Поля качества тоже нужны, а не только status — иначе этот
             # (лёгкий) путь ресинхронизации после реконнекта оставляет
             # quality_status/latency/jitter/loss на карте устаревшими, пока
@@ -311,11 +309,12 @@ def create_app():
             statuses = [
                 {
                     "id": d.id,
-                    "status": d.status,
-                    "quality_status": d.quality_status,
-                    "quality_latency_ms": d.quality_latency_ms,
-                    "quality_jitter_ms": d.quality_jitter_ms,
-                    "quality_loss_percent": d.quality_loss_percent,
+                    "status": d.status if d.monitoring_enabled else "up",
+                    "monitoring_enabled": d.monitoring_enabled,
+                    "quality_status": d.quality_status if d.monitoring_enabled else "unknown",
+                    "quality_latency_ms": d.quality_latency_ms if d.monitoring_enabled else None,
+                    "quality_jitter_ms": d.quality_jitter_ms if d.monitoring_enabled else None,
+                    "quality_loss_percent": d.quality_loss_percent if d.monitoring_enabled else None,
                 }
                 for d in devices
             ]

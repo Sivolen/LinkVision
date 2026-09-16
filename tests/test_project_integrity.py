@@ -104,6 +104,20 @@ def test_request_status_contains_quality_fields():
         assert f'"{key}": d.{key}' in source
 
 
+def test_request_status_resyncs_disabled_devices_and_quality():
+    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert "devices = Device.query.filter_by(map_id=map_id).all()" in source
+    assert '"monitoring_enabled": d.monitoring_enabled' in source
+    assert 'd.quality_status if d.monitoring_enabled else "unknown"' in source
+
+
+def test_socket_connect_is_single_resync_path():
+    source = (ROOT / "static/js/base.js").read_text(encoding="utf-8")
+    connect_block = source[source.index("window.socket.on('connect',") : source.index("window.socket.on('connect_error'")]
+    assert "request_status" in connect_block
+    assert "window.socket.on('reconnect'" not in connect_block
+
+
 def test_single_realtime_status_event_can_update_quality():
     source = (ROOT / "static/js/src/map/index.js").read_text(encoding="utf-8")
     assert "quality_status: data.quality_status || 'unknown'" in source

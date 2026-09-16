@@ -1162,6 +1162,12 @@ let wasDisconnected = false;
                 if (window.debugMode) Logger.info('Socket connected (global)');
                 if (window.currentMapId) {
                     window.socket.emit('join_room', `map_${window.currentMapId}`);
+                    // `connect` fires both on the initial connection and after a
+                    // reconnect. Always request a fresh status snapshot here so
+                    // we do not depend on a separate Socket.IO `reconnect` event.
+                    // This also makes the recovery path deterministic when the
+                    // client library changes its manager/socket event ordering.
+                    window.socket.emit('request_status', { map_id: window.currentMapId });
                 }
                 updateBackendStatus(true);
                 if (wasDisconnected) {
@@ -1178,19 +1184,6 @@ let wasDisconnected = false;
                     wasDisconnected = true;
                 }
             });
-            window.socket.on('reconnect', (attemptNumber) => {
-                if (window.debugMode) Logger.info('Socket reconnected after', attemptNumber, 'attempts');
-                if (window.currentMapId) {
-                    window.socket.emit('join_room', `map_${window.currentMapId}`);
-                    window.socket.emit('request_status', { map_id: window.currentMapId });
-                }
-                updateBackendStatus(true);
-                if (wasDisconnected) {
-                    if (connectionToast) connectionToast.hide();
-                    connectionToast = showToast(t('connection.restoredTitle'), t('connection.restoredMsg'), 'success', { autoHide: 3000 });
-                    wasDisconnected = false;
-                }
-            });
             window.socket.on('connect_error', (error) => {
                 Logger.warn('Socket connection error:', error);
                 updateBackendStatus(false);
@@ -1203,9 +1196,8 @@ let wasDisconnected = false;
             // моргание БЕЗ формального disconnect: соединение с точки зрения
             // Socket.IO живо, а конкретные эмиты (device_status_batch),
             // отправленные сервером в этот момент, тихо теряются — реального
-            // подтверждения доставки у volatile-эмитов нет. В таком случае
-            // 'reconnect' не срабатывает вообще, и request_status там не
-            // помогает. visibilitychange — дешёвый дополнительный триггер:
+            // подтверждения доставки у volatile-эмитов нет. visibilitychange —
+            // дешёвый дополнительный триггер:
             // при возврате на вкладку просто просим текущее состояние карты
             // заново, независимо от того, считает ли сокет себя живым.
             document.addEventListener('visibilitychange', () => {
