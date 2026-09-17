@@ -1,4 +1,4 @@
-# LinkVision v2.2.2
+# LinkVision
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![Flask](https://img.shields.io/badge/Flask-3.1.3-green?logo=flask)
