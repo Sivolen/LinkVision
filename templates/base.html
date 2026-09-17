@@ -76,9 +76,12 @@
                 <button class="theme-toggle  w-50" onclick="toggleTheme()">
                     <i class="fas fa-moon"></i> <span>{{ _('Тема') }}</span>
                 </button>
-                <a href="{{ url_for('auth.logout') }}" class="theme-toggle w-50">
-                    <i class="fas fa-sign-out-alt"></i> <span>{{ _('Выход') }}</span>
-                </a>
+                <form method="post" action="{{ url_for('auth.logout') }}" class="w-50 m-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="theme-toggle w-100">
+                        <i class="fas fa-sign-out-alt"></i> <span>{{ _('Выход') }}</span>
+                    </button>
+                </form>
             </div>
 
             <!-- Переключатель языка -->

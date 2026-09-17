@@ -272,6 +272,9 @@ def create_app():
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+        )
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
@@ -279,6 +282,9 @@ def create_app():
             "img-src 'self' data: blob:; "
             "font-src 'self' https://cdnjs.cloudflare.com; "
             "connect-src 'self' ws: wss:; "
+            "object-src 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
             "frame-ancestors 'self';"
         )
         if app.config.get("SESSION_COOKIE_SECURE"):

@@ -345,7 +345,7 @@ class TestAuthLogout:
                 sess["_user_id"] = str(uid)
                 sess["_fresh"] = True
 
-            resp = client.get("/auth/logout", follow_redirects=False)
+            resp = client.post("/auth/logout", follow_redirects=False)
             assert resp.status_code == 302
             assert "/auth/login" in resp.headers.get("Location", "")
         finally:
@@ -357,7 +357,7 @@ class TestAuthLogout:
 
     def test_logout_unauthenticated(self, app, client):
         """Выход без авторизации -> редирект на login (302)."""
-        resp = client.get("/auth/logout", follow_redirects=False)
+        resp = client.post("/auth/logout", follow_redirects=False)
         assert resp.status_code == 302
 
 
@@ -391,7 +391,7 @@ class TestAuthLifecycle:
         assert resp.status_code == 302
 
         # 3. Выход
-        resp = client.get("/auth/logout", follow_redirects=False)
+        resp = client.post("/auth/logout", follow_redirects=False)
         assert resp.status_code == 302
 
         # 4. Повторный вход

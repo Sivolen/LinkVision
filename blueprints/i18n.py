@@ -23,7 +23,12 @@ def _is_safe_redirect_url(target: str) -> bool:
     if not target:
         return False
     parsed = urlsplit(target)
-    return not parsed.netloc and not parsed.scheme and target.startswith("/")
+    return (
+        target.startswith("/")
+        and not target.startswith("//")
+        and not parsed.netloc
+        and not parsed.scheme
+    )
 
 
 @i18n_bp.route("/set-language/<lang_code>", methods=["POST"])
