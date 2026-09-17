@@ -1,6 +1,48 @@
 import atexit
+import os
 import secrets
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load .env before importing Config/logger: those modules read environment
+# variables at import time. This is essential for SECRET_KEY, database and
+# production cookie/proxy settings to actually take effect on first startup.
+ENV_PATH = Path(__file__).resolve().parent / ".env"
+
+
+def ensure_env_file():
+    """Create/load .env before project modules read Config at import time."""
+    required_vars = {
+        "SECRET_KEY": secrets.token_hex(32),
+        # Standalone HTTP works by default. Production HTTPS deployments should
+        # set SESSION_COOKIE_SECURE=True and BEHIND_PROXY=True explicitly.
+        "SESSION_COOKIE_SECURE": "False",
+        "BEHIND_PROXY": "False",
+        "LOG_LEVEL": "INFO",
+    }
+
+    if not ENV_PATH.exists():
+        ENV_PATH.write_text(
+            "".join(f"{key}={value}\n" for key, value in required_vars.items()),
+            encoding="utf-8",
+        )
+    else:
+        existing = ENV_PATH.read_text(encoding="utf-8")
+        missing = [
+            (key, default)
+            for key, default in required_vars.items()
+            if not any(line.startswith(f"{key}=") for line in existing.splitlines())
+        ]
+        if missing:
+            with ENV_PATH.open("a", encoding="utf-8") as env_file:
+                for key, default in missing:
+                    env_file.write(f"{key}={default}\n")
+
+    load_dotenv(ENV_PATH, override=False)
+
+
+ensure_env_file()
 
 from flask import Flask, request, render_template, jsonify, send_from_directory
 from flask_login import current_user, login_required
@@ -29,48 +71,6 @@ from services.db.schema_service import (
     validate_database_schema,
 )
 from utils.logger import app_logger
-from dotenv import load_dotenv
-import os
-
-
-def ensure_env_file():
-    """Создаёт или дополняет .env необходимыми переменными (продакшен-конфигурация)."""
-    env_path = Path(".env")
-    required_vars = {
-        "SECRET_KEY": secrets.token_hex(32),
-        "SESSION_COOKIE_SECURE": "True",  # Безопасность: только HTTPS
-        "BEHIND_PROXY": "True",  # Приложение работает за прокси (nginx)
-        "LOG_LEVEL": "INFO",
-    }
-
-    if not env_path.exists():
-        with open(env_path, "w") as f:
-            for key, value in required_vars.items():
-                f.write(f"{key}={value}\n")
-        app_logger.info(
-            f"Файл .env создан с переменными для продакшена: {', '.join(required_vars.keys())}"
-        )
-        load_dotenv(env_path)
-        return
-
-    load_dotenv(env_path)
-
-    missing = []
-    for key, default in required_vars.items():
-        if os.environ.get(key) is None:
-            missing.append((key, default))
-
-    if missing:
-        with open(env_path, "a") as f:
-            for key, default in missing:
-                f.write(f"{key}={default}\n")
-        load_dotenv(env_path, override=True)
-        app_logger.info(
-            f"В .env добавлены переменные: {', '.join(k for k, _ in missing)}"
-        )
-
-
-ensure_env_file()
 
 
 def create_app():

@@ -1,160 +1,182 @@
-#!/bin/bash
-# LinkVision Installer for Ubuntu
-# This script automates the installation of LinkVision web application
-# Run with sudo or as root for full system integration (optional)
-# Usage: ./install.sh [-p http://proxy:port]
-set -e  # exit on error
+#!/usr/bin/env bash
+# LinkVision — installer for Ubuntu/Debian
+# Usage: sudo ./install.sh
+# Optional environment variables:
+#   LINKVISION_INSTALL_SERVICE=true|false
+#   LINKVISION_PORT=8005
+#   LINKVISION_HTTPS=true|false
+#   LINKVISION_BEHIND_PROXY=true|false
+#   LINKVISION_PYTHON=/usr/bin/python3
+#   http/https proxy: use -p http://proxy:port
 
-# Colors for output
+set -euo pipefail
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}   LinkVision Installer for Ubuntu     ${NC}"
-echo -e "${GREEN}========================================${NC}"
+info() { echo -e "${GREEN}$*${NC}"; }
+warn() { echo -e "${YELLOW}$*${NC}"; }
+error() { echo -e "${RED}$*${NC}" >&2; }
 
-# Parse command line arguments
+usage() {
+    cat <<USAGE
+Usage: $0 [-p http://proxy:port]
+
+Environment variables:
+  LINKVISION_INSTALL_SERVICE=true|false  Install/start systemd service (root only)
+  LINKVISION_PORT=8005                   Production HTTP port
+  LINKVISION_HTTPS=true|false            Set Secure cookies for HTTPS
+  LINKVISION_BEHIND_PROXY=true|false     Trust X-Forwarded-* from reverse proxy
+  LINKVISION_PYTHON=/path/to/python3     Python interpreter (default: python3)
+USAGE
+}
+
 PROXY_ARG=""
-while getopts "p:" opt; do
-    case $opt in
-        p)
-            PROXY_ARG="$OPTARG"
-            echo -e "${GREEN}Using proxy: $PROXY_ARG${NC}"
-            ;;
-        \?)
-            echo -e "${RED}Invalid option: -$OPTARG${NC}"
-            echo "Usage: $0 [-p http://proxy:port]"
-            exit 1
-            ;;
-        :)
-            echo -e "${RED}Option -$OPTARG requires an argument.${NC}"
-            echo "Usage: $0 [-p http://proxy:port]"
-            exit 1
-            ;;
+while getopts ":p:h" opt; do
+    case "$opt" in
+        p) PROXY_ARG="$OPTARG" ;;
+        h) usage; exit 0 ;;
+        :) error "Option -$OPTARG requires an argument."; usage; exit 1 ;;
+        \?) error "Invalid option: -$OPTARG"; usage; exit 1 ;;
     esac
 done
 
-# Check if running as root (recommended for systemd setup)
-if [[ $EUID -ne 0 ]]; then
-    echo -e "${YELLOW}Warning: Not running as root. Systemd service installation will be skipped.${NC}"
-    echo -e "${YELLOW}If you want to install systemd service later, run this script with sudo.${NC}"
-    INSTALL_SERVICE=false
-    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-else
-    INSTALL_SERVICE=true
-    # If running as root, enforce installation directory to /opt/LinkVision
-    SCRIPT_DIR="/opt/LinkVision"
-    echo -e "${GREEN}Running as root. Target directory set to: $SCRIPT_DIR${NC}"
-fi
-
-# Ensure project directory exists and switch to it
-mkdir -p "$SCRIPT_DIR"
+# Resolve the actual checkout directory instead of assuming /opt/LinkVision.
+# This also makes the installer work when the repository lives elsewhere.
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 cd "$SCRIPT_DIR"
-echo -e "${GREEN}Project directory: $SCRIPT_DIR${NC}"
 
-# Check Python version
-echo -e "
-${GREEN}Checking Python version...${NC}"
-if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}Python3 not found. Installing...${NC}"
-    apt update && apt install -y python3 python3-pip python3-venv
-fi
-
-PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-PY_MAJOR=$(python3 -c 'import sys; print(sys.version_info.major)')
-PY_MINOR=$(python3 -c 'import sys; print(sys.version_info.minor)')
-
-if [ "$PY_MAJOR" -lt 3 ] || { [ "$PY_MAJOR" -eq 3 ] && [ "$PY_MINOR" -lt 8 ]; }; then
-    echo -e "${RED}Error: Python 3.8+ required, found ${PY_MAJOR}.${PY_MINOR}${NC}"
+if [[ ! -f "$SCRIPT_DIR/requirements.txt" || ! -f "$SCRIPT_DIR/app.py" ]]; then
+    error "This script must be run from a complete LinkVision checkout."
+    error "Missing requirements.txt or app.py in: $SCRIPT_DIR"
     exit 1
 fi
-echo -e "${GREEN}Python $PY_VERSION found.${NC}"
 
-# Install system dependencies
-echo -e "
-${GREEN}Installing system dependencies...${NC}"
-apt update
-apt install -y git build-essential libssl-dev libffi-dev python3-dev
-
-# Create virtual environment if not exists
-echo -e "
-${GREEN}Setting up Python virtual environment...${NC}"
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-    echo -e "${GREEN}Virtual environment created.${NC}"
+if [[ $EUID -eq 0 ]]; then
+    SUDO=""
+    INSTALL_SERVICE_DEFAULT="true"
 else
-    echo -e "${YELLOW}Virtual environment already exists.${NC}"
+    if command -v sudo >/dev/null 2>&1; then
+        SUDO="sudo"
+    else
+        SUDO=""
+    fi
+    INSTALL_SERVICE_DEFAULT="false"
 fi
 
-# Activate venv and install requirements
-echo -e "
-${GREEN}Installing Python dependencies...${NC}"
-source venv/bin/activate
-pip install --upgrade pip setuptools wheel
-
-# Install requirements with proxy if specified
-if [ -n "$PROXY_ARG" ]; then
-    echo -e "${GREEN}Installing requirements with proxy: $PROXY_ARG${NC}"
-    pip install --proxy "$PROXY_ARG" -r requirements.txt
-else
-    echo -e "${GREEN}Installing requirements (no proxy)...${NC}"
-    pip install -r requirements.txt
-fi
-
-# Проверка наличия config.py (реальный файл репозитория со всей
-# конфигурацией — CSP, i18n, CSRF и т.д.; подменять его урезанным
-# шаблоном при отсутствии небезопасно и неверно по смыслу)
-echo -e "
-${GREEN}Checking configuration...${NC}"
-if [ ! -f "config.py" ]; then
-    echo -e "${RED}config.py not found in $SCRIPT_DIR.${NC}"
-    echo -e "${RED}This file is part of the repository and should not be missing —${NC}"
-    echo -e "${RED}check that the clone/checkout completed successfully.${NC}"
+if ! command -v apt-get >/dev/null 2>&1; then
+    error "apt-get not found. This installer supports Ubuntu/Debian systems."
     exit 1
 fi
-echo -e "${GREEN}config.py found.${NC}"
 
-# .env с SECRET_KEY и остальными переменными безопасности создаётся и
-# дополняется автоматически при первом запуске приложения (см.
-# ensure_env_file() в app.py) — здесь ничего вручную генерировать не нужно.
+if [[ -n "$SUDO" ]]; then
+    # Fail early with a useful message instead of halfway through installation.
+    if ! sudo -v; then
+        error "Administrator privileges are required to install system packages."
+        exit 1
+    fi
+elif [[ $EUID -ne 0 ]]; then
+    warn "Running without root privileges. System packages cannot be installed and systemd setup will be skipped."
+fi
 
+LINKVISION_PORT="${LINKVISION_PORT:-8005}"
+LINKVISION_HTTPS="${LINKVISION_HTTPS:-false}"
+LINKVISION_BEHIND_PROXY="${LINKVISION_BEHIND_PROXY:-false}"
+INSTALL_SERVICE="${LINKVISION_INSTALL_SERVICE:-$INSTALL_SERVICE_DEFAULT}"
+PYTHON_BIN="${LINKVISION_PYTHON:-python3}"
 
-# Initialize / upgrade database
-echo -e "\n${GREEN}Initializing database...${NC}"
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+    info "Python interpreter not found; installing Python 3 and venv support..."
+    "$SUDO" apt-get update
+    "$SUDO" apt-get install -y python3 python3-pip python3-venv
+fi
+
+PY_VERSION="$($PYTHON_BIN -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")')"
+PY_MAJOR="$($PYTHON_BIN -c 'import sys; print(sys.version_info.major)')"
+PY_MINOR="$($PYTHON_BIN -c 'import sys; print(sys.version_info.minor)')"
+
+if [[ "$PY_MAJOR" -lt 3 || ( "$PY_MAJOR" -eq 3 && "$PY_MINOR" -lt 10 ) ]]; then
+    error "Python 3.10+ is required; found $PY_VERSION."
+    exit 1
+fi
+info "Python $PY_VERSION found."
+
+info "Installing system build dependencies..."
+"$SUDO" apt-get update
+"$SUDO" apt-get install -y git build-essential libssl-dev libffi-dev python3-dev
+
+info "Creating/updating Python virtual environment..."
+if [[ ! -x "$SCRIPT_DIR/venv/bin/python" ]]; then
+    "$PYTHON_BIN" -m venv "$SCRIPT_DIR/venv"
+else
+    info "Virtual environment already exists."
+fi
+
+VENV_PYTHON="$SCRIPT_DIR/venv/bin/python"
+VENV_PIP="$SCRIPT_DIR/venv/bin/pip"
+
+info "Installing Python dependencies..."
+"$VENV_PIP" install --upgrade pip setuptools wheel
+if [[ -n "$PROXY_ARG" ]]; then
+    "$VENV_PIP" install --proxy "$PROXY_ARG" -r requirements.txt
+else
+    "$VENV_PIP" install -r requirements.txt
+fi
+
+# Create .env before the first migration/startup. This fixes the common
+# standalone-install problem where Secure cookies are enabled on plain HTTP.
+# Production behind HTTPS should use LINKVISION_HTTPS=true.
+if [[ ! -f "$SCRIPT_DIR/.env" ]]; then
+    SECRET_KEY="$($VENV_PYTHON -c 'import secrets; print(secrets.token_hex(32))')"
+    cat > "$SCRIPT_DIR/.env" <<ENV
+SECRET_KEY=$SECRET_KEY
+SESSION_COOKIE_SECURE=$LINKVISION_HTTPS
+BEHIND_PROXY=$LINKVISION_BEHIND_PROXY
+LOG_LEVEL=INFO
+ENV
+    chmod 600 "$SCRIPT_DIR/.env"
+    info ".env created with a random SECRET_KEY."
+else
+    chmod 600 "$SCRIPT_DIR/.env"
+    info ".env already exists; existing settings were preserved."
+fi
+
+# Read DATABASE_URL from .env when it was not exported by the shell. The
+# migration entrypoint itself reads process environment, so export only this
+# value here; the application loads the full .env during startup.
+if [[ -z "${DATABASE_URL:-}" && -f "$SCRIPT_DIR/.env" ]]; then
+    ENV_DATABASE_URL="$(sed -n 's/^DATABASE_URL=//p' "$SCRIPT_DIR/.env" | head -n 1)"
+    if [[ -n "$ENV_DATABASE_URL" ]]; then
+        export DATABASE_URL="$ENV_DATABASE_URL"
+    fi
+fi
+
+info "Preparing database schema..."
 if [[ "${DATABASE_URL:-}" == postgresql://* || "${DATABASE_URL:-}" == postgres://* ]]; then
-    echo -e "${YELLOW}PostgreSQL detected.${NC}"
-    echo -e "${YELLOW}Existing PostgreSQL schemas are validated at application startup; this installer does not mutate them.${NC}"
-    echo -e "${YELLOW}For an existing PostgreSQL database, apply a supported schema migration before starting LinkVision.${NC}"
+    warn "PostgreSQL detected. The installer does not mutate an existing PostgreSQL schema."
+    warn "For an existing database, apply the supported schema migration before starting LinkVision."
 else
-    chmod +x ./apply_migrations.sh
-    ./apply_migrations.sh
+    chmod +x "$SCRIPT_DIR/apply_migrations.sh"
+    "$SCRIPT_DIR/apply_migrations.sh"
 fi
 
-# Create upload directories
-echo -e "
-${GREEN}Creating upload directories...${NC}"
-mkdir -p static/uploads/icons static/uploads/maps
+info "Creating upload/log directories..."
+mkdir -p "$SCRIPT_DIR/static/uploads/icons" \
+         "$SCRIPT_DIR/static/uploads/maps" \
+         "$SCRIPT_DIR/logs"
+chmod 755 "$SCRIPT_DIR/static/uploads" "$SCRIPT_DIR/static/uploads/icons" "$SCRIPT_DIR/static/uploads/maps"
 
-# Set permissions
-echo -e "
-${GREEN}Setting permissions...${NC}"
-chmod -R 755 static/uploads
+if [[ "$INSTALL_SERVICE" == "true" && $EUID -eq 0 ]]; then
+    if ! command -v systemctl >/dev/null 2>&1; then
+        error "systemctl not found; cannot install the systemd service."
+        exit 1
+    fi
 
-# Ask about systemd service
-if [ "$INSTALL_SERVICE" = true ]; then
-    echo -e "
-${GREEN}Do you want to install LinkVision as a systemd service? (y/n)${NC}"
-    read -r install_service_choice
-    if [[ "$install_service_choice" =~ ^[Yy]$ ]]; then
-        echo -e "${GREEN}Creating systemd service with symbolic link...${NC}"
-
-        SERVICE_FILE_SRC="$SCRIPT_DIR/linkvision.service"
-        SERVICE_FILE_LINK="/etc/systemd/system/linkvision.service"
-
-        # Create service file in project directory
-        cat > "$SERVICE_FILE_SRC" <<EOF
+    SERVICE_FILE="$SCRIPT_DIR/linkvision.service"
+    cat > "$SERVICE_FILE" <<EOF_SERVICE
 [Unit]
 Description=LinkVision - Network Infrastructure Visualization
 After=network.target
@@ -163,51 +185,51 @@ After=network.target
 User=root
 Group=root
 WorkingDirectory=$SCRIPT_DIR
-Environment="PATH=$SCRIPT_DIR/venv/bin"
-ExecStart=$SCRIPT_DIR/venv/bin/gunicorn -k eventlet -w 1 -b 0.0.0.0:8005 wsgi:app
+Environment="PATH=$SCRIPT_DIR/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONPATH=$SCRIPT_DIR"
+Environment="FLASK_ENV=production"
+Environment="FLASK_APP=app.py"
+ExecStart=$SCRIPT_DIR/venv/bin/gunicorn -k eventlet -w 1 -b 0.0.0.0:$LINKVISION_PORT wsgi:app
 Restart=always
 RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=LinkVision
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
-EOF
+EOF_SERVICE
 
-        # Create symbolic link to /etc/systemd/system/
-        ln -sf "$SERVICE_FILE_SRC" "$SERVICE_FILE_LINK"
-
-        systemctl daemon-reload
-        systemctl enable linkvision.service
-        systemctl start linkvision.service
-
-        echo -e "${GREEN}Service file created at: $SERVICE_FILE_SRC${NC}"
-        echo -e "${GREEN}Symbolic link created at: $SERVICE_FILE_LINK${NC}"
-        echo -e "Status: systemctl status linkvision.service"
-    else
-        echo -e "${YELLOW}Skipping systemd service installation.${NC}"
-    fi
+    ln -sf "$SERVICE_FILE" /etc/systemd/system/linkvision.service
+    systemctl daemon-reload
+    systemctl enable linkvision.service
+    systemctl restart linkvision.service
+    info "systemd service installed and started."
 else
-    echo -e "${YELLOW}Not root – skipping systemd service installation.${NC}"
+    warn "systemd installation skipped."
 fi
 
-# Completion message
-echo -e "
-${GREEN}========================================${NC}"
-echo -e "${GREEN}   Installation complete!                ${NC}"
+echo
 echo -e "${GREEN}========================================${NC}"
-echo -e ""
-echo -e "You can now run LinkVision manually:"
-echo -e "  cd $SCRIPT_DIR"
-echo -e "  source venv/bin/activate"
-echo -e "  python app.py"
-echo -e ""
-echo -e "Or if you installed systemd service, it's already running —"
-echo -e "check the very first startup log for the admin password:"
-echo -e "  sudo journalctl -u linkvision.service -n 50 | grep -A2 'Temporary admin password'"
-echo -e ""
-echo -e "Access the web interface at: http://localhost:5000"
-echo -e ""
-echo -e "${YELLOW}IMPORTANT: this installer does NOT create the admin user itself.${NC}"
-echo -e "${YELLOW}On its very first real startup the application creates the admin${NC}"
-echo -e "${YELLOW}account automatically, with a random temporary password printed${NC}"
-echo -e "${YELLOW}ONCE to the console/log (never stored in plain text anywhere else).${NC}"
-echo -e "${YELLOW}You will be forced to set a new password on first login.${NC}"
+echo -e "${GREEN}       LinkVision installation OK       ${NC}"
+echo -e "${GREEN}========================================${NC}"
+echo
+info "Project: $SCRIPT_DIR"
+echo "Production port: $LINKVISION_PORT"
+echo "HTTPS cookies: $LINKVISION_HTTPS"
+echo "Behind proxy:  $LINKVISION_BEHIND_PROXY"
+echo
+echo "Manual start:"
+echo "  cd $SCRIPT_DIR"
+echo "  $SCRIPT_DIR/venv/bin/python app.py"
+echo
+echo "Production/systemd logs:"
+echo "  sudo journalctl -u linkvision.service -n 50"
+echo
+echo "First admin password (printed once by the application):"
+echo "  sudo journalctl -u linkvision.service -n 100 | grep -A2 'Temporary admin password'"
+echo
+if [[ "$INSTALL_SERVICE" != "true" || $EUID -ne 0 ]]; then
+    warn "If this is a production HTTPS deployment, set SESSION_COOKIE_SECURE=True and BEHIND_PROXY=True in .env before exposing the application."
+fi
