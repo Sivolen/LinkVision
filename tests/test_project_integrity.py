@@ -321,3 +321,36 @@ def test_install_uses_single_migration_entrypoint():
     assert "apply_migrations.sh" in install
     assert "flask db upgrade" not in install
     assert "fix_db.py" not in install
+
+
+def test_logout_is_post_only_and_csrf_protected_by_form():
+    auth = (ROOT / "blueprints/auth.py").read_text(encoding="utf-8")
+    base = (ROOT / "templates/base.html").read_text(encoding="utf-8")
+    assert '@auth_bp.route("/logout", methods=["POST"])' in auth
+    assert 'action="{{ url_for(\'auth.logout\') }}"' in base
+    assert 'name="csrf_token" value="{{ csrf_token() }}"' in base
+
+
+def test_security_headers_include_browser_hardening_directives():
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    assert 'response.headers["X-Content-Type-Options"] = "nosniff"' in app
+    assert 'response.headers["X-Frame-Options"] = "SAMEORIGIN"' in app
+    assert 'response.headers["Permissions-Policy"]' in app
+    assert '"object-src \'none\'; "' in app
+    assert '"base-uri \'self\'; "' in app
+    assert '"form-action \'self\'; "' in app
+
+
+def test_remember_cookie_uses_secure_defaults():
+    config = (ROOT / "config.py").read_text(encoding="utf-8")
+    assert 'REMEMBER_COOKIE_HTTPONLY = True' in config
+    assert 'REMEMBER_COOKIE_SAMESITE = "Lax"' in config
+    assert 'REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE' in config
+
+
+def test_redirect_validation_rejects_protocol_relative_targets():
+    auth = (ROOT / "blueprints/auth.py").read_text(encoding="utf-8")
+    i18n = (ROOT / "blueprints/i18n.py").read_text(encoding="utf-8")
+    expected = 'and not target.startswith("//")'
+    assert auth.count(expected) == 1
+    assert i18n.count(expected) == 1

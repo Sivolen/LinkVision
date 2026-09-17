@@ -25,6 +25,8 @@ class Config:
     SESSION_REFRESH_EACH_REQUEST = True
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_HTTPONLY = True
     WTF_CSRF_TIME_LIMIT = None
@@ -38,6 +40,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_TIMEZONE = True
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "False") == "True"
+    REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
     DEBUG = os.environ.get("FLASK_DEBUG", "False") == "True"
 
     if os.environ.get("BEHIND_PROXY") == "True":

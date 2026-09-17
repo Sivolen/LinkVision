@@ -22,7 +22,12 @@ def _is_safe_redirect_url(target: str) -> bool:
     if not target:
         return False
     parsed = urlsplit(target)
-    return not parsed.netloc and not parsed.scheme and target.startswith("/")
+    return (
+        target.startswith("/")
+        and not target.startswith("//")
+        and not parsed.netloc
+        and not parsed.scheme
+    )
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
@@ -60,7 +65,7 @@ def login():
     return render_template("login.html", form=form)
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
     log_auth_action("logout", current_user.id, current_user.username)
