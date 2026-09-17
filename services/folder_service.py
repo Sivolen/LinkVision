@@ -114,6 +114,11 @@ def delete_folder(folder_id: int, cascade: bool = False) -> None:
         for m in folder.maps.all():
             m.folder_id = None
 
+    # Права на папку не имеют ORM-cascade от MapFolder, поэтому удаляем их
+    # явно вместе с самой папкой.
+    FolderPermission.query.filter_by(folder_id=folder_id).delete(
+        synchronize_session=False
+    )
     db.session.delete(folder)
     db.session.commit()
     invalidate_all_sidebar_caches()

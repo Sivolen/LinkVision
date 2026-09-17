@@ -125,7 +125,7 @@ def import_map_route():
 
     # Минимальная проверка структуры выполняется до сервисного импорта, чтобы
     # повреждённый/чужой JSON не превращался в 500.
-    for field in ("devices", "links", "groups"):
+    for field in ("devices", "links", "groups", "shapes"):
         if field in data and not isinstance(data[field], list):
             return (
                 jsonify(
