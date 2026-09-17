@@ -26,6 +26,10 @@ from models import (
     db,
     Link,
     MapShape,
+    MapPermission,
+    DeviceHistory,
+    DeviceQualityHistory,
+    DeviceIP,
 )
 from utils.logger import api_logger, main_logger
 from services.db.map_repository import map_repo
@@ -431,8 +435,36 @@ def delete_map_and_cleanup(map_id: int, app) -> int:
         if os.path.exists(bg_path):
             os.remove(bg_path)
 
-    # Удаление настроек пользователей для этой карты
-    UserMapSettings.query.filter_by(map_id=map_id).delete()
+    # Удаление зависимых сущностей явно. Часть моделей не имеет ORM-cascade
+    # от Map, поэтому полагаться только на db.session.delete(map_obj) здесь
+    # нельзя: иначе могли оставаться фигуры, группы, права и истории.
+    UserMapSettings.query.filter_by(map_id=map_id).delete(synchronize_session=False)
+    MapPermission.query.filter_by(map_id=map_id).delete(synchronize_session=False)
+    MapShape.query.filter_by(map_id=map_id).delete(synchronize_session=False)
+
+    device_ids = [device.id for device in map_obj.devices.all()]
+    if device_ids:
+        DeviceQualityHistory.query.filter(
+            DeviceQualityHistory.device_id.in_(device_ids)
+        ).delete(synchronize_session=False)
+        DeviceHistory.query.filter(DeviceHistory.device_id.in_(device_ids)).delete(
+            synchronize_session=False
+        )
+        DeviceIP.query.filter(DeviceIP.device_id.in_(device_ids)).delete(
+            synchronize_session=False
+        )
+
+    # Убираем ссылки групп друг на друга перед удалением, чтобы self-FK
+    # parent_group_id не мешал удалить дерево целиком.
+    Group.query.filter_by(map_id=map_id).update(
+        {Group.parent_group_id: None}, synchronize_session=False
+    )
+    Group.query.filter_by(map_id=map_id).delete(synchronize_session=False)
+
+    # Связи, IP и устройства удаляются до самой карты. Здесь используются
+    # bulk-delete запросы, поэтому зависимые записи удаляются явно выше.
+    Link.query.filter_by(map_id=map_id).delete(synchronize_session=False)
+    Device.query.filter_by(map_id=map_id).delete(synchronize_session=False)
 
     db.session.delete(map_obj)
     db.session.commit()

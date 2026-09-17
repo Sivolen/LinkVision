@@ -11,7 +11,7 @@
 """
 
 import pytest
-from models import Map, Device, Link, Group, DeviceType, DeviceIP, User
+from models import Map, MapShape, Device, Link, Group, DeviceType, DeviceIP, User
 from extensions import db
 from services.map_import_export_service import (
     export_map_data,
@@ -45,6 +45,30 @@ def sample_map_with_devices(app):
         db.session.flush()
         group_id = group.id
 
+        child_group = Group(
+            name="Child Group",
+            color="#00FF00",
+            font_size=13,
+            map_id=map_obj.id,
+            parent_group_id=group_id,
+        )
+        db.session.add(child_group)
+        db.session.flush()
+
+        shape = MapShape(
+            map_id=map_obj.id,
+            shape_type="rectangle",
+            x=10,
+            y=20,
+            width=300,
+            height=150,
+            font_size=14,
+            color="#123456",
+            opacity=0.7,
+            description="Test shape",
+        )
+        db.session.add(shape)
+
         # Создать устройство
         dev1 = Device(
             map_id=map_obj.id,
@@ -53,7 +77,9 @@ def sample_map_with_devices(app):
             pos_x=100,
             pos_y=100,
             status="up",
-            group_id=group_id,
+            monitoring_enabled=False,
+            font_size=16,
+            group_id=child_group.id,
         )
         db.session.add(dev1)
         db.session.flush()
@@ -86,6 +112,7 @@ def sample_map_with_devices(app):
             line_color="#FF5733",
             line_width=4,
             line_style="dashed",
+            font_size=10,
         )
         db.session.add(link)
         db.session.commit()
@@ -95,6 +122,8 @@ def sample_map_with_devices(app):
             "device1": dev1,
             "device2": dev2,
             "group": group,
+            "child_group": child_group,
+            "shape": shape,
             "link": link,
             "dtype": dtype,
         }
@@ -103,6 +132,8 @@ def sample_map_with_devices(app):
         db.session.delete(link)
         db.session.delete(dev1)
         db.session.delete(dev2)
+        db.session.delete(shape)
+        db.session.delete(child_group)
         db.session.delete(group)
         db.session.delete(map_obj)
         db.session.delete(dtype)
@@ -137,7 +168,9 @@ class TestExportMapData:
             assert dev1_data["pos_x"] == 100
             assert dev1_data["pos_y"] == 100
             assert dev1_data["status"] == "up"
-            assert dev1_data["group_id"] == sample_map_with_devices["group"].id
+            assert dev1_data["group_id"] == sample_map_with_devices["child_group"].id
+            assert dev1_data["monitoring_enabled"] is False
+            assert dev1_data["font_size"] == 16
             assert len(dev1_data["ips"]) == 2
             assert "192.168.1.1" in dev1_data["ips"]
             assert "192.168.1.2" in dev1_data["ips"]
@@ -151,11 +184,19 @@ class TestExportMapData:
             assert link_data["line_color"] == "#FF5733"
             assert link_data["line_width"] == 4
             assert link_data["line_style"] == "dashed"
+            assert link_data["font_size"] == 10
 
             # Проверить группы
-            assert len(data["groups"]) == 1
-            assert data["groups"][0]["name"] == "Test Group"
-            assert data["groups"][0]["color"] == "#FF0000"
+            assert len(data["groups"]) == 2
+            parent_data = next(g for g in data["groups"] if g["name"] == "Test Group")
+            child_data = next(g for g in data["groups"] if g["name"] == "Child Group")
+            assert parent_data["parent_group_id"] is None
+            assert child_data["parent_group_id"] == parent_data["id"]
+            assert child_data["font_size"] == 13
+
+            assert len(data["shapes"]) == 1
+            assert data["shapes"][0]["description"] == "Test shape"
+            assert data["shapes"][0]["font_size"] == 14
 
     def test_export_nonexistent_map_raises_404(self, app):
         """Экспорт несуществующей карты должен вызвать 404."""
@@ -218,7 +259,14 @@ class TestImportMap:
 
             # Проверить группы
             groups = Group.query.filter_by(map_id=imported_map.id).all()
-            assert len(groups) == 1
+            assert len(groups) == 2
+            parent = next(g for g in groups if g.name == "Test Group")
+            child = next(g for g in groups if g.name == "Child Group")
+            assert child.parent_group_id == parent.id
+
+            shapes = MapShape.query.filter_by(map_id=imported_map.id).all()
+            assert len(shapes) == 1
+            assert shapes[0].description == "Test shape"
 
     def test_import_map_with_new_name_creates_new(self, app):
         """Импорт без id должен создать новую карту."""
@@ -417,6 +465,87 @@ class TestImportExportLifecycle:
             assert len(reexported_data["devices"]) == len(exported_data["devices"])
             assert len(reexported_data["links"]) == len(exported_data["links"])
             assert len(reexported_data["groups"]) == len(exported_data["groups"])
+            assert len(reexported_data["shapes"]) == len(exported_data["shapes"])
+
+    def test_import_rejects_group_cycle_before_commit(self, app):
+        """Циклическая иерархия групп не должна частично записаться в БД."""
+        with app.app_context():
+            data = {
+                "name": "Cyclic Map",
+                "devices": [],
+                "links": [],
+                "groups": [
+                    {"id": 1, "name": "A", "parent_group_id": 2},
+                    {"id": 2, "name": "B", "parent_group_id": 1},
+                ],
+                "shapes": [],
+            }
+            mock_user = type("MockUser", (), {"id": 1})()
+            with pytest.raises(ValueError, match="цикл"):
+                import_map(data, mock_user)
+            assert Group.query.filter_by(name="A").count() == 0
+            assert Group.query.filter_by(name="B").count() == 0
+
+    def test_import_old_format_without_shapes(self, app):
+        """Старый экспорт без shapes остаётся совместимым."""
+        with app.app_context():
+            data = {
+                "name": "Legacy Map",
+                "devices": [],
+                "links": [],
+                "groups": [],
+            }
+            mock_user = type("MockUser", (), {"id": 1})()
+            imported_map = import_map(data, mock_user)
+            assert MapShape.query.filter_by(map_id=imported_map.id).count() == 0
+
+    def test_import_map_preserves_existing_folder_and_permissions(self, app, map_ids):
+        """Замена содержимого карты не должна сбрасывать папку или права."""
+        from models import FolderPermission, MapFolder, MapPermission
+
+        with app.app_context():
+            map_obj = db.session.get(Map, map_ids["Own Map"])
+            folder = MapFolder(name="Import Folder", owner_id=1)
+            db.session.add(folder)
+            db.session.flush()
+            map_obj.folder_id = folder.id
+            map_perm = MapPermission(map_id=map_obj.id, user_id=2, role="viewer")
+            folder_perm = FolderPermission(
+                folder_id=folder.id, user_id=2, role="viewer"
+            )
+            db.session.add_all([map_perm, folder_perm])
+            db.session.commit()
+
+            data = {
+                "id": map_obj.id,
+                "name": "Replaced",
+                "devices": [],
+                "links": [],
+                "groups": [],
+                "shapes": [],
+            }
+            from flask_login import login_user
+
+            admin = User.query.filter_by(username="admin").first()
+            with app.test_request_context():
+                login_user(admin)
+                import_map(data, admin)
+
+            db.session.expire_all()
+            assert db.session.get(Map, map_obj.id).folder_id == folder.id
+            assert (
+                MapPermission.query.filter_by(map_id=map_obj.id, user_id=2).count() == 1
+            )
+            assert (
+                FolderPermission.query.filter_by(folder_id=folder.id, user_id=2).count()
+                == 1
+            )
+
+            map_obj.folder_id = None
+            db.session.delete(folder_perm)
+            db.session.delete(map_perm)
+            db.session.delete(folder)
+            db.session.commit()
 
     def test_import_map_with_unknown_id_creates_new(self, app):
         """ID из другой БД не должен делать импорт карты ошибочным."""
