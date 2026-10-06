@@ -34,10 +34,21 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 @admin_bp.before_request
 def check_admin():
-    if not current_user.is_authenticated or not current_user.is_admin:
-        flash(_("Доступ запрещен. Требуются права администратора."))
-        return redirect(url_for("main.dashboard"))
-    return None  # явное возвращение None для продолжения запроса
+    """Защитить весь /admin namespace без redirect-loop.
+
+    Неавторизованный пользователь отправляется на login с исходным URL в
+    параметре next. Авторизованный пользователь без admin-прав получает
+    HTTP 403 вместо возврата на dashboard, который сам может перенаправить
+    обратно в /admin/maps.
+    """
+    if not current_user.is_authenticated:
+        next_url = request.full_path.rstrip("?")
+        return redirect(url_for("auth.login", next=next_url))
+
+    if not current_user.is_admin:
+        abort(403)
+
+    return None
 
 
 # ============================================================================

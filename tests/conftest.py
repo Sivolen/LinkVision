@@ -5,7 +5,7 @@ Pytest fixtures and configuration for LinkVision tests.
 import os
 import pytest
 from datetime import timedelta
-from flask import Flask
+from flask import Flask, render_template
 from extensions import db, init_extensions, login_manager
 from models import User, Map, Device, DeviceType
 
@@ -96,6 +96,11 @@ def app():
             "debug_mode": False,
             "js_i18n": js_i18n_payload(locale),
         }
+
+    # Обработчик 403 зеркалит app.py: шаблоны ошибок должны рендериться и в тестах.
+    @app.errorhandler(403)
+    def access_denied(e):
+        return render_template("403.html", hide_sidebar=True), 403
 
     # Настройка login_manager
     @login_manager.user_loader

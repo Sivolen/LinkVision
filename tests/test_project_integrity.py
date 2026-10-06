@@ -101,7 +101,11 @@ def test_request_status_contains_quality_fields():
         "quality_jitter_ms",
         "quality_loss_percent",
     ):
-        assert f'"{key}": d.{key}' in source
+        # Допускаем обе формы: однострочную и разбитую black-ом на 88 символов.
+        assert f'"{key}": d.{key}' in source or (
+            f'"{key}": (' in source
+            and f"d.{key} if d.monitoring_enabled else" in source
+        )
 
 
 def test_request_status_resyncs_disabled_devices_and_quality():
@@ -113,7 +117,11 @@ def test_request_status_resyncs_disabled_devices_and_quality():
 
 def test_socket_connect_is_single_resync_path():
     source = (ROOT / "static/js/base.js").read_text(encoding="utf-8")
-    connect_block = source[source.index("window.socket.on('connect',") : source.index("window.socket.on('connect_error'")]
+    connect_block = source[
+        source.index("window.socket.on('connect',") : source.index(
+            "window.socket.on('connect_error'"
+        )
+    ]
     assert "request_status" in connect_block
     assert "window.socket.on('reconnect'" not in connect_block
 
@@ -327,7 +335,7 @@ def test_logout_is_post_only_and_csrf_protected_by_form():
     auth = (ROOT / "blueprints/auth.py").read_text(encoding="utf-8")
     base = (ROOT / "templates/base.html").read_text(encoding="utf-8")
     assert '@auth_bp.route("/logout", methods=["POST"])' in auth
-    assert 'action="{{ url_for(\'auth.logout\') }}"' in base
+    assert "action=\"{{ url_for('auth.logout') }}\"" in base
     assert 'name="csrf_token" value="{{ csrf_token() }}"' in base
 
 
@@ -336,16 +344,16 @@ def test_security_headers_include_browser_hardening_directives():
     assert 'response.headers["X-Content-Type-Options"] = "nosniff"' in app
     assert 'response.headers["X-Frame-Options"] = "SAMEORIGIN"' in app
     assert 'response.headers["Permissions-Policy"]' in app
-    assert '"object-src \'none\'; "' in app
-    assert '"base-uri \'self\'; "' in app
-    assert '"form-action \'self\'; "' in app
+    assert "\"object-src 'none'; \"" in app
+    assert "\"base-uri 'self'; \"" in app
+    assert "\"form-action 'self'; \"" in app
 
 
 def test_remember_cookie_uses_secure_defaults():
     config = (ROOT / "config.py").read_text(encoding="utf-8")
-    assert 'REMEMBER_COOKIE_HTTPONLY = True' in config
+    assert "REMEMBER_COOKIE_HTTPONLY = True" in config
     assert 'REMEMBER_COOKIE_SAMESITE = "Lax"' in config
-    assert 'REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE' in config
+    assert "REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE" in config
 
 
 def test_redirect_validation_rejects_protocol_relative_targets():

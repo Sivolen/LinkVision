@@ -266,6 +266,10 @@ def create_app():
     def page_not_found(e):
         return render_template("404.html", hide_sidebar=True), 404
 
+    @app.errorhandler(403)
+    def access_denied(e):
+        return render_template("403.html", hide_sidebar=True), 403
+
     # ─── Security headers ───────────────────────────────────────────────────
     @app.after_request
     def set_security_headers(response):
@@ -317,10 +321,18 @@ def create_app():
                     "id": d.id,
                     "status": d.status if d.monitoring_enabled else "up",
                     "monitoring_enabled": d.monitoring_enabled,
-                    "quality_status": d.quality_status if d.monitoring_enabled else "unknown",
-                    "quality_latency_ms": d.quality_latency_ms if d.monitoring_enabled else None,
-                    "quality_jitter_ms": d.quality_jitter_ms if d.monitoring_enabled else None,
-                    "quality_loss_percent": d.quality_loss_percent if d.monitoring_enabled else None,
+                    "quality_status": (
+                        d.quality_status if d.monitoring_enabled else "unknown"
+                    ),
+                    "quality_latency_ms": (
+                        d.quality_latency_ms if d.monitoring_enabled else None
+                    ),
+                    "quality_jitter_ms": (
+                        d.quality_jitter_ms if d.monitoring_enabled else None
+                    ),
+                    "quality_loss_percent": (
+                        d.quality_loss_percent if d.monitoring_enabled else None
+                    ),
                 }
                 for d in devices
             ]

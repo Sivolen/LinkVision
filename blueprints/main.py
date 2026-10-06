@@ -76,11 +76,14 @@ def dashboard():
     if available_maps:
         return redirect(url_for("main.map_view", map_id=available_maps[0].id))
 
-    # Карт нет
-    if current_user.is_operator:
-        return render_template("no_maps.html")
-    else:
+    # Карт нет. Только администратор должен попадать в раздел управления
+    # картами. Обычный пользователь/оператор остаётся на информационной
+    # странице, иначе /admin/maps отправит его обратно на / и получится
+    # бесконечный цикл редиректов.
+    if current_user.is_admin:
         return redirect(url_for("admin.maps_list"))
+
+    return render_template("no_maps.html")
 
 
 # @main_bp.route('/map/create-page')
