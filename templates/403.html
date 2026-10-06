@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block body_class %}error-page-body{% endblock %}
+
+{% block extra_css %}
+<style>
+    body.error-page-body { margin: 0 !important; padding: 0 !important; overflow: hidden !important; height: 100%; width: 100%; }
+    body.error-page-body .main-content { margin-left: 0 !important; padding: 0 !important; width: 100vw !important; min-height: 100vh !important; }
+    .access-denied-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .access-denied-card { max-width: 680px; width: 100%; text-align: center; padding: 3rem; border-radius: 2rem; background: rgba(255,255,255,.95); border: 1px solid var(--border-color); box-shadow: var(--card-shadow); }
+    [data-theme="dark"] .access-denied-card { background: rgba(45,45,45,.95); }
+    .access-denied-code { font-size: 8rem; line-height: 1; font-weight: 900; margin-bottom: 1rem; color: var(--accent-color); }
+    .access-denied-icon { font-size: 4rem; margin: 1rem 0 1.5rem; color: var(--accent-color); }
+    .access-denied-title { font-size: 2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; }
+    .access-denied-message { color: var(--text-secondary); font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem; }
+    .access-denied-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    @media (max-width: 768px) { .access-denied-card { padding: 2rem 1.5rem; } .access-denied-code { font-size: 6rem; } .access-denied-title { font-size: 1.5rem; } .access-denied-actions { flex-direction: column; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="access-denied-page">
+    <div class="access-denied-card">
+        <div class="access-denied-code">403</div>
+        <div class="access-denied-icon"><i class="fas fa-lock"></i></div>
+        <h1 class="access-denied-title">{{ _('Доступ запрещён') }}</h1>
+        <p class="access-denied-message">
+            {{ _('У вашей учётной записи недостаточно прав для просмотра этой страницы.') }}<br>
+            {{ _('Если вы считаете, что это ошибка, обратитесь к администратору.') }}
+        </p>
+        <div class="access-denied-actions">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-home me-2"></i>{{ _('На главную') }}
+            </a>
+            <button onclick="history.back()" class="btn btn-outline btn-lg">
+                <i class="fas fa-arrow-left me-2"></i>{{ _('Назад') }}
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
