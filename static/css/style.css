@@ -1029,12 +1029,42 @@ body.resizing-sidebar .main-content {
 /* ============================================================================
 ПАНЕЛЬ ИНСТРУМЕНТОВ
 ============================================================================ */
+.toolbar-shell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  min-width: 0;
+}
+
 .toolbar {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.toolbar-scroll-btn {
+  display: none;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: var(--card-shadow);
+  cursor: pointer;
+}
+
+.toolbar-scroll-btn:hover,
+.toolbar-scroll-btn:focus-visible {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
 }
 
 /* Когда карта заблокирована — гасим и отключаем инструменты редактирования
@@ -1484,7 +1514,17 @@ modal-header,
    и aria-label для скринридеров) и переключаем ряд в горизонтальный скролл,
    чтобы он всегда оставался в одну строку. */
 @media (max-width: 1300px) {
+  .toolbar-shell {
+    gap: 4px;
+  }
+
+  .toolbar-scroll-btn {
+    display: inline-flex;
+  }
+
   .toolbar {
+    flex: 1 1 auto;
+    min-width: 0;
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
@@ -1605,7 +1645,7 @@ modal-header,
     display: flex;
   }
 
-  .toolbar {
+  .toolbar-shell {
     margin-top: 60px;
   }
 
