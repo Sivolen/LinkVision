@@ -18,7 +18,11 @@
     window.canEditMap = {{ 'true' if can_edit else 'false' }};
 </script>
 
-<div class="toolbar">
+<div class="toolbar-shell">
+    <button type="button" class="toolbar-scroll-btn" aria-label="{{ _('Прокрутить панель влево') }}" onclick="document.querySelector('.toolbar').scrollBy({ left: -240, behavior: 'smooth' })">
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+    </button>
+    <div class="toolbar">
     {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group edit-tools">
         <button class="toolbar-btn" onclick="openDeviceModal()" aria-label="{{ _('Добавить устройство') }}">
@@ -143,6 +147,10 @@
 <!--            <i class="fas fa-save"></i> Сохранить-->
 <!--        </button>-->
 <!--    </div>-->
+    </div>
+    <button type="button" class="toolbar-scroll-btn" aria-label="{{ _('Прокрутить панель вправо') }}" onclick="document.querySelector('.toolbar').scrollBy({ left: 240, behavior: 'smooth' })">
+        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+    </button>
 </div>
 
 <div class="map-container">
