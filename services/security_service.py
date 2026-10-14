@@ -169,7 +169,7 @@ class RateLimiter:
 rate_limiter = RateLimiter()
 
 
-def rate_limit(max_requests: int = 10, window_seconds: int = 60):
+def rate_limit(max_requests: int = 10, window_seconds: int = 60, methods=None):
     """
     Декоратор для ограничения частоты запросов.
 
@@ -183,12 +183,15 @@ def rate_limit(max_requests: int = 10, window_seconds: int = 60):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            if methods is not None and request.method not in methods:
+                return f(*args, **kwargs)
+
             # Ключ: IP адрес или user_id
             if current_user.is_authenticated:
-                key = f"user:{current_user.id}"
+                key = f"user:{current_user.id}:{request.endpoint}"
             else:
-                key = f"ip:{request.remote_addr}"
-
+                
+                key = f"ip:{request.remote_addr}:{request.endpoint}"
             if rate_limiter.is_rate_limited(key, max_requests, window_seconds):
                 remaining = rate_limiter.get_remaining_requests(
                     key, max_requests, window_seconds
