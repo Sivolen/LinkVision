@@ -31,7 +31,7 @@ def _is_safe_redirect_url(target: str) -> bool:
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-@rate_limit(max_requests=5, window_seconds=300)  # 5 попыток за 5 минут
+@rate_limit(max_requests=10, window_seconds=300, methods=("POST",))  # 10 отправок формы за 5 минут
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
@@ -103,7 +103,7 @@ def change_password():
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
-@rate_limit(max_requests=20, window_seconds=300)  # 20 регистраций за 5 минут
+@rate_limit(max_requests=20, window_seconds=300, methods=("POST",))  # 20 отправок формы за 5 минут
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
