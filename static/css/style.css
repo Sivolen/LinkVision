@@ -1039,10 +1039,25 @@ body.resizing-sidebar .main-content {
 
 .toolbar {
   display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 8px;
   margin-bottom: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-bottom: 8px;
+}
+
+.toolbar > * {
+  flex: 0 0 auto;
+}
+
+.toolbar-shell.has-overflow .toolbar-scroll-btn {
+  display: inline-flex;
 }
 
 .toolbar-scroll-btn {
@@ -1518,10 +1533,6 @@ modal-header,
     gap: 4px;
   }
 
-  .toolbar-scroll-btn {
-    display: inline-flex;
-  }
-
   .toolbar {
     flex: 1 1 auto;
     min-width: 0;
@@ -1556,15 +1567,13 @@ modal-header,
 }
 
 /* Тонкий скроллбар для тулбара в WebKit-браузерах (Chrome/Safari/Edge) */
-@media (max-width: 1300px) {
-  .toolbar::-webkit-scrollbar {
-    height: 4px;
-  }
+.toolbar::-webkit-scrollbar {
+  height: 4px;
+}
 
-  .toolbar::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 4px;
-  }
+.toolbar::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
 }
 
 @media (max-width: 768px) {
