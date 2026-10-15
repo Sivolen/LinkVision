@@ -761,6 +761,22 @@
 <script src="{{ url_for('static', filename='js/dist/map.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dist/modal.min.js') }}"></script>
 <script>
+    const toolbarShell = document.querySelector('.toolbar-shell');
+    const toolbar = toolbarShell?.querySelector('.toolbar');
+    if (toolbarShell && toolbar) {
+        const updateToolbarOverflow = () => {
+            toolbarShell.classList.toggle('has-overflow', toolbar.scrollWidth > toolbarShell.clientWidth + 1);
+        };
+        new ResizeObserver(updateToolbarOverflow).observe(toolbarShell);
+        new MutationObserver(updateToolbarOverflow).observe(toolbar, {
+            attributes: true,
+            childList: true,
+            subtree: true
+        });
+        window.addEventListener('resize', updateToolbarOverflow);
+        updateToolbarOverflow();
+    }
+
     if (window.currentMapId && typeof initMap === 'function') {
         initMap(window.currentMapId);
     }
