@@ -2825,5 +2825,5 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 .quality-chart-loss { color: #dc3545; stroke: #dc3545; fill: #dc3545; }
 /* Align toolbar scroll arrows with the controls, above the scrollbar padding. */
 .toolbar-scroll-btn {
-  transform: translateY(-4px);
+  transform: translateY(-6px);
 }
