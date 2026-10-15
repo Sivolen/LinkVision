@@ -2823,3 +2823,7 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 .quality-chart-series-0 { color: #0d6efd; stroke: #0d6efd; fill: #0d6efd; }
 .quality-chart-series-1 { color: #6f42c1; stroke: #6f42c1; fill: #6f42c1; }
 .quality-chart-loss { color: #dc3545; stroke: #dc3545; fill: #dc3545; }
+/* Align toolbar scroll arrows with the controls, above the scrollbar padding. */
+.toolbar-scroll-btn {
+  transform: translateY(-4px);
+}
