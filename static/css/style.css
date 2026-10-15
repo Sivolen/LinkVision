@@ -2827,3 +2827,11 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 .toolbar-scroll-btn {
   transform: translateY(-6px);
 }
+/* Align scroll arrows to the toolbar control row, not its scrollbar area. */
+.toolbar-shell {
+  align-items: flex-start;
+}
+.toolbar-scroll-btn {
+  margin-top: 3px;
+  transform: none;
+}
