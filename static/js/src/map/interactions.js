@@ -549,8 +549,22 @@ export function initInteractions(cy) {
         event.originalEvent?.preventDefault();
         if (event.target === cy) {
             const { x, y } = getAbsoluteMousePosition(event);
+            // Cytoscape supplies the model coordinate for this input event.
+            // Copy it now so later camera changes cannot move the creation target.
+            const graphPosition = event.position
+                && Number.isFinite(event.position.x)
+                && Number.isFinite(event.position.y)
+                ? { x: event.position.x, y: event.position.y }
+                : (() => {
+                    const rendered = event.renderedPosition;
+                    const pan = cy.pan();
+                    const zoom = cy.zoom();
+                    return rendered && zoom
+                        ? { x: (rendered.x - pan.x) / zoom, y: (rendered.y - pan.y) / zoom }
+                        : null;
+                })();
             showContextMenu([
-                { icon: 'fa-plus-circle', label: t('contextMenu.createDevice'), action: () => window.openDeviceModal() },
+                { icon: 'fa-plus-circle', label: t('contextMenu.createDevice'), action: () => window.openDeviceModal(null, { position: graphPosition }) },
                 { icon: 'fa-shapes', label: t('contextMenu.createShape'), action: () => window.openShapeModal() }
             ], x, y);
         }

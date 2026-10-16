@@ -179,6 +179,15 @@ export const CY_STYLE = [
         'border-color': '#fd7e14', 'border-style': 'solid', 'border-width': 3,
         'overlay-color': '#fd7e14', 'overlay-opacity': 0.12, 'overlay-padding': '3px'
     } },
+    // Temporary underlay leaves status borders, monitoring overlays, and selection intact.
+    {
+        selector: 'node.cy-node-created',
+        style: {
+            'underlay-color': '#f59e0b',
+            'underlay-opacity': 0.72,
+            'underlay-padding': '10px'
+        }
+    },
     // Выделенный узел — overlay вместо border-width, чтобы не менять bounding box
     {
         selector: 'node:selected, node[selected]',

@@ -2,6 +2,7 @@ import { initCy, updateGroupLabelColor } from './core.js';
 import { loadBackground, setElementsLoaded, setBackgroundLoaded, markUserInteracted, resetUserInteracted, fitImageToView, updateMapBackground } from './background.js';
 import { loadElements } from './elements.js';
 import { initInteractions } from './interactions.js';
+import { initNewNodeFeedback } from './newNodeFeedback.js';
 import { initModes, setMode } from './modes.js';
 import { initViewport, saveViewportToServer, withViewportRestore } from './viewport.js';
 import { initLayout } from './layout.js';
@@ -119,6 +120,7 @@ export function initMap(id) {
     }
 
     initInteractions(cy);
+    initNewNodeFeedback(cy);
     initModes(cy);
     initViewport(cy);
     initLayout(cy);

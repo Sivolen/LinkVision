@@ -19,6 +19,8 @@ let currentHistoryPage = 1;
 let totalHistoryPages = 1;
 let currentDeviceId = null;
 let historyPerPage = 10;
+// Keep the context-menu target until the server confirms device creation.
+let pendingCreatePosition = null;
 
 /**
  * Загрузить типы устройств
@@ -171,7 +173,14 @@ function syncNodeFromDetails(node, data) {
     if (typeof window.refreshAllCollapsedStatuses === 'function') window.refreshAllCollapsedStatuses();
 }
 
-export function openDeviceModal(node) {
+export function openDeviceModal(node, options = {}) {
+    if (!node) {
+        const position = options?.position;
+        pendingCreatePosition = position && Number.isFinite(position.x) && Number.isFinite(position.y)
+            ? { x: position.x, y: position.y }
+            : null;
+    }
+
     if (!deviceModal) {
         const el = document.getElementById('deviceModal');
         if (el) deviceModal = new bootstrap.Modal(el);
@@ -334,18 +343,29 @@ export async function saveDevice() {
     if (fontSize !== '') data.font_size = parseInt(fontSize, 10);
     else data.font_size = null;
 
+    let revealSnapshot = null;
     if (!devId) {
         if (!window.currentMapId) {
             showToast(t('toast.errorTitle'), t('modal.device.noCurrentMap'), 'error');
             return;
         }
         data.map_id = window.currentMapId;
-        if (window.cy && typeof window.cy.pan === 'function') {
+        if (pendingCreatePosition) {
+            data.x = Math.round(pendingCreatePosition.x);
+            data.y = Math.round(pendingCreatePosition.y);
+        } else if (window.cy && typeof window.cy.pan === 'function') {
             const container = document.getElementById('cy');
             const pan = window.cy.pan();
             const zoom = window.cy.zoom();
             data.x = Math.round((-pan.x + container.clientWidth / 2) / zoom);
             data.y = Math.round((-pan.y + container.clientHeight / 2) / zoom);
+            revealSnapshot = {
+                pan: { x: pan.x, y: pan.y },
+                zoom,
+                interactionVersion: typeof window.getMapInteractionVersion === 'function'
+                    ? window.getMapInteractionVersion()
+                    : null
+            };
         } else {
             data.x = 100;
             data.y = 100;
@@ -395,6 +415,16 @@ export async function saveDevice() {
                     // Не прерываем выполнение – устройство уже создано на сервере
                 }
             }
+            // Highlight only after the API succeeds and the returned ID exists in Cytoscape.
+            if (window.cy?.getElementById(String(result.id)).length) {
+                if (typeof window.highlightNewMapNode === 'function') window.highlightNewMapNode(result.id);
+                // Toolbar-created nodes stay at the calculated center. Adjust the camera
+                // only when the node is off-screen/near an edge and the user did not move it.
+                if (revealSnapshot && typeof window.revealNewMapNode === 'function') {
+                    window.revealNewMapNode(result.id, revealSnapshot);
+                }
+            }
+            pendingCreatePosition = null;
             showToast(t('toast.successTitle'), t('modal.device.created'), 'success');
         } else {
             if (typeof window.updateDevice === 'function') {
@@ -464,6 +494,8 @@ export function deleteDevice(deviceId) {
 export function initDeviceModal() {
     // Обработчик скрытия модального окна
     document.getElementById('deviceModal')?.addEventListener('hidden.bs.modal', function() {
+        // Closing without saving cancels the saved context-menu point.
+        pendingCreatePosition = null;
         const historyBody = document.getElementById('device-history-body');
         if (historyBody) historyBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">' + t('modal.device.switchToHistory') + '</td></tr>';
         
