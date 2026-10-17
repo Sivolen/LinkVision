@@ -174,6 +174,24 @@ function syncNodeFromDetails(node, data) {
 }
 
 export function openDeviceModal(node, options = {}) {
+    const sourceDefaults = !node && options?.initialData && typeof options.initialData === 'object'
+        ? options.initialData
+        : null;
+    // Keep creation prefill limited to fields supported by the existing form;
+    // never accept source IDs, status/history, or source coordinates here.
+    const createDefaults = sourceDefaults ? {
+        name: typeof sourceDefaults.name === 'string' ? sourceDefaults.name : '',
+        type_id: sourceDefaults.type_id ?? null,
+        ips: Array.isArray(sourceDefaults.ips)
+            ? sourceDefaults.ips.filter(ip => typeof ip === 'string').slice()
+            : [],
+        group_id: sourceDefaults.group_id ?? null,
+        font_size: sourceDefaults.font_size ?? null,
+        monitoring_enabled: sourceDefaults.monitoring_enabled === true
+            || sourceDefaults.monitoring_enabled === 'true',
+        quality_profile_id: sourceDefaults.quality_profile_id ?? null
+    } : null;
+
     if (!node) {
         const position = options?.position;
         pendingCreatePosition = position && Number.isFinite(position.x) && Number.isFinite(position.y)
@@ -255,20 +273,25 @@ export function openDeviceModal(node, options = {}) {
             });
     } else {
         devId.value = '';
-        devName.value = '';
-        fontSizeInput.value = '';
+        devName.value = createDefaults?.name ?? '';
+        fontSizeInput.value = createDefaults?.font_size ?? '';
         if (devType) devType.value = '';
         deleteBtn.style.display = 'none';
         neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">' + t('modal.device.noData') + '</td></tr>';
-        loadGroups(devGroup);
-        loadQualityProfiles(document.getElementById('dev_quality_profile'), null);
-        setIpsInForm([]);
+        loadGroups(devGroup, createDefaults?.group_id);
+        loadQualityProfiles(document.getElementById('dev_quality_profile'), createDefaults?.quality_profile_id);
+        setIpsInForm(createDefaults?.ips ?? []);
+        if (monitoringCheck && createDefaults) {
+            monitoringCheck.checked = createDefaults.monitoring_enabled;
+        }
 
         if (historyTabItem) historyTabItem.style.display = 'none';
         if (neighborsTabItem) neighborsTabItem.style.display = 'none';
         if (qualityTabItem) qualityTabItem.style.display = 'none';
         clearDeviceQuality();
-        loadDeviceTypes(devType);
+        loadDeviceTypes(devType, () => {
+            if (createDefaults?.type_id) devType.value = String(createDefaults.type_id);
+        });
     }
 
     if (infoTabLink) {
@@ -351,8 +374,8 @@ export async function saveDevice() {
         }
         data.map_id = window.currentMapId;
         if (pendingCreatePosition) {
-            data.x = Math.round(pendingCreatePosition.x);
-            data.y = Math.round(pendingCreatePosition.y);
+            data.x = pendingCreatePosition.x;
+            data.y = pendingCreatePosition.y;
         } else if (window.cy && typeof window.cy.pan === 'function') {
             const container = document.getElementById('cy');
             const pan = window.cy.pan();

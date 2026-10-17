@@ -248,6 +248,10 @@
   },
   "contextMenu": {
     "createDevice": "Create device",
+    "copyDevice": "Copy device",
+    "pasteDevice": "Paste device",
+    "deviceCopied": "Configuration for “{name}” copied",
+    "deviceCopyFailed": "Failed to copy device configuration",
     "createShape": "Create shape",
     "editGroup": "Edit group",
     "deleteGroup": "Delete group",

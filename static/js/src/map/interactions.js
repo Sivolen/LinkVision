@@ -24,6 +24,51 @@ let highlightedEdges = new Set();
 // выполняет сохранение (используется flushPendingDragSaves()).
 const pendingDragSaves = {};
 
+// Copy buffer is intentionally kept in this module's memory only. It survives
+// map reinitialization and is replaced only after another device is copied.
+let copiedDeviceConfig = null;
+let deviceCopyRequestId = 0;
+
+async function copyDeviceConfiguration(node) {
+    const requestId = ++deviceCopyRequestId;
+    try {
+        // The rendered Cytoscape node omits some editable fields (notably type
+        // and the complete IP list), so reuse the existing authorized details
+        // endpoint and explicitly whitelist fields supported by device create.
+        const details = await http.get(`/api/device/${encodeURIComponent(node.id())}/details`);
+        // If the user copied another device while this request was in flight,
+        // only the most recent copy action is allowed to replace the buffer.
+        if (requestId !== deviceCopyRequestId) return;
+        const monitoringValue = details.monitoring_enabled ?? node.data('monitoring_enabled');
+        const monitoringEnabled = monitoringValue === true || monitoringValue === 'true';
+
+        copiedDeviceConfig = {
+            sourceMapId: window.currentMapId,
+            fields: {
+                name: details.name ?? node.data('name') ?? '',
+                type_id: details.type_id ?? node.data('type_id') ?? null,
+                ips: Array.isArray(details.ips)
+                    ? details.ips.filter(ip => typeof ip === 'string').slice()
+                    : (Array.isArray(node.data('ips')) ? node.data('ips').slice() : []),
+                group_id: details.group_id ?? node.data('group_id') ?? null,
+                font_size: node.data('fontSize') ?? details.font_size ?? null,
+                monitoring_enabled: monitoringEnabled,
+                quality_profile_id: details.quality_profile_id ?? null
+            }
+        };
+
+        showToast(
+            t('toast.successTitle'),
+            t('contextMenu.deviceCopied', { name: copiedDeviceConfig.fields.name }),
+            'success'
+        );
+    } catch (err) {
+        if (requestId !== deviceCopyRequestId) return;
+        console.error('Failed to copy device configuration:', err);
+        showToast(t('toast.errorTitle'), t('contextMenu.deviceCopyFailed'), 'error');
+    }
+}
+
 /**
  * Принудительно и немедленно выполняет все отложенные сохранения позиций
  * (устройства, фигуры, групповые перемещения), которые сейчас ждут в
@@ -563,10 +608,34 @@ export function initInteractions(cy) {
                         ? { x: (rendered.x - pan.x) / zoom, y: (rendered.y - pan.y) / zoom }
                         : null;
                 })();
-            showContextMenu([
+            const items = [];
+            if (copiedDeviceConfig) {
+                items.push({
+                    icon: 'fa-paste',
+                    label: t('contextMenu.pasteDevice'),
+                    action: () => {
+                        // Clone the allow-listed form values so editing this
+                        // insertion never mutates the reusable copy buffer.
+                        const initialData = {
+                            ...copiedDeviceConfig.fields,
+                            ips: copiedDeviceConfig.fields.ips.slice(),
+                            // A group is a map-local relationship. Do not send
+                            // a source-map group ID when pasting onto another map.
+                            group_id: String(copiedDeviceConfig.sourceMapId) === String(window.currentMapId)
+                                ? copiedDeviceConfig.fields.group_id
+                                : null
+                        };
+                        if (typeof window.openDeviceModal === 'function') {
+                            window.openDeviceModal(null, { position: graphPosition, initialData });
+                        }
+                    }
+                });
+            }
+            items.push(
                 { icon: 'fa-plus-circle', label: t('contextMenu.createDevice'), action: () => window.openDeviceModal(null, { position: graphPosition }) },
                 { icon: 'fa-shapes', label: t('contextMenu.createShape'), action: () => window.openShapeModal() }
-            ], x, y);
+            );
+            showContextMenu(items, x, y);
         }
     });
 
@@ -636,6 +705,7 @@ export function initInteractions(cy) {
 
         const items = [
             { icon: 'fa-edit', label: t('contextMenu.edit'), action: () => window.openDeviceModal(node) },
+            { icon: 'fa-copy', label: t('contextMenu.copyDevice'), action: () => copyDeviceConfiguration(node) },
             { icon: 'fa-trash', label: t('common.delete'), action: () => {
                 if (typeof window.deleteDevice === 'function') window.deleteDevice(deviceId);
             }}

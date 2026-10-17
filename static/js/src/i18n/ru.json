@@ -248,6 +248,10 @@
   },
   "contextMenu": {
     "createDevice": "Создать устройство",
+    "copyDevice": "Копировать устройство",
+    "pasteDevice": "Вставить устройство",
+    "deviceCopied": "Параметры устройства «{name}» скопированы",
+    "deviceCopyFailed": "Не удалось скопировать параметры устройства",
     "createShape": "Создать фигуру",
     "editGroup": "Редактировать группу",
     "deleteGroup": "Удалить группу",
