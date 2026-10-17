@@ -23,6 +23,7 @@ from flask import (
 )
 from flask_login import current_user
 import re
+import uuid
 
 # ============================================================================
 # Rate Limiting
@@ -77,24 +78,34 @@ class RateLimiter:
         redis = self._get_redis()
 
         if redis:
-            # Redis implementation (atomic)
-            now = int(time.time())
-            window_key = f"ratelimit:{key}:{now // window_seconds}"
-            next_window_key = f"ratelimit:{key}:{(now // window_seconds) + 1}"
-
-            # Проверяем текущее и следующее окно
-            current_count = int(redis.get(window_key) or 0)
-            next_count = int(redis.get(next_window_key) or 0)
-
-            if current_count >= max_requests and next_count >= max_requests:
-                return True
-
-            # Увеличиваем счётчик
-            pipe = redis.pipeline()
-            pipe.incr(window_key)
-            pipe.expire(window_key, window_seconds * 2)
-            pipe.execute()
-            return False
+            now_ms = int(time.time() * 1000)
+            window_ms = window_seconds * 1000
+            window_key = f"ratelimit:{key}"
+            script = """
+                local now = tonumber(ARGV[1])
+                local window = tonumber(ARGV[2])
+                local limit = tonumber(ARGV[3])
+                redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now - window)
+                local count = redis.call('ZCARD', KEYS[1])
+                if count >= limit then
+                    local oldest = redis.call('ZRANGE', KEYS[1], 0, 0, 'WITHSCORES')
+                    local retry = math.max(1, math.ceil((tonumber(oldest[2]) + window - now) / 1000))
+                    return {1, count, retry}
+                end
+                redis.call('ZADD', KEYS[1], now, ARGV[4])
+                redis.call('PEXPIRE', KEYS[1], window)
+                return {0, count + 1, 0}
+            """
+            result = redis.eval(
+                script,
+                1,
+                window_key,
+                now_ms,
+                window_ms,
+                max_requests,
+                f"{now_ms}:{uuid.uuid4().hex}",
+            )
+            return bool(int(result[0]))
         else:
             # In-memory implementation (single worker)
             now = time.time()
@@ -102,6 +113,8 @@ class RateLimiter:
 
             # Очистить старые записи
             self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
+            if not self._storage[key]:
+                self._storage.pop(key, None)
 
             # Проверить лимит
             if len(self._storage[key]) >= max_requests:
@@ -118,22 +131,47 @@ class RateLimiter:
         redis = self._get_redis()
 
         if redis:
-            now = int(time.time())
-            window_key = f"ratelimit:{key}:{now // window_seconds}"
-            current_count = int(redis.get(window_key) or 0)
+            now_ms = int(time.time() * 1000)
+            window_key = f"ratelimit:{key}"
+            redis.zremrangebyscore(window_key, "-inf", now_ms - window_seconds * 1000)
+            current_count = int(redis.zcard(window_key))
             return max(0, max_requests - current_count)
         else:
             now = time.time()
             window_start = now - window_seconds
             self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
-            return max(0, max_requests - len(self._storage[key]))
+            remaining = max(0, max_requests - len(self._storage[key]))
+            if not self._storage[key]:
+                self._storage.pop(key, None)
+            return remaining
+
+    def get_retry_after(self, key: str, window_seconds: int = 60) -> int:
+        """Сколько секунд осталось до освобождения самого старого запроса."""
+        redis = self._get_redis()
+        if redis:
+            now_ms = int(time.time() * 1000)
+            window_key = f"ratelimit:{key}"
+            redis.zremrangebyscore(window_key, "-inf", now_ms - window_seconds * 1000)
+            oldest = redis.zrange(window_key, 0, 0, withscores=True)
+            if not oldest:
+                return 0
+            return max(1, int((oldest[0][1] + window_seconds * 1000 - now_ms + 999) // 1000))
+
+        now = time.time()
+        window_start = now - window_seconds
+        timestamps = [ts for ts in self._storage.get(key, []) if ts > window_start]
+        if not timestamps:
+            self._storage.pop(key, None)
+            return 0
+        self._storage[key] = timestamps
+        return max(1, int(timestamps[0] + window_seconds - now + 0.999))
 
     def reset(self, key: str) -> None:
         """Сбросить лимит для ключа."""
         redis = self._get_redis()
         if redis:
             # Удалить все ключи rate limit для этого key
-            pattern = f"ratelimit:{key}:*"
+            pattern = f"ratelimit:{key}"
             keys = redis.keys(pattern)
             if keys:
                 redis.delete(*keys)
@@ -196,7 +234,7 @@ def rate_limit(max_requests: int = 10, window_seconds: int = 60, methods=None):
                 remaining = rate_limiter.get_remaining_requests(
                     key, max_requests, window_seconds
                 )
-                retry_after = window_seconds
+                retry_after = rate_limiter.get_retry_after(key, window_seconds)
 
                 # Если запрос JSON — возвращаем JSON
                 if request.is_json:

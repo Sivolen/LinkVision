@@ -244,7 +244,7 @@ def create_device(
             status="up",
         )
         db.session.add(device)
-        db.session.commit()
+        db.session.flush()
 
         if ips and isinstance(ips, list):
             seen = set()
@@ -256,7 +256,7 @@ def create_device(
                             DeviceIP(device_id=device.id, ip_address=ip_clean)
                         )
                         seen.add(ip_clean)
-            db.session.commit()
+        db.session.commit()
 
         api_logger.info(
             f"Device created: ID={device.id}, name={device.name}, ips={ips}"

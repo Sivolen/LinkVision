@@ -4,6 +4,7 @@ API роуты для групп (Groups).
 
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
+import re
 
 from services import (
     map_service,
@@ -41,12 +42,16 @@ def create_group():
         # Валидация карты
         map_service.validate_map(map_id)
 
+        color = data.get("color", "#3498db")
+        if not isinstance(color, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+            return jsonify({"error": "Некорректный цвет группы"}), 400
+
         font_size = data.get("font_size", 11)
         parent_group_id = data.get("parent_group_id")
         group = map_service.create_group(
             map_id,
             data["name"],
-            data.get("color", "#3498db"),
+            color,
             font_size,
             parent_group_id,
         )
@@ -92,11 +97,17 @@ def update_group(group_id):
         # Сохраняем map_id до обновления
         map_id = group.map_id
 
+        color = data.get("color")
+        if color is not None and (
+            not isinstance(color, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", color)
+        ):
+            return jsonify({"error": "Некорректный цвет группы"}), 400
+
         parent_group_id = data.get("parent_group_id")
         map_service.update_group(
             group_id,
             name=data.get("name"),
-            color=data.get("color"),
+            color=color,
             font_size=data.get("font_size"),
             parent_group_id=parent_group_id,
         )
@@ -105,7 +116,7 @@ def update_group(group_id):
         group_data = {
             "id": group_id,
             "name": data.get("name"),
-            "color": data.get("color"),
+            "color": group.color,
             "font_size": data.get("font_size"),
             "parent_group_id": group.parent_group_id,
         }

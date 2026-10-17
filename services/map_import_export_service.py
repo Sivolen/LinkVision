@@ -1,5 +1,7 @@
 """Сервис для импорта/экспорта карт."""
 
+import re
+
 from models import (
     Device,
     DeviceHistory,
@@ -116,6 +118,9 @@ def _validate_groups(groups_data: list) -> None:
         if key in ids:
             raise ValueError("Дублирующийся ID группы")
         ids.add(key)
+        color = group_data.get("color", "#3498db")
+        if not isinstance(color, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+            raise ValueError("Некорректный цвет группы")
 
     for group_data in groups_data:
         parent_id = group_data.get("parent_group_id")

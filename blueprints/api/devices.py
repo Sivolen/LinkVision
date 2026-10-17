@@ -117,6 +117,12 @@ def create_device():
     """Создать новое устройство."""
     data = request.json
 
+    font_size = data.get("font_size")
+    if font_size is not None and (
+        type(font_size) is not int or not 8 <= font_size <= 48
+    ):
+        return jsonify({"error": "font_size должен быть целым числом от 8 до 48"}), 400
+
     # Валидация обязательных полей
     if not all(k in data for k in ["map_id", "type_id", "name"]):
         return jsonify({"error": "map_id, type_id, name required"}), 400
@@ -233,7 +239,12 @@ def update_device(device_id):
         update_data["ips"] = ips
 
     if "font_size" in data:
-        update_data["font_size"] = data["font_size"]
+        font_size = data["font_size"]
+        if font_size is not None and (
+            type(font_size) is not int or not 8 <= font_size <= 48
+        ):
+            return jsonify({"error": "font_size должен быть целым числом от 8 до 48"}), 400
+        update_data["font_size"] = font_size
 
     try:
         if "type_id" in update_data:

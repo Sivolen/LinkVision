@@ -38,6 +38,7 @@ class Config:
         SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DIR, "webnetmap.db")}'
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    REDIS_URL = os.environ.get("REDIS_URL")
     SQLALCHEMY_TIMEZONE = True
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "False") == "True"
     REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
@@ -61,7 +62,7 @@ class Config:
     BABEL_DEFAULT_LOCALE = "ru"
     BABEL_TRANSLATION_DIRECTORIES = "translations"
 
-    VERSION = "2.2.3"
+    VERSION = "2.2.4"
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
     LOG_FOLDER = os.path.join(BASE_DIR, "logs")
     LOG_MAX_BYTES = 10 * 1024 * 1024

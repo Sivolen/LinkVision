@@ -129,15 +129,18 @@ export function clearDeviceQuality(){
     if(s)s.innerHTML=''; if(c)c.innerHTML='';
 }
 
-export async function loadDeviceQuality(deviceId,hours=24,current=null,preloaded=null){
+export async function loadDeviceQuality(deviceId,hours=24,current=null,preloaded=null,isCurrent=()=>true){
     if(!deviceId)return;
+    if(!isCurrent())return;
     // Render details immediately, then ALWAYS fetch the dedicated history endpoint.
     if(preloaded) renderDeviceQuality(preloaded,current);
     try{
         const response=await fetch(`/api/device/${deviceId}/quality?hours=${hours}`,{cache:'no-store'});
         if(!response.ok)throw new Error(`quality request failed: ${response.status}`);
-        renderDeviceQuality(await response.json(),current);
+        const data=await response.json();
+        if(isCurrent())renderDeviceQuality(data,current);
     }catch(err){
+        if(!isCurrent())return;
         Logger.error('Ошибка загрузки статистики качества:',err);
         if(!preloaded){
             const summary=document.getElementById('device-quality-summary');

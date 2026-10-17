@@ -19,12 +19,13 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 def _is_safe_redirect_url(target: str) -> bool:
     """Разрешаем редирект только на локальный путь (без схемы и хоста)."""
-    if not target:
+    if not target or "\\" in target or any(ord(char) < 32 for char in target):
         return False
     parsed = urlsplit(target)
     return (
         target.startswith("/")
         and not target.startswith("//")
+        and not target.startswith("/\\")
         and not parsed.netloc
         and not parsed.scheme
     )

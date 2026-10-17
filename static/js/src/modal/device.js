@@ -21,15 +21,21 @@ let currentDeviceId = null;
 let historyPerPage = 10;
 // Keep the context-menu target until the server confirms device creation.
 let pendingCreatePosition = null;
+let deviceModalLoadId = 0;
+
+function isCurrentDeviceModalLoad(loadId) {
+    return deviceModalLoadId === loadId;
+}
 
 /**
  * Загрузить типы устройств
  */
-function loadDeviceTypes(selectEl, callback) {
+function loadDeviceTypes(selectEl, callback, isCurrent = () => true) {
     if (!selectEl) return;
     
     http.get('/api/types')
         .then(types => {
+            if (!isCurrent()) return;
             window.deviceTypes = types;
             selectEl.innerHTML = '<option value="">' + t('modal.device.selectTypeOpt') + '</option>';
             types.forEach(t => {
@@ -41,6 +47,7 @@ function loadDeviceTypes(selectEl, callback) {
             if (callback) callback();
         })
         .catch(err => {
+            if (!isCurrent()) return;
             Logger.error('Ошибка загрузки типов:', err);
             if (callback) callback();
         });
@@ -49,7 +56,7 @@ function loadDeviceTypes(selectEl, callback) {
 /**
  * Загрузить группы для карты
  */
-function loadGroups(selectEl, selectedGroupId) {
+function loadGroups(selectEl, selectedGroupId, isCurrent = () => true) {
     if (!selectEl) return;
     
     const mapId = window.currentMapId;
@@ -58,6 +65,7 @@ function loadGroups(selectEl, selectedGroupId) {
     fetch(`/api/map/${mapId}/groups`)
         .then(res => res.ok ? res.json() : [])
         .then(groups => {
+            if (!isCurrent()) return;
             selectEl.innerHTML = '<option value="">' + t('modal.device.noGroupOpt') + '</option>';
             groups.forEach(g => {
                 const option = document.createElement('option');
@@ -74,12 +82,13 @@ function loadGroups(selectEl, selectedGroupId) {
 /**
  * Загрузить профили качества связи для устройства
  */
-function loadQualityProfiles(selectEl, selectedProfileId) {
+function loadQualityProfiles(selectEl, selectedProfileId, isCurrent = () => true) {
     if (!selectEl) return;
 
     fetch('/api/quality-profiles')
         .then(res => res.ok ? res.json() : [])
         .then(profiles => {
+            if (!isCurrent()) return;
             selectEl.innerHTML = '<option value="">' + t('modal.device.defaultQualityProfileOpt') + '</option>';
 
             // Глобальный профиль по умолчанию уже представлен служебным
@@ -174,6 +183,8 @@ function syncNodeFromDetails(node, data) {
 }
 
 export function openDeviceModal(node, options = {}) {
+    const loadId = ++deviceModalLoadId;
+    const isCurrentLoad = () => isCurrentDeviceModalLoad(loadId);
     const sourceDefaults = !node && options?.initialData && typeof options.initialData === 'object'
         ? options.initialData
         : null;
@@ -238,9 +249,11 @@ export function openDeviceModal(node, options = {}) {
         fetch(`/api/device/${node.id()}/details`)
             .then(res => res.ok ? res.json() : Promise.reject(t('toast.errorTitle')))
             .then(data => {
+                if (!isCurrentLoad()) return;
                 loadDeviceTypes(devType, () => {
+                    if (!isCurrentLoad()) return;
                     if (data.type_id) devType.value = data.type_id;
-                });
+                }, isCurrentLoad);
                 
                 if (data.ips) setIpsInForm(data.ips);
                 else setIpsInForm([]);
@@ -261,12 +274,13 @@ export function openDeviceModal(node, options = {}) {
                 }
                 if (monitoringCheck) monitoringCheck.checked = data.monitoring_enabled;
                 fontSizeInput.value = node.data('fontSize') || '';
-                loadGroups(devGroup, data.group_id);
-                loadQualityProfiles(document.getElementById('dev_quality_profile'), data.quality_profile_id);
-                loadDeviceQuality(node.id(), 24, data, data.quality_history);
+                loadGroups(devGroup, data.group_id, isCurrentLoad);
+                loadQualityProfiles(document.getElementById('dev_quality_profile'), data.quality_profile_id, isCurrentLoad);
+                loadDeviceQuality(node.id(), 24, data, data.quality_history, isCurrentLoad);
                 syncNodeFromDetails(node, data);
             })
             .catch(err => {
+                if (!isCurrentLoad()) return;
                 Logger.error('Ошибка загрузки деталей:', err);
                 neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">' + t('common.loadError') + '</td></tr>';
                 showToast(t('toast.errorTitle'), t('modal.device.loadFail'), 'error');
@@ -278,8 +292,8 @@ export function openDeviceModal(node, options = {}) {
         if (devType) devType.value = '';
         deleteBtn.style.display = 'none';
         neighborsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">' + t('modal.device.noData') + '</td></tr>';
-        loadGroups(devGroup, createDefaults?.group_id);
-        loadQualityProfiles(document.getElementById('dev_quality_profile'), createDefaults?.quality_profile_id);
+        loadGroups(devGroup, createDefaults?.group_id, isCurrentLoad);
+        loadQualityProfiles(document.getElementById('dev_quality_profile'), createDefaults?.quality_profile_id, isCurrentLoad);
         setIpsInForm(createDefaults?.ips ?? []);
         if (monitoringCheck && createDefaults) {
             monitoringCheck.checked = createDefaults.monitoring_enabled;
@@ -290,8 +304,9 @@ export function openDeviceModal(node, options = {}) {
         if (qualityTabItem) qualityTabItem.style.display = 'none';
         clearDeviceQuality();
         loadDeviceTypes(devType, () => {
+            if (!isCurrentLoad()) return;
             if (createDefaults?.type_id) devType.value = String(createDefaults.type_id);
-        });
+        }, isCurrentLoad);
     }
 
     if (infoTabLink) {
@@ -517,6 +532,7 @@ export function deleteDevice(deviceId) {
 export function initDeviceModal() {
     // Обработчик скрытия модального окна
     document.getElementById('deviceModal')?.addEventListener('hidden.bs.modal', function() {
+        deviceModalLoadId += 1;
         // Closing without saving cancels the saved context-menu point.
         pendingCreatePosition = null;
         const historyBody = document.getElementById('device-history-body');

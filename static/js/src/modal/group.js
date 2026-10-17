@@ -300,6 +300,9 @@ async function loadGroupsList() {
 
         tbody.innerHTML = ordered.map(({ group, depth }, idx) => {
             const parent = byId.get(group.parent_group_id);
+            const safeColor = typeof group.color === 'string' && /^#[0-9a-f]{6}$/i.test(group.color)
+                ? group.color
+                : '#3498db';
             const indent = depth ? `padding-left:${depth * 18}px;` : '';
             const branch = depth ? '<span class="text-muted me-1">└</span>' : '';
             // Родителя показываем подписью ПОД названием, а не отдельной
@@ -312,11 +315,11 @@ async function loadGroupsList() {
             return `
             <tr style="animation: rowFadeIn 0.25s ease ${idx * 50}ms forwards; opacity: 0">
                 <td><span class="fw-medium" style="${indent}">${branch}${escapeHtml(group.name)}</span>${parentHint}</td>
-                <td><span class="color-preview" style="background:${group.color}" title="${group.color}"></span></td>
+                <td><span class="color-preview" style="background:${safeColor}" title="${safeColor}"></span></td>
                 <td class="text-center"><span class="badge bg-light text-dark">${group.device_count || 0}</span></td>
                 <td class="text-end">
                     <div class="table-actions">
-                        <button type="button" class="btn-action" data-action="edit" data-id="${group.id}" data-name="${escapeHtml(group.name)}" data-color="${group.color}" data-fontsize="${group.font_size || 11}">
+                        <button type="button" class="btn-action" data-action="edit" data-id="${group.id}" data-name="${escapeHtml(group.name)}" data-color="${safeColor}" data-fontsize="${group.font_size || 11}">
                             <i class="fas fa-pen"></i>
                         </button>
                         <button type="button" class="btn-action btn-danger" data-action="delete" data-id="${group.id}" data-name="${escapeHtml(group.name)}">
