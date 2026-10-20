@@ -107,21 +107,24 @@ class MapRepository:
         Дополнить множество ID папок ID-ами ВСЕХ их вложенных подпапок
         (рекурсивно, произвольная глубина дерева).
 
-        Обход через ORM-relationship (children), а не рекурсивный SQL CTE —
-        проще и переносимо между SQLite/Postgres, а глубина дерева папок на
-        практике невелика (это сайдбар навигации, не миллион строк).
+        Дерево загружается одним запросом и обходится в памяти. Это сохраняет
+        работу при произвольной глубине и не делает отдельный SQL-запрос на
+        каждый каталог при вычислении доступа пользователя.
         """
         result = set(folder_ids)
         queue = list(folder_ids)
+        children_by_parent = {}
+        folder_rows = db.session.query(MapFolder.id, MapFolder.parent_id).all()
+        for child_id, parent_id in folder_rows:
+            if parent_id is not None:
+                children_by_parent.setdefault(parent_id, []).append(child_id)
+
         while queue:
             fid = queue.pop()
-            folder = db.session.get(MapFolder, fid)
-            if not folder:
-                continue
-            for child in folder.children:
-                if child.id not in result:
-                    result.add(child.id)
-                    queue.append(child.id)
+            for child_id in children_by_parent.get(fid, ()):
+                if child_id not in result:
+                    result.add(child_id)
+                    queue.append(child_id)
         return result
 
     @staticmethod

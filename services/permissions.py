@@ -531,12 +531,15 @@ def get_user_editable_map_ids() -> list[int]:
     own_maps = Map.query.filter_by(owner_id=current_user.id, is_locked=False).all()
     editable_ids.update(m.id for m in own_maps)
 
-    # Персональный editor — только незаблокированные карты.
-    perms = MapPermission.query.filter_by(user_id=current_user.id, role="editor").all()
-    for perm in perms:
-        map_obj = db.session.get(Map, perm.map_id)
-        if map_obj and not map_obj.is_locked:
-            editable_ids.add(perm.map_id)
+    # Собираем персональные/ролевые editor разрешения до запроса карт,
+    # вместо отдельного SELECT для каждой записи разрешения.
+    editor_map_ids = {
+        perm.map_id
+        for perm in MapPermission.query.filter_by(
+            user_id=current_user.id, role="editor"
+        ).all()
+        if perm.map_id is not None
+    }
 
     # Персональный admin имеет полный контроль, включая locked.
     admin_perms = MapPermission.query.filter_by(
@@ -551,9 +554,12 @@ def get_user_editable_map_ids() -> list[int]:
             MapPermission.user_id.is_(None),
             MapPermission.role == "editor",
         ).all()
-        for perm in perms:
-            map_obj = db.session.get(Map, perm.map_id)
-            if map_obj and not map_obj.is_locked:
-                editable_ids.add(perm.map_id)
+        editor_map_ids.update(perm.map_id for perm in perms if perm.map_id is not None)
+
+    if editor_map_ids:
+        unlocked_map_ids = db.session.query(Map.id).filter(
+            Map.id.in_(editor_map_ids), Map.is_locked.is_(False)
+        )
+        editable_ids.update(map_id for (map_id,) in unlocked_map_ids.all())
 
     return list(editable_ids)
