@@ -127,7 +127,9 @@ def create_app():
                 db.create_all()
             else:
                 schema_result = validate_sqlite_database(
-                    sqlite_path, db.metadata, expected_version=Config.VERSION
+                    sqlite_path,
+                    db.metadata,
+                    expected_version=Config.DB_SCHEMA_VERSION,
                 )
                 if not schema_result.valid:
                     app_logger.critical(
@@ -161,8 +163,9 @@ def create_app():
                     )
 
         # После успешной проверки/создания фиксируем версию схемы SQLite.
+        # Это не версия выпуска: она меняется только вместе с миграцией БД.
         if database_uri.startswith("sqlite:///") and sqlite_path:
-            mark_sqlite_schema(sqlite_path, Config.VERSION)
+            mark_sqlite_schema(sqlite_path, Config.DB_SCHEMA_VERSION)
 
         # --- Создание администратора, если ни одного нет ---
         if not User.query.filter_by(is_admin=True).first():

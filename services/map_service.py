@@ -572,29 +572,20 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
     )
     group_ids_with_devices = {gid for gid, _ in group_device_counts}
 
-    # Рекурсивная проверка видимости групп (с устройствами у потомков)
-    def group_visible_recursive(g_id, memo=None):
-        if memo is None:
-            memo = {}
-        if g_id in memo:
-            return memo[g_id]
-
-        if g_id in group_ids_with_devices:
-            memo[g_id] = True
-            return True
-
-        children = Group.query.filter_by(parent_group_id=g_id).all()
-        has_visible_child = any(group_visible_recursive(c.id, memo) for c in children)
-        memo[g_id] = has_visible_child
-        return has_visible_child
-
-    visible_group_memo = {}
-    visible_groups = {gid for gid in group_ids_with_devices}
-    for g in groups:
-        if g.id not in visible_group_memo:
-            group_visible_recursive(g.id, visible_group_memo)
-        if visible_group_memo.get(g.id, False):
-            visible_groups.add(g.id)
+    # Группа видима, когда в ней или в одном из потомков есть устройство.
+    # Раньше рекурсивная проверка запрашивала детей каждой группы отдельно,
+    # то есть загрузка карты с N группами делала до N дополнительных SQL
+    # запросов. Все группы уже получены выше, поэтому поднимаемся от групп с
+    # устройствами по карте родителей в памяти.
+    parent_by_group_id = {group.id: group.parent_group_id for group in groups}
+    visible_groups = set(group_ids_with_devices)
+    for group_id in group_ids_with_devices:
+        visited = set()
+        parent_id = parent_by_group_id.get(group_id)
+        while parent_id is not None and parent_id not in visited:
+            visited.add(parent_id)
+            visible_groups.add(parent_id)
+            parent_id = parent_by_group_id.get(parent_id)
 
     # Формирование узлов
     nodes = []
