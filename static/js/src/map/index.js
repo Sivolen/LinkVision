@@ -14,7 +14,7 @@ import { initBulk } from './bulk.js';
 import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
 import { initMinimap } from './minimap.js';
 import { initUndoRedo } from './undoRedo.js';
-import { beginSelfUpdate, endSelfUpdate, isSelfUpdating, getPendingCount } from '../utils/state.js';
+import { beginSelfUpdate, endSelfUpdate, isSelfUpdating, getPendingCount, isLocalOperation } from '../utils/state.js';
 import { restoreCollapseState, refreshAllCollapsedStatuses, collapseGroup, expandGroup } from './groupCollapse.js';
 
 // Импорт функций для инкрементальных обновлений
@@ -28,6 +28,7 @@ import {
     addShapeToGraph as _addShapeToGraph,
     removeShapeFromGraph as _removeShapeFromGraph,
     updateDevicePositionInGraph,
+    updateDevicePositionsInGraph,
     addGroupToGraph,
     updateGroupInGraph,
     removeGroupFromGraph,
@@ -332,10 +333,19 @@ export function initMap(id) {
 
     // Массовое изменение позиций
     onMapEvent(window.socket, mapId, 'bulk_position_updated', (data) => {
-        // Позиции уже обновлены на клиенте через dragfree — просто обновим метки
-        if (typeof window.updateAllEdgeLabels === 'function') window.updateAllEdgeLabels();
-        if (typeof window.updateEdgeCurves === 'function') window.updateEdgeCurves();
-        if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
+        if (isLocalOperation(data.operation_id)) return;
+        if (Array.isArray(data.positions)) {
+            updateDevicePositionsInGraph(data.positions);
+            return;
+        }
+
+        // Совместимость с сервером старой версии: у него в событии есть
+        // только ID, поэтому перечитываем состояние карты целиком.
+        if (typeof window.withViewportRestore === 'function') {
+            window.withViewportRestore(() => window.reloadMapElements(true));
+        } else {
+            window.reloadMapElements(true);
+        }
     });
 
     // Создание связи

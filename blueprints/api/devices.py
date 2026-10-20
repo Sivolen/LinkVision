@@ -2,6 +2,8 @@
 API роуты для устройств (Devices).
 """
 
+import math
+
 from flask import Blueprint, request, jsonify, url_for
 from flask_login import login_required
 
@@ -25,7 +27,8 @@ from services.notifications import (
     notify_device_position_updated,
     notify_bulk_position_updated,
 )
-from services.permissions import can_edit_device, can_edit_map
+from services.permissions import can_edit_map
+from models import Device, db
 from utils.logger import api_logger
 
 devices_bp = Blueprint("devices", __name__)
@@ -386,38 +389,58 @@ def update_position(device_id):
 @login_required
 def update_devices_positions():
     """Массовое обновление позиций устройств."""
-    data = request.json
+    payload = request.json
+    operation_id = None
+    if isinstance(payload, dict):
+        data = payload.get("positions")
+        operation_id = payload.get("operation_id")
+    else:
+        data = payload
     if not data or not isinstance(data, list):
         return jsonify({"error": "Invalid request, expected list of {id, x, y}"}), 400
 
     valid_updates = []
+    seen_ids = set()
     for item in data:
-        device_id = item.get("id")
-        x = item.get("x")
-        y = item.get("y")
-
-        if device_id is None or x is None or y is None:
-            continue
-
-        device = device_service.get_device_by_id(device_id)
-        if not device:
-            continue
-
-        # Используем функцию проверки прав
-        if not can_edit_device(device_id):
-            continue
-
+        if not isinstance(item, dict):
+            return jsonify({"error": "Each update must contain id, x and y"}), 400
+        try:
+            raw_device_id = item["id"]
+            if isinstance(raw_device_id, bool) or (
+                isinstance(raw_device_id, float) and not raw_device_id.is_integer()
+            ):
+                raise ValueError("Invalid device id")
+            device_id = int(raw_device_id)
+            x = float(item["x"])
+            y = float(item["y"])
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return jsonify({"error": "Each update must contain numeric id, x and y"}), 400
+        if device_id <= 0 or device_id in seen_ids or not math.isfinite(x) or not math.isfinite(y):
+            return jsonify({"error": "Invalid or duplicate device position"}), 400
+        seen_ids.add(device_id)
         valid_updates.append({"id": device_id, "x": x, "y": y})
 
     if not valid_updates:
         return jsonify({"error": "No valid updates"}), 400
 
+    device_maps = dict(
+        db.session.query(Device.id, Device.map_id)
+        .filter(Device.id.in_(seen_ids))
+        .all()
+    )
+    if len(device_maps) != len(seen_ids):
+        return jsonify({"error": "One or more devices were not found"}), 404
+
+    map_ids = set(device_maps.values())
+    if len(map_ids) != 1:
+        return jsonify({"error": "All devices must belong to the same map"}), 400
+    map_id = map_ids.pop()
+    if not can_edit_map(map_id):
+        return jsonify({"error": "Доступ запрещён"}), 403
+
     try:
-        updated = device_service.update_devices_positions(valid_updates)
-        if valid_updates:
-            first_device = device_service.get_device_by_id(valid_updates[0]["id"])
-            device_ids = [u["id"] for u in valid_updates]
-            notify_bulk_position_updated(first_device.map_id, device_ids)
+        updated = device_service.update_devices_positions(valid_updates, map_id=map_id)
+        notify_bulk_position_updated(map_id, valid_updates, operation_id=operation_id)
         return jsonify({"status": "ok", "updated": updated})
     except Exception:
         api_logger.exception("Error updating multiple positions")

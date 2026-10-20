@@ -406,18 +406,30 @@ def get_all_device_types():
     return DeviceType.query.all()
 
 
-def update_devices_positions(updates: List[Dict[str, Any]]) -> int:
+def update_devices_positions(
+    updates: List[Dict[str, Any]], map_id: Optional[int] = None
+) -> int:
     """Массовое обновление позиций."""
     from .map_service import invalidate_map_elements_cache
 
-    map_ids = set()
-    for update in updates:
-        device = db.session.get(Device, update["id"])
-        if device:
-            device.pos_x = update["x"]
-            device.pos_y = update["y"]
-            map_ids.add(device.map_id)
+    if not updates:
+        return 0
 
+    if map_id is None:
+        device_maps = db.session.query(Device.id, Device.map_id).filter(
+            Device.id.in_([update["id"] for update in updates])
+        )
+        map_ids = {row.map_id for row in device_maps.all()}
+    else:
+        map_ids = {map_id}
+
+    db.session.bulk_update_mappings(
+        Device,
+        [
+            {"id": update["id"], "pos_x": update["x"], "pos_y": update["y"]}
+            for update in updates
+        ],
+    )
     db.session.commit()
 
     # Инвалидируем кэш для всех затронутых карт

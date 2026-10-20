@@ -1,10 +1,10 @@
 import { getCy } from './core.js';
 import { boundNodePosition, setElementsLoaded, getBgImageSize } from './background.js';
 import { addPulsingNode, removePulsingNode } from './pulse.js';
-import { updateAllEdgeLabels } from './edgeLabels.js';
+import { updateAllEdgeLabels, updateEdgeLabelsForNode, updateEdgeLabelsForNodes } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
 import { refreshZoomEmphasis } from './zoomEmphasis.js';
-import { updateAllGroups } from './groupResize.js';
+import { updateAllGroups, updateGroupsForNodes } from './groupResize.js';
 import { updateSidebarCounter, setSidebarCounter } from './sidebar.js';
 import { http } from '../utils/http.js';
 
@@ -510,10 +510,31 @@ export function updateDevicePositionInGraph(deviceId, x, y) {
     if (!node.length) return;
 
     node.position({ x, y });
-    // Обновим метки рёбер, разведение связей и размеры групп
-    if (typeof window.updateAllEdgeLabels === 'function') window.updateAllEdgeLabels();
+    // Пересчитываем только рёбра и группы, затронутые перемещённым узлом.
+    updateEdgeLabelsForNode(node);
     if (typeof window.updateEdgeCurves === 'function') window.updateEdgeCurves();
-    if (typeof window.updateAllGroups === 'function') window.updateAllGroups();
+    updateGroupsForNodes([node]);
+}
+
+export function updateDevicePositionsInGraph(positions) {
+    const cy = getCy();
+    if (!cy || !Array.isArray(positions)) return;
+
+    const changedNodes = [];
+    cy.batch(() => {
+        positions.forEach(({ id, x, y }) => {
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+            const node = cy.getElementById(String(id));
+            if (!node.length || node.data('isGroup') || node.data('isShape')) return;
+            node.position({ x, y });
+            changedNodes.push(node);
+        });
+    });
+
+    if (!changedNodes.length) return;
+    updateEdgeLabelsForNodes(changedNodes);
+    if (typeof window.updateEdgeCurves === 'function') window.updateEdgeCurves();
+    updateGroupsForNodes(changedNodes);
 }
 
 export function updateGroupInGraph(groupData) {

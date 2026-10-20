@@ -23,6 +23,23 @@ export function updateGroupsForNode(node) {
     });
 }
 
+/** Пересчитать только группы-предки изменившихся узлов, снизу вверх. */
+export function updateGroupsForNodes(nodes) {
+    const cy = getCy();
+    if (!cy || !nodes) return;
+
+    const groups = new Map();
+    nodes.forEach(node => {
+        if (!node || !node.length) return;
+        node.ancestors().filter('node[isGroup]').forEach(group => groups.set(group.id(), group));
+    });
+
+    const orderedGroups = Array.from(groups.values()).sort(
+        (a, b) => b.ancestors().filter('node[isGroup]').length - a.ancestors().filter('node[isGroup]').length
+    );
+    cy.batch(() => orderedGroups.forEach(updateGroupSize));
+}
+
 // Оптимизированное массовое обновление с троттлингом
 export function updateAllGroups() {
     if (groupUpdateTimeout) return;

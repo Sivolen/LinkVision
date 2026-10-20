@@ -3,13 +3,13 @@ import { getCy } from './core.js';
 import { t } from '../i18n/i18n.js';
 import { boundNodePosition, getBgDimensions } from './background.js';
 import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes.js';
-import { updateEdgeLabelsForNode } from './edgeLabels.js';
+import { updateEdgeLabelsForNode, updateEdgeLabelsForNodes } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
 import { updateGroupsForNode, updateAllGroups } from './groupResize.js';
 import { isDragLocked } from './lock.js';
 import { showToast } from '../utils/toast.js';
 import { http } from '../utils/http.js';
-import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
+import { beginSelfUpdate, endSelfUpdate, rememberLocalOperation } from '../utils/state.js';
 import { isShapeId, parseRawId } from './ids.js';
 
 let dragTimeouts = {};
@@ -178,7 +178,11 @@ export function initInteractions(cy) {
     // тоже — без этого флага каждый ребёнок создал бы отдельную запись в истории
     // undo, и отмена "ничего не делала" бы (N одинаковых записей подряд).
     let draggingGroup = false;
-    cy.on('grab', 'node[isGroup]', () => { draggingGroup = true; });
+    let draggedGroupId = null;
+    cy.on('grab', 'node[isGroup]', evt => {
+        draggingGroup = true;
+        draggedGroupId = evt.target.id();
+    });
 
     // Перетаскивание одиночного узла
     cy.on('dragfree', 'node', function(evt) {
@@ -317,9 +321,15 @@ export function initInteractions(cy) {
     cy.on('dragfree', 'node[isGroup]', function(evt) {
         if (window.canEditMap === false || isDragLocked()) return;
         const groupNode = evt.target;
-        // Фильтруем: только устройства, не вложенные группы
-        const children = groupNode.children().filter(child => !child.data('isGroup'));
-        if (!children.length) return;
+        // A parent drag also triggers dragfree for nested compound groups.
+        // Persist the moved subtree only once, from the group the user grabbed.
+        if (draggedGroupId && groupNode.id() !== draggedGroupId) return;
+        // Берём все устройства на любой глубине вложенности. Compound-группа
+        // перемещает всё поддерево, значит позиции всех листьев нужно сохранить.
+        const devices = groupNode.descendants().filter(
+            child => !child.data('isGroup') && !child.data('isShape')
+        );
+        if (!devices.length) return;
 
         // Ограничение позиции группы границами фона (если есть)
         let pos = groupNode.position();
@@ -331,22 +341,30 @@ export function initInteractions(cy) {
         }
 
         // Собираем новые позиции всех дочерних устройств
-        const updates = children.map(child => ({
+        const updates = devices.map(child => ({
             id: child.id(),
             x: Math.round(child.position().x),
             y: Math.round(child.position().y)
         }));
 
-        children.forEach(child => updateEdgeLabelsForNode(child));
+        // Одно пакетное обновление меток, чтобы общее ребро не пересчитывалось
+        // повторно для обоих перемещённых концов.
+        updateEdgeLabelsForNodes(devices);
         updateEdgeCurves();
 
         const key = `group:${groupNode.id()}`;
         const commitGroupNodeMove = () => {
             delete pendingDragSaves[key];
             beginSelfUpdate();
+            const operationId = window.crypto?.randomUUID?.()
+                || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            rememberLocalOperation(operationId);
 
             // Отправляем один массовый запрос вместо многих
-            return http.put('/api/devices/positions', updates)
+            return http.put('/api/devices/positions', {
+                positions: updates,
+                operation_id: operationId,
+            })
             .then(response => {
                 if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
             })
@@ -362,7 +380,10 @@ export function initInteractions(cy) {
         pendingDragSaves[key] = commitGroupNodeMove;
 
         // Сбрасываем флаг в следующем тике — после всех dragfree на детях
-        setTimeout(() => { draggingGroup = false; }, 0);
+        setTimeout(() => {
+            draggingGroup = false;
+            draggedGroupId = null;
+        }, 0);
     });
     cy.on('tap', 'node', function(evt) {
         const node = evt.target;

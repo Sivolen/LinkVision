@@ -34,6 +34,20 @@ export function updateEdgeLabelsForNode(node) {
     connectedEdges.forEach(edge => updateEdgeLabel(edge));
 }
 
+/** Обновить метки рёбер для набора узлов, обрабатывая общие рёбра один раз. */
+export function updateEdgeLabelsForNodes(nodes) {
+    const cy = getCy();
+    if (!cy || !nodes) return;
+
+    const edges = new Set();
+    nodes.forEach(node => {
+        if (!node || !node.length) return;
+        node.connectedEdges().forEach(edge => edges.add(edge));
+    });
+
+    cy.batch(() => edges.forEach(updateEdgeLabel));
+}
+
 // Оптимизированное массовое обновление с троттлингом
 export function updateAllEdgeLabels() {
     if (updateTimeout) return; // Защита от частых вызовов

@@ -66,9 +66,19 @@ def notify_device_position_updated(map_id, device_id, x, y, skip_sid=None):
     )
 
 
-def notify_bulk_position_updated(map_id, device_ids, skip_sid=None):
+def notify_bulk_position_updated(map_id, positions, skip_sid=None, operation_id=None):
     """Уведомление о массовом изменении позиций."""
-    _notify(map_id, "bulk_position_updated", {"device_ids": device_ids}, skip_sid)
+    has_coordinates = all(
+        isinstance(position, dict) and {"id", "x", "y"}.issubset(position)
+        for position in positions
+    )
+    device_ids = [position["id"] if isinstance(position, dict) else position for position in positions]
+    payload = {"device_ids": device_ids}
+    if has_coordinates:
+        payload["positions"] = positions
+    if operation_id:
+        payload["operation_id"] = operation_id
+    _notify(map_id, "bulk_position_updated", payload, skip_sid)
 
 
 def notify_link_created(map_id, link_data, skip_sid=None):
