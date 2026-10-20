@@ -5,7 +5,7 @@ import { boundNodePosition, getBgDimensions } from './background.js';
 import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes.js';
 import { updateEdgeLabelsForNode, updateEdgeLabelsForNodes } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
-import { updateGroupsForNode, updateAllGroups } from './groupResize.js';
+import { updateGroupsForNode, updateGroupsForNodes } from './groupResize.js';
 import { isDragLocked } from './lock.js';
 import { showToast } from '../utils/toast.js';
 import { http } from '../utils/http.js';
@@ -191,6 +191,10 @@ export function initInteractions(cy) {
         if (window.canEditMap === false || isDragLocked()) return;
         // Если тащили группу — дети уже обработаны в node[isGroup], пропускаем
         if (draggingGroup) return;
+        // Обработчик множественного выделения сохранит все позиции одной
+        // пачкой. Без этого одиночный обработчик ставил свой debounce для
+        // каждого выбранного устройства, а затем срабатывала и общая пачка.
+        if (node.selected() && cy.nodes(':selected').filter(n => !n.data('isGroup')).length > 1) return;
 
         let pos = node.position();
         const { width, height } = getBgDimensions();
@@ -253,19 +257,28 @@ export function initInteractions(cy) {
             }
         });
 
-        selectedNodes.forEach(node => updateGroupsForNode(node));
-        selectedNodes.forEach(node => updateEdgeLabelsForNode(node));
+        const movedDevices = selectedNodes.filter(node => !node.data('isShape'));
+        updateGroupsForNodes(movedDevices);
+        updateEdgeLabelsForNodes(movedDevices);
         updateEdgeCurves();
-        updateAllGroups();
 
         const key = 'multiSelect';
         const commitGroupMove = () => {
             delete pendingDragSaves[key];
             beginSelfUpdate();
-            const promises = [
-                ...deviceUpdates.map(upd => http.put(`/api/device/${upd.id}/position`, { x: upd.x, y: upd.y })),
-                ...shapeUpdates.map(upd => http.put(`/api/shape/${upd.id}`, { x: upd.x, y: upd.y })),
-            ];
+            const promises = [];
+            if (deviceUpdates.length) {
+                const operationId = window.crypto?.randomUUID?.()
+                    || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                rememberLocalOperation(operationId);
+                promises.push(http.put('/api/devices/positions', {
+                    positions: deviceUpdates,
+                    operation_id: operationId,
+                }));
+            }
+            shapeUpdates.forEach(upd => {
+                promises.push(http.put(`/api/shape/${upd.id}`, { x: upd.x, y: upd.y }));
+            });
             return Promise.all(promises)
                 .then(() => {
                     if (typeof window.saveState === 'function') window.saveState('Перемещение группы устройств');
@@ -282,6 +295,7 @@ export function initInteractions(cy) {
     cy.on('dragfree', 'node[isShape]', function(evt) {
         if (window.canEditMap === false || isDragLocked()) return;
         const node = evt.target;
+        if (node.selected() && cy.nodes(':selected').filter(n => !n.data('isGroup')).length > 1) return;
         let pos = node.position();
         const { width, height } = getBgDimensions();
         if (width && height) {
