@@ -41,17 +41,40 @@ import { updateEdgeCurves } from './edgeBundling.js';
 import { initZoomEmphasis, refreshZoomEmphasis } from './zoomEmphasis.js';
 import { updateAllGroups } from './groupResize.js';
 
-// ─── Утилита: обёртка для socket-событий с проверкой map_id ─────────────────────
+// ─── Утилиты жизненного цикла карты и Socket.IO ────────────────────────────────
+// initMap() может вызываться повторно без полной перезагрузки страницы. Все
+// обработчики, созданные предыдущим экземпляром карты, нужно снять, иначе одно
+// событие Socket.IO начнёт применяться несколько раз.
+let mapCleanupHandlers = [];
+
+function clearMapCleanupHandlers() {
+    mapCleanupHandlers.forEach(cleanup => {
+        try {
+            cleanup();
+        } catch (error) {
+            console.error('Error cleaning up map listener:', error);
+        }
+    });
+    mapCleanupHandlers = [];
+}
+
+function registerMapCleanup(cleanup) {
+    mapCleanupHandlers.push(cleanup);
+}
+
 function onMapEvent(socket, mapId, event, handler) {
-    socket.on(event, data => {
+    const listener = data => {
         if (Number(data.map_id) !== Number(mapId)) return;
         handler(data);
-    });
+    };
+    socket.on(event, listener);
+    registerMapCleanup(() => socket.off(event, listener));
 }
 
 let mapId = null;
 
 export function initMap(id) {
+    clearMapCleanupHandlers();
     mapId = id;
     window.currentMapId = id;
     if (!mapId || isNaN(parseInt(mapId))) {
@@ -75,7 +98,7 @@ export function initMap(id) {
         // ЛЮБЫЕ real-time события по этой карте (статусы, позиции, связи) до
         // ручной перезагрузки страницы. Именно это стояло за жалобами
         // "иногда нужно обновить страницу, чтобы всё обновилось".
-        window.socket.on('connect', () => {
+        const handleSocketConnect = () => {
             joinMapRoom();
             // Событий, которые сервер разослал, пока мы были отключены, мы не
             // получим (Socket.IO их не буферизует после разрыва соединения) —
@@ -98,7 +121,9 @@ export function initMap(id) {
                     loadElements(mapId, true);
                 });
             }
-        });
+        };
+        window.socket.on('connect', handleSocketConnect);
+        registerMapCleanup(() => window.socket.off('connect', handleSocketConnect));
     }
 
     const cy = initCy(mapId);
@@ -118,6 +143,10 @@ export function initMap(id) {
         };
         cyContainer.addEventListener('wheel', onFirstInteract, { passive: true });
         cyContainer.addEventListener('mousedown', onFirstInteract);
+        registerMapCleanup(() => {
+            cyContainer.removeEventListener('wheel', onFirstInteract);
+            cyContainer.removeEventListener('mousedown', onFirstInteract);
+        });
     }
 
     initInteractions(cy);
@@ -145,9 +174,11 @@ export function initMap(id) {
     // добавлены в граф: loadElements() ходит на сервер асинхронно, и вызов сразу
     // после него отрабатывал по пустому графу — из-за этого после F5 все группы
     // оказывались развёрнутыми. 'elements:loaded' диспатчится в elements.js.
-    window.addEventListener('elements:loaded', () => {
+    const restoreCollapsedGroups = () => {
         if (typeof restoreCollapseState === 'function') restoreCollapseState();
-    });
+    };
+    window.addEventListener('elements:loaded', restoreCollapsedGroups);
+    registerMapCleanup(() => window.removeEventListener('elements:loaded', restoreCollapsedGroups));
 
     loadElements(mapId);
     window.__mapLoadedOnce = true;
@@ -159,6 +190,11 @@ export function initMap(id) {
     let statusBatch = [];
     let statusBatchTimeout = null;
     const STATUS_BATCH_DELAY = 100; // Увеличено с 50мс для производительности
+    registerMapCleanup(() => {
+        if (statusBatchTimeout) clearTimeout(statusBatchTimeout);
+        statusBatch = [];
+        statusBatchTimeout = null;
+    });
 
     // Реалтайм-обработчики регистрируем только если сокет создан. Иначе (когда
     // window.socket ещё не готов) не роняем initMap — карта и мини-карта уже
@@ -168,7 +204,12 @@ export function initMap(id) {
         return;
     }
 
-    window.socket.on('device_status', (data) => {
+    const listenSocket = (event, handler) => {
+        window.socket.on(event, handler);
+        registerMapCleanup(() => window.socket.off(event, handler));
+    };
+
+    listenSocket('device_status', (data) => {
         const node = cy.getElementById(String(data.id));
         if (!node.length) return;
         const newStatus = data.status;
@@ -230,7 +271,7 @@ export function initMap(id) {
             statusBatchTimeout = null;
         }, STATUS_BATCH_DELAY);
     });
-    window.socket.on('device_status_batch', (statuses) => {
+    listenSocket('device_status_batch', (statuses) => {
         if (!cy) return;
         cy.batch(() => {
             statuses.forEach(item => {
@@ -416,7 +457,7 @@ export function initMap(id) {
     });
 
     // Полная перезагрузка карты (крупные изменения: импорт, массовое редактирование)
-    window.socket.on('map_updated', (data) => {
+    listenSocket('map_updated', (data) => {
         if (isSelfUpdating()) {
             console.log('⏭️ Skipping map reload (self change, pending:', getPendingCount(), ')');
             return;
