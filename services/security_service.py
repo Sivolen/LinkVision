@@ -9,6 +9,8 @@
 """
 
 import time
+import re
+import uuid
 from typing import Dict, Optional, Tuple
 from collections import defaultdict
 from functools import wraps
@@ -22,8 +24,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user
-import re
-import uuid
+from utils.logger import app_logger
 
 # ============================================================================
 # Rate Limiting
@@ -43,11 +44,15 @@ class RateLimiter:
         self._storage: Dict[str, list] = defaultdict(list)
         self._lock_counts: Dict[str, int] = defaultdict(int)
         self._redis = redis_client
+        self._redis_retry_after = 0.0
 
     def _get_redis(self):
         """Получить Redis клиент из Flask app config."""
         if self._redis:
             return self._redis
+
+        if time.monotonic() < self._redis_retry_after:
+            return None
 
         if has_app_context():
             redis_url = current_app.config.get("REDIS_URL")
@@ -58,8 +63,20 @@ class RateLimiter:
                     self._redis = redis.from_url(redis_url)
                     return self._redis
                 except ImportError:
-                    pass
+                    app_logger.warning(
+                        "REDIS_URL is configured but the redis package is unavailable"
+                    )
+                    self._redis_retry_after = time.monotonic() + 60
         return None
+
+    def _disable_redis(self, error: Exception) -> None:
+        """Temporarily use the local limiter after a Redis availability error."""
+        self._redis = None
+        self._redis_retry_after = time.monotonic() + 60
+        app_logger.warning(
+            "Redis rate limiter is unavailable (%s); using the in-memory fallback for 60 seconds",
+            type(error).__name__,
+        )
 
     def is_rate_limited(
         self, key: str, max_requests: int = 10, window_seconds: int = 60
@@ -78,51 +95,54 @@ class RateLimiter:
         redis = self._get_redis()
 
         if redis:
-            now_ms = int(time.time() * 1000)
-            window_ms = window_seconds * 1000
-            window_key = f"ratelimit:{key}"
-            script = """
-                local now = tonumber(ARGV[1])
-                local window = tonumber(ARGV[2])
-                local limit = tonumber(ARGV[3])
-                redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now - window)
-                local count = redis.call('ZCARD', KEYS[1])
-                if count >= limit then
-                    local oldest = redis.call('ZRANGE', KEYS[1], 0, 0, 'WITHSCORES')
-                    local retry = math.max(1, math.ceil((tonumber(oldest[2]) + window - now) / 1000))
-                    return {1, count, retry}
-                end
-                redis.call('ZADD', KEYS[1], now, ARGV[4])
-                redis.call('PEXPIRE', KEYS[1], window)
-                return {0, count + 1, 0}
-            """
-            result = redis.eval(
-                script,
-                1,
-                window_key,
-                now_ms,
-                window_ms,
-                max_requests,
-                f"{now_ms}:{uuid.uuid4().hex}",
-            )
-            return bool(int(result[0]))
-        else:
-            # In-memory implementation (single worker)
-            now = time.time()
-            window_start = now - window_seconds
+            try:
+                now_ms = int(time.time() * 1000)
+                window_ms = window_seconds * 1000
+                window_key = f"ratelimit:{key}"
+                script = """
+                    local now = tonumber(ARGV[1])
+                    local window = tonumber(ARGV[2])
+                    local limit = tonumber(ARGV[3])
+                    redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now - window)
+                    local count = redis.call('ZCARD', KEYS[1])
+                    if count >= limit then
+                        local oldest = redis.call('ZRANGE', KEYS[1], 0, 0, 'WITHSCORES')
+                        local retry = math.max(1, math.ceil((tonumber(oldest[2]) + window - now) / 1000))
+                        return {1, count, retry}
+                    end
+                    redis.call('ZADD', KEYS[1], now, ARGV[4])
+                    redis.call('PEXPIRE', KEYS[1], window)
+                    return {0, count + 1, 0}
+                """
+                result = redis.eval(
+                    script,
+                    1,
+                    window_key,
+                    now_ms,
+                    window_ms,
+                    max_requests,
+                    f"{now_ms}:{uuid.uuid4().hex}",
+                )
+                return bool(int(result[0]))
+            except Exception as error:
+                self._disable_redis(error)
 
-            # Очистить старые записи
-            self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
-            if not self._storage[key]:
-                self._storage.pop(key, None)
+        # In-memory implementation (single worker)
+        now = time.time()
+        window_start = now - window_seconds
 
-            # Проверить лимит
-            if len(self._storage[key]) >= max_requests:
-                return True
+        # Очистить старые записи
+        self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
+        if not self._storage[key]:
+            self._storage.pop(key, None)
 
-            # Добавить текущий запрос
-            self._storage[key].append(now)
-            return False
+        # Проверить лимит
+        if len(self._storage[key]) >= max_requests:
+            return True
+
+        # Добавить текущий запрос
+        self._storage[key].append(now)
+        return False
 
     def get_remaining_requests(
         self, key: str, max_requests: int = 10, window_seconds: int = 60
@@ -131,31 +151,44 @@ class RateLimiter:
         redis = self._get_redis()
 
         if redis:
-            now_ms = int(time.time() * 1000)
-            window_key = f"ratelimit:{key}"
-            redis.zremrangebyscore(window_key, "-inf", now_ms - window_seconds * 1000)
-            current_count = int(redis.zcard(window_key))
-            return max(0, max_requests - current_count)
-        else:
-            now = time.time()
-            window_start = now - window_seconds
-            self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
-            remaining = max(0, max_requests - len(self._storage[key]))
-            if not self._storage[key]:
-                self._storage.pop(key, None)
-            return remaining
+            try:
+                now_ms = int(time.time() * 1000)
+                window_key = f"ratelimit:{key}"
+                redis.zremrangebyscore(
+                    window_key, "-inf", now_ms - window_seconds * 1000
+                )
+                current_count = int(redis.zcard(window_key))
+                return max(0, max_requests - current_count)
+            except Exception as error:
+                self._disable_redis(error)
+
+        now = time.time()
+        window_start = now - window_seconds
+        self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
+        remaining = max(0, max_requests - len(self._storage[key]))
+        if not self._storage[key]:
+            self._storage.pop(key, None)
+        return remaining
 
     def get_retry_after(self, key: str, window_seconds: int = 60) -> int:
         """Сколько секунд осталось до освобождения самого старого запроса."""
         redis = self._get_redis()
         if redis:
-            now_ms = int(time.time() * 1000)
-            window_key = f"ratelimit:{key}"
-            redis.zremrangebyscore(window_key, "-inf", now_ms - window_seconds * 1000)
-            oldest = redis.zrange(window_key, 0, 0, withscores=True)
-            if not oldest:
-                return 0
-            return max(1, int((oldest[0][1] + window_seconds * 1000 - now_ms + 999) // 1000))
+            try:
+                now_ms = int(time.time() * 1000)
+                window_key = f"ratelimit:{key}"
+                redis.zremrangebyscore(
+                    window_key, "-inf", now_ms - window_seconds * 1000
+                )
+                oldest = redis.zrange(window_key, 0, 0, withscores=True)
+                if not oldest:
+                    return 0
+                return max(
+                    1,
+                    int((oldest[0][1] + window_seconds * 1000 - now_ms + 999) // 1000),
+                )
+            except Exception as error:
+                self._disable_redis(error)
 
         now = time.time()
         window_start = now - window_seconds
@@ -170,25 +203,26 @@ class RateLimiter:
         """Сбросить лимит для ключа."""
         redis = self._get_redis()
         if redis:
-            # Удалить все ключи rate limit для этого key
-            pattern = f"ratelimit:{key}"
-            keys = redis.keys(pattern)
-            if keys:
-                redis.delete(*keys)
-        else:
-            self._storage[key] = []
+            try:
+                redis.delete(f"ratelimit:{key}")
+                return
+            except Exception as error:
+                self._disable_redis(error)
+        self._storage[key] = []
 
     def reset_all(self) -> None:
         """Сбросить все rate limit счётчики."""
         redis = self._get_redis()
         if redis:
-            # Удалить все ключи rate limit
-            keys = redis.keys("ratelimit:*")
-            if keys:
-                redis.delete(*keys)
-        else:
-            self._storage.clear()
-            self._lock_counts.clear()
+            try:
+                keys = list(redis.scan_iter("ratelimit:*"))
+                if keys:
+                    redis.delete(*keys)
+                return
+            except Exception as error:
+                self._disable_redis(error)
+        self._storage.clear()
+        self._lock_counts.clear()
 
     def lock_account(self, key: str, max_attempts: int = 5) -> None:
         """Заблокировать аккаунт после неудачных попыток."""
