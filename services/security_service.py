@@ -11,7 +11,7 @@
 import time
 import re
 import uuid
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 from collections import defaultdict
 from functools import wraps
 from flask import (
@@ -241,7 +241,12 @@ class RateLimiter:
 rate_limiter = RateLimiter()
 
 
-def rate_limit(max_requests: int = 10, window_seconds: int = 60, methods=None):
+def rate_limit(
+    max_requests: int = 10,
+    window_seconds: int = 60,
+    methods=None,
+    key_func: Optional[Callable[[], str]] = None,
+):
     """
     Декоратор для ограничения частоты запросов.
 
@@ -258,11 +263,13 @@ def rate_limit(max_requests: int = 10, window_seconds: int = 60, methods=None):
             if methods is not None and request.method not in methods:
                 return f(*args, **kwargs)
 
-            # Ключ: IP адрес или user_id
-            if current_user.is_authenticated:
+            # Дополнительный ключ позволяет разделить общий лимит IP и лимит
+            # конкретного логина, не меняя поведение остальных маршрутов.
+            if key_func is not None:
+                key = f"{key_func()}:{request.endpoint}"
+            elif current_user.is_authenticated:
                 key = f"user:{current_user.id}:{request.endpoint}"
             else:
-                
                 key = f"ip:{request.remote_addr}:{request.endpoint}"
             if rate_limiter.is_rate_limited(key, max_requests, window_seconds):
                 remaining = rate_limiter.get_remaining_requests(

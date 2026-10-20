@@ -1,3 +1,4 @@
+import hashlib
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_babel import gettext as _
 from flask_login import login_user, logout_user, login_required, current_user
@@ -17,6 +18,15 @@ from utils.logger import auth_logger
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
+def _login_rate_limit_key() -> str:
+    """Стабильный ключ по логину без хранения имени в ключе ограничителя."""
+    username = (request.form.get("username") or "").strip().casefold()
+    if not username:
+        return f"login-ip:{request.remote_addr or 'unknown'}"
+    username_hash = hashlib.sha256(username.encode("utf-8")).hexdigest()
+    return f"login:{username_hash}"
+
+
 def _is_safe_redirect_url(target: str) -> bool:
     """Разрешаем редирект только на локальный путь (без схемы и хоста)."""
     if not target or "\\" in target or any(ord(char) < 32 for char in target):
@@ -32,7 +42,13 @@ def _is_safe_redirect_url(target: str) -> bool:
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-@rate_limit(max_requests=10, window_seconds=300, methods=("POST",))  # 10 отправок формы за 5 минут
+@rate_limit(max_requests=60, window_seconds=300, methods=("POST",))
+@rate_limit(
+    max_requests=20,
+    window_seconds=300,
+    methods=("POST",),
+    key_func=_login_rate_limit_key,
+)
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
