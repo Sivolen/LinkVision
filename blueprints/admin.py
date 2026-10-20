@@ -387,7 +387,7 @@ def _validate_sqlite_backup(backup_path):
     result = validate_sqlite_database(
         backup_path,
         db.metadata,
-        expected_version=current_app.config.get("VERSION"),
+        expected_version=current_app.config.get("DB_SCHEMA_VERSION"),
     )
     if result.valid:
         return True, None
@@ -459,7 +459,7 @@ def restore_backup_action():
         installed = validate_sqlite_database(
             db_path,
             db.metadata,
-            expected_version=current_app.config.get("VERSION"),
+            expected_version=current_app.config.get("DB_SCHEMA_VERSION"),
         )
         if not installed.valid:
             db.session.remove()

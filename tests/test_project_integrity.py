@@ -79,6 +79,30 @@ def test_migrations_have_single_entrypoint():
     assert "migrate_quality_profile.py" not in script
 
 
+def test_schema_marker_uses_db_schema_version_not_release_version():
+    """Маркер версии схемы пишется значением DB_SCHEMA_VERSION.
+
+    VERSION растёт при каждом релизе, а приложение при старте сверяет маркер
+    с DB_SCHEMA_VERSION. Запись версии выпуска в маркер блокировала бы запуск
+    уже существующей базы ровно после применения миграций.
+    """
+    migration_sources = {
+        "apply_migrations.sh": (ROOT / "apply_migrations.sh").read_text(
+            encoding="utf-8"
+        ),
+        "fix_db.py": (ROOT / "fix_db.py").read_text(encoding="utf-8"),
+    }
+    for name, source in migration_sources.items():
+        assert "mark_sqlite_schema(path, Config.DB_SCHEMA_VERSION)" in source, name
+        assert "Config.VERSION)" not in source, name
+
+    admin_source = (ROOT / "blueprints/admin.py").read_text(encoding="utf-8")
+    assert (
+        'expected_version=current_app.config.get("DB_SCHEMA_VERSION")' in admin_source
+    )
+    assert 'expected_version=current_app.config.get("VERSION")' not in admin_source
+
+
 def test_quality_profile_service_validates_threshold_order():
     source = (ROOT / "services/quality_service.py").read_text(encoding="utf-8")
     assert "def validate_quality_thresholds" in source

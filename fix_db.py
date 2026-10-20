@@ -23,8 +23,10 @@ def run_migration():
     if not result.valid:
         raise RuntimeError(f"После миграции схема несовместима: {result.message}")
 
-    mark_sqlite_schema(path, Config.VERSION)
-    print(f"✅ База данных успешно приведена к схеме LinkVision {Config.VERSION}.")
+    mark_sqlite_schema(path, Config.DB_SCHEMA_VERSION)
+    print(
+        f"✅ База данных успешно приведена к схеме LinkVision {Config.DB_SCHEMA_VERSION}."
+    )
 
 
 if __name__ == "__main__":
