@@ -26,7 +26,10 @@ def setup_logger(name):
 
     log_file = os.path.join(Config.LOG_FOLDER, f"{name}.log")
     file_handler = RotatingFileHandler(
-        log_file, maxBytes=Config.LOG_MAX_BYTES, backupCount=Config.LOG_BACKUP_COUNT
+        log_file,
+        maxBytes=Config.LOG_MAX_BYTES,
+        backupCount=Config.LOG_BACKUP_COUNT,
+        encoding="utf-8",
     )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
