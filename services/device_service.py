@@ -390,13 +390,14 @@ def update_device_position(device_id: int, x: float, y: float) -> Device:
     device.pos_x = x
     device.pos_y = y
     db.session.commit()
-    api_logger.info(f"Device position updated: ID={device_id} -> ({x}, {y})")
+    api_logger.debug(
+        "Device position updated: ID=%s -> (%s, %s)", device_id, x, y
+    )
 
     # Инвалидируем кэш элементов карты
     from .map_service import invalidate_map_elements_cache
 
     invalidate_map_elements_cache(device.map_id)
-    api_logger.info(f"  🗑️ Invalidated cache for map {device.map_id}")
 
     return device
 
@@ -435,7 +436,7 @@ def update_devices_positions(
     # Инвалидируем кэш для всех затронутых карт
     for map_id in map_ids:
         invalidate_map_elements_cache(map_id)
-        api_logger.info(f"Invalidated cache for map {map_id}")
+        api_logger.debug("Invalidated device position cache for map %s", map_id)
 
     return len(updates)
 
