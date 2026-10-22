@@ -11,6 +11,7 @@
 import time
 import re
 import uuid
+import threading
 from typing import Callable, Dict, Optional, Tuple
 from collections import defaultdict
 from functools import wraps
@@ -43,6 +44,7 @@ class RateLimiter:
         # Хранилище: {key: [(timestamp, count)]}
         self._storage: Dict[str, list] = defaultdict(list)
         self._lock_counts: Dict[str, int] = defaultdict(int)
+        self._storage_lock = threading.RLock()
         self._redis = redis_client
         self._redis_retry_after = 0.0
 
@@ -128,21 +130,21 @@ class RateLimiter:
                 self._disable_redis(error)
 
         # In-memory implementation (single worker)
-        now = time.time()
-        window_start = now - window_seconds
+        with self._storage_lock:
+            now = time.time()
+            window_start = now - window_seconds
 
-        # Очистить старые записи
-        self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
-        if not self._storage[key]:
-            self._storage.pop(key, None)
+            # Очистить старые записи
+            self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
+            if not self._storage[key]:
+                self._storage.pop(key, None)
 
-        # Проверить лимит
-        if len(self._storage[key]) >= max_requests:
-            return True
+            # Проверить лимит и записать запрос как одну атомарную операцию.
+            if len(self._storage[key]) >= max_requests:
+                return True
 
-        # Добавить текущий запрос
-        self._storage[key].append(now)
-        return False
+            self._storage[key].append(now)
+            return False
 
     def get_remaining_requests(
         self, key: str, max_requests: int = 10, window_seconds: int = 60
@@ -162,13 +164,14 @@ class RateLimiter:
             except Exception as error:
                 self._disable_redis(error)
 
-        now = time.time()
-        window_start = now - window_seconds
-        self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
-        remaining = max(0, max_requests - len(self._storage[key]))
-        if not self._storage[key]:
-            self._storage.pop(key, None)
-        return remaining
+        with self._storage_lock:
+            now = time.time()
+            window_start = now - window_seconds
+            self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
+            remaining = max(0, max_requests - len(self._storage[key]))
+            if not self._storage[key]:
+                self._storage.pop(key, None)
+            return remaining
 
     def get_retry_after(self, key: str, window_seconds: int = 60) -> int:
         """Сколько секунд осталось до освобождения самого старого запроса."""
@@ -190,14 +193,15 @@ class RateLimiter:
             except Exception as error:
                 self._disable_redis(error)
 
-        now = time.time()
-        window_start = now - window_seconds
-        timestamps = [ts for ts in self._storage.get(key, []) if ts > window_start]
-        if not timestamps:
-            self._storage.pop(key, None)
-            return 0
-        self._storage[key] = timestamps
-        return max(1, int(timestamps[0] + window_seconds - now + 0.999))
+        with self._storage_lock:
+            now = time.time()
+            window_start = now - window_seconds
+            timestamps = [ts for ts in self._storage.get(key, []) if ts > window_start]
+            if not timestamps:
+                self._storage.pop(key, None)
+                return 0
+            self._storage[key] = timestamps
+            return max(1, int(timestamps[0] + window_seconds - now + 0.999))
 
     def reset(self, key: str) -> None:
         """Сбросить лимит для ключа."""
@@ -208,7 +212,8 @@ class RateLimiter:
                 return
             except Exception as error:
                 self._disable_redis(error)
-        self._storage[key] = []
+        with self._storage_lock:
+            self._storage.pop(key, None)
 
     def reset_all(self) -> None:
         """Сбросить все rate limit счётчики."""
@@ -221,20 +226,24 @@ class RateLimiter:
                 return
             except Exception as error:
                 self._disable_redis(error)
-        self._storage.clear()
-        self._lock_counts.clear()
+        with self._storage_lock:
+            self._storage.clear()
+            self._lock_counts.clear()
 
     def lock_account(self, key: str, max_attempts: int = 5) -> None:
         """Заблокировать аккаунт после неудачных попыток."""
-        self._lock_counts[key] += 1
+        with self._storage_lock:
+            self._lock_counts[key] += 1
 
     def is_account_locked(self, key: str, max_attempts: int = 5) -> bool:
         """Проверить, заблокирован ли аккаунт."""
-        return self._lock_counts[key] >= max_attempts
+        with self._storage_lock:
+            return self._lock_counts[key] >= max_attempts
 
     def unlock_account(self, key: str) -> None:
         """Разблокировать аккаунт."""
-        self._lock_counts[key] = 0
+        with self._storage_lock:
+            self._lock_counts[key] = 0
 
 
 # Глобальный экземпляр
