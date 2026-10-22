@@ -11,6 +11,7 @@ import { showToast } from '../utils/toast.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate, rememberLocalOperation } from '../utils/state.js';
 import { isShapeId, parseRawId } from './ids.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
@@ -18,6 +19,27 @@ let hoverTimeout = null;
 let pendingHighlight = null;
 let highlightedNodes = new Set();
 let highlightedEdges = new Set();
+let activeContextMenu = null;
+let closeContextMenuHandler = null;
+let closeContextMenuTimer = null;
+
+function closeActiveContextMenu() {
+    if (closeContextMenuTimer) {
+        clearTimeout(closeContextMenuTimer);
+        closeContextMenuTimer = null;
+    }
+    if (closeContextMenuHandler) {
+        document.removeEventListener('click', closeContextMenuHandler);
+        document.removeEventListener('contextmenu', closeContextMenuHandler);
+        closeContextMenuHandler = null;
+    }
+    if (activeContextMenu) {
+        activeContextMenu.remove();
+        activeContextMenu = null;
+    }
+}
+
+registerCleanup(closeActiveContextMenu);
 
 // Отложенные (debounced) сохранения позиций после drag, которые ещё не
 // долетели до сервера/истории undo. Ключ -> функция, которая немедленно
@@ -173,6 +195,7 @@ function clearHighlight() {
 }
 
 export function initInteractions(cy) {
+    closeActiveContextMenu();
     // Флаг: пользователь тащит compound-узел (группу), а не отдельное устройство.
     // При перетаскивании группы Cytoscape генерирует dragfree на каждом ребёнке
     // тоже — без этого флага каждый ребёнок создал бы отдельную запись в истории
@@ -511,11 +534,9 @@ export function initInteractions(cy) {
     cy.on('boxstart', () => { window._isBulkSelecting = true; clearHighlight(); });
     cy.on('boxend',   () => { window._isBulkSelecting = false; });
         // ==================== КОНТЕКСТНОЕ МЕНЮ ====================
-    let contextMenu = null;
-
     // Создание и показ меню с абсолютными координатами
     function showContextMenu(items, mouseX, mouseY) {
-        if (contextMenu) contextMenu.remove();
+        closeActiveContextMenu();
 
         const menu = document.createElement('div');
         menu.className = 'context-menu';
@@ -559,7 +580,7 @@ export function initInteractions(cy) {
             btn.onclick = (e) => {
                 e.stopPropagation();
                 item.action();
-                if (contextMenu) contextMenu.remove();
+                closeActiveContextMenu();
             };
             btn.onmouseenter = () => btn.style.backgroundColor = 'var(--accent-color)';
             btn.onmouseleave = () => btn.style.backgroundColor = 'transparent';
@@ -568,7 +589,7 @@ export function initInteractions(cy) {
         });
 
         document.body.appendChild(menu);
-        contextMenu = menu;
+        activeContextMenu = menu;
 
         // Фокус на первый элемент
         buttons[0]?.focus();
@@ -598,15 +619,16 @@ export function initInteractions(cy) {
         // Закрыть при клике вне
         const closeHandler = (e) => {
             if (!menu.contains(e.target)) {
-                if (contextMenu) contextMenu.remove();
-                document.removeEventListener('click', closeHandler);
-                document.removeEventListener('contextmenu', closeHandler);
+                closeActiveContextMenu();
             }
         };
         const closeMenu = () => {
-            if (contextMenu) contextMenu.remove();
+            closeActiveContextMenu();
         };
-        setTimeout(() => {
+        closeContextMenuHandler = closeHandler;
+        closeContextMenuTimer = setTimeout(() => {
+            closeContextMenuTimer = null;
+            if (activeContextMenu !== menu || closeContextMenuHandler !== closeHandler) return;
             document.addEventListener('click', closeHandler);
             document.addEventListener('contextmenu', closeHandler);
         }, 10);
