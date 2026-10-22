@@ -15,8 +15,7 @@ import { registerCleanup } from './moduleRegistry.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
-let hoverTimeout = null;
-let pendingHighlight = null;
+let pendingHighlightFrame = null;
 let highlightedNodes = new Set();
 let highlightedEdges = new Set();
 let activeContextMenu = null;
@@ -134,12 +133,11 @@ function fallbackCopy(text) {
 
 // Оптимизация highlight через requestAnimationFrame
 function scheduleHighlight(node) {
-    if (pendingHighlight) return; // Уже запланировано
+    if (pendingHighlightFrame !== null) return; // Уже запланировано
 
-    pendingHighlight = true;
-    requestAnimationFrame(() => {
+    pendingHighlightFrame = requestAnimationFrame(() => {
+        pendingHighlightFrame = null;
         applyHighlight(node);
-        pendingHighlight = false;
     });
 }
 
@@ -199,8 +197,30 @@ function clearHighlight() {
     highlightedNodes.clear();
 }
 
-export function initInteractions(cy) {
+function cleanupInteractions() {
     closeActiveContextMenu();
+    if (pendingHighlightFrame !== null) {
+        cancelAnimationFrame(pendingHighlightFrame);
+        pendingHighlightFrame = null;
+    }
+    clearHighlight();
+
+    // Завершаем уже совершённые перемещения до уничтожения старого Cytoscape
+    // экземпляра. saveStateForMap не даст позднему ответу добавить их в историю
+    // новой карты.
+    flushPendingDragSaves().catch(error => {
+        console.error('Failed to flush drag saves during map cleanup:', error);
+    });
+    Object.values(dragTimeouts).forEach(clearTimeout);
+    dragTimeouts = {};
+    clearTimeout(groupBatchTimeout);
+    groupBatchTimeout = null;
+}
+
+registerCleanup(cleanupInteractions);
+
+export function initInteractions(cy) {
+    cleanupInteractions();
     // Флаг: пользователь тащит compound-узел (группу), а не отдельное устройство.
     // При перетаскивании группы Cytoscape генерирует dragfree на каждом ребёнке
     // тоже — без этого флага каждый ребёнок создал бы отдельную запись в истории
