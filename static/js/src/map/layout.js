@@ -5,11 +5,19 @@ import { boundNodePosition, getBgDimensions } from './background.js';
 import { showToast } from '../utils/toast.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 let layoutRunning = false;
+let activeCy = null;
+let activeLayout = null;
 
 export function initLayout(cy) {
-    window.applyLayout = (layoutName, direction = null) => {
+    cleanup();
+    activeCy = cy;
+    const mapId = window.currentMapId;
+
+    const applyLayout = (layoutName, direction = null) => {
+        if (activeCy !== cy || String(window.currentMapId) !== String(mapId)) return;
         if (layoutRunning) return;
         layoutRunning = true;
         const layoutOptions = {
@@ -32,13 +40,18 @@ export function initLayout(cy) {
             // Можно также указать корневой узел, если нужно (layoutOptions.roots = [...])
         }
         const layout = cy.layout(layoutOptions);
+        activeLayout = layout;
         layout.on('layoutstop', () => {
-            saveAllPositions();
+            if (activeLayout === layout) activeLayout = null;
             layoutRunning = false;
+            if (activeCy === cy && String(window.currentMapId) === String(mapId)) {
+                saveAllPositions(cy, mapId);
+            }
         });
         layout.run();
     };
-    window.confirmLayout = async (layoutName, direction = null) => {
+
+    const confirmLayout = async (layoutName, direction = null) => {
         const names = {
             grid: t('layout.grid'),
             circle: t('layout.circle'),
@@ -62,15 +75,16 @@ export function initLayout(cy) {
             confirmText: t('layout.apply'),
             variant: 'primary'
         });
-        if (confirmed) {
-            window.applyLayout(layoutName, direction);
+        if (confirmed && activeCy === cy && String(window.currentMapId) === String(mapId)) {
+            applyLayout(layoutName, direction);
         }
     };
+    window.applyLayout = applyLayout;
+    window.confirmLayout = confirmLayout;
 }
 
-async function saveAllPositions() {
-    const cy = getCy();
-    if (!cy) return;
+async function saveAllPositions(cy, mapId) {
+    if (!cy || getCy() !== cy || String(window.currentMapId) !== String(mapId)) return;
     const devices = cy.nodes().filter(n => !n.data('isGroup') && !n.data('isShape'));
     const updates = devices.map(device => {
         let pos = device.position();
@@ -87,6 +101,7 @@ async function saveAllPositions() {
     beginSelfUpdate();
     try {
         const data = await http.put('/api/devices/positions', updates);
+        if (getCy() !== cy || String(window.currentMapId) !== String(mapId)) return;
         showToast(t('toast.successTitle'), t('layout.savedPositions', { count: data.updated }), 'success');
         if (typeof window.saveState === 'function') window.saveState('Авто-раскладка');
     } catch (err) {
@@ -97,3 +112,15 @@ async function saveAllPositions() {
         if (toast && toast.hide) toast.hide();
     }
 }
+
+export function cleanup() {
+    const layout = activeLayout;
+    activeLayout = null;
+    activeCy = null;
+    layoutRunning = false;
+    if (layout) layout.stop();
+    delete window.applyLayout;
+    delete window.confirmLayout;
+}
+
+registerCleanup(cleanup);
