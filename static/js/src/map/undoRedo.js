@@ -12,7 +12,8 @@ import { registerCleanup } from './moduleRegistry.js';
 
 let history = [];
 let currentIndex = -1;
-let maxHistory = 50;
+const MAX_HISTORY = 50;
+const MAX_HISTORY_NODE_SNAPSHOTS = 250000;
 let isUndoRedo = false;
 
 export function initUndoRedo(cy) {
@@ -25,14 +26,12 @@ export function initUndoRedo(cy) {
     function saveState(description = '') {
         if (isUndoRedo) return;
 
-        // Сохраняем позиции всех узлов. Позиции групп-родителей тоже пишем (для
-        // отладки/совместимости), но при восстановлении их НЕ применяем: позиция
-        // compound-родителя производная от детей и пересчитывается Cytoscape сама.
-        // Ручное восстановление позиции группы задваивало смещение — см.
-        // подробный комментарий в restoreState().
-        const allNodes = cy.nodes();
+        // Позиции compound-групп производны от детей и при восстановлении не
+        // применяются. Не сохраняем их в каждом снимке, чтобы история меньше
+        // расходовала память на больших графах.
+        const movableNodes = cy.nodes().filter(node => !node.data('isGroup'));
         const positions = {};
-        allNodes.forEach(node => {
+        movableNodes.forEach(node => {
             const pos = node.position();
             positions[node.id()] = { x: pos.x, y: pos.y };
         });
@@ -43,7 +42,13 @@ export function initUndoRedo(cy) {
         }
 
         history.push({ positions, viewport, description });
-        if (history.length > maxHistory) history.shift();
+        const nodeCount = movableNodes.length;
+        const historyLimit = nodeCount
+            ? Math.max(2, Math.min(MAX_HISTORY, Math.floor(MAX_HISTORY_NODE_SNAPSHOTS / nodeCount)))
+            : MAX_HISTORY;
+        if (history.length > historyLimit) {
+            history.splice(0, history.length - historyLimit);
+        }
         currentIndex = history.length - 1;
 
         updateButtons();
