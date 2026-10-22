@@ -1,15 +1,18 @@
 import { t } from '../i18n/i18n.js';
 import { refreshZoomEmphasis } from './zoomEmphasis.js';
+import { registerCleanup } from './moduleRegistry.js';
 // search.js – поиск по имени/IP и фильтр по статусу
 let cy = null;
+let searchInputElement = null;
 let currentFilter = 'all';
 let searchTimeout = null;
 let lastSearchCount = -1; // для предотвращения дублирования announce
 
 export function initSearch(instance) {
+    cleanup();
     cy = instance;
-    const searchInput = document.getElementById('searchInput');
-    if (!searchInput) return;
+    searchInputElement = document.getElementById('searchInput');
+    if (!searchInputElement) return;
 
     // Создаём aria-live область для анонса результатов поиска (если ещё нет)
     let searchStatus = document.getElementById('searchStatus');
@@ -22,25 +25,30 @@ export function initSearch(instance) {
         document.body.appendChild(searchStatus);
     }
 
-    searchInput.addEventListener('input', () => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(applyFilterAndSearch, 300);
-    });
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            clearTimeout(searchTimeout);
-            applyFilterAndSearch();
-        }
-    });
+    searchInputElement.addEventListener('input', handleSearchInput);
+    searchInputElement.addEventListener('keypress', handleSearchKeypress);
     window.filterByStatus = (status) => {
         currentFilter = status;
         applyFilterAndSearch();
     };
     window.clearSearch = () => {
-        if (searchInput) searchInput.value = '';
+        if (searchInputElement) searchInputElement.value = '';
         applyFilterAndSearch();
     };
+}
+
+function handleSearchInput() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(applyFilterAndSearch, 300);
+}
+
+function handleSearchKeypress(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(searchTimeout);
+        searchTimeout = null;
+        applyFilterAndSearch();
+    }
 }
 
 function announceSearchResults(count, term) {
@@ -109,3 +117,21 @@ function applyFilterAndSearch() {
     // фиксированной рамкой из styles.js до первого скролла колёсиком.
     refreshZoomEmphasis();
 }
+
+export function cleanup() {
+    if (searchInputElement) {
+        searchInputElement.removeEventListener('input', handleSearchInput);
+        searchInputElement.removeEventListener('keypress', handleSearchKeypress);
+    }
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+        searchTimeout = null;
+    }
+    if (window.filterByStatus) delete window.filterByStatus;
+    if (window.clearSearch) delete window.clearSearch;
+    searchInputElement = null;
+    cy = null;
+    lastSearchCount = -1;
+}
+
+registerCleanup(cleanup);
