@@ -1,11 +1,14 @@
 // minimap.js — мини-карта (обзор) с фоном-планом, элементами и рамкой вьюпорта
 import { getCy } from './core.js';
 import { getBgDimensions } from './background.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 let cy = null;
 let panel = null, inner = null, bgEl = null, imgEl = null, rectEl = null;
 let visible = true;
 let refreshTimer = null;
+let detachPointerHandlers = null;
+let toggleHandler = null;
 let world = null;  // {x, y, w, h} — «мир» превью в модельных координатах
 let scale = 1;     // px мини-карты на единицу модели
 const KEY = 'minimapVisible';
@@ -15,6 +18,7 @@ const MIN_WORLD_W = 1000;
 const MIN_WORLD_H = 700;
 
 export function initMinimap(instance) {
+    cleanup();
     cy = instance;
     panel = document.getElementById('minimap');
     if (!panel) return;
@@ -58,16 +62,16 @@ export function initMinimap(instance) {
         }
     };
 
-    inner.addEventListener('pointerdown', (e) => {
+    const onPointerDown = (e) => {
         dragging = true;
         isDrag = false;
         dragStartPos = { x: e.clientX, y: e.clientY };
         inner.setPointerCapture(e.pointerId);
         navTo(e.clientX, e.clientY, false); // Мгновенно при нажатии
         e.preventDefault();
-    });
+    };
 
-    inner.addEventListener('pointermove', (e) => {
+    const onPointerMove = (e) => {
         if (!dragging) return;
 
         // Проверяем, превышено ли расстояние для drag
@@ -80,9 +84,9 @@ export function initMinimap(instance) {
         if (dragging) {
             navTo(e.clientX, e.clientY, false); // Всегда мгновенно при drag
         }
-    });
+    };
 
-    inner.addEventListener('pointerup', (e) => {
+    const onPointerUp = (e) => {
         if (!dragging) return;
         dragging = false;
 
@@ -91,14 +95,26 @@ export function initMinimap(instance) {
             navTo(e.clientX, e.clientY, true); // Анимированный переход
         }
         isDrag = false;
-    });
+    };
 
-    window.toggleMinimap = () => {
+    inner.addEventListener('pointerdown', onPointerDown);
+    inner.addEventListener('pointermove', onPointerMove);
+    inner.addEventListener('pointerup', onPointerUp);
+    inner.addEventListener('pointercancel', onPointerUp);
+    detachPointerHandlers = () => {
+        inner.removeEventListener('pointerdown', onPointerDown);
+        inner.removeEventListener('pointermove', onPointerMove);
+        inner.removeEventListener('pointerup', onPointerUp);
+        inner.removeEventListener('pointercancel', onPointerUp);
+    };
+
+    toggleHandler = () => {
         visible = !visible;
         localStorage.setItem(KEY, visible);
         applyVisibility();
         if (visible) refresh();
     };
+    window.toggleMinimap = toggleHandler;
 
     scheduleRefresh();
 }
@@ -208,3 +224,26 @@ function updateViewportRect() {
     rectEl.style.width = Math.max(0, r - l) + 'px';
     rectEl.style.height = Math.max(0, b - t) + 'px';
 }
+
+export function cleanup() {
+    if (cy) {
+        cy.off('pan zoom', updateViewportRect);
+        cy.off('add remove position', scheduleRefresh);
+    }
+    window.removeEventListener('elements:loaded', scheduleRefresh);
+    if (detachPointerHandlers) {
+        detachPointerHandlers();
+        detachPointerHandlers = null;
+    }
+    if (window.toggleMinimap === toggleHandler) delete window.toggleMinimap;
+    toggleHandler = null;
+    if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+    }
+    cy = null;
+    panel = inner = bgEl = imgEl = rectEl = null;
+    world = null;
+}
+
+registerCleanup(cleanup);
