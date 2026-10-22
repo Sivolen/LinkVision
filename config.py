@@ -1,5 +1,4 @@
 import os
-import sys
 from datetime import timedelta
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -9,18 +8,6 @@ class Config:
     BASE_DIR = BASE_DIR
 
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-me"
-
-    # Проверка SECRET_KEY в production
-    if (
-        os.environ.get("FLASK_ENV") == "production"
-        and SECRET_KEY == "dev-secret-key-change-me"
-    ):
-        print(
-            "WARNING: Using default SECRET_KEY in production! Set SECRET_KEY environment variable."
-        )
-        print(
-            "   Generate a new key: python -c 'import secrets; print(secrets.token_hex(32))'"
-        )
 
     SESSION_REFRESH_EACH_REQUEST = True
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
@@ -62,7 +49,7 @@ class Config:
     BABEL_DEFAULT_LOCALE = "ru"
     BABEL_TRANSLATION_DIRECTORIES = "translations"
 
-    VERSION = "2.2.16"
+    VERSION = "2.2.17"
     # Версия схемы меняется только при миграции БД. Она отделена от VERSION,
     # чтобы выпуск исправления без изменения таблиц не блокировал запуск уже
     # существующей SQLite-базы.

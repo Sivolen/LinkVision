@@ -76,6 +76,14 @@ from utils.logger import app_logger
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    if (
+        os.environ.get("FLASK_ENV") == "production"
+        and app.config["SECRET_KEY"] == "dev-secret-key-change-me"
+    ):
+        app_logger.warning(
+            "Для production задан стандартный SECRET_KEY. "
+            "Создайте ключ командой: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
     # Отключаем кэширование шаблонов в debug режиме
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
