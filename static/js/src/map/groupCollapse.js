@@ -214,11 +214,42 @@ export function aggregateGroupStatus(groupNode) {
  * стили тут не нужны — раньше они «залипали» после разворачивания.
  */
 function syncBubbleStatus(cy) {
-    cy.nodes('[?isGroup]').forEach(group => {
+    const groups = cy.nodes('[?isGroup]').map(group => group);
+    const statusByGroup = new Map(groups.map(group => [group.id(), 'up']));
+
+    // Сначала учитываем устройства в их непосредственных родительских группах.
+    // Фигуры и сами группы не являются мониторируемыми устройствами.
+    cy.nodes().forEach(node => {
+        if (node.data('isGroup') || node.data('isShape')) return;
+        const monitoring = node.data('monitoring_enabled');
+        if (monitoring === false || monitoring === 'false') return;
+
+        const parent = node.parent();
+        if (!parent.length || !statusByGroup.has(parent.id())) return;
+
+        const status = node.data('status');
+        const current = statusByGroup.get(parent.id());
+        if (status === 'down' || (status === 'partial' && current !== 'down')) {
+            statusByGroup.set(parent.id(), status);
+        }
+    });
+
+    // Передаём агрегаты снизу вверх. Так каждый узел группы обрабатывается один
+    // раз, а вложенные группы не повторно обходят одних и тех же потомков.
+    groups.sort((a, b) => b.ancestors().length - a.ancestors().length);
+    groups.forEach(group => {
+        const status = statusByGroup.get(group.id());
         if (isCollapsed(group)) {
-            group.data('bubbleStatus', aggregateGroupStatus(group));
+            group.data('bubbleStatus', status);
         } else if (group.data('bubbleStatus') !== undefined) {
             group.removeData('bubbleStatus');
+        }
+
+        const parent = group.parent();
+        if (!parent.length || !statusByGroup.has(parent.id())) return;
+        const parentStatus = statusByGroup.get(parent.id());
+        if (status === 'down' || (status === 'partial' && parentStatus !== 'down')) {
+            statusByGroup.set(parent.id(), status);
         }
     });
 }
