@@ -2,6 +2,7 @@
 import { getCy } from './core.js';
 import { updateBackgroundTransform, enforcePanBounds, isElementsLoaded } from './background.js';
 import { http } from '../utils/http.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 let viewportTimeout = null;
 
@@ -15,15 +16,27 @@ export function initViewport(cy) {
 
 export function saveViewportToServer() {
     const cy = getCy();
-    if (!cy) return;
+    const mapId = window.currentMapId;
+    if (!cy || !mapId) return;
     const pan = cy.pan();
     const zoom = cy.zoom();
     clearTimeout(viewportTimeout);
     viewportTimeout = setTimeout(() => {
-        http.put(`/api/map/${window.currentMapId}/viewport`, { pan_x: pan.x, pan_y: pan.y, zoom })
+        viewportTimeout = null;
+        if (String(window.currentMapId) !== String(mapId)) return;
+        http.put(`/api/map/${mapId}/viewport`, { pan_x: pan.x, pan_y: pan.y, zoom })
         .catch(err => console.debug('Viewport save failed:', err.message));
     }, 500);
 }
+
+export function cleanup() {
+    if (viewportTimeout) {
+        clearTimeout(viewportTimeout);
+        viewportTimeout = null;
+    }
+}
+
+registerCleanup(cleanup);
 
 export function withViewportRestore(callback, skipAutoFit = true) {
     const cy = getCy();
