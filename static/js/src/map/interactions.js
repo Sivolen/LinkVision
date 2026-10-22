@@ -41,6 +41,11 @@ function closeActiveContextMenu() {
 
 registerCleanup(closeActiveContextMenu);
 
+function saveStateForMap(mapId, description) {
+    if (String(window.currentMapId) !== String(mapId)) return;
+    if (typeof window.saveState === 'function') window.saveState(description);
+}
+
 // Отложенные (debounced) сохранения позиций после drag, которые ещё не
 // долетели до сервера/истории undo. Ключ -> функция, которая немедленно
 // выполняет сохранение (используется flushPendingDragSaves()).
@@ -229,13 +234,14 @@ export function initInteractions(cy) {
         updateEdgeLabelsForNode(node);
         updateEdgeCurves();
 
+        const operationMapId = window.currentMapId;
         const key = `device:${node.id()}`;
         const commitDeviceMove = () => {
             delete pendingDragSaves[key];
             beginSelfUpdate();
             return http.put(`/api/device/${node.id()}/position`, { x: Math.round(pos.x), y: Math.round(pos.y) })
             .then(() => {
-                if (typeof window.saveState === 'function') window.saveState('Перемещение устройства');
+                saveStateForMap(operationMapId, 'Перемещение устройства');
             })
             .catch(err => console.error(err))
             .finally(() => {
@@ -285,6 +291,7 @@ export function initInteractions(cy) {
         updateEdgeLabelsForNodes(movedDevices);
         updateEdgeCurves();
 
+        const operationMapId = window.currentMapId;
         const key = 'multiSelect';
         const commitGroupMove = () => {
             delete pendingDragSaves[key];
@@ -304,7 +311,7 @@ export function initInteractions(cy) {
             });
             return Promise.all(promises)
                 .then(() => {
-                    if (typeof window.saveState === 'function') window.saveState('Перемещение группы устройств');
+                    saveStateForMap(operationMapId, 'Перемещение группы устройств');
                 })
                 .catch(console.error)
                 .finally(() => endSelfUpdate());
@@ -329,6 +336,7 @@ export function initInteractions(cy) {
             }
         }
         const shapeId = parseRawId(node.id());
+        const operationMapId = window.currentMapId;
         const key = `shape:${shapeId}`;
 
         const commitShapeMove = () => {
@@ -341,7 +349,7 @@ export function initInteractions(cy) {
                 // dragfree, до debounce и до реального PUT, из-за чего
                 // история могла зафиксировать позицию, которая ещё не
                 // была (или не будет, при ошибке сети) сохранена на бэкенде.
-                if (typeof window.saveState === 'function') window.saveState('Перемещение фигуры');
+                saveStateForMap(operationMapId, 'Перемещение фигуры');
             })
             .catch(err => console.error('Error saving shape position:', err))
             .finally(() => {
@@ -390,6 +398,7 @@ export function initInteractions(cy) {
         updateEdgeCurves();
 
         const key = `group:${groupNode.id()}`;
+        const operationMapId = window.currentMapId;
         const commitGroupNodeMove = () => {
             delete pendingDragSaves[key];
             beginSelfUpdate();
@@ -403,7 +412,7 @@ export function initInteractions(cy) {
                 operation_id: operationId,
             })
             .then(response => {
-                if (typeof window.saveState === 'function') window.saveState('Перемещение группы');
+                saveStateForMap(operationMapId, 'Перемещение группы');
             })
             .catch(err => console.error('Error moving group:', err))
             .finally(() => {
