@@ -167,7 +167,7 @@ export function initMap(id) {
     if (bgEl && bgEl.dataset.background) loadBackground(bgEl.dataset.background);
     else setBackgroundLoaded(true);
 
-    const { saveState } = initUndoRedo(cy, () => mapId);
+    const { saveState } = initUndoRedo(cy);
     window.saveState = saveState;
 
     // Состояние свёрнутых групп восстанавливаем ПОСЛЕ того, как элементы реально

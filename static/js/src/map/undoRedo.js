@@ -8,13 +8,20 @@ import { flushPendingDragSaves } from './interactions.js';
 import { updateAllGroups } from './groupResize.js';
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 let history = [];
 let currentIndex = -1;
 let maxHistory = 50;
 let isUndoRedo = false;
 
-export function initUndoRedo(cy, getMapId) {
+export function initUndoRedo(cy) {
+    // initMap может повторно использовать этот модуль для другой карты.
+    // История предыдущего графа не должна применяться к новому.
+    history = [];
+    currentIndex = -1;
+    isUndoRedo = false;
+
     function saveState(description = '') {
         if (isUndoRedo) return;
 
@@ -169,3 +176,15 @@ export function initUndoRedo(cy, getMapId) {
     // Не сохраняем начальное состояние здесь – оно будет сохранено после загрузки карты
     return { saveState };
 }
+
+export function cleanup() {
+    history = [];
+    currentIndex = -1;
+    isUndoRedo = false;
+    delete window.undo;
+    delete window.redo;
+    delete window.saveState;
+    delete window.refreshUndoRedoButtons;
+}
+
+registerCleanup(cleanup);
