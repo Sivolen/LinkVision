@@ -137,14 +137,6 @@ export function initUndoRedo(cy, getMapId) {
     // редактирования (не связанного с историей отмены), не трогая саму
     // историю — см. updateEditToolsDisabledState() в lock.js.
     window.refreshUndoRedoButtons = updateButtons;
-    // Позволяет lock.js пересчитать disabled после изменения прав
-    // редактирования (не связанного с историей отмены), не трогая саму
-    // историю — см. updateEditToolsDisabledState() в lock.js.
-    window.refreshUndoRedoButtons = updateButtons;
-    // Позволяет lock.js пересчитать disabled после изменения прав
-    // редактирования (не связанного с историей отмены), не трогая саму
-    // историю — см. updateEditToolsDisabledState() в lock.js.
-    window.refreshUndoRedoButtons = updateButtons;
 
     window.undo = async () => {
         // Если только что был drag (устройства/фигуры/группы) — его сохранение
