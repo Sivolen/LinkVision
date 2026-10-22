@@ -141,6 +141,14 @@ function computeWorld() {
 
 function refresh() {
     if (!cy || !visible || !panel) return;
+    // Полный снимок cy.png() дорог на больших картах. При перетаскивании
+    // Cytoscape шлёт частые события position; откладываем снимок до отпускания
+    // узла, иначе мини-карта будет многократно растрировать весь граф во время
+    // движения группы.
+    if (cy.nodes(':grabbed').length) {
+        scheduleRefresh();
+        return;
+    }
     world = computeWorld();
     const bgUrl = getBgUrl();
     if (!world) { // ни фона, ни элементов
