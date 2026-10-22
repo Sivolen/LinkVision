@@ -98,46 +98,53 @@ const EMPHASIS_GROUPS = [
     },
 ];
 
-function clearEmphasis(n, group) {
-    n.removeStyle('border-width overlay-padding overlay-opacity');
-    n.removeData(group.dataKey);
-}
-
 function recompute() {
     const cy = getCy();
     if (!cy) return;
 
     const zoom = cy.zoom();
-
-    EMPHASIS_GROUPS.forEach((group) => {
-        const targetNodes = cy.nodes().filter(group.isTarget);
-
-        // Снимаем усиление с узлов, которым оно больше НЕ полагается: zoom вырос
-        // выше порога, или узел вышел из целевой группы (статус стал up,
-        // мониторинг выключили, узел больше не совпадает с поиском). Иначе
-        // inline-стиль "залипает" на узле, переставшем быть аварийным/найденным.
-        cy.nodes().forEach(n => {
-            if (n.data(group.dataKey) && (zoom >= ZOOM_THRESHOLD || !targetNodes.contains(n))) {
-                clearEmphasis(n, group);
-            }
-        });
-
-        if (zoom >= ZOOM_THRESHOLD || !targetNodes.length) return;
-
-        const borderWidth = clamp(group.minBorderPx / zoom, group.baseBorder, group.maxBorderGraphUnits);
-        const overlayPadding = clamp(group.minOverlayPaddingPx / zoom, group.baseOverlayPadding, group.maxOverlayPaddingGraphUnits);
-        // Чем дальше отдалились от порога — тем плотнее гало (линейно от min до max)
+    const shouldEmphasize = zoom < ZOOM_THRESHOLD;
+    const groupStyles = EMPHASIS_GROUPS.map(group => {
         const t = clamp(1 - zoom / ZOOM_THRESHOLD, 0, 1);
-        const overlayOpacity = group.minOverlayOpacity + t * (group.maxOverlayOpacity - group.minOverlayOpacity);
+        return {
+            group,
+            borderWidth: clamp(group.minBorderPx / zoom, group.baseBorder, group.maxBorderGraphUnits),
+            overlayPadding: clamp(group.minOverlayPaddingPx / zoom, group.baseOverlayPadding, group.maxOverlayPaddingGraphUnits),
+            // Чем дальше отдалились от порога — тем плотнее гало.
+            overlayOpacity: group.minOverlayOpacity + t * (group.maxOverlayOpacity - group.minOverlayOpacity),
+        };
+    });
 
-        cy.batch(() => {
-            targetNodes.forEach(n => {
-                n.data(group.dataKey, true);
-                n.style({
-                    'border-width': borderWidth,
-                    'overlay-padding': `${overlayPadding}px`,
-                    'overlay-opacity': overlayOpacity,
-                });
+    // Один проход вместо отдельного полного прохода для каждой группы. На карте
+    // с большим числом устройств это уменьшает работу при каждом изменении zoom.
+    // Стили объединяются, чтобы несколько видов подсветки одного узла не снимали
+    // друг друга в зависимости от порядка обхода.
+    cy.batch(() => {
+        cy.nodes().forEach(n => {
+            const activeStyles = [];
+            let hadEmphasis = false;
+
+            groupStyles.forEach(({ group, ...style }) => {
+                const wasEmphasized = Boolean(n.data(group.dataKey));
+                hadEmphasis = hadEmphasis || wasEmphasized;
+
+                if (shouldEmphasize && group.isTarget(n)) {
+                    n.data(group.dataKey, true);
+                    activeStyles.push(style);
+                } else if (wasEmphasized) {
+                    n.removeData(group.dataKey);
+                }
+            });
+
+            if (!activeStyles.length) {
+                if (hadEmphasis) n.removeStyle('border-width overlay-padding overlay-opacity');
+                return;
+            }
+
+            n.style({
+                'border-width': Math.max(...activeStyles.map(style => style.borderWidth)),
+                'overlay-padding': `${Math.max(...activeStyles.map(style => style.overlayPadding))}px`,
+                'overlay-opacity': Math.max(...activeStyles.map(style => style.overlayOpacity)),
             });
         });
     });
