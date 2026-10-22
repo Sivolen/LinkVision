@@ -6,6 +6,7 @@ import { registerCleanup } from './moduleRegistry.js';
 
 let cy = null;
 let currentMapId = null;
+let lockStateRequestId = 0;
 
 // Состояние блокировки хранится для каждой карты отдельно
 const mapLockStates = new Map();
@@ -17,11 +18,13 @@ let elementsLoadedHooked = false;
 // Идентифицируем именно эту вкладку, а не пользователя — иначе другая вкладка того
 // же аккаунта не увидит тост.
 let awaitingOwnLockEcho = false;
+let ownLockEchoTimer = null;
 
 /**
  * Инициализация модуля блокировки
  */
 export function initLock(instance) {
+    cleanup();
     cy = instance;
     currentMapId = window.currentMapId || null;
 
@@ -54,17 +57,23 @@ export function initLock(instance) {
 
     // Глобальная функция для переключения (вызывается из UI)
     window.toggleLock = async () => {
-        if (!currentMapId) return;
+        const mapId = currentMapId;
+        if (!mapId) return;
 
-        const currentState = mapLockStates.get(currentMapId) || false;
+        const currentState = mapLockStates.get(mapId) || false;
         const newState = !currentState;
 
         try {
             // Помечаем, что следующее событие лока — эхо моего действия (без тоста).
             // Ставим ДО запроса: эхо от сервера может прийти раньше ответа PUT.
             awaitingOwnLockEcho = true;
-            setTimeout(() => { awaitingOwnLockEcho = false; }, 4000); // fallback, если эхо не пришло
-            const data = await http.put(`/api/map/${currentMapId}/lock`, { locked: newState });
+            clearTimeout(ownLockEchoTimer);
+            ownLockEchoTimer = setTimeout(() => {
+                awaitingOwnLockEcho = false;
+                ownLockEchoTimer = null;
+            }, 4000); // fallback, если эхо не пришло
+            const data = await http.put(`/api/map/${mapId}/lock`, { locked: newState });
+            if (String(currentMapId) !== String(mapId)) return;
             // Локально применяем сразу (отзывчивость). Остальным клиентам разошлёт
             // сервер через событие map_lock_updated (см. notify_map_lock на бэке),
             // поэтому клиентский emit больше не нужен.
@@ -89,7 +98,8 @@ export function initLock(instance) {
     if (window.socket) {
         window.socket.off('map_lock_updated'); // Очищаем старый слушатель перед новым
         window.socket.on('map_lock_updated', async (data) => {
-            if (Number(data.map_id) !== Number(currentMapId)) return;
+            const eventMapId = data.map_id;
+            if (Number(eventMapId) !== Number(currentMapId)) return;
 
             mapLockStates.set(currentMapId, data.is_locked);
             window.dragLocked = data.is_locked;
@@ -103,7 +113,8 @@ export function initLock(instance) {
             // подтягиваем актуальные права отдельным запросом (как при
             // обычной загрузке страницы).
             try {
-                const perm = await http.get(`/api/map/${currentMapId}/lock`);
+                const perm = await http.get(`/api/map/${eventMapId}/lock`);
+                if (String(currentMapId) !== String(eventMapId)) return;
                 applyEditPermission(perm.can_edit);
             } catch (err) {
                 console.error('Error refreshing edit permission after lock update:', err);
@@ -114,6 +125,8 @@ export function initLock(instance) {
             // того же пользователя — тост увидит.
             if (awaitingOwnLockEcho) {
                 awaitingOwnLockEcho = false; // это эхо моего действия — гасим один раз
+                clearTimeout(ownLockEchoTimer);
+                ownLockEchoTimer = null;
             } else {
                 const who = data.username || t('common.otherUser');
                 if (data.is_locked) {
@@ -130,19 +143,31 @@ export function initLock(instance) {
  * Очистка слушателей и состояния при смене карты
  */
 export function cleanup() {
+    lockStateRequestId += 1;
     if (window.socket) {
         window.socket.off('map_lock_updated');
     }
     mapLockStates.clear();
+    cy = null;
+    currentMapId = null;
+    awaitingOwnLockEcho = false;
+    clearTimeout(ownLockEchoTimer);
+    ownLockEchoTimer = null;
     window.dragLocked = false;
+    delete window.toggleLock;
 }
 
 /**
  * Загрузить состояние блокировки карты с сервера
  */
 async function loadMapLockState(mapId) {
+    const requestId = ++lockStateRequestId;
     try {
         const data = await http.get(`/api/map/${mapId}/lock`);
+        if (
+            requestId !== lockStateRequestId
+            || String(currentMapId) !== String(mapId)
+        ) return;
         mapLockStates.set(mapId, data.is_locked);
         window.dragLocked = data.is_locked;
         applyDragLockToCanvas(data.is_locked);
