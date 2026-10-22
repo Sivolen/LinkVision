@@ -154,6 +154,10 @@ export function cleanup() {
     clearTimeout(ownLockEchoTimer);
     ownLockEchoTimer = null;
     window.dragLocked = false;
+    window.canEditMap = false;
+    window.canToggleMapLock = false;
+    updateEditToolsDisabledState(false);
+    updateLockPermissions(false);
     delete window.toggleLock;
 }
 
