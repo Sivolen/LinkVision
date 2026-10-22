@@ -62,7 +62,7 @@ def get_groups(map_id):
             f"get_groups called for map_id={map_id}, user={current_user.id}"
         )
         groups = map_service.get_map_groups(map_id)
-        api_logger.debug(f"Returning {len(groups)} groups: {groups}")
+        api_logger.debug("Returning %d groups for map_id=%d", len(groups), map_id)
         return jsonify(groups)
     except Exception as e:
         api_logger.error(f"Error fetching groups: {e}", exc_info=True)
