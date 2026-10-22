@@ -180,11 +180,17 @@ export function initMap(id) {
     window.addEventListener('elements:loaded', restoreCollapsedGroups);
     registerMapCleanup(() => window.removeEventListener('elements:loaded', restoreCollapsedGroups));
 
+    // Начальную историю фиксируем после завершения загрузки элементов, а не
+    // через фиксированный таймер: медленный ответ сервера иначе оставлял пустой
+    // снимок, и первый undo не мог восстановить исходные позиции.
+    const saveInitialState = () => {
+        if (typeof window.saveState === 'function') window.saveState('initial');
+    };
+    window.addEventListener('elements:loaded', saveInitialState, { once: true });
+    registerMapCleanup(() => window.removeEventListener('elements:loaded', saveInitialState));
+
     loadElements(mapId);
     window.__mapLoadedOnce = true;
-    if (typeof window.saveState === 'function') {
-        setTimeout(() => window.saveState('initial'), 500);
-    }
 
     // Оптимизированный batch для обновлений статусов
     let statusBatch = [];
