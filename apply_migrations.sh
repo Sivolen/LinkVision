@@ -30,13 +30,15 @@ if not os.path.isabs(path):
     path = os.path.join(Config.BASE_DIR, path)
 
 # Старый version marker не является миграцией. Сначала проверяем реальную
-# структуру, затем только после успеха продвигаем marker до версии приложения.
+# структуру, затем только после успеха продвигаем marker. Версия схемы
+# (Config.DB_SCHEMA_VERSION), а не версия выпуска: приложение при старте
+# ожидает в базе именно её.
 result = validate_sqlite_database(path, db.metadata, expected_version=None)
 if not result.valid:
     raise SystemExit(f"❌ Схема после миграций несовместима: {result.message}")
 
-mark_sqlite_schema(path, Config.VERSION)
-print(f"✅ Схема LinkVision {Config.VERSION} подтверждена.")
+mark_sqlite_schema(path, Config.DB_SCHEMA_VERSION)
+print(f"✅ Схема LinkVision {Config.DB_SCHEMA_VERSION} подтверждена.")
 PY
 
 echo "✅ Все миграции применены единым запуском."

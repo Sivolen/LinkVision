@@ -7,11 +7,11 @@ app = create_app()
 
 if __name__ == "__main__":
     os.makedirs("static/uploads/icons", exist_ok=True)
-    application = create_app()
-    # Используем настройку DEBUG из конфигурации
-    debug_mode = application.config["DEBUG"]
+    # Второй create_app() переинициализировал бы фоновый монитор
+    # ("Monitor is running") и расширения: используем уже созданное приложение.
+    debug_mode = app.config["DEBUG"]
     socketio.run(
-        application,
+        app,
         debug=debug_mode,
         use_reloader=False,
         port=5000,
