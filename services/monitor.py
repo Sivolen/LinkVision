@@ -639,7 +639,10 @@ def monitor_loop():
                         continue
                     except Exception as e:
                         monitor_logger.error(f"Error checking device {dev_id}: {e}")
-                        results.append((dev_id, "down", {}))
+                        # Ошибка worker — это ошибка измерения, а не доказательство
+                        # недоступности устройства. Пропускаем его в этом цикле,
+                        # чтобы не записать ложный down и не создать outage event.
+                        continue
 
             # ---- ОБРАБОТКА ИЗМЕНЕНИЙ ----
             current_time = time.time()
