@@ -48,18 +48,12 @@ export function updateAllGroups() {
         const cy = getCy();
         if (!cy) return;
         
-        // Обновляем все группы
-        cy.nodes('node[isGroup]').forEach(group => {
-            // Сначала сбрасываем размер
-            group.style('width', null);
-            group.style('height', null);
-            // Затем принудительно вызываем обновление стиля
-            group.emit('style');
+        // Обновляем размеры групп одной пакетной операцией. Стили и размеры
+        // обычных узлов не менялись, поэтому глобальный style().update() и
+        // resize() здесь только повторно пересчитывали весь граф и viewport.
+        cy.batch(() => {
+            cy.nodes('node[isGroup]').forEach(updateGroupSize);
         });
-        
-        // Принудительный пересчет layout
-        cy.style().update();
-        cy.resize();
         
         groupUpdateTimeout = null;
     }, GROUP_UPDATE_DELAY);
@@ -78,16 +72,14 @@ export function forceUpdateAllGroups() {
     
     // Рекурсивно обновляем все группы и их родителей
     const groups = cy.nodes('[isGroup]');
-    groups.forEach(g => {
-        // Сбрасываем размер
-        g.style('width', null);
-        g.style('height', null);
-        // Обновляем позицию (триггерит пересчёт)
-        g.position(g.position());
+    cy.batch(() => {
+        groups.forEach(g => {
+            updateGroupSize(g);
+            // Обновляем позицию (триггерит пересчёт compound-границ).
+            g.position(g.position());
+        });
     });
-    
-    cy.style().update();
-    cy.resize();
+
     console.log(`🔄 Force updated ${groups.length} groups`);
 }
 
