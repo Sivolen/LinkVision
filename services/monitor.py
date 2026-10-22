@@ -537,21 +537,10 @@ def monitor_loop():
                     },
                 )
 
-            # ---- ОТПРАВКА ВСЕХ ПРОВЕРОК В ПУЛ ОДНИМ ПОТОКОМ ЗАДАЧ ----
-            # Раньше устройства резались на батчи по 50 с барьером: следующий
-            # батч не сабмитился в пул, пока СВЕСЬ текущий не завершится
-            # через as_completed. Down/недоступное устройство блокируется у
-            # ping3 почти на ping_timeout на КАЖДЫЙ из ping_count пакетов
-            # (сериализация внутри _check_device) — то есть ~4с при timeout=1с
-            # и 4 пакетах. Если в батче из 50 попадался хотя бы один такой
-            # хост, весь батч ждал эти ~4с, и ВСЕ уже свободные воркеры
-            # простаивали: новая работа не сабмитилась, пока не закроется
-            # текущий батч. На инсталляциях с тысячами устройств и даже
-            # небольшим % недоступных это удлиняло цикл в разы относительно
-            # ping_interval, и мониторинг начинал постоянно отставать от
-            # расписания. Сабмитим все проверки сразу — пул сам держит себя
-            # загруженным по _compute_max_workers(), простоев между
-            # "батчами" больше нет.
+            # ---- ОТПРАВКА ПРОВЕРОК В ПУЛ С ОГРАНИЧЕННОЙ ОЧЕРЕДЬЮ ----
+            # Поддерживаем окно незавершённых задач размером с пул: свободные
+            # потоки сразу получают следующую проверку, но для тысяч устройств
+            # не создаются тысячи Future и не заполняется неограниченная очередь.
             all_device_checks = _build_device_checks(devices, device_ips, ping_count)
 
             # _compute_max_workers() может сходить в БД (промах 2-секундного
@@ -591,44 +580,66 @@ def monitor_loop():
                 monitor_logger.error("Monitor executor disappeared before submit")
                 break
 
-            for dev_id, ips, pcnt in all_device_checks:
-                if _monitor_stop_event.is_set():
-                    break
-                try:
-                    future = executor.submit(_tracked_check, dev_id, ips, pcnt)
-                    futures[future] = dev_id
-                except RuntimeError as e:
-                    monitor_logger.error(
-                        f"Failed to submit check for device {dev_id}: {e}"
-                    )
-                    if _monitor_stop_event.is_set():
-                        break
-                    # Executor failure unrelated to shutdown: recreate it once
-                    # and continue with the remaining devices.
-                    with _lock:
-                        try:
-                            if _executor is not None:
-                                _executor.shutdown(wait=False)
-                        except Exception:
-                            pass
+            next_check = 0
+            max_pending = max(1, _executor_worker_count)
+            while next_check < len(all_device_checks) or futures:
+                while (
+                    next_check < len(all_device_checks)
+                    and len(futures) < max_pending
+                    and not _monitor_stop_event.is_set()
+                ):
+                    dev_id, ips, pcnt = all_device_checks[next_check]
+                    next_check += 1
+                    try:
+                        future = executor.submit(_tracked_check, dev_id, ips, pcnt)
+                        futures[future] = dev_id
+                    except RuntimeError as e:
+                        monitor_logger.error(
+                            f"Failed to submit check for device {dev_id}: {e}"
+                        )
+                        if _monitor_stop_event.is_set():
+                            break
+                        # Executor failure unrelated to shutdown: recreate it
+                        # and continue with the remaining devices.
                         max_workers = _compute_max_workers()
-                        _executor = concurrent.futures.ThreadPoolExecutor(
-                            max_workers=max_workers
-                        )
-                        _executor_worker_count = max_workers
-                        executor = _executor
-                        monitor_logger.info(
-                            f"Executor recreated after error with {max_workers} workers"
-                        )
+                        with _lock:
+                            try:
+                                if _executor is not None:
+                                    _executor.shutdown(wait=False)
+                            except Exception:
+                                pass
+                            _executor = concurrent.futures.ThreadPoolExecutor(
+                                max_workers=max_workers
+                            )
+                            _executor_worker_count = max_workers
+                            executor = _executor
+                            max_pending = max_workers
+                            monitor_logger.info(
+                                f"Executor recreated after error with {max_workers} workers"
+                            )
 
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    dev_id, new_status, metrics = future.result()
-                    results.append((dev_id, new_status, metrics))
-                except Exception as e:
-                    dev_id = futures.get(future, "unknown")
-                    monitor_logger.error(f"Error checking device {dev_id}: {e}")
-                    results.append((dev_id, "down", {}))
+                if not futures:
+                    if (
+                        next_check < len(all_device_checks)
+                        and not _monitor_stop_event.is_set()
+                    ):
+                        continue
+                    break
+
+                completed, _ = concurrent.futures.wait(
+                    futures, return_when=concurrent.futures.FIRST_COMPLETED
+                )
+                for future in completed:
+                    dev_id = futures.pop(future)
+                    try:
+                        result_id, new_status, metrics = future.result()
+                        results.append((result_id, new_status, metrics))
+                    except concurrent.futures.CancelledError:
+                        # Stop/restart cancellation is not a failed device check.
+                        continue
+                    except Exception as e:
+                        monitor_logger.error(f"Error checking device {dev_id}: {e}")
+                        results.append((dev_id, "down", {}))
 
             # ---- ОБРАБОТКА ИЗМЕНЕНИЙ ----
             current_time = time.time()
