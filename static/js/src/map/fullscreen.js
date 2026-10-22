@@ -1,13 +1,27 @@
 // fullscreen.js – полноэкранный режим
 import { fitImageToView } from './background.js';
+import { registerCleanup } from './moduleRegistry.js';
+
+let exitButton = null;
+
+function handleFullscreenChange() {
+    if (!document.fullscreenElement) exitFullscreen();
+}
 
 export function initFullscreen() {
+    cleanup();
     // Не навешиваем слушатель на fullscreenBtn, так как используется onclick в HTML
-    const exitBtn = document.getElementById('exitFullscreenBtn');
-    if (exitBtn) exitBtn.addEventListener('click', exitFullscreen);
-    document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement) exitFullscreen();
-    });
+    exitButton = document.getElementById('exitFullscreenBtn');
+    if (exitButton) exitButton.addEventListener('click', exitFullscreen);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+}
+
+export function cleanup() {
+    if (exitButton) {
+        exitButton.removeEventListener('click', exitFullscreen);
+        exitButton = null;
+    }
+    document.removeEventListener('fullscreenchange', handleFullscreenChange);
 }
 
 function toggleFullscreen() {
@@ -57,3 +71,5 @@ function exitFullscreen() {
 // Глобальные функции для вызова из HTML
 window.toggleFullscreen = toggleFullscreen;
 window.exitFullscreen = exitFullscreen;
+
+registerCleanup(cleanup);
