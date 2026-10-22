@@ -1,5 +1,4 @@
 // minimap.js — мини-карта (обзор) с фоном-планом, элементами и рамкой вьюпорта
-import { getCy } from './core.js';
 import { getBgDimensions } from './background.js';
 import { registerCleanup } from './moduleRegistry.js';
 
