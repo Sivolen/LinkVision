@@ -249,9 +249,9 @@ def settings():
                 admin_logger.error(f"Error updating settings: {e}")
                 flash(_("Ошибка при сохранении настроек"))
             return redirect(url_for("admin.settings"))
-        elif "restore_backup" in request.form:
+        if "restore_backup" in request.form:
             return restore_backup_action()
-        elif "reset_rate_limit" in request.form:
+        if "reset_rate_limit" in request.form:
             rate_limiter.reset_all()
             flash(_("Счётчики rate limit успешно сброшены"), "success")
             return redirect(url_for("admin.settings"))
