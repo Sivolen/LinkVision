@@ -12,6 +12,7 @@ import time
 import re
 import uuid
 import threading
+import heapq
 from typing import Callable, Dict, Optional, Tuple
 from collections import defaultdict
 from functools import wraps
@@ -43,6 +44,8 @@ class RateLimiter:
     def __init__(self, redis_client=None):
         # Хранилище: {key: [(timestamp, count)]}
         self._storage: Dict[str, list] = defaultdict(list)
+        self._storage_expiry: Dict[str, float] = {}
+        self._expiry_heap = []
         self._lock_counts: Dict[str, int] = defaultdict(int)
         self._storage_lock = threading.RLock()
         self._redis = redis_client
@@ -79,6 +82,15 @@ class RateLimiter:
             "Redis rate limiter is unavailable (%s); using the in-memory fallback for 60 seconds",
             type(error).__name__,
         )
+
+    def _purge_expired_local_keys(self, now: float) -> None:
+        """Remove expired in-memory counters without scanning every key."""
+        while self._expiry_heap and self._expiry_heap[0][0] <= now:
+            expiry, key = heapq.heappop(self._expiry_heap)
+            if self._storage_expiry.get(key) != expiry:
+                continue
+            self._storage_expiry.pop(key, None)
+            self._storage.pop(key, None)
 
     def is_rate_limited(
         self, key: str, max_requests: int = 10, window_seconds: int = 60
@@ -132,18 +144,24 @@ class RateLimiter:
         # In-memory implementation (single worker)
         with self._storage_lock:
             now = time.time()
+            self._purge_expired_local_keys(now)
             window_start = now - window_seconds
 
             # Очистить старые записи
             self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
             if not self._storage[key]:
                 self._storage.pop(key, None)
+                self._storage_expiry.pop(key, None)
 
             # Проверить лимит и записать запрос как одну атомарную операцию.
             if len(self._storage[key]) >= max_requests:
                 return True
 
             self._storage[key].append(now)
+            expiry = now + window_seconds
+            if expiry > self._storage_expiry.get(key, 0):
+                self._storage_expiry[key] = expiry
+                heapq.heappush(self._expiry_heap, (expiry, key))
             return False
 
     def get_remaining_requests(
@@ -166,11 +184,13 @@ class RateLimiter:
 
         with self._storage_lock:
             now = time.time()
+            self._purge_expired_local_keys(now)
             window_start = now - window_seconds
             self._storage[key] = [ts for ts in self._storage[key] if ts > window_start]
             remaining = max(0, max_requests - len(self._storage[key]))
             if not self._storage[key]:
                 self._storage.pop(key, None)
+                self._storage_expiry.pop(key, None)
             return remaining
 
     def get_retry_after(self, key: str, window_seconds: int = 60) -> int:
@@ -195,10 +215,12 @@ class RateLimiter:
 
         with self._storage_lock:
             now = time.time()
+            self._purge_expired_local_keys(now)
             window_start = now - window_seconds
             timestamps = [ts for ts in self._storage.get(key, []) if ts > window_start]
             if not timestamps:
                 self._storage.pop(key, None)
+                self._storage_expiry.pop(key, None)
                 return 0
             self._storage[key] = timestamps
             return max(1, int(timestamps[0] + window_seconds - now + 0.999))
@@ -214,6 +236,7 @@ class RateLimiter:
                 self._disable_redis(error)
         with self._storage_lock:
             self._storage.pop(key, None)
+            self._storage_expiry.pop(key, None)
 
     def reset_all(self) -> None:
         """Сбросить все rate limit счётчики."""
@@ -228,6 +251,8 @@ class RateLimiter:
                 self._disable_redis(error)
         with self._storage_lock:
             self._storage.clear()
+            self._storage_expiry.clear()
+            self._expiry_heap.clear()
             self._lock_counts.clear()
 
     def lock_account(self, key: str, max_attempts: int = 5) -> None:
