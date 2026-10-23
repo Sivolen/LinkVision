@@ -423,11 +423,18 @@ def update_devices_positions():
     if not valid_updates:
         return jsonify({"error": "No valid updates"}), 400
 
-    device_maps = dict(
-        db.session.query(Device.id, Device.map_id)
-        .filter(Device.id.in_(seen_ids))
-        .all()
-    )
+    # Keep each IN clause below SQLite's bind-parameter limit so dragging
+    # a large group does not fail before the realtime event is broadcast.
+    device_ids = sorted(seen_ids)
+    device_maps = {}
+    query_batch_size = 500
+    for start in range(0, len(device_ids), query_batch_size):
+        batch_ids = device_ids[start : start + query_batch_size]
+        device_maps.update(
+            db.session.query(Device.id, Device.map_id)
+            .filter(Device.id.in_(batch_ids))
+            .all()
+        )
     if len(device_maps) != len(seen_ids):
         return jsonify({"error": "One or more devices were not found"}), 404
 
