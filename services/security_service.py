@@ -22,8 +22,6 @@ from flask import (
     current_app,
     has_app_context,
     render_template,
-    redirect,
-    url_for,
 )
 from flask_login import current_user
 from utils.logger import app_logger

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compatibility entrypoint; migration logic lives in migrate_db.py."""
 
-from migrate_db import _add_ordering_columns, _db_path
+from migrate_db import _add_ordering_columns
 from sqlalchemy import create_engine
 
 

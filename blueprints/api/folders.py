@@ -13,7 +13,6 @@ from services import (
     log_action,
 )
 from services.permissions import can_delete_map, _get_user_folder_role
-from utils.logger import api_logger
 
 folders_bp = Blueprint("folders", __name__)
 
