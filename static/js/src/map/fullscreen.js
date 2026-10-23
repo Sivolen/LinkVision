@@ -1,11 +1,37 @@
 // fullscreen.js – полноэкранный режим
 import { fitImageToView } from './background.js';
 import { registerCleanup } from './moduleRegistry.js';
+import { getCy } from './core.js';
 
 let exitButton = null;
 
 function handleFullscreenChange() {
-    if (!document.fullscreenElement) exitFullscreen();
+    const active = Boolean(document.fullscreenElement);
+    setFullscreenLayout(active);
+    resizeMap(active);
+}
+
+function setFullscreenLayout(active) {
+    document.getElementById('sidebar')?.classList.toggle('fullscreen-hidden', active);
+    document.querySelector('.toolbar-shell')?.classList.toggle('fullscreen-hidden', active);
+    document.querySelector('.mobile-menu-toggle')?.classList.toggle('fullscreen-hidden', active);
+    document.querySelector('.map-container')?.classList.toggle('fullscreen-map', active);
+
+    const exitBtn = document.getElementById('exitFullscreenBtn');
+    if (exitBtn) exitBtn.style.display = active ? 'flex' : 'none';
+    const fullBtn = document.getElementById('fullscreenBtn');
+    if (fullBtn) fullBtn.innerHTML = `<i class="fas fa-${active ? 'compress' : 'expand'}"></i>`;
+}
+
+function resizeMap(fit = false) {
+    // Fullscreen changes the map container's dimensions after the browser's
+    // fullscreen transition. Cytoscape must recalculate its renderer size first.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const cy = getCy();
+        if (!cy) return;
+        cy.resize();
+        if (fit) fitImageToView();
+    }));
 }
 
 export function initFullscreen() {
@@ -39,17 +65,8 @@ function enterFullscreen() {
             console.warn(`Fullscreen error: ${err.message}`);
         });
     }
-    document.getElementById('sidebar')?.classList.add('fullscreen-hidden');
-    document.querySelector('.toolbar')?.classList.add('fullscreen-hidden');
-    document.querySelector('.mobile-menu-toggle')?.classList.add('fullscreen-hidden');
-    const exitBtn = document.getElementById('exitFullscreenBtn');
-    if (exitBtn) exitBtn.style.display = 'flex';
-    const fullBtn = document.getElementById('fullscreenBtn');
-    if (fullBtn) fullBtn.innerHTML = '<i class="fas fa-compress"></i>';
-    document.querySelector('.map-container')?.classList.add('fullscreen-map');
-    
-    // Центрируем карту при входе в полноэкранный режим
-    setTimeout(() => fitImageToView(), 100);
+    setFullscreenLayout(true);
+    resizeMap(true);
 }
 
 function exitFullscreen() {
@@ -58,14 +75,8 @@ function exitFullscreen() {
             console.warn(`Exit fullscreen error: ${err.message}`);
         });
     }
-    document.getElementById('sidebar')?.classList.remove('fullscreen-hidden');
-    document.querySelector('.toolbar')?.classList.remove('fullscreen-hidden');
-    document.querySelector('.mobile-menu-toggle')?.classList.remove('fullscreen-hidden');
-    const exitBtn = document.getElementById('exitFullscreenBtn');
-    if (exitBtn) exitBtn.style.display = 'none';
-    const fullBtn = document.getElementById('fullscreenBtn');
-    if (fullBtn) fullBtn.innerHTML = '<i class="fas fa-expand"></i>';
-    document.querySelector('.map-container')?.classList.remove('fullscreen-map');
+    setFullscreenLayout(false);
+    resizeMap();
 }
 
 // Глобальные функции для вызова из HTML
