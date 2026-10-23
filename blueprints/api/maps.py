@@ -162,23 +162,24 @@ def update_map(map_id):
     remove_background = data.get("remove_background") == "true"
 
     # Обработка загрузки нового фона
-    if "background" in request.files:
-        file = request.files["background"]
-        if file and file.filename:
-            upload_folder = os.path.join(
-                current_app.root_path, "static", "uploads", "maps"
-            )
-            os.makedirs(upload_folder, exist_ok=True)
-            saved_name = safe_save_upload(file, upload_folder, prefix=f"map_{map_id}_")
-            if saved_name:
-                background_filename = saved_name
-                # Удаляем старый фон
-                if map_obj.background_image:
-                    old_path = os.path.join(upload_folder, map_obj.background_image)
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-            else:
-                return jsonify({"error": "Недопустимый файл"}), 400
+    background_file = request.files.get("background")
+    if background_file and background_file.filename:
+        upload_folder = os.path.join(
+            current_app.root_path, "static", "uploads", "maps"
+        )
+        os.makedirs(upload_folder, exist_ok=True)
+        saved_name = safe_save_upload(
+            background_file, upload_folder, prefix=f"map_{map_id}_"
+        )
+        if not saved_name:
+            return jsonify({"error": "Недопустимый файл"}), 400
+
+        background_filename = saved_name
+        # Удаляем старый фон только после того, как новый файл успешно сохранён.
+        if map_obj.background_image:
+            old_path = os.path.join(upload_folder, map_obj.background_image)
+            if os.path.exists(old_path):
+                os.remove(old_path)
 
     try:
         map_service.update_map_details(
