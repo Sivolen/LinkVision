@@ -9,6 +9,7 @@ let refreshTimer = null;
 let detachPointerHandlers = null;
 let toggleHandler = null;
 let resizeObserver = null;
+let snapshotRetryCount = 0;
 let world = null;  // {x, y, w, h} — «мир» превью в модельных координатах
 let scale = 1;     // px мини-карты на единицу модели
 const KEY = 'minimapVisible';
@@ -137,7 +138,21 @@ function applyVisibility() {
 function scheduleRefresh() {
     if (!visible) return;
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(refresh, 250);
+    refreshTimer = setTimeout(() => {
+        refreshTimer = null;
+        // Даём Cytoscape закончить текущий кадр после загрузки/изменения графа.
+        // Иначе первый cy.png() может снять ещё не готовый canvas.
+        requestAnimationFrame(() => requestAnimationFrame(refresh));
+    }, 250);
+}
+
+function retrySnapshot() {
+    if (!visible || !cy || snapshotRetryCount >= 4) return;
+    snapshotRetryCount += 1;
+    refreshTimer = setTimeout(() => {
+        refreshTimer = null;
+        refresh();
+    }, 250 * snapshotRetryCount);
 }
 
 // URL фонового плана из #cy-background (если есть)
@@ -199,8 +214,15 @@ function refresh() {
     if (els.length) {
         const eb = els.boundingBox();
         try {
+            cy.forceRender();
             imgEl.src = cy.png({ full: true, bg: 'transparent', maxWidth: iw * 2, maxHeight: ih * 2 });
-        } catch (e) { /* ignore */ }
+            snapshotRetryCount = 0;
+        } catch (error) {
+            // На первом кадре рендерер/иконки ещё могут быть не готовы.
+            // Повторяем автоматически, вместо ожидания ручного toggle.
+            console.warn('Minimap snapshot failed; retrying.', error);
+            retrySnapshot();
+        }
         imgEl.style.display = 'block';
         imgEl.style.left = ((eb.x1 - world.x) * scale) + 'px';
         imgEl.style.top = ((eb.y1 - world.y) * scale) + 'px';
@@ -254,6 +276,7 @@ export function cleanup() {
         clearTimeout(refreshTimer);
         refreshTimer = null;
     }
+    snapshotRetryCount = 0;
     cy = null;
     panel = inner = bgEl = imgEl = rectEl = null;
     world = null;
