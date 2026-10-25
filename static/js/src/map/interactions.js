@@ -19,6 +19,7 @@ let pendingHighlightFrame = null;
 let highlightAnimationFrame = null;
 let highlightAnimationStartedAt = 0;
 let activeHighlightNodeId = null;
+let hoveredNodeId = null;
 let lastHighlightFrameAt = 0;
 let highlightedNodes = new Set();
 let highlightedEdges = new Set();
@@ -300,6 +301,7 @@ function cleanupInteractions() {
         pendingHighlightFrame = null;
     }
     clearHighlight();
+    hoveredNodeId = null;
 
     // Завершаем уже совершённые перемещения до уничтожения старого Cytoscape
     // экземпляра. saveStateForMap не даст позднему ответу добавить их в историю
@@ -630,6 +632,7 @@ export function initInteractions(cy) {
         if (window._isBulkSelecting) return;   // ← подавляем во время рамки
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
+        hoveredNodeId = node.id();
         if (activeHighlightNodeId !== null && activeHighlightNodeId !== node.id()) {
             clearHighlight();
         }
@@ -642,6 +645,10 @@ export function initInteractions(cy) {
 
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
+        // При быстром переходе событий mouseover нового узла и mouseout
+        // предыдущего могут прийти в обратном порядке. Не очищаем новый hover.
+        if (hoveredNodeId !== node.id()) return;
+        hoveredNodeId = null;
         clearHighlight();
     };
 
@@ -650,7 +657,7 @@ export function initInteractions(cy) {
         if (window.isOperator) return;
         if (evt.originalEvent.buttons) return; // Не очищать при drag
         const node = evt.target;
-        if (!node || node === cy) {
+        if ((!node || node === cy) && hoveredNodeId === null) {
             clearHighlight();
         }
     });
