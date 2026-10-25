@@ -1,5 +1,6 @@
 // base.js - глобальные функции для всех страниц
 let connectionToast = null;
+let connectionToastTimer = null;
 let wasDisconnected = false;
 
 (function() {
@@ -1152,14 +1153,102 @@ let wasDisconnected = false;
     if (window.currentUserId !== undefined && window.currentUserId !== null) {
         (function initGlobalSocket() {
             if (window.socket) return;
+
+            const versionReloadKey = 'linkvision-version-reload-target';
+            let versionCheckInFlight = null;
+            let versionReloadScheduled = false;
+
+            const checkServerVersion = () => {
+                if (versionCheckInFlight) return versionCheckInFlight;
+
+                versionCheckInFlight = (async () => {
+                    try {
+                        // Relative URL keeps this request on the public HTTPS
+                        // origin in deployments where Nginx proxies to localhost.
+                        const response = await fetch('/api/app-version', {
+                            method: 'GET',
+                            credentials: 'same-origin',
+                            cache: 'no-store',
+                            headers: { 'Accept': 'application/json' }
+                        });
+
+                        if (response.redirected) {
+                            window.location.assign(response.url);
+                            return;
+                        }
+                        if (!response.ok) return;
+
+                        const contentType = response.headers.get('content-type') || '';
+                        if (!contentType.includes('application/json')) return;
+
+                        const data = await response.json();
+                        const serverVersion = String(data.version || '');
+                        const pageVersion = String(window.appVersion || '');
+                        if (!serverVersion || !pageVersion) return;
+
+                        if (serverVersion === pageVersion) {
+                            try { sessionStorage.removeItem(versionReloadKey); } catch (error) {}
+                            return;
+                        }
+                        if (versionReloadScheduled) return;
+
+                        let previousTarget = '';
+                        try { previousTarget = sessionStorage.getItem(versionReloadKey) || ''; } catch (error) {}
+                        if (previousTarget === serverVersion) {
+                            showToast(
+                                t('connection.updateTitle'),
+                                t('connection.updateStuckMsg'),
+                                'info',
+                                { autoHide: false }
+                            );
+                            return;
+                        }
+
+                        try { sessionStorage.setItem(versionReloadKey, serverVersion); } catch (error) {}
+                        versionReloadScheduled = true;
+                        showToast(
+                            t('connection.updateTitle'),
+                            t('connection.updateMsg', { version: serverVersion }),
+                            'info',
+                            { autoHide: false }
+                        );
+                        window.setTimeout(() => window.location.reload(), 1200);
+                    } catch (error) {
+                        Logger.debug('App version check failed:', error);
+                    }
+                })();
+
+                return versionCheckInFlight.finally(() => {
+                    versionCheckInFlight = null;
+                });
+            };
+
+            const markConnectionLost = () => {
+                if (connectionToastTimer) {
+                    window.clearTimeout(connectionToastTimer);
+                    connectionToastTimer = null;
+                }
+                updateBackendStatus(false);
+                if (!wasDisconnected) {
+                    connectionToast = showToast(t('connection.lostTitle'), t('connection.lostMsg'), 'error', { autoHide: false });
+                }
+                wasDisconnected = true;
+            };
+
+            // No host override: the browser connects to this page's public
+            // origin. HTTPS therefore uses WSS through the existing Nginx
+            // /socket.io/ proxy, never the backend's private localhost address.
             window.socket = io({
                 reconnection: true,
-                reconnectionDelay: 5000,
-                reconnectionDelayMax: 10000,
-                reconnectionAttempts: 5
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 30000,
+                randomizationFactor: 0.5,
+                timeout: 20000
             });
             window.socket.on('connect', () => {
                 if (window.debugMode) Logger.info('Socket connected (global)');
+                checkServerVersion();
                 if (window.currentMapId) {
                     window.socket.emit('join_room', `map_${window.currentMapId}`);
                     // `connect` fires both on the initial connection and after a
@@ -1171,23 +1260,34 @@ let wasDisconnected = false;
                 }
                 updateBackendStatus(true);
                 if (wasDisconnected) {
-                    if (connectionToast) connectionToast.hide();
                     connectionToast = showToast(t('connection.restoredTitle'), t('connection.restoredMsg'), 'success', { autoHide: 3000 });
                     wasDisconnected = false;
+                    if (connectionToast) {
+                        const restoredToast = connectionToast;
+                        connectionToastTimer = window.setTimeout(() => {
+                            if (connectionToast === restoredToast && !wasDisconnected) {
+                                restoredToast.hide();
+                                connectionToast = null;
+                            }
+                            connectionToastTimer = null;
+                        }, 3000);
+                    }
                 }
             });
             window.socket.on('disconnect', (reason) => {
                 Logger.debug('Socket disconnected (global):', reason);
-                updateBackendStatus(false);
-                if (!connectionToast) {
-                    connectionToast = showToast(t('connection.lostTitle'), t('connection.lostMsg'), 'error', { autoHide: false });
-                    wasDisconnected = true;
-                }
+                markConnectionLost();
             });
             window.socket.on('connect_error', (error) => {
                 Logger.warn('Socket connection error:', error);
-                updateBackendStatus(false);
+                markConnectionLost();
             });
+
+            // Start with a version check and keep long-running displays current.
+            checkServerVersion();
+            window.setInterval(() => {
+                if (document.visibilityState === 'visible') checkServerVersion();
+            }, 60 * 1000);
 
             // Ресинк по возврату вкладки в фокус — не только по socket
             // 'reconnect'. Socket.IO переподключается только если формально
@@ -1201,10 +1301,26 @@ let wasDisconnected = false;
             // при возврате на вкладку просто просим текущее состояние карты
             // заново, независимо от того, считает ли сокет себя живым.
             document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible' && window.currentMapId && window.socket && window.socket.connected) {
+                if (document.visibilityState !== 'visible') return;
+                checkServerVersion();
+                if (!window.socket) return;
+
+                if (!window.socket.connected && !window.socket.active) {
+                    window.socket.connect();
+                    return;
+                }
+                if (window.currentMapId && window.socket.connected) {
                     window.socket.emit('request_status', { map_id: window.currentMapId });
                 }
             });
+
+            window.addEventListener('online', () => {
+                checkServerVersion();
+                if (window.socket && !window.socket.connected && !window.socket.active) {
+                    window.socket.connect();
+                }
+            });
+            window.addEventListener('offline', markConnectionLost);
         })();
     }
 })();

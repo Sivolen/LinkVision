@@ -273,6 +273,17 @@ def create_app():
             "js_i18n": js_i18n_payload(locale),
         }
 
+    @app.route("/api/app-version", methods=["GET"])
+    @login_required
+    def get_app_version():
+        response = jsonify(version=Config.VERSION)
+        response.headers["Cache-Control"] = (
+            "no-store, no-cache, must-revalidate, max-age=0"
+        )
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template("404.html", hide_sidebar=True), 404

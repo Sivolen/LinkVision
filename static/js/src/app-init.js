@@ -53,6 +53,7 @@
     window.isAdmin = body.dataset.isAdmin === 'true';
     window.isOperator = body.dataset.isOperator === 'true';
     window.debugMode = body.dataset.debugMode === 'true';
+    window.appVersion = body.dataset.appVersion || '';
 
     // Карта: data-map-id может быть установлен позже (в map_view.html)
     var mapId = body.dataset.mapId;
