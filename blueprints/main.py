@@ -25,6 +25,18 @@ from utils.logger import main_logger
 main_bp = Blueprint("main", __name__)
 
 
+@main_bp.route("/api/app-version")
+@login_required
+def app_version():
+    response = jsonify(version=current_app.config["VERSION"])
+    response.headers["Cache-Control"] = (
+        "no-store, no-cache, must-revalidate, max-age=0"
+    )
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 @main_bp.route("/health")
 def health_check():
     """
