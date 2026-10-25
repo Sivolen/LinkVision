@@ -1931,6 +1931,11 @@ modal-header,
   background: var(--bg-secondary);
 }
 
+.color-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
 .color-box {
   width: 28px;
   height: 28px;
@@ -1940,7 +1945,7 @@ modal-header,
   flex-shrink: 0;
 }
 
-.color-btn #colorCode {
+.color-btn .color-code {
   flex: 1;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.875rem;
@@ -1971,6 +1976,26 @@ modal-header,
   z-index: 9999;
 }
 
+.color-picker-simple--dropup .color-panel {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+.color-picker-simple--compact .color-btn {
+  height: 31px;
+  gap: 0.5rem;
+  padding: 0 0.5rem;
+  border-width: 1px;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.color-picker-simple--compact .color-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+
 .color-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1992,6 +2017,11 @@ modal-header,
   transform: scale(1.1);
   border-color: rgba(255,255,255,0.8);
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.color-swatch:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 3px;
 }
 
 .color-swatch.active {

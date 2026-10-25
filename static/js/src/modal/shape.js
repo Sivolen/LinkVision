@@ -9,12 +9,14 @@ import { reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 import { parseRawId } from '../map/ids.js';
+import { initColorPicker as initSharedColorPicker } from './colorPicker.js';
 
 // Переменные модуля
 let shapeModal = null;
 let currentShapeId = null;
 let shapeEditX = null;
 let shapeEditY = null;
+let setShapeColor = null;
 
 /**
  * Открыть модальное окна фигуры
@@ -46,7 +48,7 @@ export function openShapeModal(shapeNode = null) {
         typeSelect.value = shapeNode.data('shape_type');
         widthInput.value = shapeNode.data('width');
         heightInput.value = shapeNode.data('height');
-        colorInput.value = shapeNode.data('color');
+        colorInput.value = shapeNode.data('color') || '#3498db';
         opacityInput.value = shapeNode.data('opacity');
         descriptionInput.value = shapeNode.data('description') || '';
         deleteBtn.style.display = 'inline-block';
@@ -54,12 +56,7 @@ export function openShapeModal(shapeNode = null) {
         fontSizeInput.value = shapeNode.data('fontSize') || 12;
 
         // Обновляем превью цвета
-        const colorPreview = document.getElementById('shapeColorPreview');
-        const colorCode = document.getElementById('shapeColorCode');
-        if (colorPreview && colorCode) {
-            colorPreview.style.backgroundColor = shapeNode.data('color');
-            colorCode.textContent = (shapeNode.data('color') || '#3498db').toUpperCase();
-        }
+        setShapeColor?.(colorInput.value);
 
         // Добавляем слушатель для обновления позиции при перетаскивании
         if (window.cy) {
@@ -85,12 +82,7 @@ export function openShapeModal(shapeNode = null) {
         fontSizeInput.value = 12;
 
         // Сброс превью цвета для новой фигуры
-        const colorPreview = document.getElementById('shapeColorPreview');
-        const colorCode = document.getElementById('shapeColorCode');
-        if (colorPreview && colorCode) {
-            colorPreview.style.backgroundColor = '#3498db';
-            colorCode.textContent = '#3498DB';
-        }
+        setShapeColor?.(colorInput.value);
     }
 
     const opacitySpan = document.getElementById('opacity_value');
@@ -107,6 +99,9 @@ export function openShapeModal(shapeNode = null) {
     const canEdit = window.canEditMap === true;
     [typeSelect, widthInput, heightInput, colorInput, opacityInput, descriptionInput, fontSizeInput].forEach((el) => {
         if (el) el.disabled = !canEdit;
+    });
+    document.querySelectorAll('#shapeModal .color-btn, #shapeModal .color-swatch').forEach(el => {
+        el.disabled = !canEdit;
     });
     const saveBtn = document.querySelector('#shapeModal .btn-primary');
     if (saveBtn) {
@@ -300,76 +295,19 @@ export function initShapeModal() {
  * Инициализация цветоселектора для фигур
  */
 function initShapeColorPicker() {
-    const btn = document.getElementById('shapeColorPickerBtn');
-    const panel = document.getElementById('shapeColorPanel');
-    const colorInput = document.getElementById('shape_color'); // input type="color" внутри panel
-    const preview = document.getElementById('shapeColorPreview');
-    const code = document.getElementById('shapeColorCode');
-
-    if (!btn || !panel || !colorInput || !preview || !code) {
+    setShapeColor = initSharedColorPicker({
+        buttonId: 'shapeColorPickerBtn',
+        panelId: 'shapeColorPanel',
+        inputId: 'shape_color',
+        previewId: 'shapeColorPreview',
+        codeId: 'shapeColorCode',
+    });
+    if (!setShapeColor) {
         Logger.error('Shape color picker: элементы не найдены');
         return;
     }
-
-    function setColor(color) {
-        preview.style.backgroundColor = color;
-        code.textContent = color.toUpperCase();
-        colorInput.value = color;
-
-        // Обновляем активный класс для свотчей
-        document.querySelectorAll('.color-swatch').forEach(sw => {
-            sw.classList.toggle('active', sw.dataset.color?.toLowerCase() === color.toLowerCase());
-        });
-    }
-
-    // Открытие/закрытие панели
-    btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const isVisible = panel.style.display !== 'none';
-        panel.style.display = isVisible ? 'none' : 'block';
-        btn.classList.toggle('active', !isVisible);
-        panel.style.zIndex = '99999';
-    });
-
-    // Выбор цвета из сетки
-    document.querySelectorAll('.color-swatch').forEach(swatch => {
-        swatch.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const color = this.dataset.color;
-            if (color) {
-                setColor(color);
-                panel.style.display = 'none';
-                btn.classList.remove('active');
-            }
-        });
-    });
-
-    // Выбор произвольного цвета через input type="color"
-    colorInput.addEventListener('input', function(e) {
-        setColor(e.target.value);
-    });
-
-    // Закрытие при клике вне панели
-    const closeHandler = function(e) {
-        if (!e.target.closest('#shapeColorPickerBtn') && !e.target.closest('#shapeColorPanel')) {
-            panel.style.display = 'none';
-            btn.classList.remove('active');
-        }
-    };
-    document.addEventListener('click', closeHandler);
-
-    // Блокировка закрытия при клике внутри панели
-    panel.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-
-    // Установить начальный цвет
-    const defaultColor = colorInput.value || '#3498db';
-    setColor(defaultColor);
-
-    // Экспорт для глобального доступа
-    window.setShapeColor = setColor;
+    window.setShapeColor = setShapeColor;
+    setShapeColor(document.getElementById('shape_color')?.value || '#3498db');
 }
 
 // Экспорт для глобального доступа

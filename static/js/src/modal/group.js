@@ -9,6 +9,7 @@ import { escapeHtml } from './utils.js';
 import { reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
+import { initColorPicker as initSharedColorPicker } from './colorPicker.js';
 
 // Переменные модуля
 let currentGroupId = null;
@@ -22,78 +23,19 @@ let pendingEditGroup = null;
  * Инициализировать цветовой пикер
  */
 function initColorPicker() {
-    const btn = document.getElementById('colorPickerBtn');
-    const panel = document.getElementById('colorPanel');
-    const input = document.getElementById('group_color');
-    const preview = document.getElementById('colorPreview');
-    const code = document.getElementById('colorCode');
-
-    if (!btn || !panel || !input || !preview || !code) {
+    const setColor = initSharedColorPicker({
+        buttonId: 'colorPickerBtn',
+        panelId: 'colorPanel',
+        inputId: 'group_color',
+        previewId: 'colorPreview',
+        codeId: 'colorCode',
+    });
+    if (!setColor) {
         Logger.error('Color picker: элементы не найдены');
         return;
     }
-
-    const newBtn = btn.cloneNode(true);
-    if (btn.parentNode) {
-        btn.parentNode.replaceChild(newBtn, btn);
-    }
-
-    const newPanel = document.getElementById('colorPanel');
-    const newInput = document.getElementById('group_color');
-    const newPreview = document.getElementById('colorPreview');
-    const newCode = document.getElementById('colorCode');
-
-    function setColor(color) {
-        newPreview.style.backgroundColor = color;
-        newCode.textContent = color.toUpperCase();
-        newInput.value = color;
-        document.querySelectorAll('.color-swatch').forEach(sw => {
-            sw.classList.toggle('active', sw.dataset.color?.toLowerCase() === color.toLowerCase());
-        });
-    }
-
-    const newBtnEl = document.getElementById('colorPickerBtn');
-    newBtnEl?.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const isVisible = newPanel.style.display !== 'none';
-        newPanel.style.display = isVisible ? 'none' : 'block';
-        newBtnEl.classList.toggle('active', !isVisible);
-        newPanel.style.zIndex = '99999';
-        newPanel.style.position = 'absolute';
-    });
-
-    document.querySelectorAll('.color-swatch').forEach(swatch => {
-        swatch.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const color = swatch.dataset.color;
-            if (color) {
-                setColor(color);
-                newPanel.style.display = 'none';
-                newBtnEl?.classList.remove('active');
-            }
-        });
-    });
-
-    newInput.addEventListener('input', function(e) {
-        setColor(e.target.value);
-    });
-
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('#colorPickerBtn') && !e.target.closest('#colorPanel')) {
-            newPanel.style.display = 'none';
-            newBtnEl?.classList.remove('active');
-        }
-    });
-
-    newPanel.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-
-    const defaultColor = newInput.value || '#3498db';
-    setColor(defaultColor);
-
     window.setColor = setColor;
+    setColor(document.getElementById('group_color')?.value || '#3498db');
 }
 
 /**

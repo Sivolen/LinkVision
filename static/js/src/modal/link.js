@@ -8,9 +8,11 @@ import { t } from '../i18n/i18n.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 import { parseRawId } from '../map/ids.js';
+import { initColorPicker as initSharedColorPicker } from './colorPicker.js';
 
 // Переменные модуля
 let linkModal = null;
+let setLinkColor = null;
 
 /**
  * Обновить предпросмотр связи
@@ -38,7 +40,7 @@ export function openLinkModal(sourceId, targetId) {
     document.getElementById('link_src_iface').value = 'eth0';
     document.getElementById('link_tgt_iface').value = 'eth0';
     document.getElementById('link_type').value = '';
-    document.getElementById('link_line_color').value = '#6c757d';
+    setLinkColor?.('#6c757d');
     document.getElementById('link_line_width').value = 2;
     document.getElementById('link_line_style').value = 'solid';
     document.getElementById('linkModalTitle').textContent = t('modal.link.newTitle');
@@ -76,7 +78,7 @@ export function openLinkModalForEdit(edge) {
     document.getElementById('link_src_iface').value = srcIface;
     document.getElementById('link_tgt_iface').value = tgtIface;
     document.getElementById('link_type').value = data.link_type || '';
-    document.getElementById('link_line_color').value = data.color || '#6c757d';
+    setLinkColor?.(data.color || '#6c757d');
     document.getElementById('link_line_width').value = data.width || 2;
     document.getElementById('link_line_style').value = data.style || 'solid';
     document.getElementById('linkModalTitle').textContent = t('modal.link.editTitle');
@@ -99,7 +101,7 @@ export function openLinkModalForEdit(edge) {
  */
 function applyLinkModalEditPermission() {
     const canEdit = window.canEditMap === true;
-    document.querySelectorAll('#linkModal input, #linkModal select').forEach(el => {
+    document.querySelectorAll('#linkModal input, #linkModal select, #linkModal .color-btn, #linkModal .color-swatch').forEach(el => {
         el.disabled = !canEdit;
     });
     const saveBtn = document.querySelector('#linkModal .btn-primary');
@@ -361,7 +363,10 @@ export function applyLinkTypePreset(type) {
         const widthInput = document.getElementById('link_line_width');
         const styleSelect = document.getElementById('link_line_style');
         
-        if (colorInput) colorInput.value = presets[type].color;
+        if (colorInput) {
+            if (setLinkColor) setLinkColor(presets[type].color);
+            else colorInput.value = presets[type].color;
+        }
         if (widthInput) widthInput.value = presets[type].width;
         if (styleSelect) styleSelect.value = presets[type].style;
         updateLinkPreview();
@@ -372,6 +377,14 @@ export function applyLinkTypePreset(type) {
  * Инициализация модального окна связей
  */
 export function initLinkModal() {
+    setLinkColor = initSharedColorPicker({
+        buttonId: 'linkColorPickerBtn',
+        panelId: 'linkColorPanel',
+        inputId: 'link_line_color',
+        previewId: 'linkColorPreview',
+        codeId: 'linkColorCode',
+    });
+    setLinkColor?.(document.getElementById('link_line_color')?.value || '#6c757d');
     Logger.info('Link modal инициализирован');
 }
 

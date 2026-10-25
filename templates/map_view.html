@@ -366,7 +366,30 @@
                 <div class="row g-2 mb-3">
                     <div class="col-md-4">
                         <label class="form-label small">{{ _('Цвет линии') }}</label>
-                        <input type="color" id="link_line_color" class="form-control form-control-sm" value="#6c757d">
+                        <div class="color-picker-simple color-picker-simple--dropup color-picker-simple--compact">
+                            <button type="button" id="linkColorPickerBtn" class="color-btn" aria-label="{{ _('Цвет линии') }}">
+                                <span class="color-box" id="linkColorPreview"></span>
+                                <span class="color-code" id="linkColorCode">#6C757D</span>
+                                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                            </button>
+                            <div id="linkColorPanel" class="color-panel" style="display:none;" aria-hidden="true">
+                                <div class="color-grid">
+                                    <button type="button" class="color-swatch" data-color="#3498db" style="background:#3498db"></button>
+                                    <button type="button" class="color-swatch" data-color="#2ecc71" style="background:#2ecc71"></button>
+                                    <button type="button" class="color-swatch" data-color="#e74c3c" style="background:#e74c3c"></button>
+                                    <button type="button" class="color-swatch" data-color="#f39c12" style="background:#f39c12"></button>
+                                    <button type="button" class="color-swatch" data-color="#9b59b6" style="background:#9b59b6"></button>
+                                    <button type="button" class="color-swatch" data-color="#1abc9c" style="background:#1abc9c"></button>
+                                    <button type="button" class="color-swatch" data-color="#34495e" style="background:#34495e"></button>
+                                    <button type="button" class="color-swatch" data-color="#e67e22" style="background:#e67e22"></button>
+                                    <button type="button" class="color-swatch" data-color="#6c757d" style="background:#6c757d"></button>
+                                </div>
+                                <div class="color-custom">
+                                    <input type="color" id="link_line_color" value="#6c757d">
+                                    <label for="link_line_color">{{ _('Свой цвет') }}</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small">{{ _('Толщина (px)') }}</label>
@@ -452,9 +475,9 @@
 
                             <div class="color-picker-simple">
                                 <!-- Кнопка выбора -->
-                                <button type="button" id="colorPickerBtn" class="color-btn">
+                                <button type="button" id="colorPickerBtn" class="color-btn" aria-label="{{ _('Цвет метки') }}">
                                     <span class="color-box" id="colorPreview"></span>
-                                    <span id="colorCode">#3498db</span>
+                                    <span class="color-code" id="colorCode">#3498db</span>
                                     <i class="fas fa-chevron-down"></i>
                                 </button>
 
@@ -469,6 +492,7 @@
                                         <button type="button" class="color-swatch" data-color="#1abc9c" style="background:#1abc9c"></button>
                                         <button type="button" class="color-swatch" data-color="#34495e" style="background:#34495e"></button>
                                         <button type="button" class="color-swatch" data-color="#e67e22" style="background:#e67e22"></button>
+                                        <button type="button" class="color-swatch" data-color="#6c757d" style="background:#6c757d"></button>
                                     </div>
                                     <div class="color-custom">
                                         <input type="color" id="group_color" value="#3498db">
@@ -636,9 +660,9 @@
                     <div class="col-md-6">
                         <label class="form-label">{{ _('Цвет') }}</label>
                         <div class="color-picker-simple">
-                            <button type="button" id="shapeColorPickerBtn" class="color-btn">
+                            <button type="button" id="shapeColorPickerBtn" class="color-btn" aria-label="{{ _('Цвет') }}">
                                 <span class="color-box" id="shapeColorPreview"></span>
-                                <span id="shapeColorCode">#3498db</span>
+                                <span class="color-code" id="shapeColorCode">#3498db</span>
                                 <i class="fas fa-chevron-down"></i>
                             </button>
                             <div id="shapeColorPanel" class="color-panel" style="display:none;">
@@ -651,6 +675,7 @@
                                     <button type="button" class="color-swatch" data-color="#1abc9c" style="background:#1abc9c"></button>
                                     <button type="button" class="color-swatch" data-color="#34495e" style="background:#34495e"></button>
                                     <button type="button" class="color-swatch" data-color="#e67e22" style="background:#e67e22"></button>
+                                    <button type="button" class="color-swatch" data-color="#6c757d" style="background:#6c757d"></button>
                                 </div>
                                 <div class="color-custom">
                                     <input type="color" id="shape_color" value="#3498db">
