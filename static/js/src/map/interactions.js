@@ -134,9 +134,8 @@ function fallbackCopy(text) {
     if (typeof showToast === 'function') showToast(t('contextMenu.copied'), t('contextMenu.copiedFallback', { ip: text }), 'info');
 }
 
-const EDGE_PULSE_DURATION_MS = 1100;
-const EDGE_PULSE_LENGTH_PERCENT = 20;
-const EDGE_PULSE_COLORS = ['#b45309', '#f59e0b', '#fff7cc', '#fbbf24', '#b45309'];
+const EDGE_FILL_DURATION_MS = 750;
+const EDGE_FILL_COLOR = '#f59e0b';
 
 // Оптимизация highlight через requestAnimationFrame
 function scheduleHighlight(node) {
@@ -200,11 +199,11 @@ function animateEdgeHighlight(now) {
     }
     lastHighlightFrameAt = now;
 
-    const progress = ((now - highlightAnimationStartedAt) % EDGE_PULSE_DURATION_MS) / EDGE_PULSE_DURATION_MS;
-    const maxStart = 100 - EDGE_PULSE_LENGTH_PERCENT;
-    const start = progress * maxStart;
-    const end = start + EDGE_PULSE_LENGTH_PERCENT;
-    const positions = [0, start, start + 3, start + 7, start + 11, start + 16, end, 100];
+    const progress = Math.min(1, (now - highlightAnimationStartedAt) / EDGE_FILL_DURATION_MS);
+    const front = progress * 100;
+    const softStart = Math.max(0, front - 3);
+    const softEnd = Math.min(100, front + 2);
+    const positions = [0, softStart, front, softEnd, 100];
     const cy = getCy();
     if (!cy) return;
 
@@ -213,11 +212,7 @@ function animateEdgeHighlight(now) {
             const original = edge._private.originalStyle;
             if (!original) return;
             const baseColor = original['line-color'] || '#6c757d';
-            const colors = [
-                baseColor, baseColor,
-                EDGE_PULSE_COLORS[0], EDGE_PULSE_COLORS[1], EDGE_PULSE_COLORS[2],
-                EDGE_PULSE_COLORS[3], EDGE_PULSE_COLORS[4], baseColor
-            ];
+            const colors = [EDGE_FILL_COLOR, EDGE_FILL_COLOR, '#fff7cc', baseColor, baseColor];
             let edgePositions = positions;
             let edgeColors = colors;
 
@@ -226,6 +221,19 @@ function animateEdgeHighlight(now) {
             if (edge.target().id() === edge._private.hoverSourceId) {
                 edgePositions = positions.map(position => 100 - position).reverse();
                 edgeColors = colors.slice().reverse();
+            }
+
+            if (progress >= 1) {
+                // Импульс дошёл до соседнего устройства: оставляем всю связь
+                // золотой до тех пор, пока курсор остаётся на исходном узле.
+                edge.style({
+                    'line-fill': 'solid',
+                    'line-color': EDGE_FILL_COLOR,
+                    'line-outline-color': 'rgba(245, 158, 11, 0.45)',
+                    'line-outline-width': 2,
+                    'width': Math.max(3, Number.parseFloat(original.width) || 2)
+                });
+                return;
             }
 
             edge.style({
@@ -239,7 +247,9 @@ function animateEdgeHighlight(now) {
         });
     });
 
-    highlightAnimationFrame = requestAnimationFrame(animateEdgeHighlight);
+    if (progress < 1) {
+        highlightAnimationFrame = requestAnimationFrame(animateEdgeHighlight);
+    }
 }
 
 function clearHighlight() {
