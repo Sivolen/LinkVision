@@ -49,7 +49,7 @@ class Config:
     BABEL_DEFAULT_LOCALE = "ru"
     BABEL_TRANSLATION_DIRECTORIES = "translations"
 
-    VERSION = "2.2.48"
+    VERSION = "2.2.49"
     # Версия схемы меняется только при миграции БД. Она отделена от VERSION,
     # чтобы выпуск исправления без изменения таблиц не блокировал запуск уже
     # существующей SQLite-базы.

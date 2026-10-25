@@ -8,6 +8,7 @@ let visible = true;
 let refreshTimer = null;
 let detachPointerHandlers = null;
 let toggleHandler = null;
+let resizeObserver = null;
 let world = null;  // {x, y, w, h} — «мир» превью в модельных координатах
 let scale = 1;     // px мини-карты на единицу модели
 const KEY = 'minimapVisible';
@@ -32,8 +33,17 @@ export function initMinimap(instance) {
     applyVisibility();
 
     cy.on('pan zoom', updateViewportRect);
-    cy.on('add remove position', scheduleRefresh);
+    // Изменение данных/стилей (например, цвет, подпись, тип связи), перенос
+    // между группами и завершение раскладки тоже меняют снимок мини-карты.
+    cy.on('add remove position data style move free dragfree layoutstop', scheduleRefresh);
     window.addEventListener('elements:loaded', scheduleRefresh);
+
+    // Размеры панели зависят от viewport. Пересчитываем масштаб и снимок при
+    // изменении размера окна, в том числе при смене ориентации/полноэкранном режиме.
+    if (typeof ResizeObserver === 'function') {
+        resizeObserver = new ResizeObserver(scheduleRefresh);
+        resizeObserver.observe(panel);
+    }
 
     // Навигация: клик/перетаскивание по мини-карте центрирует карту
     let dragging = false;
@@ -227,9 +237,13 @@ function updateViewportRect() {
 export function cleanup() {
     if (cy) {
         cy.off('pan zoom', updateViewportRect);
-        cy.off('add remove position', scheduleRefresh);
+        cy.off('add remove position data style move free dragfree layoutstop', scheduleRefresh);
     }
     window.removeEventListener('elements:loaded', scheduleRefresh);
+    if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+    }
     if (detachPointerHandlers) {
         detachPointerHandlers();
         detachPointerHandlers = null;
