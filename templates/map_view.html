@@ -317,7 +317,7 @@
 
 <!-- Модальное окно связи -->
 <div class="modal fade" id="linkModal" tabindex="-1">
-    <div class="modal-dialog modal-md">
+    <div class="modal-dialog modal-md modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="linkModalTitle">{{ _('Настройка связи') }}</h5>
@@ -363,10 +363,9 @@
                 </div>
 
                 <!-- Тонкая настройка линии -->
-                <div class="row g-2 mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label small">{{ _('Цвет линии') }}</label>
-                        <div class="color-picker-simple color-picker-simple--dropup color-picker-simple--compact">
+                <div class="mb-3">
+                    <label class="form-label small">{{ _('Цвет линии') }}</label>
+                    <div class="color-picker-simple color-picker-simple--inline">
                             <button type="button" id="linkColorPickerBtn" class="color-btn" aria-label="{{ _('Цвет линии') }}">
                                 <span class="color-box" id="linkColorPreview"></span>
                                 <span class="color-code" id="linkColorCode">#6C757D</span>
@@ -391,11 +390,13 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
                         <label class="form-label small">{{ _('Толщина (px)') }}</label>
                         <input type="number" id="link_line_width" class="form-control form-control-sm" min="1" max="10" value="2">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label small">{{ _('Стиль линии') }}</label>
                         <select id="link_line_style" class="form-select form-select-sm">
                             <option value="solid">{{ _('Сплошная') }}</option>
