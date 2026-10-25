@@ -18,6 +18,7 @@ let groupBatchTimeout = null;
 let pendingHighlightFrame = null;
 let highlightAnimationFrame = null;
 let highlightAnimationStartedAt = 0;
+let activeHighlightNodeId = null;
 let lastHighlightFrameAt = 0;
 let highlightedNodes = new Set();
 let highlightedEdges = new Set();
@@ -134,12 +135,15 @@ function fallbackCopy(text) {
     if (typeof showToast === 'function') showToast(t('contextMenu.copied'), t('contextMenu.copiedFallback', { ip: text }), 'info');
 }
 
-const EDGE_FILL_DURATION_MS = 750;
+const EDGE_FILL_DURATION_MS = 350;
 const EDGE_FILL_COLOR = '#f59e0b';
 
 // Оптимизация highlight через requestAnimationFrame
 function scheduleHighlight(node) {
-    if (pendingHighlightFrame !== null) return; // Уже запланировано
+    if (pendingHighlightFrame !== null) {
+        cancelAnimationFrame(pendingHighlightFrame);
+        pendingHighlightFrame = null;
+    }
 
     pendingHighlightFrame = requestAnimationFrame(() => {
         pendingHighlightFrame = null;
@@ -150,6 +154,13 @@ function scheduleHighlight(node) {
 function applyHighlight(node) {
     if (window.isOperator) return;
     if (!node || node.data('isGroup') || node.data('isShape')) return;
+
+    // Never mix styles or animation state from two devices when the pointer
+    // crosses nodes faster than the next animation frame.
+    if (activeHighlightNodeId !== null && activeHighlightNodeId !== node.id()) {
+        clearHighlight();
+    }
+    activeHighlightNodeId = node.id();
 
     const edges = node.connectedEdges();
     const neighbors = edges.connectedNodes();
@@ -279,6 +290,7 @@ function clearHighlight() {
         }
     });
     highlightedNodes.clear();
+    activeHighlightNodeId = null;
 }
 
 function cleanupInteractions() {
@@ -618,6 +630,9 @@ export function initInteractions(cy) {
         if (window._isBulkSelecting) return;   // ← подавляем во время рамки
         const node = evt.target;
         if (node.data('isGroup') || node.data('isShape')) return;
+        if (activeHighlightNodeId !== null && activeHighlightNodeId !== node.id()) {
+            clearHighlight();
+        }
         scheduleHighlight(node);
     };
 
