@@ -1,7 +1,29 @@
+import hashlib
 import os
 from datetime import timedelta
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+
+_BUILD_ID_FILES = (
+    "static/js/dist/common.min.js",
+    "static/js/dist/base.min.js",
+    "static/js/dist/map.min.js",
+    "static/js/dist/modal.min.js",
+    "static/css/style.css",
+)
+
+
+def _compute_build_id():
+    """Короткий хеш содержимого собранных JS/CSS (8 hex-символов)."""
+    digest = hashlib.sha1()
+    for rel in _BUILD_ID_FILES:
+        try:
+            with open(os.path.join(BASE_DIR, *rel.split("/")), "rb") as fh:
+                digest.update(fh.read())
+        except OSError:
+            digest.update(b"-")
+    return digest.hexdigest()[:8]
 
 
 class Config:
@@ -49,7 +71,16 @@ class Config:
     BABEL_DEFAULT_LOCALE = "ru"
     BABEL_TRANSLATION_DIRECTORIES = "translations"
 
-    VERSION = "2.2.57"
+    VERSION = "2.2.58"
+    # Хеш собранных фронтенд-файлов. Позволяет клиентам заметить обновление
+    # (и обойти кэш браузера), даже если VERSION забыли поднять. Считается один
+    # раз при старте процесса — после `npm run build` нужен рестарт сервиса.
+    BUILD_ID = _compute_build_id()
+    # Параметры heartbeat Socket.IO: клиент замечает «тихо упавший» сервер не
+    # позже чем через ping_interval + ping_timeout. proxy_read_timeout в nginx
+    # для /socket.io/ должен быть БОЛЬШЕ этой суммы.
+    SOCKETIO_PING_INTERVAL = int(os.environ.get("SOCKETIO_PING_INTERVAL", "25"))
+    SOCKETIO_PING_TIMEOUT = int(os.environ.get("SOCKETIO_PING_TIMEOUT", "30"))
     # Версия схемы меняется только при миграции БД. Она отделена от VERSION,
     # чтобы выпуск исправления без изменения таблиц не блокировал запуск уже
     # существующей SQLite-базы.

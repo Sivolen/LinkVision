@@ -30,7 +30,9 @@
     "lostMsg": "Connection to the server was lost, trying to reconnect...",
     "updateTitle": "Application update",
     "updateMsg": "A new version ({version}) is available. This page will reload now.",
-    "updateStuckMsg": "The server is updated, but this page still has the old version. Reload it manually."
+    "updateStuckMsg": "The server is updated, but this page still has the old version. Reload it manually.",
+    "updatePendingMsg": "A new version ({version}) is available. This page will reload when you finish what you are doing.",
+    "loadFailedMsg": "Could not load the map elements. Check the connection and reload the page."
   },
   "map": {
     "deleteTitle": "Delete map",

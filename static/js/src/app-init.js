@@ -54,6 +54,7 @@
     window.isOperator = body.dataset.isOperator === 'true';
     window.debugMode = body.dataset.debugMode === 'true';
     window.appVersion = body.dataset.appVersion || '';
+    window.appBuild = body.dataset.appBuild || '';
 
     // Карта: data-map-id может быть установлен позже (в map_view.html)
     var mapId = body.dataset.mapId;

@@ -7,6 +7,7 @@ import { refreshZoomEmphasis } from './zoomEmphasis.js';
 import { updateAllGroups, updateGroupsForNodes } from './groupResize.js';
 import { updateSidebarCounter, setSidebarCounter } from './sidebar.js';
 import { http } from '../utils/http.js';
+import { t } from '../i18n/i18n.js';
 
 const wrapText = window.wrapText || ((text) => text);
 
@@ -21,7 +22,30 @@ let elementsCache = {
 
 const CACHE_DURATION = 5000; // 5 секунд кэш
 
-export function loadElements(mapId, force = false) {
+// Номер последнего запущенного запроса: ответ устаревшего запроса (реконнект и
+// map_updated пришли почти одновременно) игнорируется, а не накладывается.
+let loadSeq = 0;
+let loadRetryTimer = null;
+const MAX_LOAD_RETRIES = 6; // паузы 2,4,8,16,30,30 с
+
+function scheduleLoadRetry(mapId, attempt) {
+    if (attempt >= MAX_LOAD_RETRIES) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(t('toast.errorTitle'), t('connection.loadFailedMsg'), 'error');
+        }
+        // index.js по этому событию перезагрузит карту при следующем реконнекте.
+        window.dispatchEvent(new CustomEvent('elements:loadfailed'));
+        return;
+    }
+    const delay = Math.min(30000, 2000 * Math.pow(2, attempt));
+    loadRetryTimer = setTimeout(() => {
+        loadRetryTimer = null;
+        if (String(window.currentMapId) !== String(mapId)) return;
+        loadElements(mapId, true, attempt + 1);
+    }, delay);
+}
+
+export function loadElements(mapId, force = false, attempt = 0) {
     const cy = getCy();
     if (!cy) return;
 
@@ -34,11 +58,22 @@ export function loadElements(mapId, force = false) {
 
     console.log(`🔄 Loading elements for map ${mapId}, force=${force}`);
 
-    cy.elements().remove();
+    // ВАЖНО: граф больше НЕ очищается до ответа сервера. Раньше remove() шёл
+    // перед fetch, и если сервер после рестарта ещё не отвечал, карта
+    // оставалась пустой. Теперь старые элементы живут до успешной загрузки.
+    const reqId = ++loadSeq;
+    if (loadRetryTimer) {
+        clearTimeout(loadRetryTimer);
+        loadRetryTimer = null;
+    }
 
     fetchWithRetry(`/api/map/${mapId}/elements`)
-        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(res => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`)))
         .then(data => {
+            // Пока шёл запрос: запущен более свежий / карту закрыли или сменили.
+            if (reqId !== loadSeq || getCy() !== cy) return;
+            if (window.currentMapId != null && String(window.currentMapId) !== String(mapId)) return;
+
             const { width: bgW, height: bgH } = getBgImageSize();
             const startTime = performance.now();
 
@@ -143,6 +178,7 @@ export function loadElements(mapId, force = false) {
 
             // Единая batch-операция для всех элементов
             cy.batch(() => {
+                cy.elements().remove();
                 cy.add(allElements);
             });
 
@@ -223,7 +259,11 @@ export function loadElements(mapId, force = false) {
                 setTimeout(() => window.loadSidebarMaps(), 300);
             }
         })
-        .catch(err => console.error('Load elements error:', err));
+        .catch(err => {
+            if (reqId !== loadSeq) return; // уже идёт более свежая загрузка
+            console.error('Load elements error:', err);
+            scheduleLoadRetry(mapId, attempt);
+        });
 }
 
 export async function addDeviceToGraph(device) {

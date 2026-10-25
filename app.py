@@ -265,6 +265,10 @@ def create_app():
         locale = str(get_locale() or Config.BABEL_DEFAULT_LOCALE)
         return {
             "app_version": Config.VERSION,
+            "app_build": Config.BUILD_ID,
+            # Версия в URL статики: смена VERSION ИЛИ содержимого бандлов
+            # гарантированно сбрасывает кэш браузера.
+            "asset_version": f"{Config.VERSION}-{Config.BUILD_ID}",
             "debug_mode": app.debug,
             "csrf_token": lambda: generate_csrf(),
             "current_locale": locale,
@@ -317,8 +321,13 @@ def create_app():
 
     @socketio.on("request_status")
     def handle_request_status(data):
-        map_id = data.get("map_id")
-        if not map_id or not current_user.is_authenticated or not can_view_map(map_id):
+        if not isinstance(data, dict) or not current_user.is_authenticated:
+            return
+        try:
+            map_id = int(data.get("map_id"))
+        except (TypeError, ValueError):
+            return
+        if not can_view_map(map_id):
             return
 
         with app.app_context():
@@ -347,7 +356,11 @@ def create_app():
                 }
                 for d in devices
             ]
-            socketio.emit("device_status_batch", statuses, room=f"map_{map_id}")
+            # Отвечаем ТОЛЬКО запросившему клиенту. Раньше рассылка шла на всю
+            # комнату: после рестарта сервера N клиентов давали N² сообщений.
+            socketio.emit(
+                "device_status_batch", statuses, room=request.sid  # type: ignore
+            )
 
     return app
 

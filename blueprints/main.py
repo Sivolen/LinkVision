@@ -28,7 +28,10 @@ main_bp = Blueprint("main", __name__)
 @main_bp.route("/api/app-version")
 @login_required
 def app_version():
-    response = jsonify(version=current_app.config["VERSION"])
+    response = jsonify(
+        version=current_app.config["VERSION"],
+        build=current_app.config.get("BUILD_ID", ""),
+    )
     response.headers["Cache-Control"] = (
         "no-store, no-cache, must-revalidate, max-age=0"
     )

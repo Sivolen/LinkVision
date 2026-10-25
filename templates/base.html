@@ -6,9 +6,9 @@
     <!-- CSRF токен для AJAX запросов -->
     <meta name="csrf-token" content="">
     <title>Link Vision</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css', v=app_version) }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css', v=app_version) }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=app_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css', v=asset_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/all.min.css', v=asset_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=asset_version) }}">
     <!-- Фавиконки -->
     <link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='images/favicon-96x96.png') }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
@@ -23,7 +23,8 @@
       data-is-operator="{{ 'true' if current_user.is_operator else 'false' }}"
       data-debug-mode="{{ 'true' if debug_mode else 'false' }}"
       data-locale="{{ current_locale }}"
-      data-app-version="{{ app_version }}">
+      data-app-version="{{ app_version }}"
+      data-app-build="{{ app_build }}">
     <!-- ====================================================================
          САЙДБАР (только для авторизованных И если не скрыт)
          ==================================================================== -->
@@ -339,9 +340,9 @@
 </form>
 
     <!-- Скрипты -->
-    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js', v=app_version) }}"></script>
-    <script src="{{ url_for('static', filename='js/socket.io.js', v=app_version) }}"></script>
-    <script src="{{ url_for('static', filename='js/cytoscape.min.js', v=app_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js', v=asset_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/socket.io.js', v=asset_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/cytoscape.min.js', v=asset_version) }}"></script>
     <script>
         // Получаем CSRF токен из скрытой формы
         document.addEventListener('DOMContentLoaded', function() {
@@ -361,8 +362,8 @@
     <!-- app-init.js ставит window.currentUserId/isAdmin/... из data-* и определяет
          window.t() из __I18N__. Должен идти ДО base.min.js: тот при загрузке создаёт
          window.socket, только если currentUserId уже задан, и использует t() в тостах. -->
-    <script src="{{ url_for('static', filename='js/src/app-init.js', v=app_version) }}"></script>
-        <script src="{{ url_for('static', filename='js/dist/base.min.js', v=app_version) }}"></script>
+    <script src="{{ url_for('static', filename='js/src/app-init.js', v=asset_version) }}"></script>
+        <script src="{{ url_for('static', filename='js/dist/base.min.js', v=asset_version) }}"></script>
     {% block scripts %}{% endblock %}
 
     {% block extra_js %}{% endblock %}

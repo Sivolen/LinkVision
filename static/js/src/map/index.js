@@ -3,7 +3,8 @@ import { loadBackground, setElementsLoaded, setBackgroundLoaded, markUserInterac
 import { loadElements } from './elements.js';
 import { initInteractions } from './interactions.js';
 import { initNewNodeFeedback } from './newNodeFeedback.js';
-import { initModes, setMode } from './modes.js';
+import { initModes, setMode, isLinkMode } from './modes.js';
+import { initResync, scheduleResync, isMapBusy } from './resync.js';
 import { initViewport, saveViewportToServer, withViewportRestore } from './viewport.js';
 import { initLayout } from './layout.js';
 import { initSearch } from './search.js';
@@ -77,6 +78,7 @@ export function initMap(id) {
     clearMapCleanupHandlers();
     mapId = id;
     window.currentMapId = id;
+    window.__mapLoadedOnce = false;
     if (!mapId || isNaN(parseInt(mapId))) {
         initCy(null);
         setElementsLoaded(true);
@@ -86,6 +88,10 @@ export function initMap(id) {
 
     if (window.socket) {
         const joinMapRoom = () => window.socket.emit('join_room', `map_${mapId}`);
+        let initialLoadFailed = false;
+        const markInitialLoadFailed = () => { initialLoadFailed = true; };
+        window.addEventListener('elements:loadfailed', markInitialLoadFailed);
+        registerMapCleanup(() => window.removeEventListener('elements:loadfailed', markInitialLoadFailed));
 
         if (window.socket.connected) joinMapRoom();
 
@@ -117,9 +123,18 @@ export function initMap(id) {
             // происходит чаще, чем кажется, поэтому визуальный "скачок" на
             // каждый такой реконнект был особенно заметен.
             if (window.__mapLoadedOnce) {
-                window.withViewportRestore(() => {
-                    loadElements(mapId, true);
+                // Не под руками у пользователя: если он тянет узел, рисует связь
+                // или редактирует в модалке — перезагрузка откладывается до паузы
+                // (см. resync.js), выделение сохраняется.
+                scheduleResync(() => {
+                    window.withViewportRestore(() => {
+                        loadElements(mapId, true);
+                    });
                 });
+            } else if (initialLoadFailed) {
+                // Первая загрузка не удалась даже после повторов — пробуем снова.
+                initialLoadFailed = false;
+                loadElements(mapId, true);
             }
         };
         window.socket.on('connect', handleSocketConnect);
@@ -128,6 +143,7 @@ export function initMap(id) {
 
     const cy = initCy(mapId);
     window.cy = cy;
+    registerMapCleanup(initResync(cy, { isExtraBusy: isLinkMode }));
     updateGroupLabelColor();
 
     // Отмена «телепортации»: если пользователь начал скроллить/зумить/тянуть карту
@@ -189,8 +205,14 @@ export function initMap(id) {
     window.addEventListener('elements:loaded', saveInitialState, { once: true });
     registerMapCleanup(() => window.removeEventListener('elements:loaded', saveInitialState));
 
+    // Флаг «карта хотя бы раз загружена» ставим по факту загрузки, а не сразу
+    // после запуска запроса — иначе реконнект во время первой загрузки запускал
+    // второй, параллельный reload.
+    const markLoadedOnce = () => { window.__mapLoadedOnce = true; };
+    window.addEventListener('elements:loaded', markLoadedOnce, { once: true });
+    registerMapCleanup(() => window.removeEventListener('elements:loaded', markLoadedOnce));
+
     loadElements(mapId);
-    window.__mapLoadedOnce = true;
 
     // Оптимизированный batch для обновлений статусов
     let statusBatch = [];
@@ -517,6 +539,7 @@ window.removePulsingNode = removePulsingNode;
 // счётчик, иначе он останется с устаревшим значением до перезагрузки страницы.
 window.updateSidebarCounter = updateSidebarCounter;
 window.withViewportRestore = withViewportRestore;
+window.isMapBusy = isMapBusy; // base.js: не перезагружать страницу посреди действия
 window.collapseGroup = collapseGroup;
 window.expandGroup = expandGroup;
 window.restoreCollapseState = restoreCollapseState;

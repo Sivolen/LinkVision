@@ -782,9 +782,9 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/dist/common.min.js', v=app_version) }}"></script>
-<script src="{{ url_for('static', filename='js/dist/map.min.js', v=app_version) }}"></script>
-<script src="{{ url_for('static', filename='js/dist/modal.min.js', v=app_version) }}"></script>
+<script src="{{ url_for('static', filename='js/dist/common.min.js', v=asset_version) }}"></script>
+<script src="{{ url_for('static', filename='js/dist/map.min.js', v=asset_version) }}"></script>
+<script src="{{ url_for('static', filename='js/dist/modal.min.js', v=asset_version) }}"></script>
 <script>
     const toolbarShell = document.querySelector('.toolbar-shell');
     const toolbar = toolbarShell?.querySelector('.toolbar');

@@ -41,6 +41,10 @@ class TestConfig:
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "icons")
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     VERSION = "2.2.1"
+    # Зеркало прод-конфига: /api/app-version и шаблоны читают BUILD_ID
+    # (хеш собранных JS/CSS). В тестах он фиксированный — проверяем проводку,
+    # а не содержимое бандлов.
+    BUILD_ID = "deadbeef"
 
     # Отключаем безопасные куки для тестов
     SESSION_COOKIE_SECURE = False
@@ -93,6 +97,10 @@ def app():
             "current_locale": locale,
             "available_languages": TestConfig.LANGUAGES,
             "app_version": TestConfig.VERSION,
+            # Зеркало inject_globals из app.py: версии статики и дата-атрибут
+            # сборки должны ведсти себя в тестах так же, как в проде.
+            "app_build": TestConfig.BUILD_ID,
+            "asset_version": f"{TestConfig.VERSION}-{TestConfig.BUILD_ID}",
             "debug_mode": False,
             "js_i18n": js_i18n_payload(locale),
         }

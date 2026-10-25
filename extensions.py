@@ -1,22 +1,45 @@
+import os
+
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
 from flask_socketio import SocketIO
 from flask_babel import Babel
 from flask import request, session, current_app
 
+from config import Config
+
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
+def _socketio_cors_origins():
+    """
+    Разрешённые Origin для WebSocket/polling.
+
+    Авторизация идёт по cookie, поэтому "*" открывает путь для cross-site
+    WebSocket hijacking. По умолчанию (None) python-engineio пропускает только
+    тот же origin, что и страница (с учётом ProxyFix). Переопределение:
+    SOCKETIO_CORS_ORIGINS="https://a.example,https://b.example" или "*".
+    """
+    raw = os.environ.get("SOCKETIO_CORS_ORIGINS", "").strip()
+    if not raw:
+        return None
+    if raw == "*":
+        return "*"
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
 socketio = SocketIO(
-    cors_allowed_origins="*",
+    cors_allowed_origins=_socketio_cors_origins(),
     # async_mode не указан — Flask-SocketIO определит eventlet сам,
     # т.к. пакет установлен и процесс при запуске (gunicorn -k eventlet)
     # монки-патчит глобальные I/O-функции под кооперативную модель.
     # Явное "threading" ломало эту магию: heartbeat, фоновые задачи
     # и отслеживание разрывов шли через чужой шедулер, что приводило
     # к "иногда события не долетают" — ровно тому, что чинил fixalarm.
-    ping_interval=30,
-    ping_timeout=100,
+    # Было 30/100: «тихо» упавший сервер/сеть обнаруживались до ~130 с.
+    # Теперь максимум ~55 с; клиенты после реконнекта сами пересинхронизируются.
+    ping_interval=Config.SOCKETIO_PING_INTERVAL,
+    ping_timeout=Config.SOCKETIO_PING_TIMEOUT,
     max_http_buffer_size=100_000_000,
 )
 babel = Babel()

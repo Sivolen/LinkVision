@@ -1157,6 +1157,52 @@ let wasDisconnected = false;
             const versionReloadKey = 'linkvision-version-reload-target';
             let versionCheckInFlight = null;
             let versionReloadScheduled = false;
+            let manualReconnectTimer = null;
+            let manualReconnectAttempt = 0;
+
+            // Пользователь сейчас что-то делает (модалка, перетаскивание, режим
+            // создания связи, несохранённые запросы) — авто-reload потерял бы
+            // его работу, поэтому откладываем обновление до паузы.
+            const isUserBusy = () => {
+                if (document.querySelector('.modal.show')) return true;
+                return typeof window.isMapBusy === 'function' && window.isMapBusy();
+            };
+
+            const reloadWhenIdle = (serverVersion) => {
+                showToast(
+                    t('connection.updateTitle'),
+                    t(isUserBusy() ? 'connection.updatePendingMsg' : 'connection.updateMsg', { version: serverVersion }),
+                    'info',
+                    { autoHide: false }
+                );
+                let idleTicks = 0;
+                const timer = window.setInterval(() => {
+                    idleTicks = isUserBusy() ? 0 : idleTicks + 1;
+                    // ~2 с подряд без активности — можно безопасно обновляться.
+                    if (idleTicks >= 2) {
+                        window.clearInterval(timer);
+                        window.location.reload();
+                    }
+                }, 1000);
+            };
+
+            // Socket.IO сам НЕ переподключается, если сервер закрыл соединение
+            // ('io server disconnect', отказ middleware/сессии) — сокет остаётся
+            // с active === false. Без этого вкладка, которая всегда на виду
+            // (монитор/NOC-стена), оставалась бы отключённой навсегда: ручной
+            // connect() был только на visibilitychange/online.
+            const scheduleManualReconnect = () => {
+                if (manualReconnectTimer) return;
+                const base = Math.min(30000, 2000 * Math.pow(2, manualReconnectAttempt));
+                manualReconnectAttempt += 1;
+                const delay = Math.round(base * (0.5 + Math.random() * 0.5));
+                manualReconnectTimer = window.setTimeout(() => {
+                    manualReconnectTimer = null;
+                    if (window.socket && !window.socket.connected && !window.socket.active) {
+                        window.socket.connect();
+                    }
+                }, delay);
+            };
 
             const checkServerVersion = () => {
                 if (versionCheckInFlight) return versionCheckInFlight;
@@ -1183,10 +1229,18 @@ let wasDisconnected = false;
 
                         const data = await response.json();
                         const serverVersion = String(data.version || '');
+                        const serverBuild = String(data.build || '');
                         const pageVersion = String(window.appVersion || '');
+                        const pageBuild = String(window.appBuild || '');
                         if (!serverVersion || !pageVersion) return;
 
-                        if (serverVersion === pageVersion) {
+                        // build сравниваем только когда он известен и серверу, и
+                        // странице: страница старого релиза без build не должна
+                        // уходить в бесконечный reload.
+                        const buildDiffers = !!(serverBuild && pageBuild && serverBuild !== pageBuild);
+                        const reloadTarget = serverVersion + '|' + serverBuild;
+
+                        if (serverVersion === pageVersion && !buildDiffers) {
                             try { sessionStorage.removeItem(versionReloadKey); } catch (error) {}
                             return;
                         }
@@ -1194,7 +1248,7 @@ let wasDisconnected = false;
 
                         let previousTarget = '';
                         try { previousTarget = sessionStorage.getItem(versionReloadKey) || ''; } catch (error) {}
-                        if (previousTarget === serverVersion) {
+                        if (previousTarget === reloadTarget) {
                             showToast(
                                 t('connection.updateTitle'),
                                 t('connection.updateStuckMsg'),
@@ -1204,15 +1258,9 @@ let wasDisconnected = false;
                             return;
                         }
 
-                        try { sessionStorage.setItem(versionReloadKey, serverVersion); } catch (error) {}
+                        try { sessionStorage.setItem(versionReloadKey, reloadTarget); } catch (error) {}
                         versionReloadScheduled = true;
-                        showToast(
-                            t('connection.updateTitle'),
-                            t('connection.updateMsg', { version: serverVersion }),
-                            'info',
-                            { autoHide: false }
-                        );
-                        window.setTimeout(() => window.location.reload(), 1200);
+                        reloadWhenIdle(serverVersion);
                     } catch (error) {
                         Logger.debug('App version check failed:', error);
                     }
@@ -1248,6 +1296,11 @@ let wasDisconnected = false;
             });
             window.socket.on('connect', () => {
                 if (window.debugMode) Logger.info('Socket connected (global)');
+                manualReconnectAttempt = 0;
+                if (manualReconnectTimer) {
+                    window.clearTimeout(manualReconnectTimer);
+                    manualReconnectTimer = null;
+                }
                 checkServerVersion();
                 if (window.currentMapId) {
                     window.socket.emit('join_room', `map_${window.currentMapId}`);
@@ -1277,10 +1330,21 @@ let wasDisconnected = false;
             window.socket.on('disconnect', (reason) => {
                 Logger.debug('Socket disconnected (global):', reason);
                 markConnectionLost();
+                if (reason === 'io server disconnect') {
+                    // Если причина — истёкшая сессия, проверка версии получит
+                    // редирект на /auth/login и отправит пользователя на вход.
+                    checkServerVersion();
+                    scheduleManualReconnect();
+                }
             });
             window.socket.on('connect_error', (error) => {
                 Logger.warn('Socket connection error:', error);
                 markConnectionLost();
+                // active === false: менеджер сдался (сервер отклонил подключение).
+                if (window.socket && !window.socket.active) {
+                    checkServerVersion();
+                    scheduleManualReconnect();
+                }
             });
 
             // Start with a version check and keep long-running displays current.
