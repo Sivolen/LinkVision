@@ -26,6 +26,8 @@ let highlightedEdges = new Set();
 let activeContextMenu = null;
 let closeContextMenuHandler = null;
 let closeContextMenuTimer = null;
+let hoverContainer = null;
+let hoverPointerLeaveHandler = null;
 
 function closeActiveContextMenu() {
     if (closeContextMenuTimer) {
@@ -294,6 +296,31 @@ function clearHighlight() {
     activeHighlightNodeId = null;
 }
 
+function updateHoverTarget(node) {
+    const isHoverableNode = node && typeof node.isNode === 'function' && node.isNode()
+        && !node.data('isGroup') && !node.data('isShape');
+
+    if (!isHoverableNode) {
+        if (hoveredNodeId !== null || activeHighlightNodeId !== null) {
+            hoveredNodeId = null;
+            clearHighlight();
+        }
+        return;
+    }
+
+    const nodeId = node.id();
+    if (hoveredNodeId !== nodeId) {
+        hoveredNodeId = nodeId;
+        clearHighlight();
+    }
+
+    // If another interaction cleared styles while the pointer stayed put,
+    // restore the effect on the next pointer event.
+    if (activeHighlightNodeId !== nodeId && pendingHighlightFrame === null) {
+        scheduleHighlight(node);
+    }
+}
+
 function cleanupInteractions() {
     closeActiveContextMenu();
     if (pendingHighlightFrame !== null) {
@@ -302,6 +329,11 @@ function cleanupInteractions() {
     }
     clearHighlight();
     hoveredNodeId = null;
+    if (hoverContainer && hoverPointerLeaveHandler) {
+        hoverContainer.removeEventListener('pointerleave', hoverPointerLeaveHandler);
+    }
+    hoverContainer = null;
+    hoverPointerLeaveHandler = null;
 
     // Завершаем уже совершённые перемещения до уничтожения старого Cytoscape
     // экземпляра. saveStateForMap не даст позднему ответу добавить их в историю
@@ -627,43 +659,20 @@ export function initInteractions(cy) {
         if (event.target === cy && isLinkMode()) resetLinkMode();
     });
 
-    // Подсветка связей при наведении (без throttle!)
-    const handleMouseOver = function(evt) {
-        if (window._isBulkSelecting) return;   // ← подавляем во время рамки
-        const node = evt.target;
-        if (node.data('isGroup') || node.data('isShape')) return;
-        hoveredNodeId = node.id();
-        if (activeHighlightNodeId !== null && activeHighlightNodeId !== node.id()) {
-            clearHighlight();
-        }
-        scheduleHighlight(node);
-    };
-
-    const handleMouseOut = function(evt) {
-        // Если кнопка мыши зажата (началось перетаскивание) — не очищать подсветку
-        if (evt.originalEvent.buttons) return;
-
-        const node = evt.target;
-        if (node.data('isGroup') || node.data('isShape')) return;
-        // При быстром переходе событий mouseover нового узла и mouseout
-        // предыдущего могут прийти в обратном порядке. Не очищаем новый hover.
-        if (hoveredNodeId !== node.id()) return;
-        hoveredNodeId = null;
-        clearHighlight();
-    };
-
-    // Fallback: полная очистка при движении мыши по canvas
+    // Один поток движения указателя задаёт активный узел. Это исключает гонки
+    // между mouseover/mouseout при быстром переходе по соседним элементам.
     cy.on('mousemove', function(evt) {
         if (window.isOperator) return;
-        if (evt.originalEvent.buttons) return; // Не очищать при drag
-        const node = evt.target;
-        if ((!node || node === cy) && hoveredNodeId === null) {
-            clearHighlight();
-        }
+        if (window._isBulkSelecting || evt.originalEvent.buttons) return;
+        updateHoverTarget(evt.target);
     });
 
-    cy.on('mouseover', 'node', handleMouseOver);
-    cy.on('mouseout', 'node', handleMouseOut);
+    hoverContainer = cy.container();
+    hoverPointerLeaveHandler = (event) => {
+        if (event.buttons || window.isOperator || window._isBulkSelecting) return;
+        updateHoverTarget(null);
+    };
+    hoverContainer?.addEventListener('pointerleave', hoverPointerLeaveHandler);
 
     // Гасим hover-подсветку во время боксового выделения
     cy.on('boxstart', () => { window._isBulkSelecting = true; clearHighlight(); });
