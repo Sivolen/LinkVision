@@ -34,9 +34,10 @@ export function initMinimap(instance) {
     applyVisibility();
 
     cy.on('pan zoom', updateViewportRect);
-    // Изменение данных/стилей (например, цвет, подпись, тип связи), перенос
-    // между группами и завершение раскладки тоже меняют снимок мини-карты.
-    cy.on('add remove position data style move free dragfree layoutstop', scheduleRefresh);
+    // Снимок зависит от элементов, их данных и положения. Не слушаем событие
+    // style: пульсация аварийных узлов меняет стиль каждые 100 мс и постоянно
+    // сбрасывала debounce, из-за чего первый снимок откладывался до 30 секунд.
+    cy.on('add remove position data move free dragfree layoutstop', scheduleRefresh);
     window.addEventListener('elements:loaded', scheduleRefresh);
 
     // Размеры панели зависят от viewport. Пересчитываем масштаб и снимок при
@@ -259,7 +260,7 @@ function updateViewportRect() {
 export function cleanup() {
     if (cy) {
         cy.off('pan zoom', updateViewportRect);
-        cy.off('add remove position data style move free dragfree layoutstop', scheduleRefresh);
+        cy.off('add remove position data move free dragfree layoutstop', scheduleRefresh);
     }
     window.removeEventListener('elements:loaded', scheduleRefresh);
     if (resizeObserver) {
