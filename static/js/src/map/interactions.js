@@ -16,6 +16,9 @@ import { registerCleanup } from './moduleRegistry.js';
 let dragTimeouts = {};
 let groupBatchTimeout = null;
 let pendingHighlightFrame = null;
+let highlightAnimationFrame = null;
+let highlightAnimationStartedAt = 0;
+let lastHighlightFrameAt = 0;
 let highlightedNodes = new Set();
 let highlightedEdges = new Set();
 let activeContextMenu = null;
@@ -131,6 +134,10 @@ function fallbackCopy(text) {
     if (typeof showToast === 'function') showToast(t('contextMenu.copied'), t('contextMenu.copiedFallback', { ip: text }), 'info');
 }
 
+const EDGE_PULSE_DURATION_MS = 1100;
+const EDGE_PULSE_LENGTH_PERCENT = 20;
+const EDGE_PULSE_COLORS = ['#b45309', '#f59e0b', '#fff7cc', '#fbbf24', '#b45309'];
+
 // Оптимизация highlight через requestAnimationFrame
 function scheduleHighlight(node) {
     if (pendingHighlightFrame !== null) return; // Уже запланировано
@@ -148,44 +155,111 @@ function applyHighlight(node) {
     const edges = node.connectedEdges();
     const neighbors = edges.connectedNodes();
 
-    // Подсвечиваем edges
-    edges.forEach(edge => {
-        if (!highlightedEdges.has(edge)) {
-            if (!edge._private.originalStyle) {
-                edge._private.originalStyle = {
-                    'line-color': edge.style('line-color'),
-                    'width': edge.style('width')
-                };
-            }
-            edge.style({ 'line-color': '#f59e0b', 'width': 3 });
+    node.cy().batch(() => {
+        edges.forEach(edge => {
+            if (highlightedEdges.has(edge)) return;
+            edge._private.originalStyle = {
+                'line-fill': edge.style('line-fill'),
+                'line-color': edge.style('line-color'),
+                'line-gradient-stop-colors': edge.style('line-gradient-stop-colors'),
+                'line-gradient-stop-positions': edge.style('line-gradient-stop-positions'),
+                'line-outline-color': edge.style('line-outline-color'),
+                'line-outline-width': edge.style('line-outline-width'),
+                'width': edge.style('width')
+            };
+            edge._private.hoverSourceId = node.id();
             highlightedEdges.add(edge);
-        }
-    });
+        });
 
-    // Подсвечиваем neighbors
-    neighbors.union(node).forEach(n => {
-        if (!highlightedNodes.has(n)) {
-            if (!n._private.originalBorderStyle) {
-                n._private.originalBorderStyle = {
-                    'border-color': n.style('border-color'),
-                    'border-width': n.style('border-width')
-                };
-            }
+        // Подсвечиваем устройства, соединенные с наведенным.
+        neighbors.union(node).forEach(n => {
+            if (highlightedNodes.has(n)) return;
+            n._private.originalBorderStyle = {
+                'border-color': n.style('border-color'),
+                'border-width': n.style('border-width')
+            };
             n.style({ 'border-color': '#f59e0b', 'border-width': 3 });
             highlightedNodes.add(n);
-        }
+        });
     });
+
+    highlightAnimationStartedAt = performance.now();
+    if (highlightAnimationFrame === null) {
+        highlightAnimationFrame = requestAnimationFrame(animateEdgeHighlight);
+    }
+}
+
+function animateEdgeHighlight(now) {
+    highlightAnimationFrame = null;
+    if (highlightedEdges.size === 0) return;
+    // Ограничиваем стильные перерисовки примерно 30 кадрами/с: подсветка
+    // остаётся плавной, но не создаёт лишнюю нагрузку на большие графы.
+    if (now - lastHighlightFrameAt < 1000 / 30) {
+        highlightAnimationFrame = requestAnimationFrame(animateEdgeHighlight);
+        return;
+    }
+    lastHighlightFrameAt = now;
+
+    const progress = ((now - highlightAnimationStartedAt) % EDGE_PULSE_DURATION_MS) / EDGE_PULSE_DURATION_MS;
+    const maxStart = 100 - EDGE_PULSE_LENGTH_PERCENT;
+    const start = progress * maxStart;
+    const end = start + EDGE_PULSE_LENGTH_PERCENT;
+    const positions = [0, start, start + 3, start + 7, start + 11, start + 16, end, 100];
+    const cy = getCy();
+    if (!cy) return;
+
+    cy.batch(() => {
+        highlightedEdges.forEach(edge => {
+            const original = edge._private.originalStyle;
+            if (!original) return;
+            const baseColor = original['line-color'] || '#6c757d';
+            const colors = [
+                baseColor, baseColor,
+                EDGE_PULSE_COLORS[0], EDGE_PULSE_COLORS[1], EDGE_PULSE_COLORS[2],
+                EDGE_PULSE_COLORS[3], EDGE_PULSE_COLORS[4], baseColor
+            ];
+            let edgePositions = positions;
+            let edgeColors = colors;
+
+            // Градиент Cytoscape направлен от source к target. Для наведения
+            // на target меняем направление, чтобы импульс шёл ОТ курсора.
+            if (edge.target().id() === edge._private.hoverSourceId) {
+                edgePositions = positions.map(position => 100 - position).reverse();
+                edgeColors = colors.slice().reverse();
+            }
+
+            edge.style({
+                'line-fill': 'linear-gradient',
+                'line-gradient-stop-colors': edgeColors.join(' '),
+                'line-gradient-stop-positions': edgePositions.map(position => `${position.toFixed(2)}%`).join(' '),
+                'line-outline-color': 'rgba(245, 158, 11, 0.45)',
+                'line-outline-width': 2,
+                'width': Math.max(3, Number.parseFloat(original.width) || 2)
+            });
+        });
+    });
+
+    highlightAnimationFrame = requestAnimationFrame(animateEdgeHighlight);
 }
 
 function clearHighlight() {
+    if (pendingHighlightFrame !== null) {
+        cancelAnimationFrame(pendingHighlightFrame);
+        pendingHighlightFrame = null;
+    }
     // Очищаем edges
     highlightedEdges.forEach(edge => {
         if (edge._private.originalStyle) {
             edge.style(edge._private.originalStyle);
             delete edge._private.originalStyle;
         }
+        delete edge._private.hoverSourceId;
     });
     highlightedEdges.clear();
+    if (highlightAnimationFrame !== null) {
+        cancelAnimationFrame(highlightAnimationFrame);
+        highlightAnimationFrame = null;
+    }
 
     // Очищаем nodes
     highlightedNodes.forEach(n => {
