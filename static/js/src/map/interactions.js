@@ -16,18 +16,11 @@ import { registerCleanup } from './moduleRegistry.js';
 let dragTimeouts = {};
 let groupBatchTimeout = null;
 let pendingHighlightFrame = null;
-let highlightAnimationFrame = null;
-let highlightAnimationStartedAt = 0;
-let activeHighlightNodeId = null;
-let hoveredNodeId = null;
-let lastHighlightFrameAt = 0;
 let highlightedNodes = new Set();
 let highlightedEdges = new Set();
 let activeContextMenu = null;
 let closeContextMenuHandler = null;
 let closeContextMenuTimer = null;
-let hoverContainer = null;
-let hoverPointerLeaveHandler = null;
 
 function closeActiveContextMenu() {
     if (closeContextMenuTimer) {
@@ -138,15 +131,9 @@ function fallbackCopy(text) {
     if (typeof showToast === 'function') showToast(t('contextMenu.copied'), t('contextMenu.copiedFallback', { ip: text }), 'info');
 }
 
-const EDGE_FILL_DURATION_MS = 350;
-const EDGE_FILL_COLOR = '#f59e0b';
-
 // Оптимизация highlight через requestAnimationFrame
 function scheduleHighlight(node) {
-    if (pendingHighlightFrame !== null) {
-        cancelAnimationFrame(pendingHighlightFrame);
-        pendingHighlightFrame = null;
-    }
+    if (pendingHighlightFrame !== null) return; // Уже запланировано
 
     pendingHighlightFrame = requestAnimationFrame(() => {
         pendingHighlightFrame = null;
@@ -158,132 +145,47 @@ function applyHighlight(node) {
     if (window.isOperator) return;
     if (!node || node.data('isGroup') || node.data('isShape')) return;
 
-    // Never mix styles or animation state from two devices when the pointer
-    // crosses nodes faster than the next animation frame.
-    if (activeHighlightNodeId !== null && activeHighlightNodeId !== node.id()) {
-        clearHighlight();
-    }
-    activeHighlightNodeId = node.id();
-
     const edges = node.connectedEdges();
     const neighbors = edges.connectedNodes();
 
-    node.cy().batch(() => {
-        edges.forEach(edge => {
-            if (highlightedEdges.has(edge)) return;
-            edge._private.originalStyle = {
-                'line-fill': edge.style('line-fill'),
-                'line-color': edge.style('line-color'),
-                'line-gradient-stop-colors': edge.style('line-gradient-stop-colors'),
-                'line-gradient-stop-positions': edge.style('line-gradient-stop-positions'),
-                'line-outline-color': edge.style('line-outline-color'),
-                'line-outline-width': edge.style('line-outline-width'),
-                'width': edge.style('width')
-            };
-            edge._private.hoverSourceId = node.id();
+    // Подсвечиваем edges
+    edges.forEach(edge => {
+        if (!highlightedEdges.has(edge)) {
+            if (!edge._private.originalStyle) {
+                edge._private.originalStyle = {
+                    'line-color': edge.style('line-color'),
+                    'width': edge.style('width')
+                };
+            }
+            edge.style({ 'line-color': '#f59e0b', 'width': 3 });
             highlightedEdges.add(edge);
-        });
+        }
+    });
 
-        // Подсвечиваем устройства, соединенные с наведенным.
-        neighbors.union(node).forEach(n => {
-            if (highlightedNodes.has(n)) return;
-            n._private.originalBorderStyle = {
-                'border-color': n.style('border-color'),
-                'border-width': n.style('border-width')
-            };
+    // Подсвечиваем neighbors
+    neighbors.union(node).forEach(n => {
+        if (!highlightedNodes.has(n)) {
+            if (!n._private.originalBorderStyle) {
+                n._private.originalBorderStyle = {
+                    'border-color': n.style('border-color'),
+                    'border-width': n.style('border-width')
+                };
+            }
             n.style({ 'border-color': '#f59e0b', 'border-width': 3 });
             highlightedNodes.add(n);
-        });
+        }
     });
-
-    highlightAnimationStartedAt = performance.now();
-    if (highlightAnimationFrame === null) {
-        highlightAnimationFrame = requestAnimationFrame(animateEdgeHighlight);
-    }
-}
-
-function animateEdgeHighlight(now) {
-    highlightAnimationFrame = null;
-    if (highlightedEdges.size === 0) return;
-    // Ограничиваем стильные перерисовки примерно 30 кадрами/с: подсветка
-    // остаётся плавной, но не создаёт лишнюю нагрузку на большие графы.
-    if (now - lastHighlightFrameAt < 1000 / 30) {
-        highlightAnimationFrame = requestAnimationFrame(animateEdgeHighlight);
-        return;
-    }
-    lastHighlightFrameAt = now;
-
-    const progress = Math.min(1, (now - highlightAnimationStartedAt) / EDGE_FILL_DURATION_MS);
-    const front = progress * 100;
-    const softStart = Math.max(0, front - 3);
-    const softEnd = Math.min(100, front + 2);
-    const positions = [0, softStart, front, softEnd, 100];
-    const cy = getCy();
-    if (!cy) return;
-
-    cy.batch(() => {
-        highlightedEdges.forEach(edge => {
-            const original = edge._private.originalStyle;
-            if (!original) return;
-            const baseColor = original['line-color'] || '#6c757d';
-            const colors = [EDGE_FILL_COLOR, EDGE_FILL_COLOR, '#fff7cc', baseColor, baseColor];
-            let edgePositions = positions;
-            let edgeColors = colors;
-
-            // Градиент Cytoscape направлен от source к target. Для наведения
-            // на target меняем направление, чтобы импульс шёл ОТ курсора.
-            if (edge.target().id() === edge._private.hoverSourceId) {
-                edgePositions = positions.map(position => 100 - position).reverse();
-                edgeColors = colors.slice().reverse();
-            }
-
-            if (progress >= 1) {
-                // Импульс дошёл до соседнего устройства: оставляем всю связь
-                // золотой до тех пор, пока курсор остаётся на исходном узле.
-                edge.style({
-                    'line-fill': 'solid',
-                    'line-color': EDGE_FILL_COLOR,
-                    'line-outline-color': 'rgba(245, 158, 11, 0.45)',
-                    'line-outline-width': 2,
-                    'width': Math.max(3, Number.parseFloat(original.width) || 2)
-                });
-                return;
-            }
-
-            edge.style({
-                'line-fill': 'linear-gradient',
-                'line-gradient-stop-colors': edgeColors.join(' '),
-                'line-gradient-stop-positions': edgePositions.map(position => `${position.toFixed(2)}%`).join(' '),
-                'line-outline-color': 'rgba(245, 158, 11, 0.45)',
-                'line-outline-width': 2,
-                'width': Math.max(3, Number.parseFloat(original.width) || 2)
-            });
-        });
-    });
-
-    if (progress < 1) {
-        highlightAnimationFrame = requestAnimationFrame(animateEdgeHighlight);
-    }
 }
 
 function clearHighlight() {
-    if (pendingHighlightFrame !== null) {
-        cancelAnimationFrame(pendingHighlightFrame);
-        pendingHighlightFrame = null;
-    }
     // Очищаем edges
     highlightedEdges.forEach(edge => {
         if (edge._private.originalStyle) {
             edge.style(edge._private.originalStyle);
             delete edge._private.originalStyle;
         }
-        delete edge._private.hoverSourceId;
     });
     highlightedEdges.clear();
-    if (highlightAnimationFrame !== null) {
-        cancelAnimationFrame(highlightAnimationFrame);
-        highlightAnimationFrame = null;
-    }
 
     // Очищаем nodes
     highlightedNodes.forEach(n => {
@@ -293,32 +195,6 @@ function clearHighlight() {
         }
     });
     highlightedNodes.clear();
-    activeHighlightNodeId = null;
-}
-
-function updateHoverTarget(node) {
-    const isHoverableNode = node && typeof node.isNode === 'function' && node.isNode()
-        && !node.data('isGroup') && !node.data('isShape');
-
-    if (!isHoverableNode) {
-        if (hoveredNodeId !== null || activeHighlightNodeId !== null) {
-            hoveredNodeId = null;
-            clearHighlight();
-        }
-        return;
-    }
-
-    const nodeId = node.id();
-    if (hoveredNodeId !== nodeId) {
-        hoveredNodeId = nodeId;
-        clearHighlight();
-    }
-
-    // If another interaction cleared styles while the pointer stayed put,
-    // restore the effect on the next pointer event.
-    if (activeHighlightNodeId !== nodeId && pendingHighlightFrame === null) {
-        scheduleHighlight(node);
-    }
 }
 
 function cleanupInteractions() {
@@ -328,12 +204,6 @@ function cleanupInteractions() {
         pendingHighlightFrame = null;
     }
     clearHighlight();
-    hoveredNodeId = null;
-    if (hoverContainer && hoverPointerLeaveHandler) {
-        hoverContainer.removeEventListener('pointerleave', hoverPointerLeaveHandler);
-    }
-    hoverContainer = null;
-    hoverPointerLeaveHandler = null;
 
     // Завершаем уже совершённые перемещения до уничтожения старого Cytoscape
     // экземпляра. saveStateForMap не даст позднему ответу добавить их в историю
@@ -659,20 +529,35 @@ export function initInteractions(cy) {
         if (event.target === cy && isLinkMode()) resetLinkMode();
     });
 
-    // Один поток движения указателя задаёт активный узел. Это исключает гонки
-    // между mouseover/mouseout при быстром переходе по соседним элементам.
+    // Подсветка связей при наведении (без throttle!)
+    const handleMouseOver = function(evt) {
+        if (window._isBulkSelecting) return;   // ← подавляем во время рамки
+        const node = evt.target;
+        if (node.data('isGroup') || node.data('isShape')) return;
+        scheduleHighlight(node);
+    };
+
+    const handleMouseOut = function(evt) {
+        // Если кнопка мыши зажата (началось перетаскивание) — не очищать подсветку
+        if (evt.originalEvent.buttons) return;
+
+        const node = evt.target;
+        if (node.data('isGroup') || node.data('isShape')) return;
+        clearHighlight();
+    };
+
+    // Fallback: полная очистка при движении мыши по canvas
     cy.on('mousemove', function(evt) {
         if (window.isOperator) return;
-        if (window._isBulkSelecting || evt.originalEvent.buttons) return;
-        updateHoverTarget(evt.target);
+        if (evt.originalEvent.buttons) return; // Не очищать при drag
+        const node = evt.target;
+        if (!node || node === cy) {
+            clearHighlight();
+        }
     });
 
-    hoverContainer = cy.container();
-    hoverPointerLeaveHandler = (event) => {
-        if (event.buttons || window.isOperator || window._isBulkSelecting) return;
-        updateHoverTarget(null);
-    };
-    hoverContainer?.addEventListener('pointerleave', hoverPointerLeaveHandler);
+    cy.on('mouseover', 'node', handleMouseOver);
+    cy.on('mouseout', 'node', handleMouseOut);
 
     // Гасим hover-подсветку во время боксового выделения
     cy.on('boxstart', () => { window._isBulkSelecting = true; clearHighlight(); });

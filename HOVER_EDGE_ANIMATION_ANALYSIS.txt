@@ -1,0 +1,183 @@
+АНАЛИЗ ЭФФЕКТА ЗОЛОТОГО ЗАПОЛНЕНИЯ РЁБЕР
+Дата: 25.10.2026
+Проект: LinkVision
+
+1. ЧТО ПРОСИЛОСЬ
+
+При наведении курсора на обычное устройство золотая подсветка должна начинаться
+у этого устройства, двигаться по всем подключённым рёбрам к соседним устройствам,
+а после достижения конца оставлять всё ребро золотым. Подсветка должна оставаться
+до ухода курсора с устройства. Группы и фигуры в этот эффект не включаются.
+
+2. ЧТО БЫЛО ДО АНИМАЦИИ
+
+До коммита 072c50a подсветка была статической. Обработчик mouseover откладывал
+применение стилей до ближайшего кадра браузера. Все связанные рёбра сразу
+становились золотыми, а наведённое устройство и его соседи получали золотую
+окантовку. На mouseout функция clearHighlight восстанавливала сохранённые стили.
+
+Ключевая логика до эксперимента (static/js/src/map/interactions.js):
+
+function scheduleHighlight(node) {
+    if (pendingHighlightFrame !== null) return;
+    pendingHighlightFrame = requestAnimationFrame(() => {
+        pendingHighlightFrame = null;
+        applyHighlight(node);
+    });
+}
+
+function applyHighlight(node) {
+    if (window.isOperator) return;
+    if (!node || node.data('isGroup') || node.data('isShape')) return;
+
+    const edges = node.connectedEdges();
+    const neighbors = edges.connectedNodes();
+
+    edges.forEach(edge => {
+        if (!highlightedEdges.has(edge)) {
+            if (!edge._private.originalStyle) {
+                edge._private.originalStyle = {
+                    'line-color': edge.style('line-color'),
+                    'width': edge.style('width')
+                };
+            }
+            edge.style({ 'line-color': '#f59e0b', 'width': 3 });
+            highlightedEdges.add(edge);
+        }
+    });
+
+    neighbors.union(node).forEach(n => {
+        if (!highlightedNodes.has(n)) {
+            if (!n._private.originalBorderStyle) {
+                n._private.originalBorderStyle = {
+                    'border-color': n.style('border-color'),
+                    'border-width': n.style('border-width')
+                };
+            }
+            n.style({ 'border-color': '#f59e0b', 'border-width': 3 });
+            highlightedNodes.add(n);
+        }
+    });
+}
+
+function clearHighlight() {
+    highlightedEdges.forEach(edge => {
+        if (edge._private.originalStyle) {
+            edge.style(edge._private.originalStyle);
+            delete edge._private.originalStyle;
+        }
+    });
+    highlightedEdges.clear();
+
+    highlightedNodes.forEach(node => {
+        if (node._private.originalBorderStyle) {
+            node.style(node._private.originalBorderStyle);
+            delete node._private.originalBorderStyle;
+        }
+    });
+    highlightedNodes.clear();
+}
+
+В initInteractions были обработчики Cytoscape:
+
+cy.on('mouseover', 'node', handleMouseOver);
+cy.on('mouseout', 'node', handleMouseOut);
+
+handleMouseOver игнорировал группы и фигуры и вызывал scheduleHighlight(node).
+handleMouseOut вызывал clearHighlight, если кнопка мыши не была зажата.
+
+3. ЧТО МЕНЯЛОСЬ
+
+Коммит 072c50a (Animate hover pulse along connected edges):
+- Сохранение исходных стилей расширено для line-fill, градиентных цветов и
+  позиций, обводки и ширины ребра.
+- В приватных данных ребра сохранялся id устройства-источника наведения.
+- requestAnimationFrame обновлял CSS-градиент ребра. Направление градиента
+  переворачивалось, если наведённый узел был target-концом ребра.
+- Использовался повторяющийся импульс: длительность цикла 1100 мс, длина светлой
+  части примерно 20% ребра, палитра от тёмно-золотого через светлый к золотому.
+- После окончания кадра всегда планировался следующий кадр. clearHighlight
+  отменял RAF и восстанавливал сохранённые стили.
+
+Ключ исходной анимационной логики:
+
+const EDGE_PULSE_DURATION_MS = 1100;
+const EDGE_PULSE_LENGTH_PERCENT = 20;
+
+const progress = ((now - highlightAnimationStartedAt)
+    % EDGE_PULSE_DURATION_MS) / EDGE_PULSE_DURATION_MS;
+const start = progress * (100 - EDGE_PULSE_LENGTH_PERCENT);
+const end = start + EDGE_PULSE_LENGTH_PERCENT;
+
+edge.style({
+    'line-fill': 'linear-gradient',
+    'line-gradient-stop-colors': edgeColors.join(' '),
+    'line-gradient-stop-positions': edgePositions
+        .map(position => `${position.toFixed(2)}%`).join(' '),
+    'line-outline-color': 'rgba(245, 158, 11, 0.45)',
+    'line-outline-width': 2,
+    'width': Math.max(3, Number.parseFloat(original.width) || 2)
+});
+
+В последующих изменениях повторяющийся импульс был заменён на однократное
+заполнение: длительность сначала 750 мс, затем 350 мс. По завершении ребро
+переключалось на сплошной золотой цвет. Также пробовали сериализовать активный
+узел, отменять отложенный кадр при новом наведении, защищать mouseout предыдущего
+устройства от очистки нового, а затем заменить mouseover/mouseout на один
+mousemove-обработчик и pointerleave контейнера Cytoscape.
+
+4. НАБЛЮДАЕМАЯ ПРОБЛЕМА
+
+По ручной проверке пользователя, если быстро вести указатель между устройствами,
+эффект ломается уже после первого перехода: лучи прекращают движение, остаётся
+золотая окантовка вокруг двух устройств, и следующие наведения больше не запускают
+эффект. Остальные функции карты при этом продолжают работать.
+
+Перечисленные ниже причины были гипотезами, а не доказанным root cause:
+- конфликт порядка mouseover/mouseout при переходе между соседними узлами;
+- очистка или отмена requestAnimationFrame в момент старта следующего эффекта;
+- смешивание сохранённых стилей соседних hover-областей;
+- очистка hover через core mousemove, когда Cytoscape меняет evt.target;
+- особенности градиентных стилей или перерисовки Cytoscape при частом изменении.
+
+Каждая из нескольких правок была собрана и закоммичена, но пользователь подтвердил,
+что залипание осталось. В браузере и с диагностическими логами проблему не
+профилировали, поэтому достоверно утверждать причину нельзя.
+
+5. ТЕКУЩЕЕ СОСТОЯНИЕ ПОСЛЕ ОТКАТА
+
+Запрошенный эффект анимированного заполнения отключён. Файл
+static/js/src/map/interactions.js восстановлен к состоянию коммита 18f8220 —
+последнего состояния до анимации. Возвращена немедленная статическая подсветка
+всех связанных рёбер при наведении и восстановление исходных стилей на mouseout.
+Это не отменяет более ранние исправления миникарты и другие изменения карты.
+
+Версия поднята до 2.2.57, чтобы клиенты увидели новый бандл после обновления.
+static/js/dist/map.min.js должен быть пересобран из восстановленного исходника.
+Новая версия не является исправлением анимации: это откат нестабильного эффекта.
+
+6. ДАННЫЕ ДЛЯ ДАЛЬНЕЙШЕЙ ДИАГНОСТИКИ
+
+Исходный диапазон коммитов эффекта:
+072c50a Animate hover pulse along connected edges
+17ebd60 Fill connected edges from hovered device
+dfbc90b Fix hover highlight cleanup and speed
+9e0c0ff Guard hover cleanup across device transitions
+6231266 Drive edge hover from pointer movement
+
+Ветка: dev. Коммиты были локальными; push не выполнялся. Текущий откат также
+нужно сохранить отдельным коммитом. Неотслеживаемые .pnpm-store/ и
+pnpm-workspace.yaml к этой задаче не относятся.
+
+Рекомендуемые данные для продолжения анализа:
+1. Версия Firefox и ОС, воспроизводится ли в другом браузере.
+2. Небольшая тестовая карта с двумя-тремя узлами и разными типами рёбер.
+3. Логи mouseover, mouseout, mousemove с target.id(), hoveredNodeId,
+   activeHighlightNodeId и размерами highlightedEdges/highlightedNodes.
+4. Состояния edge.style() и node.style() непосредственно перед наведением,
+   после первого hover, после перехода на соседний узел и после выхода с canvas.
+5. Проверка вызовов cy.batch и числа активных RAF-циклов, чтобы определить,
+   теряется ли очистка стилей или останавливается только анимация.
+
+Проверки браузером не проводились. Сборка бандла и git diff --check выполняются
+отдельно; они не заменяют воспроизведение пользовательского сценария в Firefox.
