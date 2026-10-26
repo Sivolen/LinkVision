@@ -15,9 +15,9 @@ import { registerCleanup } from './moduleRegistry.js';
 
 let dragTimeouts = {};
 let groupBatchTimeout = null;
-let pendingHighlightFrame = null;
-let highlightedNodes = new Set();
-let highlightedEdges = new Set();
+// Состояние hover-подсветки: ровно один активный узел и один rAF-цикл.
+let hoverLeaveTarget = null;
+let hoverState = null; // { nodeId, startedAt, raf, edges: [{edge, reverse, base}], nodes }
 let activeContextMenu = null;
 let closeContextMenuHandler = null;
 let closeContextMenuTimer = null;
@@ -131,79 +131,144 @@ function fallbackCopy(text) {
     if (typeof showToast === 'function') showToast(t('contextMenu.copied'), t('contextMenu.copiedFallback', { ip: text }), 'info');
 }
 
-// Оптимизация highlight через requestAnimationFrame
-function scheduleHighlight(node) {
-    if (pendingHighlightFrame !== null) return; // Уже запланировано
+// ==================== HOVER-ПОДСВЕТКА С ЗАПОЛНЕНИЕМ РЁБЕР ====================
+// Принципы (чтобы не залипало при быстром движении мыши):
+//  1. Никаких отложенных применений: stopHover() и startHover() синхронные.
+//  2. Исходные стили не копируются: финальное состояние — CSS-классы
+//     (hl-edge / hl-node), промежуточное — bypass, который снимается removeStyle.
+//  3. Очистка идемпотентна, обёрнута в try/finally и не может оставить
+//     полу-очищенное состояние.
+//  4. mouseout очищает только если уходим с того узла, который активен.
+const HL_FILL_MS = 350;
+const HL_GOLD = '#f59e0b';
+const HL_LIGHT = '#fde68a';
+const HL_ANIM_KEYS = ['line-fill', 'line-gradient-stop-colors',
+    'line-gradient-stop-positions', 'transition-property', 'line-color', 'width'];
 
-    pendingHighlightFrame = requestAnimationFrame(() => {
-        pendingHighlightFrame = null;
-        applyHighlight(node);
+// Итоговое состояние «горит»: явный сплошной золотой стиль на ребре.
+// Держится до stopHover(), который снимает все HL_ANIM_KEYS.
+function setSolidGold(edge) {
+    edge.removeStyle('line-gradient-stop-colors line-gradient-stop-positions');
+    edge.style({
+        'transition-property': 'none',
+        'line-fill': 'solid',
+        'line-color': HL_GOLD,
+        'width': 3
     });
+    edge.addClass('hl-edge');
 }
 
-function applyHighlight(node) {
-    if (window.isOperator) return;
-    if (!node || node.data('isGroup') || node.data('isShape')) return;
+function isPlainDevice(node) {
+    return node && node.length && !node.data('isGroup') && !node.data('isShape');
+}
 
+function stopHover() {
+    const st = hoverState;
+    hoverState = null;               // сначала сбрасываем, чтобы повторный вызов был no-op
+    if (!st) return;
+    if (st.raf !== null) cancelAnimationFrame(st.raf);
+    const cy = getCy();
+    const clean = () => {
+        st.edges.forEach(({ edge }) => {
+            try {
+                if (edge.removed()) return;
+                edge.removeStyle(HL_ANIM_KEYS.join(' '));
+                edge.removeClass('hl-edge');
+            } catch (e) { console.warn('hover edge cleanup', e); }
+        });
+        st.nodes.forEach(n => {
+            try { if (!n.removed()) n.removeClass('hl-node'); }
+            catch (e) { console.warn('hover node cleanup', e); }
+        });
+    };
+    try { cy && !cy.destroyed() ? cy.batch(clean) : clean(); }
+    catch (e) { console.warn('hover cleanup', e); }
+}
+
+function paintFill(st, now) {
+    const t = Math.max(0, Math.min(1, (now - st.startedAt) / HL_FILL_MS));
+    const p = t * 100;
+    st.edges.forEach(({ edge, reverse, base }) => {
+        if (edge.removed()) return;
+        if (t >= 1) {
+            setSolidGold(edge);
+            return;
+        }
+        // Фронт заполнения идёт от наведённого устройства к соседу.
+        const colors = reverse ? [base, base, HL_LIGHT, HL_GOLD]
+                               : [HL_GOLD, HL_LIGHT, base, base];
+        const pos = reverse ? [0, 100 - p, 100 - p, 100] : [0, p, p, 100];
+        edge.style({
+            'transition-property': 'none',
+            'line-fill': 'linear-gradient',
+            'line-gradient-stop-colors': colors.join(' '),
+            'line-gradient-stop-positions': pos.map(x => x.toFixed(2) + '%').join(' ')
+        });
+    });
+    return t >= 1;
+}
+
+function startHover(node) {
+    if (window.isOperator || window._isBulkSelecting) return;
+    if (!isPlainDevice(node)) return;
+    const id = node.id();
+    if (hoverState && hoverState.nodeId === id) return;
+    stopHover();                                 // синхронно гасим предыдущий
+
+    const cy = getCy();
+    if (!cy) return;
     const edges = node.connectedEdges();
-    const neighbors = edges.connectedNodes();
+    const st = { nodeId: id, startedAt: performance.now(), raf: null, edges: [], nodes: [] };
+    hoverState = st;
 
-    // Подсвечиваем edges
-    edges.forEach(edge => {
-        if (!highlightedEdges.has(edge)) {
-            if (!edge._private.originalStyle) {
-                edge._private.originalStyle = {
-                    'line-color': edge.style('line-color'),
-                    'width': edge.style('width')
-                };
-            }
-            edge.style({ 'line-color': '#f59e0b', 'width': 3 });
-            highlightedEdges.add(edge);
+    cy.batch(() => {
+        edges.forEach(edge => {
+            // base читаем до любых изменений: stopHover() уже снял прошлый bypass
+            st.edges.push({
+                edge,
+                reverse: edge.target().id() === id && edge.source().id() !== id,
+                base: String(edge.style('line-color')).replace(/\s+/g, '')
+            });
+        });
+        edges.connectedNodes().union(node).forEach(n => {
+            if (!isPlainDevice(n)) return;
+            n.addClass('hl-node');
+            st.nodes.push(n);
+        });
+        try { paintFill(st, st.startedAt); }
+        catch (e) {
+            console.warn('hover paint', e);
+            st.edges.forEach(({ edge }) => {
+                setSolidGold(edge);
+            });
         }
     });
 
-    // Подсвечиваем neighbors
-    neighbors.union(node).forEach(n => {
-        if (!highlightedNodes.has(n)) {
-            if (!n._private.originalBorderStyle) {
-                n._private.originalBorderStyle = {
-                    'border-color': n.style('border-color'),
-                    'border-width': n.style('border-width')
-                };
-            }
-            n.style({ 'border-color': '#f59e0b', 'border-width': 3 });
-            highlightedNodes.add(n);
+    const tick = () => {
+        const now = performance.now();   // не rAF-метка: она может быть раньше startedAt
+        if (hoverState !== st) return;           // нас уже заменили/остановили
+        let done = true;
+        try { done = paintFill(st, now); }
+        catch (e) {
+            console.warn('hover paint', e);
+            // Градиент не применился — всё равно показываем итоговое золото
+            st.edges.forEach(({ edge }) => {
+                if (edge.removed()) return;
+                setSolidGold(edge);
+            });
         }
-    });
-}
-
-function clearHighlight() {
-    // Очищаем edges
-    highlightedEdges.forEach(edge => {
-        if (edge._private.originalStyle) {
-            edge.style(edge._private.originalStyle);
-            delete edge._private.originalStyle;
-        }
-    });
-    highlightedEdges.clear();
-
-    // Очищаем nodes
-    highlightedNodes.forEach(n => {
-        if (n._private.originalBorderStyle) {
-            n.style(n._private.originalBorderStyle);
-            delete n._private.originalBorderStyle;
-        }
-    });
-    highlightedNodes.clear();
+        st.raf = done ? null : requestAnimationFrame(tick);
+    };
+    st.raf = requestAnimationFrame(tick);
 }
 
 function cleanupInteractions() {
     closeActiveContextMenu();
-    if (pendingHighlightFrame !== null) {
-        cancelAnimationFrame(pendingHighlightFrame);
-        pendingHighlightFrame = null;
+    stopHover();
+    if (hoverLeaveTarget) {
+        hoverLeaveTarget.removeEventListener('mouseleave', stopHover);
+        hoverLeaveTarget = null;
     }
-    clearHighlight();
 
     // Завершаем уже совершённые перемещения до уничтожения старого Cytoscape
     // экземпляра. saveStateForMap не даст позднему ответу добавить их в историю
@@ -529,38 +594,37 @@ export function initInteractions(cy) {
         if (event.target === cy && isLinkMode()) resetLinkMode();
     });
 
-    // Подсветка связей при наведении (без throttle!)
-    const handleMouseOver = function(evt) {
-        if (window._isBulkSelecting) return;   // ← подавляем во время рамки
-        const node = evt.target;
-        if (node.data('isGroup') || node.data('isShape')) return;
-        scheduleHighlight(node);
-    };
+    // Подсветка связей при наведении
+    cy.on('mouseover', 'node', evt => startHover(evt.target));
 
-    const handleMouseOut = function(evt) {
-        // Если кнопка мыши зажата (началось перетаскивание) — не очищать подсветку
-        if (evt.originalEvent.buttons) return;
-
-        const node = evt.target;
-        if (node.data('isGroup') || node.data('isShape')) return;
-        clearHighlight();
-    };
-
-    // Fallback: полная очистка при движении мыши по canvas
-    cy.on('mousemove', function(evt) {
-        if (window.isOperator) return;
-        if (evt.originalEvent.buttons) return; // Не очищать при drag
-        const node = evt.target;
-        if (!node || node === cy) {
-            clearHighlight();
+    // Подсветка держится, пока курсор остаётся на устройстве или на его
+    // собственных рёбрах. mouseout узла НЕ гасит её: Cytoscape шлёт его и тогда,
+    // когда курсор заходит на ребро/подпись поверх того же узла.
+    cy.on('mousemove', evt => {
+        if (!hoverState) return;
+        if (evt.originalEvent && evt.originalEvent.buttons) return; // drag
+        const target = evt.target;
+        if (target === cy) { stopHover(); return; }
+        if (target.isNode()) {
+            if (target.id() === hoverState.nodeId) return;
+            if (isPlainDevice(target)) startHover(target);   // переход на другое устройство
+            else stopHover();                                // группа/фигура
+            return;
         }
+        // ребро: остаёмся, только если оно принадлежит активному устройству
+        if (!hoverState.edges.some(e => e.edge === target)) stopHover();
     });
 
-    cy.on('mouseover', 'node', handleMouseOver);
-    cy.on('mouseout', 'node', handleMouseOut);
+    // Курсор вернулся на фон — гарантированно очищаем
+    cy.on('mouseover', evt => { if (evt.target === cy) stopHover(); });
+
+    // Курсор покинул canvas
+    if (hoverLeaveTarget) hoverLeaveTarget.removeEventListener('mouseleave', stopHover);
+    hoverLeaveTarget = cy.container();
+    hoverLeaveTarget.addEventListener('mouseleave', stopHover);
 
     // Гасим hover-подсветку во время боксового выделения
-    cy.on('boxstart', () => { window._isBulkSelecting = true; clearHighlight(); });
+    cy.on('boxstart', () => { window._isBulkSelecting = true; stopHover(); });
     cy.on('boxend',   () => { window._isBulkSelecting = false; });
         // ==================== КОНТЕКСТНОЕ МЕНЮ ====================
     // Создание и показ меню с абсолютными координатами

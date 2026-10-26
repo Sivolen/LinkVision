@@ -272,11 +272,8 @@ export function updateLink(linkId, srcIface, tgtIface, linkType, lineColor, line
                 font_size: fontSize
             });
             
-            edge.style({
-                'line-color': lineColor,
-                'width': lineWidth,
-                'line-style': lineStyle
-            });
+            // Стиль берётся из data через stylesheet; bypass мешал hover-подсветке
+            edge.removeStyle('line-color width line-style');
             
             window.cy.style().update();
         }
