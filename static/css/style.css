@@ -980,10 +980,12 @@ body.resizing-sidebar .main-content {
   position: absolute;
   right: 12px;
   bottom: 12px;
-  width: clamp(140px, 24vw, 300px);
-  height: clamp(110px, 28vh, 210px);
-  max-width: calc(100vw - 24px);
-  max-height: calc(100dvh - 24px);
+  /* Размер растёт вместе с экраном: ~18% ширины / ~24% высоты окна,
+     с ограничениями для маленьких и очень больших мониторов */
+  width: clamp(170px, 18vw, 460px);
+  height: clamp(130px, 24vh, 340px);
+  max-width: min(30vw, calc(100vw - 24px));
+  max-height: min(35vh, calc(100dvh - 24px));
   z-index: 6;
   display: flex;
   align-items: flex-end;      /* прижимаем снимок к правому-нижнему углу */
