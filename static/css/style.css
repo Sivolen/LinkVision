@@ -2925,18 +2925,7 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   pointer-events: none;
 }
 
-.toolbar-section-edit::before { content: "РЕДАКТИРОВАНИЕ"; }
-.toolbar-section-mode::before { content: "РЕЖИМ"; }
-.toolbar-section-status::before { content: "СОСТОЯНИЕ"; }
-.toolbar-section-selection::before { content: "ВЫБОР"; }
-.toolbar-section-zoom::before { content: "МАСШТАБ"; }
-.toolbar-section-elements::before { content: "ЭЛЕМЕНТЫ"; }
-.toolbar-section-layout::before { content: "РАСКЛАДКА"; }
-.toolbar-section-search::before { content: "ПОИСК И ФИЛЬТР"; }
-.toolbar-section-history::before { content: "ИСТОРИЯ"; }
-.toolbar-section-lock::before { content: "БЛОКИРОВКА"; }
-.toolbar-section-permissions::before { content: "ДОСТУП"; }
-.toolbar-section-view::before { content: "ВИД"; }
+.toolbar-section::before { content: attr(data-label); }
 
 /* Keep desktop section captions inside their own layout boxes. */
 @media (min-width: 1600px) {
