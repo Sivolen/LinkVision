@@ -1,111 +1,116 @@
-/*
- * Theme-aware Cytoscape labels.
- * Kept as a small runtime module so the theme palette works even when the
- * application serves the prebuilt map.min.js bundle.
- */
+/* Theme-aware Cytoscape labels, kept separate from the main map bundle. */
 (() => {
     const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
     const palette = () => isDark() ? {
-        text: '#f3f6fb',
-        mutedText: '#d4dde8',
-        label: '#28313d',
-        edgeLabel: '#252e39',
-        selectedEdgeLabel: '#243b52',
+        text: '#f8fafc',
+        mutedText: '#cbd5e1',
+        label: '#1e293b',
+        edgeLabel: '#253244',
+        selectedEdgeLabel: '#173b61',
         shapeBorder: '#64748b'
     } : {
-        text: '#172033',
+        text: '#1f2937',
         mutedText: '#475569',
-        label: '#f8fafc',
+        label: '#ffffff',
         edgeLabel: '#f8fafc',
         selectedEdgeLabel: '#e7f3ff',
-        shapeBorder: '#64748b'
+        shapeBorder: '#94a3b8'
     };
 
     let styledCy = null;
+    let styleSignature = '';
 
-    function addThemeRules(cy) {
+    function apply(cy) {
         if (!cy || cy.destroyed()) return;
-        if (styledCy === cy) {
-            cy.style().update();
-            return;
-        }
+
+        const colors = palette();
+        const signature = `${isDark()}:${colors.label}:${colors.text}`;
+        if (styledCy === cy && styleSignature === signature) return;
+
         styledCy = cy;
+        styleSignature = signature;
         const dynamic = key => () => palette()[key];
         const stylesheet = cy.style();
-        const labelStyle = {
+        const deviceLabel = {
             color: dynamic('text'),
             'text-background-color': dynamic('label'),
             'text-background-opacity': 0.97,
             'text-background-padding': '4px',
             'text-background-shape': 'roundrectangle',
             'text-outline-color': dynamic('label'),
-            'text-outline-width': 0.5
+            'text-outline-width': 0.5,
+            'text-wrap': 'wrap',
+            'text-max-width': node => {
+                const name = String(node.data('name') || node.data('label') || '');
+                return `${Math.max(92, Math.min(220, name.length * 6.7 + 16))}px`;
+            }
         };
 
-        // Re-apply label styling to all device states without touching status
-        // borders, quality overlays, selection, dimensions, or icon rendering.
         [
             'node[iconUrl][iconUrl != ""]',
             'node[!iconUrl][status="up"], node[iconUrl=""][status="up"]',
             'node[!iconUrl][status="down"], node[iconUrl=""][status="down"]',
-            'node[!iconUrl][status="partial"], node[iconUrl=""][status="partial"]',
-            'node[isShape]'
-        ].forEach(selector => stylesheet.selector(selector).style(labelStyle));
+            'node[!iconUrl][status="partial"], node[iconUrl=""][status="partial"]'
+        ].forEach(selector => stylesheet.selector(selector).style(deviceLabel));
+
+        stylesheet.selector('node[isGroup]').style({
+            color: dynamic('text'),
+            'text-background-color': dynamic('label'),
+            'text-background-opacity': 0.94,
+            'text-background-padding': '4px',
+            'text-background-shape': 'roundrectangle',
+            'text-outline-width': 0
+        });
+        stylesheet.selector('node[isGroup][?collapsed]').style({
+            color: dynamic('text'),
+            'text-background-color': dynamic('label'),
+            'text-background-opacity': 0.97,
+            'text-background-padding': '5px',
+            'text-background-shape': 'roundrectangle'
+        });
         stylesheet.selector('node[isShape]').style({
+            color: dynamic('text'),
+            'text-background-color': dynamic('label'),
+            'text-background-opacity': 0.88,
+            'text-background-padding': '3px',
+            'text-background-shape': 'roundrectangle',
+            'text-outline-width': 0,
             'border-color': dynamic('shapeBorder')
         });
 
-        const groupLabelStyle = {
-            color: dynamic('text'),
-            'text-background-color': dynamic('label'),
-            'text-background-opacity': 0.92,
-            'text-background-padding': '4px',
-            'text-background-shape': 'roundrectangle'
-        };
-        stylesheet.selector('node[isGroup]').style(groupLabelStyle);
-        stylesheet.selector('node[isGroup][?collapsed]').style(groupLabelStyle);
-
-        const edgeLabelStyle = {
+        const edgeLabel = {
             color: dynamic('mutedText'),
             'text-background-color': dynamic('edgeLabel'),
             'text-background-opacity': 0.96,
             'text-background-padding': '3px',
-            'text-background-shape': 'roundrectangle'
+            'text-background-shape': 'roundrectangle',
+            'text-outline-width': 0
         };
-        stylesheet.selector('edge').style(edgeLabelStyle);
-        stylesheet.selector('edge[?isCollapseProxy]').style(edgeLabelStyle);
+        stylesheet.selector('edge').style(edgeLabel);
+        stylesheet.selector('edge[?isCollapseProxy]').style(edgeLabel);
         stylesheet.selector('edge:selected').style({
-            'text-background-color': dynamic('selectedEdgeLabel')
+            color: dynamic('text'),
+            'text-background-color': dynamic('selectedEdgeLabel'),
+            'text-background-opacity': 1
         });
         stylesheet.update();
     }
 
-    window.applyMapThemeStyles = () => addThemeRules(window.cy);
-
-    const themeObserver = new MutationObserver(mutations => {
-        if (!mutations.some(mutation => mutation.attributeName === 'data-theme')) return;
-        window.applyMapThemeStyles();
+    window.applyMapThemeStyles = () => apply(window.cy);
+    window.addEventListener('linkvision:cy-ready', event => {
+        apply(event.detail?.cy || window.cy);
     });
-    themeObserver.observe(document.documentElement, {
+
+    const observer = new MutationObserver(records => {
+        if (records.some(record => record.attributeName === 'data-theme')) {
+            apply(window.cy);
+        }
+    });
+    observer.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ['data-theme']
     });
 
-    // Map initialization can happen after this script is loaded.
-    document.addEventListener('DOMContentLoaded', () => {
-        window.applyMapThemeStyles();
-    }, { once: true });
-
-    // Map data can arrive asynchronously after DOMContentLoaded. Retry briefly
-    // so the theme rules are applied to the first Cytoscape instance as well.
-    let attempts = 0;
-    const readinessTimer = window.setInterval(() => {
-        attempts += 1;
-        if (window.cy && !window.cy.destroyed()) {
-            window.applyMapThemeStyles();
-            window.clearInterval(readinessTimer);
-        } else if (attempts >= 100) {
-            window.clearInterval(readinessTimer);
-        }
-    }, 100);
+    document.addEventListener('DOMContentLoaded', () => apply(window.cy), { once: true });
+    if (window.cy) apply(window.cy);
 })();

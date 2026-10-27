@@ -145,6 +145,9 @@ export function initMap(id) {
     window.cy = cy;
     registerMapCleanup(initResync(cy, { isExtraBusy: isLinkMode }));
     updateGroupLabelColor();
+    // Notify theme styling only after the initial group style has been set,
+    // so the theme-aware rules take precedence on every map initialization.
+    window.dispatchEvent(new CustomEvent('linkvision:cy-ready', { detail: { cy } }));
 
     // Отмена «телепортации»: если пользователь начал скроллить/зумить/тянуть карту
     // до того, как отработал начальный авто-фит (фон+элементы грузятся асинхронно),

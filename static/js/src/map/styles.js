@@ -6,6 +6,10 @@ const labelTextColor = () => isDarkTheme() ? '#f3f6fb' : '#172033';
 const labelBackgroundColor = () => isDarkTheme() ? '#28313d' : '#f8fafc';
 const edgeLabelTextColor = () => isDarkTheme() ? '#e6edf5' : '#475569';
 const edgeLabelBackgroundColor = () => isDarkTheme() ? '#252e39' : '#f8fafc';
+const deviceLabelMaxWidth = node => {
+    const name = String(node.data('name') || '');
+    return `${Math.max(92, Math.min(220, name.length * 6.7 + 16))}px`;
+};
 
 export const CY_STYLE = [
     {
@@ -45,7 +49,7 @@ export const CY_STYLE = [
             'font-size': function(node) { return (node.data('fontSize') || 11) + 'px'; },
             'font-weight': 'bold',
             'text-wrap': 'wrap',
-            'text-max-width': '80px',
+            'text-max-width': deviceLabelMaxWidth,
             'color': labelTextColor,
             'text-background-color': labelBackgroundColor,
             'text-background-opacity': 0.97,
@@ -106,7 +110,7 @@ export const CY_STYLE = [
                 return node.data('name') + '\n' + (node.data('ip') || '');
             },
             'text-wrap': 'wrap',
-            'text-max-width': '70px',
+            'text-max-width': deviceLabelMaxWidth,
             'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
             'font-weight': 'bold',
             'color': labelTextColor,
@@ -135,7 +139,7 @@ export const CY_STYLE = [
                 return node.data('name') + '\n' + (node.data('ip') || '');
             },
             'text-wrap': 'wrap',
-            'text-max-width': '70px',
+            'text-max-width': deviceLabelMaxWidth,
             'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
             'font-weight': 'bold',
             'color': labelTextColor,
@@ -168,7 +172,7 @@ export const CY_STYLE = [
                 return node.data('name') + '\n' + (node.data('ip') || '');
             },
             'text-wrap': 'wrap',
-            'text-max-width': '70px',
+            'text-max-width': deviceLabelMaxWidth,
             'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
             'font-weight': 'bold',
             'color': labelTextColor,
