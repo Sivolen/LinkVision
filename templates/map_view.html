@@ -24,7 +24,7 @@
     </button>
     <div class="toolbar">
     {% if can_toggle_lock or can_edit %}
-    <div class="toolbar-group edit-tools">
+    <div class="toolbar-group toolbar-section toolbar-section-edit edit-tools">
         <button class="toolbar-btn" onclick="openDeviceModal()" aria-label="{{ _('Добавить устройство') }}">
             <i class="fas fa-plus" aria-hidden="true"></i> <span class="btn-label">{{ _('Устройство') }}</span>
         </button>
@@ -34,42 +34,42 @@
     </div>
     {% endif %}
 
-    <div class="toolbar-group">
+    <div class="toolbar-group toolbar-section toolbar-section-mode">
         <button class="toolbar-btn" id="panMode" onclick="setMode('pan')" title="{{ _('Перемещение карты') }}" aria-label="{{ _('Режим перемещения карты') }}">
             <i class="fas fa-hand-paper" aria-hidden="true"></i> <span class="btn-label">{{ _('Пан') }}</span>
         </button>
-        <button class="toolbar-btn" id="selectMode" onclick="setMode('select')" title="{{ _('Выделение нескольких устройств') }}" aria-label="{{ _('Режим выделения устройств') }}">
+        <button class="toolbar-btn" id="selectMode" onclick="setMode('select')" title="{{ _('Выделение устройств') }}" aria-label="{{ _('Режим выделения устройств') }}">
             <i class="fas fa-object-group" aria-hidden="true"></i> <span class="btn-label">{{ _('Выделение') }}</span>
         </button>
     </div>
 
     <!-- Индикатор текущего режима -->
-    <div class="toolbar-group">
+    <div class="toolbar-group toolbar-section toolbar-section-status">
         <span id="modeIndicator" class="mode-badge" role="status" aria-live="polite">{{ _('Просмотр') }}</span>
     </div>
 
     {% if can_toggle_lock or can_edit %}
-    <div class="toolbar-group edit-tools" id="bulkEditGroup" style="display:none;">
+    <div class="toolbar-group toolbar-section toolbar-section-selection edit-tools" id="bulkEditGroup" style="display:none;">
         <button class="toolbar-btn toolbar-btn-icon-only" onclick="openBulkEditModal()" aria-label="{{ _('Массовое редактирование выбранных устройств') }}">
             <i class="fas fa-edit" aria-hidden="true"></i> <span class="btn-label">{{ _('Редактировать выбранные') }}</span>
         </button>
     </div>
     {% endif %}
 
-    <div class="toolbar-group">
-        <button class="toolbar-btn" onclick="zoomIn()" aria-label="{{ _('Увеличить масштаб') }}">
+    <div class="toolbar-group toolbar-section toolbar-section-zoom">
+        <button class="toolbar-btn" onclick="zoomIn()" title="{{ _('Увеличить масштаб') }}" aria-label="{{ _('Увеличить масштаб') }}">
             <i class="fas fa-search-plus" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" onclick="zoomOut()" aria-label="{{ _('Уменьшить масштаб') }}">
+        <button class="toolbar-btn" onclick="zoomOut()" title="{{ _('Уменьшить масштаб') }}" aria-label="{{ _('Уменьшить масштаб') }}">
             <i class="fas fa-search-minus" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" onclick="resetZoom()" aria-label="{{ _('Сбросить масштаб') }}">
+        <button class="toolbar-btn" onclick="resetZoom()" title="{{ _('Подогнать карту / сбросить масштаб') }}" aria-label="{{ _('Подогнать карту / сбросить масштаб') }}">
             <i class="fas fa-compress-arrows-alt" aria-hidden="true"></i>
         </button>
     </div>
 
     {% if can_toggle_lock or can_edit %}
-    <div class="toolbar-group edit-tools">
+    <div class="toolbar-group toolbar-section toolbar-section-elements edit-tools">
         <button class="toolbar-btn" onclick="openGroupManager()" aria-label="{{ _('Управление группами устройств') }}">
             <i class="fas fa-layer-group" aria-hidden="true"></i> <span class="btn-label">{{ _('Группы') }}</span>
         </button>
@@ -77,7 +77,7 @@
             <i class="fas fa-shapes" aria-hidden="true"></i> <span class="btn-label">{{ _('Фигура') }}</span>
         </button>
     </div>
-    <div class="toolbar-group edit-tools">
+    <div class="toolbar-group toolbar-section toolbar-section-layout edit-tools">
         <div class="dropdown">
             <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-label="{{ _('Автораскладка карты') }}">
                 <i class="fas fa-project-diagram" aria-hidden="true"></i> <span class="btn-label">{{ _('Автораскладка') }}</span>
@@ -96,9 +96,14 @@
     </div>
     {% endif %}
 
-    <div class="search-filter-bar toolbar-group">
+    <div class="search-filter-bar toolbar-group toolbar-section toolbar-section-search">
         <div class="input-group">
-            <span class="input-group-text bg-secondary text-white"><i class="fas fa-search"></i></span>
+            <span class="input-group-text bg-secondary text-white" role="button" tabindex="0"
+                  aria-label="{{ _('Открыть поиск') }}"
+                  onclick="const bar=this.closest('.search-filter-bar'); bar.classList.toggle('search-expanded'); if(bar.classList.contains('search-expanded')) bar.querySelector('input').focus();"
+                  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+                <i class="fas fa-search" aria-hidden="true"></i>
+            </span>
             <input type="text" id="searchInput" class="form-control" placeholder="{{ _('Поиск по имени, IP или типу...') }}">
             <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ _('Фильтр') }}</button>
             <ul class="dropdown-menu dropdown-menu-end">
@@ -111,7 +116,7 @@
         </div>
     </div>
     {% if can_toggle_lock or can_edit %}
-    <div class="toolbar-group edit-tools">
+    <div class="toolbar-group toolbar-section toolbar-section-history edit-tools">
         <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="{{ _('Отменить (Ctrl+Z)') }}" aria-label="{{ _('Отменить последнее действие') }}" disabled>
             <i class="fas fa-undo-alt" aria-hidden="true"></i>
         </button>
@@ -121,20 +126,20 @@
     </div>
     {% endif %}
     {% if can_toggle_lock %}
-    <div class="toolbar-group">
-        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="{{ _('Заблокировать/разблокировать перемещение устройств') }}" aria-label="{{ _('Заблокировать или разблокировать перемещение устройств') }}">
+    <div class="toolbar-group toolbar-section toolbar-section-lock">
+        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="{{ _('Блокировка перемещения') }}" aria-label="{{ _('Заблокировать или разблокировать перемещение устройств') }}">
             <i class="fas fa-lock-open" aria-hidden="true"></i>
         </button>
     </div>
     {% endif %}
     {% if current_user.is_admin %}
-    <div class="toolbar-group">
-        <button class="toolbar-btn" onclick="openPermissionsModal({{ map.id }}, '{{ map.name }}')" title="{{ _('Управление правами доступа') }}" aria-label="{{ _('Управление правами доступа к карте') }}">
+    <div class="toolbar-group toolbar-section toolbar-section-permissions">
+        <button class="toolbar-btn" onclick="openPermissionsModal({{ map.id }}, '{{ map.name }}')" title="{{ _('Права доступа') }}" aria-label="{{ _('Управление правами доступа к карте') }}">
             <i class="fas fa-users-cog" aria-hidden="true"></i> <span class="btn-label">{{ _('Права') }}</span>
         </button>
     </div>
     {% endif %}
-    <div class="toolbar-group">
+    <div class="toolbar-group toolbar-section toolbar-section-view">
         <button class="toolbar-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="{{ _('Полноэкранный режим') }}" aria-label="{{ _('Переключить полноэкранный режим') }}">
             <i class="fas fa-expand" aria-hidden="true"></i>
         </button>

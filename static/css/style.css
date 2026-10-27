@@ -1060,10 +1060,6 @@ body.resizing-sidebar .main-content {
   flex: 0 0 auto;
 }
 
-.toolbar-shell.has-overflow .toolbar-scroll-btn {
-  display: inline-flex;
-}
-
 .toolbar-scroll-btn {
   display: none;
   flex: 0 0 34px;
@@ -2850,15 +2846,536 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 .quality-chart-series-0 { color: #0d6efd; stroke: #0d6efd; fill: #0d6efd; }
 .quality-chart-series-1 { color: #6f42c1; stroke: #6f42c1; fill: #6f42c1; }
 .quality-chart-loss { color: #dc3545; stroke: #dc3545; fill: #dc3545; }
-/* Align toolbar scroll arrows with the controls, above the scrollbar padding. */
-.toolbar-scroll-btn {
-  transform: translateY(-6px);
-}
-/* Align scroll arrows to the toolbar control row, not its scrollbar area. */
+/* ============================================================================
+   LinkVision map toolbar — consolidated responsive styles
+   Keep toolbar rules in one place to avoid cascade conflicts.
+   ============================================================================ */
 .toolbar-shell {
-  align-items: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
 }
+
+.toolbar {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 13px 0 2px;
+  box-sizing: border-box;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.toolbar::-webkit-scrollbar { display: none; }
+
+.toolbar > .toolbar-section {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  align-self: center;
+  gap: 3px;
+  height: 36px;
+  min-height: 36px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 8px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--border-color);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.toolbar > .toolbar-section:last-child { border-right: 0; }
+
+.toolbar-section-mode { gap: 4px; }
+.toolbar-section-mode .btn-label { display: inline-block; }
+
+.toolbar-section::before {
+  position: absolute;
+  top: -12px;
+  left: 8px;
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 10px;
+  letter-spacing: .065em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: .82;
+  pointer-events: none;
+}
+
+.toolbar-section-edit::before { content: "РЕДАКТИРОВАНИЕ"; }
+.toolbar-section-mode::before { content: "РЕЖИМ"; }
+.toolbar-section-status::before { content: "СОСТОЯНИЕ"; }
+.toolbar-section-selection::before { content: "ВЫБОР"; }
+.toolbar-section-zoom::before { content: "МАСШТАБ"; }
+.toolbar-section-elements::before { content: "ЭЛЕМЕНТЫ"; }
+.toolbar-section-layout::before { content: "РАСКЛАДКА"; }
+.toolbar-section-search::before { content: "ПОИСК И ФИЛЬТР"; }
+.toolbar-section-history::before { content: "ИСТОРИЯ"; }
+.toolbar-section-lock::before { content: "БЛОКИРОВКА"; }
+.toolbar-section-permissions::before { content: "ДОСТУП"; }
+.toolbar-section-view::before { content: "ВИД"; }
+
+/* Keep desktop section captions inside their own layout boxes. */
+@media (min-width: 1600px) {
+  .toolbar-section-history,
+  .toolbar-section-view {
+    min-width: 54px;
+    justify-content: center;
+  }
+
+  /* Icon-only actions already have native tooltips; captions here collide. */
+  .toolbar-section-lock::before,
+  .toolbar-section-permissions::before {
+    content: none;
+    display: none;
+  }
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: .82rem;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color .16s ease, color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.toolbar-btn:hover {
+  background: color-mix(in srgb, var(--accent-color) 12%, var(--bg-secondary));
+  border-color: color-mix(in srgb, var(--accent-color) 25%, var(--border-color));
+  color: var(--accent-color);
+}
+
+.toolbar-btn.active {
+  background: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+  box-shadow: 0 2px 5px rgba(45, 105, 170, .18);
+}
+
+.toolbar-btn:focus-visible,
+.toolbar-scroll-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.toolbar-section-zoom .toolbar-btn,
+.toolbar-section-history .toolbar-btn,
+.toolbar-section-view .toolbar-btn {
+  width: 34px;
+  padding: 0;
+}
+
+.toolbar-section-status {
+  flex: 0 0 auto;
+  min-width: max-content;
+  padding: 0 8px;
+}
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: .76rem;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+/* Keep the mode indicator visually consistent across pan/select/link modes.
+   The active mode is already communicated by the selected toolbar button. */
+.mode-badge.mode-view,
+.mode-badge.mode-edit,
+.mode-badge.mode-link {
+  background: color-mix(in srgb, var(--accent-color) 11%, var(--bg-secondary));
+  color: var(--accent-color);
+  border: 1px solid color-mix(in srgb, var(--accent-color) 28%, var(--border-color));
+  font-weight: 600;
+}
+
+.toolbar-section-search {
+  flex: 1 1 250px;
+  min-width: 180px;
+  max-width: 390px;
+}
+
+.toolbar-section-search .input-group {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  min-width: 0;
+}
+
+.toolbar-section-search .input-group-text {
+  display: flex;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-right: 0;
+  border-radius: 8px 0 0 8px;
+  background: var(--bg-primary) !important;
+  color: var(--text-secondary) !important;
+}
+
+.toolbar-section-search .form-control {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 70px;
+  height: 34px;
+  box-sizing: border-box;
+  border-color: var(--border-color);
+  font-size: .8rem;
+  box-shadow: none;
+}
+
+.toolbar-section-search .input-group > .btn {
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 9px;
+  border-color: var(--border-color);
+  border-radius: 0 8px 8px 0;
+  font-size: .8rem;
+  white-space: nowrap;
+}
+
+.toolbar-section-layout .dropdown,
+.toolbar-section-layout .dropdown > .toolbar-btn { height: 34px; }
+.toolbar-section-layout .dropdown > .toolbar-btn { padding: 0 9px; }
+
 .toolbar-scroll-btn {
-  margin-top: 3px;
-  transform: none;
+  display: none;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-shadow: none;
+  cursor: pointer;
 }
+
+[data-theme="dark"] .toolbar-shell {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .toolbar-section::before { color: var(--text-secondary); }
+[data-theme="dark"] .toolbar-btn:hover {
+  background: rgba(108, 142, 191, .18);
+  border-color: rgba(108, 142, 191, .32);
+  color: var(--text-primary);
+}
+
+/* Keep the mode indicator from colliding with the mode buttons on ordinary laptop widths. */
+@media (max-width: 1799px) {
+  .toolbar-section-status { display: none; }
+}
+
+/* Medium screens: remove section captions and button labels, but keep the search usable. */
+@media (max-width: 1599px) {
+  .toolbar-shell { padding: 6px 8px; }
+  .toolbar { padding: 0 0 2px; }
+  .toolbar-section::before { display: none; }
+  .toolbar > .toolbar-section { padding: 0 5px; }
+  .toolbar-btn .btn-label { display: none; }
+  .toolbar-btn,
+  .toolbar-section-edit .toolbar-btn,
+  .toolbar-section-layout .toolbar-btn,
+  .toolbar-section-mode .toolbar-btn,
+  .toolbar-section-zoom .toolbar-btn,
+  .toolbar-section-history .toolbar-btn,
+  .toolbar-section-view .toolbar-btn {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    padding: 0;
+    gap: 0;
+  }
+  .toolbar-section-status { display: none; }
+  .toolbar-section-lock,
+  .toolbar-section-permissions,
+  .toolbar-section-history,
+  .toolbar-section-view { min-width: 0; }
+  .toolbar-section-search {
+    flex: 1 1 200px;
+    width: auto;
+    min-width: 150px;
+    max-width: 300px;
+  }
+  .toolbar-section-search .form-control { min-width: 50px; }
+}
+
+/* Narrow screens: search collapses to its icon and expands on click. */
+@media (max-width: 1100px) {
+  .toolbar-shell { gap: 4px; padding: 6px; border-radius: 10px; }
+  .toolbar > .toolbar-section { padding: 0 3px; }
+  .toolbar-section-search {
+    flex: 0 0 36px;
+    width: 36px;
+    min-width: 36px;
+    max-width: 36px;
+    overflow: hidden;
+    border-right: 1px solid var(--border-color);
+  }
+  .toolbar-section-search .input-group { width: 260px; }
+  .toolbar-section-search .input-group-text {
+    flex-basis: 34px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .toolbar-section-search .form-control,
+  .toolbar-section-search .input-group > .btn { display: none; }
+  .toolbar-section-search.search-expanded {
+    flex: 0 0 260px;
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    overflow: visible;
+    border-right: 0;
+  }
+  .toolbar-section-search.search-expanded .input-group-text { border-radius: 8px 0 0 8px; }
+  .toolbar-section-search.search-expanded .form-control,
+  .toolbar-section-search.search-expanded .input-group > .btn { display: block; }
+  .toolbar-scroll-btn { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-btn { transition: none; }
+}
+
+/* ==========================================================================
+   Toolbar responsive behavior — final unified overrides
+   Wide: labels. Medium: compact controls. Narrow: symmetric scroll controls.
+   ========================================================================== */
+
+/* Keep the toolbar shell vertically aligned. */
+.toolbar-shell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Use one neutral accent for the status badge in both light and dark themes. */
+.mode-badge.mode-view,
+.mode-badge.mode-edit,
+.mode-badge.mode-link,
+[data-theme="dark"] .mode-badge.mode-view,
+[data-theme="dark"] .mode-badge.mode-edit,
+[data-theme="dark"] .mode-badge.mode-link {
+  background: color-mix(in srgb, var(--accent-color) 12%, var(--bg-secondary));
+  color: var(--accent-color);
+  border: 1px solid color-mix(in srgb, var(--accent-color) 32%, var(--border-color));
+  font-weight: 600;
+}
+
+/* These are icon-only utility groups: don't show only some captions. */
+.toolbar-section-history::before,
+.toolbar-section-lock::before,
+.toolbar-section-permissions::before,
+.toolbar-section-view::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Compact immediately as the browser gets narrower, rather than waiting
+   for the toolbar to overflow with full text labels. */
+@media (max-width: 1799px) {
+  .toolbar-section::before { display: none !important; }
+  .toolbar-btn .btn-label { display: none !important; }
+  .toolbar-section-status { display: none !important; }
+
+  .toolbar > .toolbar-section {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 0 5px;
+    align-self: center;
+  }
+
+  .toolbar .toolbar-btn {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    padding: 0;
+    gap: 0;
+    white-space: nowrap;
+  }
+
+  /* Keep search as a flexible field while there is room. */
+  .toolbar-section-search {
+    flex: 1 1 180px;
+    width: auto;
+    min-width: 140px;
+    max-width: 300px;
+    overflow: visible;
+  }
+
+  .toolbar-section-search .form-control {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .toolbar-section-search .input-group {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+  }
+
+  .toolbar-section-search .input-group > .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+/* Narrow: collapse search to a single icon. Keep arrows hidden unless the
+   viewport is genuinely narrow AND the observer detects horizontal overflow. */
+@media (max-width: 1100px) {
+  .toolbar-shell {
+    gap: 6px;
+    padding: 6px 8px;
+    align-items: center;
+  }
+
+  .toolbar {
+    min-width: 0;
+    padding: 0;
+    align-items: center;
+    scrollbar-width: none;
+  }
+
+  .toolbar::-webkit-scrollbar { display: none; }
+
+  .toolbar > .toolbar-section {
+    padding: 0 3px;
+    align-self: center;
+  }
+
+  .toolbar-section-search {
+    flex: 0 0 36px;
+    width: 36px;
+    min-width: 36px;
+    max-width: 36px;
+    overflow: hidden;
+    border-right: 0;
+  }
+
+  .toolbar-section-search .input-group {
+    display: flex;
+    width: 260px;
+    min-width: 260px;
+    flex-wrap: nowrap;
+  }
+
+  .toolbar-section-search .input-group-text {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .toolbar-section-search .form-control,
+  .toolbar-section-search .input-group > .btn {
+    display: none;
+  }
+
+  .toolbar-section-search.search-expanded {
+    flex: 0 0 260px;
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    overflow: visible;
+    z-index: 20;
+    background: var(--bg-secondary);
+  }
+
+  .toolbar-section-search.search-expanded .form-control,
+  .toolbar-section-search.search-expanded .input-group > .btn {
+    display: block;
+  }
+
+  .toolbar-section-search.search-expanded .input-group-text {
+    border-radius: 8px 0 0 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar,
+  .toolbar-btn,
+  .toolbar-scroll-btn {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}
+/* Single source of truth for toolbar scroll controls:
+   show both arrows at every viewport width only when JS detects overflow. */
+.toolbar-shell .toolbar-scroll-btn {
+  display: none !important;
+  flex: 0 0 30px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  align-self: center;
+  transform: none !important;
+}
+
+.toolbar-shell.has-overflow .toolbar-scroll-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
