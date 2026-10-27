@@ -71,7 +71,7 @@ class Config:
     BABEL_DEFAULT_LOCALE = "ru"
     BABEL_TRANSLATION_DIRECTORIES = "translations"
 
-    VERSION = "2.2.59"
+    VERSION = "2.2.60"
     # Хеш собранных фронтенд-файлов. Позволяет клиентам заметить обновление
     # (и обойти кэш браузера), даже если VERSION забыли поднять. Считается один
     # раз при старте процесса — после `npm run build` нужен рестарт сервиса.

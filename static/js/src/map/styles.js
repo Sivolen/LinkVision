@@ -378,5 +378,13 @@ export const CY_STYLE = [
             'overlay-padding': '4px',
             'background-color': 'rgba(0,123,255,0.1)'
         }
+    },
+    {
+        selector: 'edge.hl-edge',
+        style: { 'line-color': '#f59e0b', 'width': 3 }
+    },
+    {
+        selector: 'node.hl-node',
+        style: { 'border-color': '#f59e0b', 'border-width': 3 }
     }
 ];
