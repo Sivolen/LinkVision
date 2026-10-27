@@ -95,4 +95,17 @@
     document.addEventListener('DOMContentLoaded', () => {
         window.applyMapThemeStyles();
     }, { once: true });
+
+    // Map data can arrive asynchronously after DOMContentLoaded. Retry briefly
+    // so the theme rules are applied to the first Cytoscape instance as well.
+    let attempts = 0;
+    const readinessTimer = window.setInterval(() => {
+        attempts += 1;
+        if (window.cy && !window.cy.destroyed()) {
+            window.applyMapThemeStyles();
+            window.clearInterval(readinessTimer);
+        } else if (attempts >= 100) {
+            window.clearInterval(readinessTimer);
+        }
+    }, 100);
 })();
