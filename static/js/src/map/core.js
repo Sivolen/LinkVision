@@ -19,7 +19,6 @@ export function initCy(mapId, onReady) {
 
         // Очищаем слушатели и таймеры перед уничтожением
         cleanupAll();
-
         cy.destroy();
     }
     cy = cytoscape({
@@ -54,9 +53,16 @@ export function initCy(mapId, onReady) {
 export function updateGroupLabelColor() {
     if (!cy) return;
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const textColor = isDark ? '#ffffff' : '#000000';
+    const textColor = isDark ? '#f3f6fb' : '#172033';
+    const labelBackground = isDark ? '#28313d' : '#f8fafc';
     cy.style()
         .selector('node[isGroup]')
-        .style('color', textColor)
+        .style({
+            'color': textColor,
+            'text-background-color': labelBackground,
+            'text-background-opacity': 0.92,
+            'text-background-padding': '4px',
+            'text-background-shape': 'roundrectangle'
+        })
         .update();
 }

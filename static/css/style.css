@@ -13,8 +13,9 @@ LinkVision - Современный дизайн (финальная верси�
   --accent-color: #4682b4;
   --accent-hover: #5a9bd4;
   --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
-  --cy-background: #ffffff;
-  --cy-grid: #cbd5e1;
+  /* Нейтральное поле карты и малоконтрастная сетка. */
+  --cy-background: #fbfcfe;
+  --cy-grid: #d7dee8;
   --sidebar-blur: blur(12px);
   --sidebar-width: 280px;
   /* Единая высота всех контролов тулбара карты (кнопки, индикатор режима,
@@ -37,8 +38,9 @@ LinkVision - Современный дизайн (финальная верси�
   --accent-color: #6c8ebf;      /* приглушённый синий */
   --accent-hover: #7e9ec9;
   --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-  --cy-background: #1e1e1e;
-  --cy-grid: #2c2c2c;
+  /* Графитовая поверхность без резкого чёрного контраста. */
+  --cy-background: #202630;
+  --cy-grid: #303946;
   --sidebar-blur: blur(12px);
 }
 

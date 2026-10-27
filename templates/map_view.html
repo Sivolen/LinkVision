@@ -789,6 +789,7 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/dist/common.min.js', v=asset_version) }}"></script>
 <script src="{{ url_for('static', filename='js/dist/map.min.js', v=asset_version) }}"></script>
+<script src="{{ url_for('static', filename='js/map-theme-styles.js', v=asset_version) }}"></script>
 <script src="{{ url_for('static', filename='js/dist/modal.min.js', v=asset_version) }}"></script>
 <script>
     const toolbarShell = document.querySelector('.toolbar-shell');
@@ -826,6 +827,7 @@
 
     if (window.currentMapId && typeof initMap === 'function') {
         initMap(window.currentMapId);
+        if (typeof window.applyMapThemeStyles === 'function') window.applyMapThemeStyles();
     }
 </script>
 {% endblock %}
