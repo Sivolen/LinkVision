@@ -3,7 +3,7 @@
 // cy.style().update(), который вызывается наблюдателем темы карты.
 const isDarkTheme = () => document.documentElement.getAttribute('data-theme') === 'dark';
 const labelTextColor = () => isDarkTheme() ? '#f3f6fb' : '#172033';
-const labelBackgroundColor = () => isDarkTheme() ? '#28313d' : '#f8fafc';
+const labelBackgroundColor = () => isDarkTheme() ? '#28313d' : '#eef3f8';
 const edgeLabelTextColor = () => isDarkTheme() ? '#e6edf5' : '#475569';
 const edgeLabelBackgroundColor = () => isDarkTheme() ? '#252e39' : '#f8fafc';
 const deviceLabelMaxWidth = node => {
@@ -52,11 +52,11 @@ export const CY_STYLE = [
             'text-max-width': deviceLabelMaxWidth,
             'color': labelTextColor,
             'text-background-color': labelBackgroundColor,
-            'text-background-opacity': 0.97,
-            'text-background-padding': '4px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '2px',
             'text-background-shape': 'roundrectangle',
             'text-outline-color': labelBackgroundColor,
-            'text-outline-width': 0.5
+            'text-outline-width': 0
         }
     },
     // Узлы с иконкой: статус UP
@@ -117,11 +117,11 @@ export const CY_STYLE = [
             'text-valign': 'center',
             'text-halign': 'center',
             'text-background-color': labelBackgroundColor,
-            'text-background-opacity': 0.97,
-            'text-background-padding': '4px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '2px',
             'text-background-shape': 'roundrectangle',
             'text-outline-color': labelBackgroundColor,
-            'text-outline-width': 0.5
+            'text-outline-width': 0
         }
     },
     // Узлы БЕЗ иконки: статус DOWN
@@ -146,11 +146,11 @@ export const CY_STYLE = [
             'text-valign': 'center',
             'text-halign': 'center',
             'text-background-color': labelBackgroundColor,
-            'text-background-opacity': 0.97,
-            'text-background-padding': '4px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '2px',
             'text-background-shape': 'roundrectangle',
             'text-outline-color': labelBackgroundColor,
-            'text-outline-width': 0.5,
+            'text-outline-width': 0,
             'opacity': 0.9,
             'overlay-color': '#dc3545',
             'overlay-opacity': 0.15,
@@ -179,11 +179,11 @@ export const CY_STYLE = [
             'text-valign': 'center',
             'text-halign': 'center',
             'text-background-color': labelBackgroundColor,
-            'text-background-opacity': 0.97,
-            'text-background-padding': '4px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '2px',
             'text-background-shape': 'roundrectangle',
             'text-outline-color': labelBackgroundColor,
-            'text-outline-width': 0.5,
+            'text-outline-width': 0,
             'opacity': 0.9,
             'overlay-color': '#ffc107',
             'overlay-opacity': 0.2,
@@ -264,8 +264,8 @@ export const CY_STYLE = [
             'bounds-expansion': '20',
             'color': labelTextColor,
             'text-background-color': labelBackgroundColor,
-            'text-background-opacity': 0.92,
-            'text-background-padding': '4px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '2px',
             'text-background-shape': 'roundrectangle',
             'z-index': 0
         }
@@ -288,8 +288,8 @@ export const CY_STYLE = [
             'background-opacity': 0.2,
             'color': labelTextColor,
             'text-background-color': labelBackgroundColor,
-            'text-background-opacity': 0.96,
-            'text-background-padding': '4px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '2px',
             'text-background-shape': 'roundrectangle'
         }
     },
@@ -320,8 +320,8 @@ export const CY_STYLE = [
             'font-size': '8px',
             'color': edgeLabelTextColor,
             'text-background-color': edgeLabelBackgroundColor,
-            'text-background-opacity': 0.96,
-            'text-background-padding': '3px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '1.5px',
             'text-background-shape': 'roundrectangle'
         }
     },
@@ -351,8 +351,8 @@ export const CY_STYLE = [
             'text-margin-y': -8,
             'color': edgeLabelTextColor,
             'text-background-color': edgeLabelBackgroundColor,
-            'text-background-opacity': 0.96,
-            'text-background-padding': '3px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '1.5px',
             'text-background-shape': 'roundrectangle'
         }
     },
@@ -401,8 +401,8 @@ export const CY_STYLE = [
             'font-size': function(node) { return node.data('fontSize') + 'px'; },
             'color': labelTextColor,
             'text-background-color': labelBackgroundColor,
-            'text-background-opacity': 0.94,
-            'text-background-padding': '3px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '1.5px',
             'text-background-shape': 'roundrectangle',
             'z-index': 5
         }

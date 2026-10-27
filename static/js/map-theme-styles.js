@@ -11,7 +11,7 @@
     } : {
         text: '#1f2937',
         mutedText: '#475569',
-        label: '#ffffff',
+        label: '#eef3f8',
         edgeLabel: '#f8fafc',
         selectedEdgeLabel: '#e7f3ff',
         shapeBorder: '#94a3b8'
@@ -34,11 +34,11 @@
         const deviceLabel = {
             color: dynamic('text'),
             'text-background-color': dynamic('label'),
-            'text-background-opacity': 0.97,
-            'text-background-padding': '4px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '2px',
             'text-background-shape': 'roundrectangle',
             'text-outline-color': dynamic('label'),
-            'text-outline-width': 0.5,
+            'text-outline-width': 0,
             'text-wrap': 'wrap',
             'text-max-width': node => {
                 const name = String(node.data('name') || node.data('label') || '');
@@ -56,23 +56,23 @@
         stylesheet.selector('node[isGroup]').style({
             color: dynamic('text'),
             'text-background-color': dynamic('label'),
-            'text-background-opacity': 0.94,
-            'text-background-padding': '4px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '2px',
             'text-background-shape': 'roundrectangle',
             'text-outline-width': 0
         });
         stylesheet.selector('node[isGroup][?collapsed]').style({
             color: dynamic('text'),
             'text-background-color': dynamic('label'),
-            'text-background-opacity': 0.97,
-            'text-background-padding': '5px',
+            'text-background-opacity': 0.82,
+            'text-background-padding': '2px',
             'text-background-shape': 'roundrectangle'
         });
         stylesheet.selector('node[isShape]').style({
             color: dynamic('text'),
             'text-background-color': dynamic('label'),
-            'text-background-opacity': 0.88,
-            'text-background-padding': '3px',
+            'text-background-opacity': 0.76,
+            'text-background-padding': '1.5px',
             'text-background-shape': 'roundrectangle',
             'text-outline-width': 0,
             'border-color': dynamic('shapeBorder')
@@ -82,7 +82,7 @@
             color: dynamic('mutedText'),
             'text-background-color': dynamic('edgeLabel'),
             'text-background-opacity': 0.96,
-            'text-background-padding': '3px',
+            'text-background-padding': '1.5px',
             'text-background-shape': 'roundrectangle',
             'text-outline-width': 0
         };
