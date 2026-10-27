@@ -3379,3 +3379,10 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   justify-content: center;
 }
 
+
+
+/* Toolbar dropdowns must paint above the map and outside the horizontal scroller.
+   map_view.html temporarily relaxes toolbar overflow while a Bootstrap menu is open. */
+.toolbar .dropdown-menu {
+  z-index: 1080;
+}

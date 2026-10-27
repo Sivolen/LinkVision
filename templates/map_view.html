@@ -795,7 +795,7 @@
     const toolbar = toolbarShell?.querySelector('.toolbar');
     if (toolbarShell && toolbar) {
         const updateToolbarOverflow = () => {
-            toolbarShell.classList.toggle('has-overflow', toolbar.scrollWidth > toolbarShell.clientWidth + 1);
+            toolbarShell.classList.toggle('has-overflow', toolbar.scrollWidth > toolbar.clientWidth + 1);
         };
         new ResizeObserver(updateToolbarOverflow).observe(toolbarShell);
         new MutationObserver(updateToolbarOverflow).observe(toolbar, {
@@ -805,6 +805,23 @@
         });
         window.addEventListener('resize', updateToolbarOverflow);
         updateToolbarOverflow();
+
+        // Bootstrap dropdowns inside the horizontally scrollable toolbar were
+        // being clipped by overflow-x/overflow-y. Let the menu escape the
+        // scroll viewport while it is open, then restore responsive scrolling.
+        toolbar.addEventListener('shown.bs.dropdown', (event) => {
+            if (event.target.closest('.dropdown')) {
+                toolbar.style.overflowX = 'visible';
+                toolbar.style.overflowY = 'visible';
+            }
+        });
+        toolbar.addEventListener('hidden.bs.dropdown', (event) => {
+            if (event.target.closest('.dropdown')) {
+                toolbar.style.removeProperty('overflow-x');
+                toolbar.style.removeProperty('overflow-y');
+                updateToolbarOverflow();
+            }
+        });
     }
 
     if (window.currentMapId && typeof initMap === 'function') {
