@@ -453,7 +453,7 @@ let wasDisconnected = false;
         const badgeHtml = map.down_count > 0 ? `<span class="badge bg-danger">${map.down_count}</span>` : '';
         const li = document.createElement('li');
         li.innerHTML = `
-            <a href="/map/${map.id}" class="map-item ${isActive ? 'active' : ''}" style="padding-left: ${12 + depth * 20}px">
+            <a href="/map/${map.id}" class="map-item ${isActive ? 'active' : ''}" aria-label="${escapeHtml(map.name)}" ${isActive ? 'aria-current="page"' : ''} style="padding-left: ${12 + depth * 20}px">
                 <span class="map-item-icon"><i class="fas fa-map-marked-alt"></i></span>
                 <span class="map-item-name">${escapeHtml(map.name)}</span>
                 <div class="map-item-right">
@@ -479,6 +479,10 @@ let wasDisconnected = false;
 
         const row = document.createElement('div');
         row.className = 'map-item folder-item';
+        row.setAttribute('role', 'button');
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('aria-label', folder.name);
+        row.setAttribute('aria-expanded', String(isExpanded));
         row.style.paddingLeft = `${12 + depth * 20}px`;
 
         let actionsHtml = '';
@@ -508,6 +512,11 @@ let wasDisconnected = false;
             </div>
         `;
         row.addEventListener('click', () => window.toggleSidebarFolder(folder.id));
+        row.addEventListener('keydown', (event) => {
+            if (event.target !== row || (event.key !== 'Enter' && event.key !== ' ')) return;
+            event.preventDefault();
+            window.toggleSidebarFolder(folder.id);
+        });
         attachDragHandlers(row, 'folder', folder.id, parentFolderId);
         attachDropZone(row, 'folder', folder.id, parentFolderId, true);
         li.appendChild(row);

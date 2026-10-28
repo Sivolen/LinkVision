@@ -37,64 +37,83 @@
                     <span class="logo-letter">L</span>ink<span class="logo-letter">V</span>ision
                 </span>
             </h4>
-            <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+            <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="{{ _('Переключить боковую панель') }}" title="{{ _('Переключить боковую панель') }}">
                 <i class="fas fa-bars"></i>
             </button>
         </div>
         <div class="sidebar-user">
-            <i class="fas fa-user-circle"></i> <span>{{ current_user.username }}</span>
+            <div class="sidebar-user-avatar"><i class="fas fa-user"></i></div>
+            <div class="sidebar-user-info">
+                <span class="sidebar-user-name">{{ current_user.username }}</span>
+                <span class="sidebar-user-roles">
             {% if current_user.is_admin %}
-            <span class="badge bg-warning text-dark ms-2">Admin</span>
+                    <span class="badge sidebar-role-badge bg-warning text-dark">Admin</span>
             {% endif %}
             {% if current_user.is_operator %}
-            <span class="badge bg-info text-dark ms-2">Operator</span>
+                    <span class="badge sidebar-role-badge bg-info text-dark">Operator</span>
             {% endif %}
+                </span>
+            </div>
         </div>
 
-        <div class="sidebar-maps">
-            <h5><i class="fas fa-map"></i> <span>{{ _('Карты') }}</span></h5>
-            <ul class="map-list" id="sidebarMapList">
-                <!-- Загружается через JS -->
-            </ul>
+        <div class="sidebar-nav">
+            <div class="sidebar-maps">
+                <h5 class="sidebar-section-title"><i class="fas fa-map"></i> <span>{{ _('Карты') }}</span></h5>
+                <ul class="map-list" id="sidebarMapList">
+                    <!-- Загружается через JS -->
+                </ul>
+                {% if current_user.is_admin or current_user.is_operator %}
+                <div class="sidebar-map-actions">
             {% if current_user.is_admin %}
-            <button class="btn btn-sm btn-outline-light w-100 mt-2" data-bs-toggle="modal" data-bs-target="#createMapModal">
-                <i class="fas fa-plus"></i> <span>{{ _('Новая карта') }}</span>
-            </button>
-            <button class="btn btn-sm btn-outline-light w-100 mt-2" onclick="importMapNew()">
-                <i class="fas fa-file-import"></i> <span>{{ _('Импорт карты') }}</span>
-            </button>
+                    <button class="btn sidebar-action" data-bs-toggle="modal" data-bs-target="#createMapModal" aria-label="{{ _('Новая карта') }}" title="{{ _('Новая карта') }}">
+                        <i class="fas fa-plus"></i> <span>{{ _('Новая карта') }}</span>
+                    </button>
+                    <button class="btn sidebar-action" onclick="importMapNew()" aria-label="{{ _('Импорт карты') }}" title="{{ _('Импорт карты') }}">
+                        <i class="fas fa-file-import"></i> <span>{{ _('Импорт карты') }}</span>
+                    </button>
             {% endif %}
             {# Папки — общая навигационная структура по всем картам системы,
                поэтому создавать их могут только администратор и оператор.
                Обычный пользователь видит лишь выданное ему подмножество
                дерева и не должен создавать собственные папки. #}
             {% if current_user.is_admin or current_user.is_operator %}
-            <button class="btn btn-sm btn-outline-light w-100 mt-2" onclick="createFolderPrompt(null)">
-                <i class="fas fa-folder-plus"></i> <span>{{ _('Новая папка') }}</span>
-            </button>
+                    <button class="btn sidebar-action" onclick="createFolderPrompt(null)" aria-label="{{ _('Новая папка') }}" title="{{ _('Новая папка') }}">
+                        <i class="fas fa-folder-plus"></i> <span>{{ _('Новая папка') }}</span>
+                    </button>
+            {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            {% if current_user.is_admin %}
+            <div class="admin-menu">
+                <small class="sidebar-section-title"><span>{{ _('Администрирование') }}</span></small>
+                <a href="{{ url_for('admin.users') }}" class="admin-menu-item {{ 'active' if request.endpoint == 'admin.users' else '' }}" aria-label="{{ _('Пользователи') }}" title="{{ _('Пользователи') }}" {% if request.endpoint == 'admin.users' %}aria-current="page"{% endif %}>
+                    <i class="fas fa-users"></i> <span>{{ _('Пользователи') }}</span>
+                </a>
+                <a href="{{ url_for('admin.types') }}" class="admin-menu-item {{ 'active' if request.endpoint == 'admin.types' else '' }}" aria-label="{{ _('Типы устройств') }}" title="{{ _('Типы устройств') }}" {% if request.endpoint == 'admin.types' %}aria-current="page"{% endif %}>
+                    <i class="fas fa-shapes"></i> <span>{{ _('Типы устройств') }}</span>
+                </a>
+                <a href="{{ url_for('admin.settings') }}" class="admin-menu-item {{ 'active' if request.endpoint == 'admin.settings' else '' }}" aria-label="{{ _('Настройки') }}" title="{{ _('Настройки') }}" {% if request.endpoint == 'admin.settings' %}aria-current="page"{% endif %}>
+                    <i class="fas fa-cog"></i> <span>{{ _('Настройки') }}</span>
+                </a>
+                <a href="{{ url_for('admin.maps_list') }}" class="admin-menu-item {{ 'active' if request.endpoint == 'admin.maps_list' else '' }}" aria-label="{{ _('Карты') }}" title="{{ _('Карты') }}" {% if request.endpoint == 'admin.maps_list' %}aria-current="page"{% endif %}>
+                    <i class="fas fa-map"></i> <span>{{ _('Карты') }}</span>
+                </a>
+            </div>
             {% endif %}
         </div>
 
-        <!-- Футер сайдбара с админ-меню и кнопками -->
+        <!-- Нижняя панель: тема, язык, выход и статус сервера -->
         <div class="sidebar-footer">
-            <div class="d-flex gap-2">
-                <button class="theme-toggle  w-50" onclick="toggleTheme()">
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="{{ _('Тема') }}" title="{{ _('Тема') }}">
                     <i class="fas fa-moon"></i> <span>{{ _('Тема') }}</span>
-                </button>
-                <form method="post" action="{{ url_for('auth.logout') }}" class="w-50 m-0">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="theme-toggle w-100">
-                        <i class="fas fa-sign-out-alt"></i> <span>{{ _('Выход') }}</span>
-                    </button>
-                </form>
-            </div>
-
-            <!-- Переключатель языка -->
-            <div class="lang-switcher mt-2 dropdown">
-                <button class="theme-toggle w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            </button>
+            <div class="lang-switcher dropup dropdown">
+                <button class="theme-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ available_languages[current_locale] }}" title="{{ available_languages[current_locale] }}">
                     <i class="fas fa-globe"></i> <span>{{ available_languages[current_locale] }}</span>
                 </button>
-                <ul class="dropdown-menu w-100">
+                <ul class="dropdown-menu">
                     {% for code, label in available_languages.items() %}
                     <li>
                         <form action="{{ url_for('i18n.set_language', lang_code=code) }}" method="POST" class="m-0">
@@ -108,27 +127,16 @@
                     {% endfor %}
                 </ul>
             </div>
-            {% if current_user.is_admin %}
-            <div class="admin-menu mt-3 pt-3 border-top border-secondary">
-                <small class="text-muted d-block mb-2"><span>{{ _('Администрирование') }}</span></small>
-                <a href="{{ url_for('admin.users') }}" class="admin-menu-item">
-                    <i class="fas fa-users"></i> <span>{{ _('Пользователи') }}</span>
-                </a>
-                <a href="{{ url_for('admin.types') }}" class="admin-menu-item">
-                    <i class="fas fa-shapes"></i> <span>{{ _('Типы устройств') }}</span>
-                </a>
-                <a href="{{ url_for('admin.settings') }}" class="admin-menu-item">
-                    <i class="fas fa-cog"></i> <span>{{ _('Настройки') }}</span>
-                </a>
-                <a href="{{ url_for('admin.maps_list') }}" class="admin-menu-item">
-                    <i class="fas fa-map"></i> <span>{{ _('Карты') }}</span>
-                </a>
-            </div>
-            {% endif %}
+            <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-logout-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="theme-toggle sidebar-logout" aria-label="{{ _('Выход') }}" title="{{ _('Выход') }}">
+                        <i class="fas fa-sign-out-alt"></i> <span>{{ _('Выход') }}</span>
+                    </button>
+            </form>
             <!-- Индикатор состояния бэкенда и версия -->
-            <div class="status-indicator">
+            <div class="status-indicator" role="status" aria-live="polite">
                 <div class="status-dot" id="backend-status-dot"></div>
-                <span id="backend-status-text">{{ _('Проверка...') }}</span>
+                <span class="status-copy" id="backend-status-text">{{ _('Проверка...') }}</span>
                 <span class="version-badge">v{{ app_version }}</span>
             </div>
         </div>
