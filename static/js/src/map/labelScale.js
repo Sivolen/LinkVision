@@ -12,8 +12,9 @@ export const SCALE_MIN = 0.72;       // минимальный коэффици�
 export const EDGE_SCALE_MIN = 0.85;  // подписи рёбер: 9.5px × 0.85 ≈ 8px
 export const SCALE_MAX = 1.15;
 const SCALE_EXP = 0.7;
-// Ниже этого зума подписи портов на рёбрах скрываются: на обзоре они сливаются.
+// Подписи портов на рёбрах постепенно появляются после общего обзора карты.
 export const EDGE_LABEL_MIN_ZOOM = 0.3;
+export const EDGE_LABEL_FULL_ZOOM = 0.5;
 
 export const viewState = { zoom: 1 };
 
@@ -39,6 +40,16 @@ export function isCyAlive(cy) {
 }
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+/** Плавно показывает подписи рёбер в диапазоне масштабов обзора. */
+export function edgeLabelOpacity(zoom = viewState.zoom) {
+    if (!Number.isFinite(zoom)) return 0;
+    return clamp(
+        (zoom - EDGE_LABEL_MIN_ZOOM) / (EDGE_LABEL_FULL_ZOOM - EDGE_LABEL_MIN_ZOOM),
+        0,
+        1
+    );
+}
 
 export function labelScale(zoom = viewState.zoom, min = SCALE_MIN) {
     return clamp(Math.pow(zoom, SCALE_EXP), min, SCALE_MAX);

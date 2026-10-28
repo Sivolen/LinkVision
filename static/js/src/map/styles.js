@@ -7,7 +7,7 @@
 // Подписи УСТРОЙСТВ рисует HTML-слой (deviceLabels.js + .lv-dev-label в
 // style.css); правила label в этом файле — запасной вариант на случай, если
 // слой не создан (класс lv-html-label гасит нативную подпись).
-import { screenPx, minScreenWidth, viewState, EDGE_LABEL_MIN_ZOOM, EDGE_SCALE_MIN } from './labelScale.js';
+import { screenPx, minScreenWidth, edgeLabelOpacity, EDGE_SCALE_MIN } from './labelScale.js';
 
 const isDarkTheme = () => document.documentElement.getAttribute('data-theme') === 'dark';
 
@@ -100,18 +100,17 @@ const edgeFontBase = edge => {
     if (size === undefined || size === null) size = 9.5;
     return Math.max(Number(size) || 9.5, 9.5);
 };
-const edgeLabelVisible = () => (viewState.zoom >= EDGE_LABEL_MIN_ZOOM ? 1 : 0);
 const edgeLabelStyle = {
     'font-size': edge => screenPx(edgeFontBase(edge), EDGE_SCALE_MIN) + 'px',
     'color': themed('edgeText'),
-    'text-opacity': edgeLabelVisible,
+    'text-opacity': () => edgeLabelOpacity(),
     'text-background-color': themed('edgeBg'),
-    'text-background-opacity': () => 0.9 * edgeLabelVisible(),
+    'text-background-opacity': () => 0.9 * edgeLabelOpacity(),
     'text-background-padding': () => screenPx(2.5, EDGE_SCALE_MIN) + 'px',
     'text-background-shape': 'roundrectangle',
     'text-border-color': themed('edgeBorder'),
     'text-border-width': () => minScreenWidth(1, 3),
-    'text-border-opacity': edgeLabelVisible,
+    'text-border-opacity': () => edgeLabelOpacity(),
     'text-outline-width': 0
 };
 
@@ -408,7 +407,11 @@ export const CY_STYLE = [
             'width': 4,
             'line-color': '#007bff',
             'text-background-color': themed('edgeSelectedBg'),
-            'color': themed('text')
+            'color': themed('text'),
+            // Selected edge labels stay readable even when overview labels fade out.
+            'text-opacity': 1,
+            'text-background-opacity': 1,
+            'text-border-opacity': 1
         }
     },
     {

@@ -7,7 +7,7 @@
     "build:modal": "esbuild static/js/src/modal/index.js --bundle --minify --outfile=static/js/dist/modal.min.js",
     "build:map": "esbuild static/js/src/map/index.js --bundle --minify --outfile=static/js/dist/map.min.js",
     "watch": "nodemon --watch static/js --ignore static/js/dist/** --ext js --exec 'npm run build'",
-    "test:js": "node tests/js/groupCollapse.test.mjs && node tests/js/resync.test.mjs && node tests/js/deviceLabels.test.mjs",
+    "test:js": "node tests/js/groupCollapse.test.mjs && node tests/js/resync.test.mjs && node tests/js/deviceLabels.test.mjs && node tests/js/edgeLabelScale.test.mjs",
     "test:frontend": "bash scripts/check_frontend.sh"
   },
   "devDependencies": {
