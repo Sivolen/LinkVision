@@ -7,6 +7,8 @@
 // Подписи УСТРОЙСТВ рисует HTML-слой (deviceLabels.js + .lv-dev-label в
 // style.css); правила label в этом файле — запасной вариант на случай, если
 // слой не создан (класс lv-html-label гасит нативную подпись).
+import { screenPx, minScreenWidth, viewState, EDGE_LABEL_MIN_ZOOM, EDGE_SCALE_MIN } from './labelScale.js';
+
 const isDarkTheme = () => document.documentElement.getAttribute('data-theme') === 'dark';
 
 // Единая палитра: светлая и тёмная темы. Геометрия (размеры, отступы) от темы не зависит.
@@ -14,30 +16,30 @@ const PALETTE = {
     light: {
         text: '#172033',
         labelBg: '#ffffff',
-        labelBorder: '#d9e1ec',
+        labelBorder: '#cfd8e4',
         edgeText: '#52627a',
         edgeBg: '#ffffff',
         edgeBorder: '#d5deea',
         edgeSelectedBg: '#e7f3ff',
         shapeBorder: '#94a3b8',
-        groupMixTarget: null,        // цвет группы берём как есть
-        groupMixRatio: 1,
-        groupFillOpacity: 0.14,
-        groupBorderOpacity: 0.5
+        groupMixTarget: [148, 163, 184], // приглушаем цвет группы к нейтральному
+        groupMixRatio: 0.7,
+        groupFillOpacity: 0.08,          // лёгкая заливка, не красит всю область
+        groupBorderOpacity: 0.6
     },
     dark: {
         text: '#f1f5f9',
-        labelBg: '#252d3a',
-        labelBorder: '#3a465a',
+        labelBg: '#2e3849',
+        labelBorder: '#4a5870',
         edgeText: '#c4d0e0',
         edgeBg: '#1d2634',
         edgeBorder: '#3a4a61',
         edgeSelectedBg: '#243b52',
         shapeBorder: '#64748b',
         groupMixTarget: [148, 163, 184], // нейтральный серо-голубой
-        groupMixRatio: 0.4,              // доля исходного цвета группы
-        groupFillOpacity: 0.12,
-        groupBorderOpacity: 0.6
+        groupMixRatio: 0.45,             // доля исходного цвета группы
+        groupFillOpacity: 0.1,
+        groupBorderOpacity: 0.85
     }
 };
 const themed = key => () => (isDarkTheme() ? PALETTE.dark : PALETTE.light)[key];
@@ -91,16 +93,25 @@ const nativeDeviceLabel = {
     'text-outline-width': 0
 };
 
-// Общая часть подписи рёбер: компактная контрастная «пилюля».
+// Общая часть подписи рёбер: компактная контрастная «пилюля». Размеры — функции
+// от zoom (labelScale.js), чтобы на экране подпись не уменьшалась вместе с картой.
+const edgeFontBase = edge => {
+    let size = edge.data('font_size');
+    if (size === undefined || size === null) size = 9.5;
+    return Math.max(Number(size) || 9.5, 9.5);
+};
+const edgeLabelVisible = () => (viewState.zoom >= EDGE_LABEL_MIN_ZOOM ? 1 : 0);
 const edgeLabelStyle = {
+    'font-size': edge => screenPx(edgeFontBase(edge), EDGE_SCALE_MIN) + 'px',
     'color': themed('edgeText'),
+    'text-opacity': edgeLabelVisible,
     'text-background-color': themed('edgeBg'),
-    'text-background-opacity': 0.96,
-    'text-background-padding': '3px',
+    'text-background-opacity': () => 0.9 * edgeLabelVisible(),
+    'text-background-padding': () => screenPx(2.5, EDGE_SCALE_MIN) + 'px',
     'text-background-shape': 'roundrectangle',
     'text-border-color': themed('edgeBorder'),
-    'text-border-width': 1,
-    'text-border-opacity': 1,
+    'text-border-width': () => minScreenWidth(1, 3),
+    'text-border-opacity': edgeLabelVisible,
     'text-outline-width': 0
 };
 
@@ -295,16 +306,18 @@ export const CY_STYLE = [
             'background-color': groupColor,
             'background-opacity': themed('groupFillOpacity'),
             'border-color': groupColor,
-            'border-width': 1,
+            'border-width': () => minScreenWidth(1.5, 4), // различима и на обзоре
             'border-opacity': themed('groupBorderOpacity'),
             'border-style': 'dashed',
             'label': 'data(name)',
-            'font-size': node => node.data('fontSize') + 'px',
+            // Заголовок читаем на обзоре: размер по labelScale (см. labelScale.js).
+            'font-size': node => screenPx(Number(node.data('fontSize')) || 11, undefined, 4) + 'px',
             'font-weight': 'bold',
             'text-valign': 'top',
             'text-halign': 'center',
             'padding': '10px',
-            'compound-sizing-wrt-labels': 'include',
+            // exclude: размер заголовка меняется с zoom и не должен менять размер самой группы.
+            'compound-sizing-wrt-labels': 'exclude',
             'min-width': '80px',
             'min-height': '60px',
             'bounds-expansion': '20',
@@ -364,7 +377,6 @@ export const CY_STYLE = [
             'line-style': 'dashed',
             'width': 2,
             'label': 'data(label)',
-            'font-size': '9px',
             ...edgeLabelStyle
         }
     },
@@ -385,13 +397,8 @@ export const CY_STYLE = [
             'curve-style': 'bezier',
             'control-point-step-size': 40,
             'label': 'data(label)',
-            'font-size': function(edge) {
-                let size = edge.data('font_size');
-                if (size === undefined || size === null) size = 9;
-                return size + 'px';
-            },
             'text-rotation': 'autorotate',
-            'text-margin-y': -8,
+            'text-margin-y': edge => -screenPx(edgeFontBase(edge) * 0.9, EDGE_SCALE_MIN),
             ...edgeLabelStyle
         }
     },

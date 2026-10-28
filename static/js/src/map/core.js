@@ -1,4 +1,5 @@
 // core.js – создание экземпляра Cytoscape, стили, базовая настройка
+import { isCyAlive } from './labelScale.js';
 import { CY_STYLE } from './styles.js';
 import { updateBulkEditButton } from './bulk.js';
 import { cleanupAll } from './moduleRegistry.js';
@@ -15,7 +16,7 @@ function watchTheme(instance) {
     if (themeObserver) themeObserver.disconnect();
     themeObserver = new MutationObserver(records => {
         if (!records.some(record => record.attributeName === 'data-theme')) return;
-        if (cy !== instance || instance.destroyed()) return;
+        if (cy !== instance || !isCyAlive(instance)) return;
         instance.style().update();
     });
     themeObserver.observe(document.documentElement, {

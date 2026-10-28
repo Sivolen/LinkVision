@@ -421,3 +421,10 @@ def test_device_label_cards_share_geometry_between_themes():
 
     index = (ROOT / "static/js/src/map/index.js").read_text(encoding="utf-8")
     assert "initDeviceLabels(cy);" in index
+    assert "initZoomLabelStyles(cy);" in index
+
+    # Слой подписей не должен масштабироваться вместе с картой: иначе на обзоре
+    # шрифт карточек уменьшается пропорционально zoom и становится нечитаемым.
+    labels = (ROOT / "static/js/src/map/deviceLabels.js").read_text(encoding="utf-8")
+    assert "scale(${zoom})" not in labels
+    assert "labelScale(" in labels

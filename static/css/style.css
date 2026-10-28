@@ -18,10 +18,10 @@ LinkVision - Современный дизайн (финальная верси�
   --cy-grid: #e2e8f0;
   /* Карточки подписей устройств (deviceLabels.js) */
   --lv-card-bg: #ffffff;
-  --lv-card-border: #d9e1ec;
-  --lv-card-name: #172033;
-  --lv-card-ip: #64748b;
-  --lv-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 3px 8px -2px rgba(15, 23, 42, 0.12);
+  --lv-card-border: #cfd8e4;
+  --lv-card-name: #0f172a;
+  --lv-card-ip: #55657c;
+  --lv-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.1), 0 4px 10px -2px rgba(15, 23, 42, 0.16);
   --sidebar-blur: blur(12px);
   --sidebar-width: 280px;
   /* Единая высота всех контролов тулбара карты (кнопки, индикатор режима,
@@ -47,11 +47,11 @@ LinkVision - Современный дизайн (финальная верси�
   /* Графитовая поверхность без резкого чёрного контраста. */
   --cy-background: #202630;
   --cy-grid: #2b3542;
-  --lv-card-bg: #252d3a;
-  --lv-card-border: #3a465a;
-  --lv-card-name: #f1f5f9;
-  --lv-card-ip: #9fb0c6;
-  --lv-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.5);
+  --lv-card-bg: #2e3849;
+  --lv-card-border: #4a5870;
+  --lv-card-name: #f8fafc;
+  --lv-card-ip: #a9b8cd;
+  --lv-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 5px 12px -2px rgba(0, 0, 0, 0.6);
   --sidebar-blur: blur(12px);
 }
 
@@ -1001,12 +1001,13 @@ body.resizing-sidebar .main-content {
 }
 
 .lv-device-labels__layer {
+  /* Только pan (translate). zoom сюда НЕ попадает: слой не масштабируется,
+     размер карточек задаёт labelScale.js. */
   position: absolute;
   left: 0;
   top: 0;
   width: 0;
   height: 0;
-  transform-origin: 0 0;
 }
 
 .lv-dev-label {
@@ -1015,8 +1016,10 @@ body.resizing-sidebar .main-content {
   top: 0;
   box-sizing: border-box;
   width: max-content;
-  max-width: 24em;
-  translate: -50% 0; /* центр карточки по центру узла; перенос — через transform */
+  max-width: 16em; /* длинные названия переносятся, карточка не растягивает обзор */
+  transform-origin: 50% 0; /* масштаб карточки не сдвигает её центр */
+  translate: -50% 0;       /* центр карточки по центру узла; перенос — через transform */
+  transition: opacity 0.15s ease;
   padding: 0.4em 0.8em 0.42em;
   font-size: var(--lv-fs, 11px);
   line-height: 1.25;
@@ -1036,6 +1039,7 @@ body.resizing-sidebar .main-content {
 
 /* Устройство без иконки: подпись по центру квадрата узла. */
 .lv-dev-label.is-anchor-center {
+  transform-origin: 50% 50%;
   translate: -50% -50%;
 }
 
@@ -1072,9 +1076,15 @@ body.resizing-sidebar .main-content {
   border-color: #3b82f6;
 }
 
-/* Дальний зум: IP нечитаем — убираем строку; ещё дальше — убираем карточки. */
-.lv-labels--no-ip .lv-dev-label__ip {
+/* Разгрузка обзора (deviceLabels.js, cull): мешающая карточка сворачивается до
+   названия, а если и так не помещается — скрывается. */
+.lv-dev-label.is-compact .lv-dev-label__ip {
   display: none;
+}
+
+.lv-dev-label.is-culled {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .lv-labels--off .lv-dev-label {

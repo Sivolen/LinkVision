@@ -41,6 +41,7 @@ import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
 import { initZoomEmphasis, refreshZoomEmphasis } from './zoomEmphasis.js';
 import { initDeviceLabels } from './deviceLabels.js';
+import { initZoomLabelStyles } from './labelScale.js';
 import { updateAllGroups } from './groupResize.js';
 
 // ─── Утилиты жизненного цикла карты и Socket.IO ────────────────────────────────
@@ -147,6 +148,7 @@ export function initMap(id) {
     registerMapCleanup(initResync(cy, { isExtraBusy: isLinkMode }));
     // HTML-подписи устройств: слой создаётся до загрузки элементов, чтобы у
     // добавляемых узлов сразу гасилась нативная подпись (без «мигания»).
+    initZoomLabelStyles(cy);
     initDeviceLabels(cy);
     window.dispatchEvent(new CustomEvent('linkvision:cy-ready', { detail: { cy } }));
 
