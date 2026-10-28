@@ -1,16 +1,107 @@
-// styles.js – вынесенные стили Cytoscape
-// Цвета меток зависят от текущей темы. Функции повторно вычисляются при
-// cy.style().update(), который вызывается наблюдателем темы карты.
+// styles.js – стили Cytoscape.
+// Цвета подписей/групп зависят от темы и заданы ФУНКЦИЯМИ: они заново
+// вычисляются при cy.style().update(), который core.js вызывает при смене
+// data-theme. Статических значений вида `isDarkTheme() ? a : b` (они
+// вычислялись один раз при создании карты и не менялись при переключении
+// темы) здесь быть не должно.
+// Подписи УСТРОЙСТВ рисует HTML-слой (deviceLabels.js + .lv-dev-label в
+// style.css); правила label в этом файле — запасной вариант на случай, если
+// слой не создан (класс lv-html-label гасит нативную подпись).
 const isDarkTheme = () => document.documentElement.getAttribute('data-theme') === 'dark';
-const labelTextColor = () => isDarkTheme() ? '#f1f5f9' : '#172033';
-const labelBackgroundColor = () => isDarkTheme() ? '#18212f' : '#ffffff';
-const labelBackgroundOpacity = () => isDarkTheme() ? 0.97 : 0.97;
-const edgeLabelTextColor = () => isDarkTheme() ? '#dbe5f1' : '#475569';
-const edgeLabelBackgroundColor = () => isDarkTheme() ? '#202b3a' : '#f8fafc';
-const edgeLabelBackgroundOpacity = () => isDarkTheme() ? 0.96 : 0.96;
+
+// Единая палитра: светлая и тёмная темы. Геометрия (размеры, отступы) от темы не зависит.
+const PALETTE = {
+    light: {
+        text: '#172033',
+        labelBg: '#ffffff',
+        labelBorder: '#d9e1ec',
+        edgeText: '#52627a',
+        edgeBg: '#ffffff',
+        edgeBorder: '#d5deea',
+        edgeSelectedBg: '#e7f3ff',
+        shapeBorder: '#94a3b8',
+        groupMixTarget: null,        // цвет группы берём как есть
+        groupMixRatio: 1,
+        groupFillOpacity: 0.14,
+        groupBorderOpacity: 0.5
+    },
+    dark: {
+        text: '#f1f5f9',
+        labelBg: '#252d3a',
+        labelBorder: '#3a465a',
+        edgeText: '#c4d0e0',
+        edgeBg: '#1d2634',
+        edgeBorder: '#3a4a61',
+        edgeSelectedBg: '#243b52',
+        shapeBorder: '#64748b',
+        groupMixTarget: [148, 163, 184], // нейтральный серо-голубой
+        groupMixRatio: 0.4,              // доля исходного цвета группы
+        groupFillOpacity: 0.12,
+        groupBorderOpacity: 0.6
+    }
+};
+const themed = key => () => (isDarkTheme() ? PALETTE.dark : PALETTE.light)[key];
+const palette = () => (isDarkTheme() ? PALETTE.dark : PALETTE.light);
+
+function parseColor(value) {
+    const text = String(value || '').trim();
+    let m = /^#([0-9a-f]{3})$/i.exec(text);
+    if (m) return m[1].split('').map(ch => parseInt(ch + ch, 16));
+    m = /^#([0-9a-f]{6})$/i.exec(text);
+    if (m) return [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16));
+    m = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(text);
+    if (m) return [Number(m[1]), Number(m[2]), Number(m[3])];
+    return null;
+}
+
+// Цвет группы с учётом темы. В тёмной теме пользовательский цвет подмешивается
+// к нейтральному серо-голубому — без этого жёлтый/оранжевый цвет группы при
+// малой прозрачности даёт грязно-коричневую заливку на графитовом фоне.
+function groupColor(node) {
+    const raw = node.data('color');
+    const rgb = parseColor(raw);
+    const p = palette();
+    if (!rgb) return raw || '#3498db';
+    if (!p.groupMixTarget) return `rgb(${rgb.join(',')})`;
+    const mixed = rgb.map((c, i) => Math.round(c * p.groupMixRatio + p.groupMixTarget[i] * (1 - p.groupMixRatio)));
+    return `rgb(${mixed.join(',')})`;
+}
+
 const deviceLabelMaxWidth = node => {
     const name = String(node.data('name') || '');
     return `${Math.max(92, Math.min(220, name.length * 6.7 + 16))}px`;
+};
+
+// Общая часть нативной подписи (запасной вариант) для узлов-устройств.
+const nativeDeviceLabel = {
+    'label': function(node) {
+        return node.data('name') + '\n' + (node.data('ip') || '');
+    },
+    'text-wrap': 'wrap',
+    'text-max-width': deviceLabelMaxWidth,
+    'font-weight': 'bold',
+    'color': themed('text'),
+    'text-background-color': themed('labelBg'),
+    'text-background-opacity': 0.97,
+    'text-background-padding': '5px',
+    'text-background-shape': 'roundrectangle',
+    'text-border-color': themed('labelBorder'),
+    'text-border-width': 1,
+    'text-border-opacity': 1,
+    'text-outline-width': 0
+};
+
+// Общая часть подписи рёбер: компактная контрастная «пилюля».
+const edgeLabelStyle = {
+    'color': themed('edgeText'),
+    'text-background-color': themed('edgeBg'),
+    'text-background-opacity': 0.96,
+    'text-background-padding': '3px',
+    'text-background-shape': 'roundrectangle',
+    'text-border-color': themed('edgeBorder'),
+    'text-border-width': 1,
+    'text-border-opacity': 1,
+    'text-outline-width': 0
 };
 
 export const CY_STYLE = [
@@ -43,24 +134,10 @@ export const CY_STYLE = [
             'border-width': 3,
             'border-color': '#28a745',
             'border-style': 'solid',
-            'label': function(node) {
-                return node.data('name') + '\n' + (node.data('ip') || '');
-            },
+            ...nativeDeviceLabel,
             'text-valign': 'bottom',
             'text-margin-y': 8,
-            'font-size': function(node) { return (node.data('fontSize') || 11) + 'px'; },
-            'font-weight': 'bold',
-            'text-wrap': 'wrap',
-            'text-max-width': deviceLabelMaxWidth,
-            'color': labelTextColor,
-            'text-background-color': labelBackgroundColor,
-            'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '5px',
-            'text-background-shape': 'roundrectangle',
-            'text-border-color': isDarkTheme() ? '#344256' : '#dbe3ed',
-            'text-border-width': 1,
-            'text-border-opacity': 1,
-            'text-outline-width': 0
+            'font-size': function(node) { return (node.data('fontSize') || 11) + 'px'; }
         }
     },
     // Узлы с иконкой: статус UP
@@ -110,24 +187,10 @@ export const CY_STYLE = [
             'border-width': 3,
             'border-color': '#28a745',
             'border-style': 'solid',
-            'label': function(node) {
-                return node.data('name') + '\n' + (node.data('ip') || '');
-            },
-            'text-wrap': 'wrap',
-            'text-max-width': deviceLabelMaxWidth,
+            ...nativeDeviceLabel,
             'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
-            'font-weight': 'bold',
-            'color': labelTextColor,
             'text-valign': 'center',
-            'text-halign': 'center',
-            'text-background-color': labelBackgroundColor,
-            'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '5px',
-            'text-background-shape': 'roundrectangle',
-            'text-border-color': isDarkTheme() ? '#344256' : '#dbe3ed',
-            'text-border-width': 1,
-            'text-border-opacity': 1,
-            'text-outline-width': 0
+            'text-halign': 'center'
         }
     },
     // Узлы БЕЗ иконки: статус DOWN
@@ -141,24 +204,10 @@ export const CY_STYLE = [
             'border-width': 3,
             'border-color': '#dc3545',
             'border-style': 'dashed',
-            'label': function(node) {
-                return node.data('name') + '\n' + (node.data('ip') || '');
-            },
-            'text-wrap': 'wrap',
-            'text-max-width': deviceLabelMaxWidth,
+            ...nativeDeviceLabel,
             'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
-            'font-weight': 'bold',
-            'color': labelTextColor,
             'text-valign': 'center',
             'text-halign': 'center',
-            'text-background-color': labelBackgroundColor,
-            'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '5px',
-            'text-background-shape': 'roundrectangle',
-            'text-border-color': isDarkTheme() ? '#344256' : '#dbe3ed',
-            'text-border-width': 1,
-            'text-border-opacity': 1,
-            'text-outline-width': 0,
             'opacity': 0.9,
             'overlay-color': '#dc3545',
             'overlay-opacity': 0.15,
@@ -176,24 +225,10 @@ export const CY_STYLE = [
             'border-width': 3,
             'border-color': '#ffc107',
             'border-style': 'solid',
-            'label': function(node) {
-                return node.data('name') + '\n' + (node.data('ip') || '');
-            },
-            'text-wrap': 'wrap',
-            'text-max-width': deviceLabelMaxWidth,
+            ...nativeDeviceLabel,
             'font-size': function(node) { return (node.data('fontSize') || 10) + 'px'; },
-            'font-weight': 'bold',
-            'color': labelTextColor,
             'text-valign': 'center',
             'text-halign': 'center',
-            'text-background-color': labelBackgroundColor,
-            'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '5px',
-            'text-background-shape': 'roundrectangle',
-            'text-border-color': isDarkTheme() ? '#344256' : '#dbe3ed',
-            'text-border-width': 1,
-            'text-border-opacity': 1,
-            'text-outline-width': 0,
             'opacity': 0.9,
             'overlay-color': '#ffc107',
             'overlay-opacity': 0.2,
@@ -252,15 +287,16 @@ export const CY_STYLE = [
             'z-index': 15
         }
     },
+    // Область группы: полупрозрачная заливка, тонкая пунктирная граница, заголовок-«пилюля».
     {
         selector: 'node[isGroup]',
         style: {
             'shape': 'rectangle',
-            'background-color': 'data(color)',
-            'background-opacity': 0.1,
-            'border-color': 'data(color)',
+            'background-color': groupColor,
+            'background-opacity': themed('groupFillOpacity'),
+            'border-color': groupColor,
             'border-width': 1,
-            'border-opacity': 0.3,
+            'border-opacity': themed('groupBorderOpacity'),
             'border-style': 'dashed',
             'label': 'data(name)',
             'font-size': node => node.data('fontSize') + 'px',
@@ -272,11 +308,15 @@ export const CY_STYLE = [
             'min-width': '80px',
             'min-height': '60px',
             'bounds-expansion': '20',
-            'color': labelTextColor,
-            'text-background-color': labelBackgroundColor,
-            'text-background-opacity': labelBackgroundOpacity,
+            'color': themed('text'),
+            'text-background-color': themed('labelBg'),
+            'text-background-opacity': 0.97,
             'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
+            'text-border-color': themed('labelBorder'),
+            'text-border-width': 1,
+            'text-border-opacity': 1,
+            'text-outline-width': 0,
             'text-margin-y': 4,
             'z-index': 0
         }
@@ -289,19 +329,15 @@ export const CY_STYLE = [
             'height': 60,
             'border-width': 3,
             'border-color': '#28a745',
+            'border-opacity': 1,
             'border-style': 'solid',
             'label': 'data(name)',
             'font-size': '12px',
             'font-weight': 'bold',
             'text-valign': 'center',
             'text-halign': 'center',
-            'background-color': 'data(color)',
-            'background-opacity': 0.2,
-            'color': labelTextColor,
-            'text-background-color': labelBackgroundColor,
-            'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '5px',
-            'text-background-shape': 'roundrectangle'
+            'background-color': groupColor,
+            'background-opacity': 0.22
         }
     },
     {
@@ -329,11 +365,7 @@ export const CY_STYLE = [
             'width': 2,
             'label': 'data(label)',
             'font-size': '9px',
-            'color': edgeLabelTextColor,
-            'text-background-color': edgeLabelBackgroundColor,
-            'text-background-opacity': edgeLabelBackgroundOpacity,
-            'text-background-padding': '5px',
-            'text-background-shape': 'roundrectangle'
+            ...edgeLabelStyle
         }
     },
     {
@@ -360,11 +392,7 @@ export const CY_STYLE = [
             },
             'text-rotation': 'autorotate',
             'text-margin-y': -8,
-            'color': edgeLabelTextColor,
-            'text-background-color': edgeLabelBackgroundColor,
-            'text-background-opacity': edgeLabelBackgroundOpacity,
-            'text-background-padding': '5px',
-            'text-background-shape': 'roundrectangle'
+            ...edgeLabelStyle
         }
     },
     {
@@ -372,7 +400,8 @@ export const CY_STYLE = [
         style: {
             'width': 4,
             'line-color': '#007bff',
-            'text-background-color': () => isDarkTheme() ? '#243b52' : '#e7f3ff'
+            'text-background-color': themed('edgeSelectedBg'),
+            'color': themed('text')
         }
     },
     {
@@ -397,7 +426,7 @@ export const CY_STYLE = [
             'background-color': 'data(color)',
             'background-opacity': 'data(opacity)',
             'border-width': 2,
-            'border-color': '#64748b',
+            'border-color': themed('shapeBorder'),
             'border-opacity': 0.5,
             'label': 'data(label)',
             'text-wrap': 'wrap',
@@ -410,11 +439,15 @@ export const CY_STYLE = [
             'text-valign': 'center',
             'text-halign': 'center',
             'font-size': function(node) { return node.data('fontSize') + 'px'; },
-            'color': labelTextColor,
-            'text-background-color': labelBackgroundColor,
+            'color': themed('text'),
+            'text-background-color': themed('labelBg'),
             'text-background-opacity': 0.94,
             'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
+            'text-border-color': themed('labelBorder'),
+            'text-border-width': 1,
+            'text-border-opacity': 1,
+            'text-outline-width': 0,
             'z-index': 5
         }
     },
@@ -434,5 +467,11 @@ export const CY_STYLE = [
     {
         selector: 'node.hl-node',
         style: { 'border-color': '#f59e0b', 'border-width': 3 }
+    },
+    // ДОЛЖНО идти последним: подпись устройства рисует HTML-слой (deviceLabels.js),
+    // нативная гасится. Класс ставится только когда слой реально создан.
+    {
+        selector: 'node.lv-html-label',
+        style: { 'label': '' }
     }
 ];

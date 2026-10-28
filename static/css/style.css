@@ -16,6 +16,12 @@ LinkVision - Современный дизайн (финальная верси�
   /* Нейтральное поле карты и малоконтрастная сетка. */
   --cy-background: #f8fafc;
   --cy-grid: #e2e8f0;
+  /* Карточки подписей устройств (deviceLabels.js) */
+  --lv-card-bg: #ffffff;
+  --lv-card-border: #d9e1ec;
+  --lv-card-name: #172033;
+  --lv-card-ip: #64748b;
+  --lv-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 3px 8px -2px rgba(15, 23, 42, 0.12);
   --sidebar-blur: blur(12px);
   --sidebar-width: 280px;
   /* Единая высота всех контролов тулбара карты (кнопки, индикатор режима,
@@ -41,6 +47,11 @@ LinkVision - Современный дизайн (финальная верси�
   /* Графитовая поверхность без резкого чёрного контраста. */
   --cy-background: #202630;
   --cy-grid: #2b3542;
+  --lv-card-bg: #252d3a;
+  --lv-card-border: #3a465a;
+  --lv-card-name: #f1f5f9;
+  --lv-card-ip: #9fb0c6;
+  --lv-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.5);
   --sidebar-blur: blur(12px);
 }
 
@@ -380,7 +391,6 @@ body.resizing-sidebar .main-content {
   top: 0;
   right: 0;
   width: auto;
-  margin-left: 0;
 }
 
 /* Скрываем кнопки действий, но оставляем бейдж */
@@ -973,6 +983,102 @@ body.resizing-sidebar .main-content {
   width: 100%;
   height: 100%;
   position: relative;
+}
+
+/* ============================================================================
+ПОДПИСИ УСТРОЙСТВ НА КАРТЕ (HTML-слой поверх холста Cytoscape)
+Создаётся static/js/src/map/deviceLabels.js. Геометрия одинакова для обеих тем,
+отличаются только переменные --lv-card-* (см. :root и [data-theme="dark"]).
+Размеры заданы в em от --lv-fs (font-size устройства), поэтому масштабируются
+вместе с картой и настройкой размера шрифта.
+============================================================================ */
+.lv-device-labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none; /* клики и перетаскивание идут в холст, как и раньше */
+  z-index: 5;
+}
+
+.lv-device-labels__layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+
+.lv-dev-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 24em;
+  translate: -50% 0; /* центр карточки по центру узла; перенос — через transform */
+  padding: 0.4em 0.8em 0.42em;
+  font-size: var(--lv-fs, 11px);
+  line-height: 1.25;
+  text-align: center;
+  background: var(--lv-card-bg);
+  border: 1px solid var(--lv-card-border);
+  border-radius: 0.6em;
+  box-shadow: var(--lv-card-shadow);
+  font-family: inherit;
+  user-select: none;
+}
+
+.lv-dev-label[hidden],
+.lv-dev-label__name[hidden] {
+  display: none;
+}
+
+/* Устройство без иконки: подпись по центру квадрата узла. */
+.lv-dev-label.is-anchor-center {
+  translate: -50% -50%;
+}
+
+.lv-dev-label__name {
+  color: var(--lv-card-name);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.lv-dev-label__ip {
+  margin-top: 0.12em;
+  color: var(--lv-card-ip);
+  font-size: 0.92em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Статус: нейтральная карточка, тонкий цветной акцент рамки только для проблем. */
+.lv-dev-label[data-status="down"] {
+  border-color: rgba(220, 53, 69, 0.8);
+}
+
+.lv-dev-label[data-status="partial"] {
+  border-color: rgba(255, 193, 7, 0.9);
+}
+
+.lv-dev-label.is-monitoring-off {
+  opacity: 0.7;
+}
+
+.lv-dev-label.is-selected,
+.lv-dev-label.is-highlight {
+  border-color: #3b82f6;
+}
+
+/* Дальний зум: IP нечитаем — убираем строку; ещё дальше — убираем карточки. */
+.lv-labels--no-ip .lv-dev-label__ip {
+  display: none;
+}
+
+.lv-labels--off .lv-dev-label {
+  display: none;
 }
 
 /* ============================================================================

@@ -5,6 +5,24 @@ import { cleanupAll } from './moduleRegistry.js';
 
 let cy = null;
 let bulkBtnUpdateScheduled = false;
+let themeObserver = null;
+
+// Тема переключается атрибутом data-theme на <html>. Стили Cytoscape с
+// функциональными значениями (styles.js) пересчитываются через style().update();
+// сам граф при этом не пересоздаётся. HTML-подписи устройств перекрашиваются
+// чистым CSS и в этом не участвуют.
+function watchTheme(instance) {
+    if (themeObserver) themeObserver.disconnect();
+    themeObserver = new MutationObserver(records => {
+        if (!records.some(record => record.attributeName === 'data-theme')) return;
+        if (cy !== instance || instance.destroyed()) return;
+        instance.style().update();
+    });
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+    });
+}
 
 export function getCy() {
     return cy;
@@ -19,6 +37,10 @@ export function initCy(mapId, onReady) {
 
         // Очищаем слушатели и таймеры перед уничтожением
         cleanupAll();
+        if (themeObserver) {
+            themeObserver.disconnect();
+            themeObserver = null;
+        }
         cy.destroy();
     }
     cy = cytoscape({
@@ -46,23 +68,8 @@ export function initCy(mapId, onReady) {
         });
     });
 
+    watchTheme(cy);
+
     if (typeof onReady === 'function') onReady(cy);
     return cy;
-}
-
-export function updateGroupLabelColor() {
-    if (!cy) return;
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const textColor = isDark ? '#f3f6fb' : '#172033';
-    const labelBackground = isDark ? '#28313d' : '#f8fafc';
-    cy.style()
-        .selector('node[isGroup]')
-        .style({
-            'color': textColor,
-            'text-background-color': labelBackground,
-            'text-background-opacity': 0.92,
-            'text-background-padding': '4px',
-            'text-background-shape': 'roundrectangle'
-        })
-        .update();
 }

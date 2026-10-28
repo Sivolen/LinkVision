@@ -1,4 +1,4 @@
-import { initCy, updateGroupLabelColor } from './core.js';
+import { initCy } from './core.js';
 import { loadBackground, setElementsLoaded, setBackgroundLoaded, markUserInteracted, resetUserInteracted, fitImageToView, updateMapBackground } from './background.js';
 import { loadElements } from './elements.js';
 import { initInteractions } from './interactions.js';
@@ -40,6 +40,7 @@ import {
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
 import { initZoomEmphasis, refreshZoomEmphasis } from './zoomEmphasis.js';
+import { initDeviceLabels } from './deviceLabels.js';
 import { updateAllGroups } from './groupResize.js';
 
 // ─── Утилиты жизненного цикла карты и Socket.IO ────────────────────────────────
@@ -144,9 +145,9 @@ export function initMap(id) {
     const cy = initCy(mapId);
     window.cy = cy;
     registerMapCleanup(initResync(cy, { isExtraBusy: isLinkMode }));
-    updateGroupLabelColor();
-    // Notify theme styling only after the initial group style has been set,
-    // so the theme-aware rules take precedence on every map initialization.
+    // HTML-подписи устройств: слой создаётся до загрузки элементов, чтобы у
+    // добавляемых узлов сразу гасилась нативная подпись (без «мигания»).
+    initDeviceLabels(cy);
     window.dispatchEvent(new CustomEvent('linkvision:cy-ready', { detail: { cy } }));
 
     // Отмена «телепортации»: если пользователь начал скроллить/зумить/тянуть карту

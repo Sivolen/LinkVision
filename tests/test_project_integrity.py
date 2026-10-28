@@ -386,3 +386,38 @@ def test_redirect_validation_rejects_protocol_relative_targets():
     expected = 'and not target.startswith("//")'
     assert auth.count(expected) == 1
     assert i18n.count(expected) == 1
+
+
+def test_map_theme_has_single_styling_mechanism():
+    """Тема карты задаётся в styles.js функциями + CSS-переменными карточек.
+
+    Отдельный патч-скрипт map-theme-styles.js (перекрывавший стили после
+    инициализации) и статические `isDarkTheme() ? a : b` в стилях Cytoscape
+    (вычислялись один раз и не менялись при смене темы) не должны возвращаться.
+    """
+    template = (ROOT / "templates/map_view.html").read_text(encoding="utf-8")
+    assert "map-theme-styles.js" not in template
+    assert not (ROOT / "static/js/map-theme-styles.js").exists()
+
+    styles = (ROOT / "static/js/src/map/styles.js").read_text(encoding="utf-8")
+    # Тема читается только внутри функций-хелперов палитры, а не в значениях стилей.
+    assert styles.count("isDarkTheme() ? PALETTE.dark") == 2
+    assert "': isDarkTheme()" not in styles
+    assert "node.lv-html-label" in styles
+
+    core = (ROOT / "static/js/src/map/core.js").read_text(encoding="utf-8")
+    assert "updateGroupLabelColor" not in core
+    assert "data-theme" in core
+
+
+def test_device_label_cards_share_geometry_between_themes():
+    css = (ROOT / "static/css/style.css").read_text(encoding="utf-8")
+    for var in ("--lv-card-bg", "--lv-card-border", "--lv-card-name", "--lv-card-ip"):
+        assert css.count(f"{var}:") == 2, f"{var} must be defined for both themes"
+    card_block = css.split(".lv-dev-label {", 1)[1].split("}", 1)[0]
+    assert "var(--lv-card-bg)" in card_block
+    # Геометрия карточки не зависит от темы.
+    assert "[data-theme=\"dark\"] .lv-dev-label" not in css
+
+    index = (ROOT / "static/js/src/map/index.js").read_text(encoding="utf-8")
+    assert "initDeviceLabels(cy);" in index
