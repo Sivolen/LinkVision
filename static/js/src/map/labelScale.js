@@ -1,19 +1,14 @@
-// labelScale.js – единая политика экранного размера подписей при зуме.
-//
-// Причина «мелких» карточек: HTML-слой подписей раньше целиком масштабировался
-// через transform: scale(zoom), как и сам граф. При обзоре всей топологии
-// (zoom 0.3–0.5) шрифт 11px превращался в 3–5px. Правильная модель: ПОЗИЦИЯ
-// подписи следует за графом (координаты × zoom), а РАЗМЕР — нет. Размер
-// считается функцией labelScale(zoom): растёт медленнее карты (zoom^0.7) и
-// ограничен снизу/сверху, чтобы название оставалось читаемым при отдалении и
-// не раздувалось при приближении.
+// labelScale.js – масштаб HTML-карточек и canvas-подписей карты.
+// HTML-подписи устройств должны масштабироваться вместе с узлом через
+// deviceLabelScale(). Подписи рёбер и групп остаются читаемыми на дальнем зуме:
+// для них используется labelScale() и пересчёт стилей ниже.
 //
 // Тот же размер нужен подписям рёбер и рамкам групп, которые рисует холст
 // Cytoscape (размеры в единицах графа). Для них стили — функции от zoom, а
 // этот модуль пересчитывает их при изменении масштаба (initZoomLabelStyles).
 import { registerCleanup } from './moduleRegistry.js';
 
-export const SCALE_MIN = 0.72;       // карточки устройств: name ≈ 8.7px на самом дальнем зуме
+export const SCALE_MIN = 0.72;       // минимальный коэффициент для canvas-подписей групп
 export const EDGE_SCALE_MIN = 0.85;  // подписи рёбер: 9.5px × 0.85 ≈ 8px
 export const SCALE_MAX = 1.15;
 const SCALE_EXP = 0.7;
@@ -47,6 +42,11 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 export function labelScale(zoom = viewState.zoom, min = SCALE_MIN) {
     return clamp(Math.pow(zoom, SCALE_EXP), min, SCALE_MAX);
+}
+
+/** HTML-карточка устройства масштабируется ровно вместе с узлом Cytoscape. */
+export function deviceLabelScale(zoom = viewState.zoom) {
+    return Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
 }
 
 /** Размер в единицах графа, дающий на экране `px` пикселей × labelScale. */

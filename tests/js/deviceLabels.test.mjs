@@ -165,7 +165,7 @@ test('повторная инициализация не оставляет вт
     dispose();
 });
 
-test('pan двигает слой, zoom двигает карточки, но НЕ масштабирует слой', () => {
+test('карточка и зазор масштабируются вместе с устройством, слой масштабирования не получает', () => {
     const container = new El('div'); const cy = makeCy(container);
     const dispose = initDeviceLabels(cy);
     cy.add(makeNode('1', { name: 'a', iconUrl: '/i.png' }, { x: 100, y: 0 })); runFrames();
@@ -174,17 +174,17 @@ test('pan двигает слой, zoom двигает карточки, но Н
     assert.equal(layer.style.transform, 'translate(10px, 20px)');
     cy._zoom = 0.3; cy.emit('viewport'); runFrames();
     assert.equal(layer.style.transform, 'translate(10px, 20px)'); // без scale()
-    // x = 100 × 0.3; размер карточки = labelScale(0.3) = нижняя граница 0.72, а не 0.3
-    assert.equal(cards(container)[0].style.transform, 'translate(30px, 13px) scale(0.72)');
+    // x = 100 × 0.3; (30 + 4) × 0.3 = 10.2; размер карточки = zoom
+    assert.equal(cards(container)[0].style.transform, 'translate(30px, 10.2px) scale(0.3)');
     dispose();
 });
 
-test('при большом зуме размер карточки ограничен сверху', () => {
+test('при приближении карточка увеличивается пропорционально устройству', () => {
     const container = new El('div'); const cy = makeCy(container);
     const dispose = initDeviceLabels(cy);
     cy.add(makeNode('1', { name: 'a', iconUrl: '/i.png' })); runFrames();
     cy._zoom = 4; cy.emit('viewport'); runFrames();
-    assert.match(cards(container)[0].style.transform, /scale\(1\.15\)$/);
+    assert.equal(cards(container)[0].style.transform, 'translate(0px, 136px) scale(4)');
     dispose();
 });
 

@@ -10,9 +10,8 @@
 //
 // Синхронизация с графом:
 //   • слой один на карту; pan — одним CSS-transform на контейнер (O(1));
-//   • ПОЗИЦИЯ карточки = координата узла × zoom (следует за графом), а РАЗМЕР
-//     задаётся labelScale(zoom) и не уменьшается вместе с картой (см.
-//     labelScale.js) — слой больше НЕ масштабируется transform: scale(zoom);
+//   • ПОЗИЦИЯ и РАЗМЕР карточки следуют за zoom узла; transform scale задаётся
+//     каждой карточке отдельно, общий слой масштабируется только для pan;
 //   • при перегруженном обзоре карточки, мешающие друг другу, сворачиваются до
 //     названия, а затем скрываются (приоритет у проблемных/выбранных);
 //   • позиция/содержимое/видимость обновляются только у «грязных» узлов,
@@ -22,13 +21,13 @@
 //     не плодит слои и обработчики;
 //   • тема переключается чистым CSS (переменные в style.css), граф не трогаем.
 import { registerCleanup } from './moduleRegistry.js';
-import { labelScale, isCyAlive } from './labelScale.js';
+import { deviceLabelScale, isCyAlive } from './labelScale.js';
 
 export const NATIVE_LABEL_OFF_CLASS = 'lv-html-label';
 
 const DEVICE_SELECTOR = 'node[!isGroup][!isShape]';
-const LABEL_GAP_PX = 4;         // зазор между иконкой и карточкой, экранные px
-const MIN_NAME_FONT = 12;       // название не мельче 12px × labelScale
+const LABEL_GAP_PX = 4;         // зазор в координатах графа между узлом и карточкой
+const MIN_NAME_FONT = 12;       // базовый размер имени до масштабирования карты
 const FONT_BOOST = 1.1;         // относительно font_size устройства
 const DEFAULT_FONT = 11;
 const ZOOM_OFF = 0.04;          // ниже — карта слишком мелкая, подписи не рисуем
@@ -167,13 +166,14 @@ export function initDeviceLabels(cy) {
             card.sizeStale = true;
         }
 
-        // Позиция следует за графом (× zoom), размер — по labelScale, не по zoom.
+        // Позиция, габариты и зазор следуют за масштабом графа, чтобы карточка
+        // сохраняла один и тот же размер относительно устройства.
         const zoom = cy.zoom();
-        const scale = labelScale(zoom);
+        const scale = deviceLabelScale(zoom);
         const pos = node.position();
         const x = pos.x * zoom;
         const y = iconNode
-            ? (pos.y + node.outerHeight() / 2) * zoom + LABEL_GAP_PX
+            ? (pos.y + node.outerHeight() / 2) * zoom + LABEL_GAP_PX * zoom
             : pos.y * zoom;
         card.x = x;
         card.y = y;
