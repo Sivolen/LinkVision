@@ -1757,6 +1757,42 @@ msgstr "Change password"
 #~ msgid "Воркеров мониторинга"
 #~ msgstr "Monitoring workers"
 
+msgid "Редактирование"
+msgstr "EDITING"
+
+msgid "Режим"
+msgstr "MODE"
+
+msgid "Состояние"
+msgstr "STATUS"
+
+msgid "Выбор"
+msgstr "SELECTION"
+
+msgid "Масштаб"
+msgstr "ZOOM"
+
+msgid "Элементы"
+msgstr "ELEMENTS"
+
+msgid "Раскладка"
+msgstr "LAYOUT"
+
+msgid "Поиск и фильтр"
+msgstr "SEARCH & FILTER"
+
+msgid "История"
+msgstr "HISTORY"
+
+msgid "Блокировка"
+msgstr "LOCK"
+
+msgid "Доступ"
+msgstr "ACCESS"
+
+msgid "Вид"
+msgstr "VIEW"
+
 #~ msgid ""
 #~ "Одновременных ICMP-проверок. Применяется после "
 #~ "перезапуска сервиса. По умолчанию — 150."
