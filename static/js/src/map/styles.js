@@ -2,12 +2,12 @@
 // Цвета меток зависят от текущей темы. Функции повторно вычисляются при
 // cy.style().update(), который вызывается наблюдателем темы карты.
 const isDarkTheme = () => document.documentElement.getAttribute('data-theme') === 'dark';
-const labelTextColor = () => isDarkTheme() ? '#f3f6fb' : '#172033';
-const labelBackgroundColor = () => isDarkTheme() ? '#1e293b' : '#ffffff';
-const labelBackgroundOpacity = () => isDarkTheme() ? 0.84 : 0.88;
-const edgeLabelTextColor = () => isDarkTheme() ? '#e6edf5' : '#475569';
-const edgeLabelBackgroundColor = () => isDarkTheme() ? '#253244' : '#f8fafc';
-const edgeLabelBackgroundOpacity = () => isDarkTheme() ? 0.88 : 0.90;
+const labelTextColor = () => isDarkTheme() ? '#f1f5f9' : '#172033';
+const labelBackgroundColor = () => isDarkTheme() ? '#18212f' : '#ffffff';
+const labelBackgroundOpacity = () => isDarkTheme() ? 0.97 : 0.97;
+const edgeLabelTextColor = () => isDarkTheme() ? '#dbe5f1' : '#475569';
+const edgeLabelBackgroundColor = () => isDarkTheme() ? '#202b3a' : '#f8fafc';
+const edgeLabelBackgroundOpacity = () => isDarkTheme() ? 0.96 : 0.96;
 const deviceLabelMaxWidth = node => {
     const name = String(node.data('name') || '');
     return `${Math.max(92, Math.min(220, name.length * 6.7 + 16))}px`;
@@ -55,8 +55,11 @@ export const CY_STYLE = [
             'color': labelTextColor,
             'text-background-color': labelBackgroundColor,
             'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
+            'text-border-color': isDarkTheme() ? '#344256' : '#dbe3ed',
+            'text-border-width': 1,
+            'text-border-opacity': 1,
             'text-outline-width': 0
         }
     },
@@ -119,8 +122,11 @@ export const CY_STYLE = [
             'text-halign': 'center',
             'text-background-color': labelBackgroundColor,
             'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
+            'text-border-color': isDarkTheme() ? '#344256' : '#dbe3ed',
+            'text-border-width': 1,
+            'text-border-opacity': 1,
             'text-outline-width': 0
         }
     },
@@ -147,8 +153,11 @@ export const CY_STYLE = [
             'text-halign': 'center',
             'text-background-color': labelBackgroundColor,
             'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
+            'text-border-color': isDarkTheme() ? '#344256' : '#dbe3ed',
+            'text-border-width': 1,
+            'text-border-opacity': 1,
             'text-outline-width': 0,
             'opacity': 0.9,
             'overlay-color': '#dc3545',
@@ -179,8 +188,11 @@ export const CY_STYLE = [
             'text-halign': 'center',
             'text-background-color': labelBackgroundColor,
             'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
+            'text-border-color': isDarkTheme() ? '#344256' : '#dbe3ed',
+            'text-border-width': 1,
+            'text-border-opacity': 1,
             'text-outline-width': 0,
             'opacity': 0.9,
             'overlay-color': '#ffc107',
@@ -263,7 +275,7 @@ export const CY_STYLE = [
             'color': labelTextColor,
             'text-background-color': labelBackgroundColor,
             'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
             'text-margin-y': 4,
             'z-index': 0
@@ -288,7 +300,7 @@ export const CY_STYLE = [
             'color': labelTextColor,
             'text-background-color': labelBackgroundColor,
             'text-background-opacity': labelBackgroundOpacity,
-            'text-background-padding': '3px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle'
         }
     },
@@ -320,7 +332,7 @@ export const CY_STYLE = [
             'color': edgeLabelTextColor,
             'text-background-color': edgeLabelBackgroundColor,
             'text-background-opacity': edgeLabelBackgroundOpacity,
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle'
         }
     },
@@ -351,7 +363,7 @@ export const CY_STYLE = [
             'color': edgeLabelTextColor,
             'text-background-color': edgeLabelBackgroundColor,
             'text-background-opacity': edgeLabelBackgroundOpacity,
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle'
         }
     },
@@ -401,7 +413,7 @@ export const CY_STYLE = [
             'color': labelTextColor,
             'text-background-color': labelBackgroundColor,
             'text-background-opacity': 0.94,
-            'text-background-padding': '3px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
             'z-index': 5
         }

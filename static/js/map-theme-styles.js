@@ -2,23 +2,25 @@
 (() => {
     const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
     const palette = () => isDark() ? {
-        text: '#f8fafc',
-        mutedText: '#cbd5e1',
-        label: '#1e293b',
-        labelOpacity: 0.84,
-        edgeLabel: '#253244',
-        edgeLabelOpacity: 0.88,
+        text: '#f1f5f9',
+        mutedText: '#dbe5f1',
+        label: '#18212f',
+        labelOpacity: 0.97,
+        edgeLabel: '#202b3a',
+        edgeLabelOpacity: 0.96,
         selectedEdgeLabel: '#173b61',
-        shapeBorder: '#64748b'
+        shapeBorder: '#64748b',
+        labelBorder: '#344256'
     } : {
-        text: '#1f2937',
+        text: '#172033',
         mutedText: '#475569',
         label: '#ffffff',
-        labelOpacity: 0.88,
+        labelOpacity: 0.97,
         edgeLabel: '#f8fafc',
-        edgeLabelOpacity: 0.90,
+        edgeLabelOpacity: 0.96,
         selectedEdgeLabel: '#e7f3ff',
-        shapeBorder: '#94a3b8'
+        shapeBorder: '#94a3b8',
+        labelBorder: '#dbe3ed'
     };
 
     let styledCy = null;
@@ -39,8 +41,11 @@
             color: dynamic('text'),
             'text-background-color': dynamic('label'),
             'text-background-opacity': dynamic('labelOpacity'),
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
+            'text-border-color': dynamic('labelBorder'),
+            'text-border-width': 1,
+            'text-border-opacity': 1,
             'text-outline-width': 0,
             'text-wrap': 'wrap',
             'text-max-width': node => {
@@ -60,8 +65,11 @@
             color: dynamic('text'),
             'text-background-color': dynamic('label'),
             'text-background-opacity': dynamic('labelOpacity'),
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
+            'text-border-color': dynamic('labelBorder'),
+            'text-border-width': 1,
+            'text-border-opacity': 1,
             'text-outline-width': 0,
             'text-margin-y': 4
         });
@@ -69,15 +77,18 @@
             color: dynamic('text'),
             'text-background-color': dynamic('label'),
             'text-background-opacity': dynamic('labelOpacity'),
-            'text-background-padding': '3px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle'
         });
         stylesheet.selector('node[isShape]').style({
             color: dynamic('text'),
             'text-background-color': dynamic('label'),
             'text-background-opacity': dynamic('labelOpacity'),
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
+            'text-border-color': dynamic('labelBorder'),
+            'text-border-width': 1,
+            'text-border-opacity': 1,
             'text-outline-width': 0,
             'border-color': dynamic('shapeBorder')
         });
@@ -86,7 +97,7 @@
             color: dynamic('mutedText'),
             'text-background-color': dynamic('edgeLabel'),
             'text-background-opacity': dynamic('edgeLabelOpacity'),
-            'text-background-padding': '2px',
+            'text-background-padding': '5px',
             'text-background-shape': 'roundrectangle',
             'text-outline-width': 0
         };
