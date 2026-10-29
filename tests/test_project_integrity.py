@@ -442,6 +442,8 @@ def test_device_label_cards_share_geometry_between_themes():
     assert "bucketZoom" in scale and "staleVisibleEdges" in scale
     assert ".scratch(" not in scale.split("export const STYLE_INTERVAL_MS", 1)[1], "scratch инвалидирует стиль элемента Cytoscape"
     core = (ROOT / "static/js/src/map/core.js").read_text(encoding="utf-8")
-    assert "textureOnViewport: true" in core
+    # textureOnViewport даёт «квадрат» (снимок исходной области) при отдалении.
+    assert "textureOnViewport: true" not in core
+    assert "isViewportGesture" in scale and "isViewportGesture" in (ROOT / "static/js/src/map/zoomEmphasis.js").read_text(encoding="utf-8")
     emphasis = (ROOT / "static/js/src/map/zoomEmphasis.js").read_text(encoding="utf-8")
     assert "n.data(group.dataKey" not in emphasis, "флаги подсветки не пишем в data"

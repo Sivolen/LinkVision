@@ -14,6 +14,7 @@
 // "видеть" издалека.
 import { getCy } from './core.js';
 import { registerCleanup } from './moduleRegistry.js';
+import { isViewportGesture } from './labelScale.js';
 
 const ZOOM_THRESHOLD = 0.5;   // выше этого зума компенсация не нужна — рамка и так видна
 
@@ -104,7 +105,6 @@ const EMPHASIS_GROUPS = [
 const emphasized = new Map();
 let wasEmphasizing = false;
 let appliedZoom = NaN;
-let lastRunAt = -Infinity;
 let activeCy = null;
 let zoomHandler = null;
 let runTimer = 0;
@@ -112,7 +112,6 @@ let destroyHandler = null;
 
 const RUN_INTERVAL_MS = 100;    // не чаще раза в 100 мс во время жеста зума
 const ZOOM_EPSILON = 0.02;      // изменение масштаба меньше 2% — стили те же
-const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
 function groupStyles(zoom) {
     const t = clamp(1 - zoom / ZOOM_THRESHOLD, 0, 1);
@@ -156,7 +155,6 @@ function recompute(full = true) {
 
     const zoom = cy.zoom();
     const shouldEmphasize = zoom < ZOOM_THRESHOLD;
-    lastRunAt = now();
 
     // Переход через порог меняет набор целей, а быстрый путь знает только прежних.
     const needFull = full || shouldEmphasize !== wasEmphasizing;
@@ -210,7 +208,13 @@ export function initZoomEmphasis(cy) {
     zoomHandler = () => {
         // Первый вызов — сразу, дальше не чаще RUN_INTERVAL_MS, последний — после остановки.
         if (runTimer) return;
-        runTimer = setTimeout(() => { runTimer = 0; recompute(false); }, Math.max(0, lastRunAt + RUN_INTERVAL_MS - now()));
+        const run = () => {
+            runTimer = 0;
+            // Не пишем стили узлов посреди жеста — дождёмся его конца.
+            if (activeCy && isViewportGesture(activeCy)) { runTimer = setTimeout(run, RUN_INTERVAL_MS); return; }
+            recompute(false);
+        };
+        runTimer = setTimeout(run, RUN_INTERVAL_MS);
     };
     destroyHandler = () => cleanup(true);
     cy.on('zoom', zoomHandler);
@@ -258,7 +262,6 @@ export function cleanup(destroying = false) {
     emphasized.clear();
     wasEmphasizing = false;
     appliedZoom = NaN;
-    lastRunAt = -Infinity;
 }
 
 // Саморегистрация в общем реестре очистки (см. moduleRegistry.js)
