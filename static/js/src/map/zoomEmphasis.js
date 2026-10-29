@@ -17,8 +17,6 @@ import { registerCleanup } from './moduleRegistry.js';
 
 const ZOOM_THRESHOLD = 0.5;   // выше этого зума компенсация не нужна — рамка и так видна
 
-let debounceTimer = null;
-
 function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
 }
@@ -98,64 +96,126 @@ const EMPHASIS_GROUPS = [
     },
 ];
 
-function recompute() {
-    const cy = getCy();
-    if (!cy) return;
+// ── Состояние ────────────────────────────────────────────────────────────────
+// Узлы, к которым сейчас применено усиление: id -> { groups: [индексы групп], sig }.
+// Нужно, чтобы при зуме обходить только их, а не все узлы карты. Новые цели
+// появляются при смене статуса/результатов поиска — тогда вызывается
+// refreshZoomEmphasis() (полный проход).
+const emphasized = new Map();
+let wasEmphasizing = false;
+let appliedZoom = NaN;
+let lastRunAt = -Infinity;
+let activeCy = null;
+let zoomHandler = null;
+let runTimer = 0;
+let destroyHandler = null;
+
+const RUN_INTERVAL_MS = 100;    // не чаще раза в 100 мс во время жеста зума
+const ZOOM_EPSILON = 0.02;      // изменение масштаба меньше 2% — стили те же
+const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+function groupStyles(zoom) {
+    const t = clamp(1 - zoom / ZOOM_THRESHOLD, 0, 1);
+    return EMPHASIS_GROUPS.map(group => ({
+        borderWidth: clamp(group.minBorderPx / zoom, group.baseBorder, group.maxBorderGraphUnits),
+        overlayPadding: clamp(group.minOverlayPaddingPx / zoom, group.baseOverlayPadding, group.maxOverlayPaddingGraphUnits),
+        // Чем дальше отдалились от порога — тем плотнее гало.
+        overlayOpacity: group.minOverlayOpacity + t * (group.maxOverlayOpacity - group.minOverlayOpacity)
+    }));
+}
+
+// Несколько видов подсветки одного узла объединяются (берём максимум), чтобы они
+// не снимали друг друга. Стиль пишем только если значения изменились: каждая
+// запись n.style() — событие 'style' для всех подписчиков и перерисовка.
+function applyToNode(n, entry, styles) {
+    const active = entry.groups.map(i => styles[i]);
+    const borderWidth = Math.max(...active.map(s => s.borderWidth));
+    const overlayPadding = Math.max(...active.map(s => s.overlayPadding));
+    const overlayOpacity = Math.max(...active.map(s => s.overlayOpacity));
+    const sig = `${borderWidth.toFixed(2)}|${overlayPadding.toFixed(2)}|${overlayOpacity.toFixed(3)}`;
+    if (entry.sig === sig) return;
+    entry.sig = sig;
+    n.style({
+        'border-width': borderWidth,
+        'overlay-padding': `${overlayPadding}px`,
+        'overlay-opacity': overlayOpacity
+    });
+}
+
+function clearNode(n) {
+    n.removeStyle('border-width overlay-padding overlay-opacity');
+}
+
+/**
+ * full=true — полный проход по узлам (смена статусов/поиска, порог зума,
+ * загрузка карты). full=false — только пересчёт значений у уже усиленных узлов.
+ */
+function recompute(full = true) {
+    const cy = activeCy || getCy();
+    if (!cy || (cy.destroyed && cy.destroyed())) return;
 
     const zoom = cy.zoom();
     const shouldEmphasize = zoom < ZOOM_THRESHOLD;
-    const groupStyles = EMPHASIS_GROUPS.map(group => {
-        const t = clamp(1 - zoom / ZOOM_THRESHOLD, 0, 1);
-        return {
-            group,
-            borderWidth: clamp(group.minBorderPx / zoom, group.baseBorder, group.maxBorderGraphUnits),
-            overlayPadding: clamp(group.minOverlayPaddingPx / zoom, group.baseOverlayPadding, group.maxOverlayPaddingGraphUnits),
-            // Чем дальше отдалились от порога — тем плотнее гало.
-            overlayOpacity: group.minOverlayOpacity + t * (group.maxOverlayOpacity - group.minOverlayOpacity),
-        };
-    });
+    lastRunAt = now();
 
-    // Один проход вместо отдельного полного прохода для каждой группы. На карте
-    // с большим числом устройств это уменьшает работу при каждом изменении zoom.
-    // Стили объединяются, чтобы несколько видов подсветки одного узла не снимали
-    // друг друга в зависимости от порядка обхода.
+    // Переход через порог меняет набор целей, а быстрый путь знает только прежних.
+    const needFull = full || shouldEmphasize !== wasEmphasizing;
+    if (!needFull) {
+        if (!shouldEmphasize || !emphasized.size) { appliedZoom = zoom; return; }
+        if (Math.abs(zoom - appliedZoom) / appliedZoom < ZOOM_EPSILON) return;
+    }
+    appliedZoom = zoom;
+    wasEmphasizing = shouldEmphasize;
+    const styles = shouldEmphasize ? groupStyles(zoom) : null;
+
     cy.batch(() => {
-        cy.nodes().forEach(n => {
-            const activeStyles = [];
-            let hadEmphasis = false;
-
-            groupStyles.forEach(({ group, ...style }) => {
-                const wasEmphasized = Boolean(n.data(group.dataKey));
-                hadEmphasis = hadEmphasis || wasEmphasized;
-
-                if (shouldEmphasize && group.isTarget(n)) {
-                    n.data(group.dataKey, true);
-                    activeStyles.push(style);
-                } else if (wasEmphasized) {
-                    n.removeData(group.dataKey);
-                }
+        if (!needFull) {
+            emphasized.forEach((entry, id) => {
+                const n = cy.getElementById(id);
+                if (!n.length) { emphasized.delete(id); return; }
+                applyToNode(n, entry, styles);
             });
+            return;
+        }
 
-            if (!activeStyles.length) {
-                if (hadEmphasis) n.removeStyle('border-width overlay-padding overlay-opacity');
-                return;
-            }
-
-            n.style({
-                'border-width': Math.max(...activeStyles.map(style => style.borderWidth)),
-                'overlay-padding': `${Math.max(...activeStyles.map(style => style.overlayPadding))}px`,
-                'overlay-opacity': Math.max(...activeStyles.map(style => style.overlayOpacity)),
+        // Один проход вместо отдельного полного прохода для каждой группы.
+        // Флаги состояния хранятся в Map, а не в data узла: запись data даёт
+        // событие 'data' (его слушают мини-карта и подписи) на каждом узле.
+        const seen = new Set();
+        if (shouldEmphasize) {
+            cy.nodes().forEach(n => {
+                const groups = [];
+                EMPHASIS_GROUPS.forEach((group, i) => { if (group.isTarget(n)) groups.push(i); });
+                if (!groups.length) return;
+                const id = n.id();
+                seen.add(id);
+                let entry = emphasized.get(id);
+                if (!entry) { entry = { groups, sig: '' }; emphasized.set(id, entry); }
+                else if (entry.groups.join() !== groups.join()) { entry.groups = groups; entry.sig = ''; }
+                applyToNode(n, entry, styles);
             });
+        }
+        emphasized.forEach((entry, id) => {
+            if (seen.has(id)) return;
+            const n = cy.getElementById(id);
+            if (n.length) clearNode(n);
+            emphasized.delete(id);
         });
     });
 }
 
 export function initZoomEmphasis(cy) {
-    cy.on('zoom', () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(recompute, 60);
-    });
-    recompute();
+    cleanup();
+    activeCy = cy;
+    zoomHandler = () => {
+        // Первый вызов — сразу, дальше не чаще RUN_INTERVAL_MS, последний — после остановки.
+        if (runTimer) return;
+        runTimer = setTimeout(() => { runTimer = 0; recompute(false); }, Math.max(0, lastRunAt + RUN_INTERVAL_MS - now()));
+    };
+    destroyHandler = () => cleanup(true);
+    cy.on('zoom', zoomHandler);
+    cy.on('destroy', destroyHandler);
+    recompute(true);
 }
 
 /**
@@ -165,14 +225,40 @@ export function initZoomEmphasis(cy) {
  * не дожидаясь следующего события zoom.
  */
 export function refreshZoomEmphasis() {
-    recompute();
+    recompute(true);
 }
 
-export function cleanup() {
-    if (debounceTimer) {
-        clearTimeout(debounceTimer);
-        debounceTimer = null;
+/**
+ * Снимает обработчики, таймер и ВСЁ временное состояние усиления. Если граф ещё
+ * жив (повторный initZoomEmphasis на том же cy), заодно убирает bypass-стили с
+ * подсвеченных узлов — иначе после потери Map они остались бы навсегда.
+ * destroying=true — граф уничтожается, его узлы не трогаем.
+ */
+export function cleanup(destroying = false) {
+    clearTimeout(runTimer);
+    runTimer = 0;
+    const cy = activeCy;
+    if (cy) {
+        try {
+            if (zoomHandler) cy.off('zoom', zoomHandler);
+            if (destroyHandler) cy.off('destroy', destroyHandler);
+        } catch (e) { /* граф уже уничтожен */ }
+        if (!destroying && !(cy.destroyed && cy.destroyed())) {
+            cy.batch(() => {
+                emphasized.forEach((_, id) => {
+                    const n = cy.getElementById(id);
+                    if (n.length) clearNode(n);
+                });
+            });
+        }
     }
+    zoomHandler = null;
+    destroyHandler = null;
+    activeCy = null;
+    emphasized.clear();
+    wasEmphasizing = false;
+    appliedZoom = NaN;
+    lastRunAt = -Infinity;
 }
 
 // Саморегистрация в общем реестре очистки (см. moduleRegistry.js)

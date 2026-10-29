@@ -5,7 +5,6 @@ LinkVision - Современный дизайн (финальная верси�
   /* Светлая тема */
   --bg-primary: #f1f5f9;
   --bg-secondary: #ffffff;
-  --bg-sidebar: rgba(248, 250, 252, 0.85);
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-sidebar: #1e293b;
@@ -18,11 +17,18 @@ LinkVision - Современный дизайн (финальная верси�
   --cy-grid: #e2e8f0;
   /* Карточки подписей устройств (deviceLabels.js) */
   --lv-card-bg: #ffffff;
-  --lv-card-border: #d9e1ec;
-  --lv-card-name: #172033;
-  --lv-card-ip: #64748b;
-  --lv-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 3px 8px -2px rgba(15, 23, 42, 0.12);
-  --sidebar-blur: blur(12px);
+  --lv-card-border: #cfd8e4;
+  --lv-card-name: #0f172a;
+  --lv-card-ip: #55657c;
+  --lv-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.1), 0 4px 10px -2px rgba(15, 23, 42, 0.16);
+  --sidebar-surface: #f8fafc;
+  --sidebar-panel: #f1f6fb;
+  --sidebar-hover: #eef5fb;
+  --sidebar-active-bg: #e3f1fc;
+  --sidebar-active-text: #235f91;
+  --sidebar-border: #dce5ef;
+  --sidebar-muted: #738197;
+  --sidebar-shadow: 0 12px 32px rgba(15, 35, 60, 0.12);
   --sidebar-width: 280px;
   /* Единая высота всех контролов тулбара карты (кнопки, индикатор режима,
      поиск) — чтобы группы кнопок были одинаковой высоты. */
@@ -36,7 +42,6 @@ LinkVision - Современный дизайн (финальная верси�
   /* Основные фоны – тёплый тёмно-серый вместо сине-чёрного */
   --bg-primary: #1a1a1a;
   --bg-secondary: #2d2d2d;
-  --bg-sidebar: rgba(30, 30, 30, 0.9);
   --text-primary: #e0e0e0;
   --text-secondary: #b0b0b0;
   --text-sidebar: #f0f0f0;
@@ -47,12 +52,19 @@ LinkVision - Современный дизайн (финальная верси�
   /* Графитовая поверхность без резкого чёрного контраста. */
   --cy-background: #202630;
   --cy-grid: #2b3542;
-  --lv-card-bg: #252d3a;
-  --lv-card-border: #3a465a;
-  --lv-card-name: #f1f5f9;
-  --lv-card-ip: #9fb0c6;
-  --lv-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.5);
-  --sidebar-blur: blur(12px);
+  --lv-card-bg: #2e3849;
+  --lv-card-border: #4a5870;
+  --lv-card-name: #f8fafc;
+  --lv-card-ip: #a9b8cd;
+  --lv-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 5px 12px -2px rgba(0, 0, 0, 0.6);
+  --sidebar-surface: #1d2732;
+  --sidebar-panel: #222e3a;
+  --sidebar-hover: #293745;
+  --sidebar-active-bg: #254665;
+  --sidebar-active-text: #d8edff;
+  --sidebar-border: #334353;
+  --sidebar-muted: #9aacc0;
+  --sidebar-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
 }
 
 /* Дополнительные корректировки для элементов интерфейса в тёмной теме */
@@ -77,25 +89,6 @@ LinkVision - Современный дизайн (финальная верси�
   background: var(--bg-primary);
   border-color: var(--border-color);
   color: var(--text-primary);
-}
-
-[data-theme="dark"] .map-item.active {
-  background: var(--accent-color);
-  color: #fff;
-}
-
-[data-theme="dark"] .map-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="dark"] .status-dot.online {
-  background: #4ade80;
-  box-shadow: 0 0 10px #4ade80;
-}
-
-[data-theme="dark"] .status-dot.offline {
-  background: #f87171;
-  box-shadow: 0 0 10px #f87171;
 }
 
 /* Таблицы */
@@ -241,7 +234,7 @@ body {
 }
 
 /* ============================================================================
-САЙДБАР (стеклянный эффект)
+БОКОВАЯ ПАНЕЛЬ
 ============================================================================ */
 .main-content.no-sidebar {
   margin-left: 0 !important;
@@ -249,648 +242,638 @@ body {
 
 .sidebar {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: var(--sidebar-width, 280px);
-  height: 100vh;
-  background: var(--bg-sidebar);
-  backdrop-filter: var(--sidebar-blur);
-  -webkit-backdrop-filter: var(--sidebar-blur);
-  color: var(--text-sidebar);
+  inset: 0 auto 0 0;
   z-index: 1000;
-  transition: width 0.25s ease;
   display: flex;
   flex-direction: column;
-  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.08);
-  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  width: var(--sidebar-width, 280px);
+  max-width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  color: var(--text-sidebar);
+  background: var(--sidebar-surface);
+  border-right: 1px solid var(--sidebar-border);
+  box-shadow: var(--sidebar-shadow);
+  transition: width 0.22s ease, transform 0.22s ease, background-color 0.2s ease;
 }
 
-/* Ручка-сплиттер для изменения ширины сайдбара */
 .sidebar-resizer {
   position: absolute;
-  top: 0;
-  right: -3px;
-  width: 6px;
-  height: 100%;
-  cursor: col-resize;
+  inset: 0 -3px 0 auto;
   z-index: 1002;
+  width: 6px;
+  cursor: col-resize;
   background: transparent;
-  transition: background 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 .sidebar-resizer:hover,
 .sidebar-resizer.dragging {
   background: var(--accent-color);
-  opacity: 0.6;
+  opacity: 0.55;
 }
-/* В свёрнутом состоянии менять ширину нельзя */
-.sidebar.collapsed .sidebar-resizer {
-  display: none;
-}
-/* Во время перетаскивания отключаем анимацию и выделение текста */
-body.resizing-sidebar {
-  cursor: col-resize;
-  user-select: none;
-}
+.sidebar.collapsed .sidebar-resizer { display: none; }
+body.resizing-sidebar { cursor: col-resize; user-select: none; }
 body.resizing-sidebar .sidebar,
-body.resizing-sidebar .main-content {
-  transition: none;
-}
+body.resizing-sidebar .main-content { transition: none; }
 
-/* Кастомный тултип с названием карты при свёрнутом сайдбаре */
 .sidebar-tooltip {
   position: fixed;
+  z-index: 3000;
+  padding: 6px 10px;
   transform: translateY(-50%);
-  background: var(--bg-secondary);
   color: var(--text-primary);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  padding: 6px 12px;
   border-radius: 8px;
-  font-size: 0.85rem;
+  box-shadow: 0 4px 16px rgba(15, 35, 60, 0.16);
+  font-size: 0.82rem;
   font-weight: 500;
   white-space: nowrap;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
-  z-index: 3000;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.12s ease;
 }
-.sidebar-tooltip.visible {
-  opacity: 1;
-}
+.sidebar-tooltip.visible { opacity: 1; }
 
-/* Свёрнутый сайдбар */
-.sidebar.collapsed {
-  width: 80px;
-}
-
-.sidebar.collapsed .sidebar-header {
-  padding: 12px 8px;
-}
-
-.sidebar.collapsed .sidebar-logo .logo-text,
-.sidebar.collapsed .sidebar-user span,
-.sidebar.collapsed .sidebar-maps h5 span,
-.sidebar.collapsed .map-item .map-item-name,
-.sidebar.collapsed .map-item-actions,
-.sidebar.collapsed .admin-menu small,
-.sidebar.collapsed .admin-menu-item span,
-.sidebar.collapsed .theme-toggle span,
-.sidebar.collapsed .status-indicator {
-  display: none !important;
-}
-
-.sidebar.collapsed .sidebar-user i,
-.sidebar.collapsed .sidebar-maps h5 i,
-.sidebar.collapsed .map-item .map-item-icon,
-.sidebar.collapsed .admin-menu-item i,
-.sidebar.collapsed .theme-toggle i {
-  margin: 0;
-  font-size: 1.4rem;
-}
-
-/* Центрирование всех элементов в свёрнутом сайдбаре */
-.sidebar.collapsed .sidebar-user {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 10px 0;
-}
-
-/* Заголовок "Карты" по центру */
-.sidebar.collapsed .sidebar-maps h5 {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.sidebar.collapsed .sidebar-maps h5 i {
-  margin: 0;
-}
-
-/* Элементы карт */
-.sidebar.collapsed .map-item {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 10px 0;
-  position: relative;
-  width: 100%;
-}
-
-/* Иконка карты точно по центру */
-.sidebar.collapsed .map-item .map-item-icon {
-  margin-right: 0;
-  width: auto;
-  text-align: center;
-}
-
-/* Контейнер для бейджа и кнопок */
-.sidebar.collapsed .map-item .map-item-right {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: auto;
-}
-
-/* Скрываем кнопки действий, но оставляем бейдж */
-.sidebar.collapsed .map-item .map-item-actions {
-  display: none;
-}
-
-/* Бейдж */
-.sidebar.collapsed .map-item .badge {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 0.6rem;
-  padding: 0.15rem 0.4rem;
-  min-width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 18px;
-  background: #ef4444;
-  color: white;
-  font-weight: 600;
-  z-index: 10;
-}
-
-/* Кнопки админ-меню, темы/выхода и "Новая карта"/"Импорт" в свёрнутом виде */
-.sidebar.collapsed .admin-menu-item,
-.sidebar.collapsed .theme-toggle,
-.sidebar.collapsed .sidebar-maps .btn {
-  width: 44px !important;
-  height: 44px;
-  padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 14px;
-  margin: 0 auto 8px auto;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--text-sidebar);
-  transition: all 0.2s;
-  flex: none; /* отменяем растягивание */
-}
-
-.sidebar.collapsed .admin-menu-item i,
-.sidebar.collapsed .theme-toggle i,
-.sidebar.collapsed .sidebar-maps .btn i {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.sidebar.collapsed .admin-menu-item span,
-.sidebar.collapsed .theme-toggle span,
-.sidebar.collapsed .sidebar-maps .btn span {
-  display: none;
-}
-
-/* Анимация наведения для кнопок в свёрнутом сайдбаре */
-.sidebar.collapsed .admin-menu-item:hover,
-.sidebar.collapsed .theme-toggle:hover,
-.sidebar.collapsed .sidebar-maps .btn:hover {
-  background: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
-}
-
-/* Шапка сайдбара */
 .sidebar-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  flex-shrink: 0;
+  min-height: 66px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--sidebar-border);
 }
-
-.sidebar-header {
-  border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
+  min-width: 0;
+  margin: 0;
 }
-
 .sidebar-logo img {
-  height: 36px;
-  width: auto;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
 }
-
 .logo-text {
-  font-size: 1.2rem;
-  font-weight: 600;
+  overflow: hidden;
   color: var(--text-sidebar);
+  font-size: 1.16rem;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-.logo-letter {
-  color: var(--accent-color);
-}
-
+.logo-letter { color: var(--accent-color); }
 .sidebar-toggle {
-  background: transparent;
-  border: none;
-  color: var(--text-sidebar);
-  font-size: 1.2rem;
-  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
   width: 36px;
   height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  transition: background 0.2s;
-}
-
-.sidebar-toggle:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.sidebar-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Пользователь */
-.sidebar-user {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  font-size: 0.9rem;
-  flex-shrink: 0;
-}
-
-.sidebar-user {
-  border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-.sidebar-user i {
-  font-size: 1.4rem;
-  opacity: 0.8;
-}
-
-.sidebar-user .badge {
-  font-size: 0.7rem;
-  padding: 0.3rem 0.5rem;
-  border-radius: 30px;
-  font-weight: 500;
-}
-
-/* Карты в сайдбаре */
-.sidebar-maps {
-  padding: 16px;
-  flex: 1 1 auto;
-  overflow-y: auto;
-}
-
-.sidebar-maps h5 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  opacity: 0.6;
-  margin-bottom: 16px;
-}
-
-.map-list {
-  list-style: none;
   padding: 0;
-  margin: 0 0 16px 0;
+  color: var(--text-sidebar);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+.sidebar-toggle:hover,
+.sidebar-toggle:focus-visible {
+  color: var(--sidebar-active-text);
+  background: var(--sidebar-hover);
+  border-color: var(--sidebar-border);
 }
 
-.map-item {
+.sidebar-user {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 12px 12px 8px;
+  padding: 9px 10px;
+  background: var(--sidebar-panel);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 12px;
+}
+.sidebar-user-avatar {
+  display: grid;
+  flex: 0 0 36px;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: #647b95;
+  background: #e1e9f2;
+  border-radius: 50%;
+  font-size: 1.05rem;
+}
+[data-theme="dark"] .sidebar-user-avatar {
+  color: #cfdaea;
+  background: #3b4a5b;
+}
+.sidebar-user-info {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.sidebar-user-name {
+  overflow: hidden;
+  color: var(--text-sidebar);
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-user-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sidebar-role-badge {
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.63rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.sidebar-maps {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 10px 12px 12px;
+  scrollbar-color: var(--sidebar-border) transparent;
+  scrollbar-width: thin;
+}
+.sidebar-maps::-webkit-scrollbar { width: 5px; }
+.sidebar-maps::-webkit-scrollbar-thumb {
+  background: var(--sidebar-border);
+  border-radius: 5px;
+}
+.sidebar-section-title {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
-  margin-bottom: 4px;
-  border-radius: 14px;
-  text-decoration: none;
-  color: var(--text-sidebar);
-  transition: background 0.2s;
-  position: relative;
+  gap: 9px;
+  margin: 4px 8px 9px;
+  color: var(--sidebar-muted);
+  font-size: 0.69rem;
+  font-weight: 650;
+  letter-spacing: 0.075em;
+  line-height: 1.3;
+  text-transform: uppercase;
 }
-
-.map-item:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.map-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.map-item.active {
-  background: var(--accent-color);
-  color: white;
-}
-
-.map-item-icon {
-  margin-right: 12px;
-  font-size: 1.1rem;
-  width: 20px;
+.sidebar-section-title i {
+  width: 16px;
+  color: var(--sidebar-muted);
+  font-size: 0.82rem;
   text-align: center;
 }
-
-.map-item-name {
-  flex: 1;
-  font-size: 0.9rem;
-  font-weight: 500;
-  white-space: nowrap;
+.map-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.map-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 39px;
+  margin: 2px 0;
+  padding: 7px 9px;
   overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.map-item-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.map-item-actions {
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.map-item:hover .map-item-actions {
-  opacity: 1;
-}
-
-.btn-map-action {
+  color: var(--text-sidebar);
   background: transparent;
-  border: none;
-  color: inherit;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
 }
-
-.btn-map-action:hover {
-  background: rgba(0, 0, 0, 0.1);
+.map-item:hover,
+.map-item:focus-visible {
+  color: var(--text-sidebar);
+  background: var(--sidebar-hover);
+  border-color: var(--sidebar-border);
+  outline: none;
 }
-
-.btn-map-action:hover {
-  background: rgba(255, 255, 255, 0.15);
+.map-item:active { background: var(--sidebar-active-bg); }
+.folder-item { cursor: pointer; }
+.folder-item:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
 }
-
-.map-item .badge {
-  background: #ef4444;
-  color: white;
-  font-size: 0.65rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 30px;
+.map-item.active {
+  color: var(--sidebar-active-text);
+  background: var(--sidebar-active-bg);
+  border-color: color-mix(in srgb, var(--sidebar-active-text) 18%, transparent);
   font-weight: 600;
 }
+.map-item.active .map-item-icon { color: var(--accent-color); }
+[data-theme="dark"] .map-item.active .map-item-icon { color: #8fc8f5; }
+.map-item-icon {
+  flex: 0 0 20px;
+  width: 20px;
+  margin-right: 9px;
+  color: var(--sidebar-muted);
+  font-size: 0.95rem;
+  text-align: center;
+}
+.map-item-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.map-item-right {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.map-item-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+.map-item:hover .map-item-actions,
+.map-item:focus-within .map-item-actions { opacity: 1; }
+.btn-map-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background-color 0.14s ease;
+}
+.btn-map-action:hover,
+.btn-map-action:focus-visible { background: color-mix(in srgb, var(--accent-color) 15%, transparent); }
+.map-item .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 2px 6px;
+  color: #9b3343;
+  background: #fde8eb;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+[data-theme="dark"] .map-item .badge {
+  color: #ffc4ca;
+  background: #55343b;
+}
+.map-item.active .badge { color: #8f2f40; background: #fff0f1; }
 
-/* Drag-and-drop в дереве сайдбара (карты/папки) */
+/* Drag-and-drop in the existing map tree. */
 .map-item.dragging,
-.folder-item.dragging {
-  opacity: 0.4;
-}
-
+.folder-item.dragging { opacity: 0.4; }
 .map-item.drag-over-top,
-.folder-item.drag-over-top {
-  box-shadow: inset 0 2px 0 0 var(--accent-color);
-}
-
+.folder-item.drag-over-top { box-shadow: inset 0 2px 0 var(--accent-color); }
 .map-item.drag-over-bottom,
-.folder-item.drag-over-bottom {
-  box-shadow: inset 0 -2px 0 0 var(--accent-color);
-}
-
+.folder-item.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--accent-color); }
 .folder-item.drag-over-folder {
   outline: 2px dashed var(--accent-color);
   outline-offset: -2px;
-  background: rgba(70, 130, 180, 0.15); /* фоллбэк для браузеров без color-mix() */
-  background: color-mix(in srgb, var(--accent-color) 15%, transparent);
+  background: var(--sidebar-active-bg);
 }
 
-/* Кнопки в сайдбаре (Новая карта, Импорт) */
-.sidebar-maps .btn-outline-light {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.sidebar-map-actions {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 4px;
+  padding: 7px;
+  background: var(--sidebar-panel);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 12px;
+}
+.sidebar-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 37px;
+  padding: 7px 9px;
   color: var(--text-sidebar);
-  border-radius: 14px;
-  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.82rem;
   font-weight: 500;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-align: center;
+  text-align: left;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
-
-.sidebar-maps .btn-outline-light:hover {
-  background: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
+.sidebar-action i { width: 18px; color: var(--accent-color); text-align: center; }
+.sidebar-action:hover,
+.sidebar-action:focus-visible {
+  color: var(--sidebar-active-text);
+  background: var(--sidebar-active-bg);
+  border-color: var(--sidebar-border);
 }
-
-.sidebar-maps .btn-outline-light {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Футер сайдбара */
-.sidebar-footer {
-  padding: 16px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  background: inherit;
-  flex-shrink: 0;
-  margin-top: auto;
-}
-
-.sidebar-footer {
-  border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Группа кнопок Тема/Выход - по умолчанию горизонтально */
-.sidebar-footer .d-flex {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-/* В свёрнутом сайдбаре - вертикально */
-.sidebar.collapsed .sidebar-footer .d-flex {
-  flex-direction: column;
-}
-
-/* Кнопки Тема и Выход в развёрнутом виде */
-.theme-toggle {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--text-sidebar);
-  border-radius: 14px;
-  padding: 8px 12px;
-  font-weight: 500;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-align: center;
-  text-decoration: none;
-  flex: 1; /* растягиваются по ширине */
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.theme-toggle:hover {
-  background: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
-}
-
-.theme-toggle {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-/* В свёрнутом сайдбаре кнопки становятся круглыми иконками */
-.sidebar.collapsed .theme-toggle {
-  width: 44px !important;
-  height: 44px;
-  padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 14px;
-  margin: 0 auto 8px auto;
-  flex: none;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--text-sidebar);
-}
-
-.sidebar.collapsed .theme-toggle i {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.sidebar.collapsed .theme-toggle span {
-  display: none;
-}
-
-.sidebar.collapsed .theme-toggle:hover {
-  background: var(--accent-color);
-  border-color: var(--accent-color);
-  color: white;
-}
-
-/* Админ-меню */
-.admin-menu {
-  margin-top: 8px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
+.sidebar-action:active { transform: translateY(1px); }
+.sidebar-action:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .admin-menu {
-  border-top-color: rgba(255, 255, 255, 0.1);
+  flex: 0 0 auto;
+  margin: 0 12px;
+  padding: 11px 0 8px;
+  border-top: 1px solid var(--sidebar-border);
 }
-
-.admin-menu small {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--text-secondary);
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  opacity: 0.7;
-}
-
+.admin-menu .sidebar-section-title { margin: 0 8px 8px; }
 .admin-menu-item {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
-  border-radius: 12px;
+  min-width: 0;
+  min-height: 38px;
+  margin: 2px 0;
+  padding: 7px 9px;
   color: var(--text-sidebar);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 0.83rem;
   text-decoration: none;
-  transition: background 0.2s;
-  margin-bottom: 2px;
+  transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
 }
-
-.admin-menu-item:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.admin-menu-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
 .admin-menu-item i {
-  margin-right: 12px;
+  flex: 0 0 20px;
   width: 20px;
+  margin-right: 9px;
+  color: var(--sidebar-muted);
+  font-size: 0.94rem;
   text-align: center;
-  font-size: 1rem;
 }
+.admin-menu-item:hover,
+.admin-menu-item:focus-visible {
+  color: var(--text-sidebar);
+  background: var(--sidebar-hover);
+  border-color: var(--sidebar-border);
+  outline: none;
+}
+.admin-menu-item:active { background: var(--sidebar-active-bg); }
+.admin-menu-item.active {
+  color: var(--sidebar-active-text);
+  background: var(--sidebar-active-bg);
+  border-color: color-mix(in srgb, var(--sidebar-active-text) 18%, transparent);
+  font-weight: 600;
+}
+.admin-menu-item.active i { color: var(--accent-color); }
+[data-theme="dark"] .admin-menu-item.active i { color: #8fc8f5; }
 
-/* Индикатор состояния */
+.sidebar-footer {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 5px;
+  margin-top: auto;
+  padding: 10px 12px 12px;
+  background: var(--sidebar-surface);
+  border-top: 1px solid var(--sidebar-border);
+}
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 35px;
+  padding: 6px 9px;
+  color: var(--text-sidebar);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 0.81rem;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+.theme-toggle i {
+  flex: 0 0 19px;
+  width: 19px;
+  color: var(--sidebar-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  color: var(--sidebar-active-text);
+  background: var(--sidebar-hover);
+  border-color: var(--sidebar-border);
+  outline: none;
+}
+.theme-toggle:active { transform: translateY(1px); }
+.theme-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
+.theme-toggle:hover i,
+.theme-toggle:focus-visible i { color: var(--accent-color); }
+.sidebar-logout-form { margin: 0; }
+.sidebar-logout { color: var(--text-sidebar); }
+.sidebar-logout i { color: #c16b74; }
+.sidebar-logout:hover,
+.sidebar-logout:focus-visible {
+  color: #a43e4c;
+  background: #fff0f1;
+  border-color: #f2d2d6;
+}
+[data-theme="dark"] .sidebar-logout:hover,
+[data-theme="dark"] .sidebar-logout:focus-visible {
+  color: #ffd5d9;
+  background: #4b3037;
+  border-color: #63424a;
+}
+.lang-switcher { min-width: 0; }
+.lang-switcher > .theme-toggle { justify-content: flex-start; }
+.lang-switcher .dropdown-toggle::after { flex: 0 0 auto; margin-left: auto; }
+.sidebar .dropdown-menu {
+  width: calc(100% - 4px);
+  margin-bottom: 4px;
+  padding: 4px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 10px;
+  box-shadow: var(--sidebar-shadow);
+}
+.sidebar .dropdown-item {
+  padding: 7px 9px;
+  color: var(--text-primary);
+  border-radius: 7px;
+  font-size: 0.82rem;
+}
+.sidebar .dropdown-item:hover,
+.sidebar .dropdown-item:focus { background: var(--sidebar-hover); }
+.sidebar .dropdown-item.active {
+  color: var(--sidebar-active-text);
+  background: var(--sidebar-active-bg);
+}
+[data-theme="dark"] .sidebar .dropdown-item { color: var(--text-primary); }
+
 .status-indicator {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  font-size: 0.75rem;
-  color: var(--text-sidebar);
-  opacity: 0.7;
+  min-width: 0;
+  min-height: 38px;
+  margin-top: 3px;
+  padding: 6px 9px;
+  color: var(--sidebar-muted);
+  background: var(--sidebar-panel);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 10px;
+  font-size: 0.72rem;
 }
-
-.status-indicator {
-  border-top-color: rgba(255, 255, 255, 0.1);
-}
-
 .status-dot {
+  flex: 0 0 8px;
   width: 8px;
   height: 8px;
+  background: #98a6b5;
   border-radius: 50%;
-  background: #94a3b8;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
-
 .status-dot.online {
-  background: #10b981;
-  box-shadow: 0 0 10px #10b981;
+  background: #35bf91;
+  box-shadow: 0 0 0 3px rgba(53, 191, 145, 0.16);
 }
-
 .status-dot.offline {
-  background: #ef4444;
-  box-shadow: 0 0 10px #ef4444;
+  background: #e46a76;
+  box-shadow: 0 0 0 3px rgba(228, 106, 118, 0.15);
 }
-
+.status-copy {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .version-badge {
+  flex: 0 0 auto;
   margin-left: auto;
-  background: rgba(0, 0, 0, 0.04);
   padding: 2px 6px;
-  border-radius: 30px;
-  font-size: 0.6rem;
+  color: var(--sidebar-muted);
+  background: color-mix(in srgb, var(--sidebar-border) 45%, transparent);
+  border-radius: 999px;
+  font-size: 0.61rem;
   font-weight: 500;
 }
 
-.version-badge {
-  background: rgba(255, 255, 255, 0.1);
+/* Collapsed desktop rail: icons remain centered and map names keep their tooltip. */
+.sidebar.collapsed { width: 76px; overflow: visible; }
+.sidebar.collapsed .sidebar-header {
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-height: 78px;
+  padding: 5px 7px;
+}
+.sidebar.collapsed .sidebar-logo .logo-text,
+.sidebar.collapsed .sidebar-user-info,
+.sidebar.collapsed .sidebar-section-title span,
+.sidebar.collapsed .map-item-name,
+.sidebar.collapsed .map-item-actions,
+.sidebar.collapsed .sidebar-action span,
+.sidebar.collapsed .admin-menu small span,
+.sidebar.collapsed .admin-menu-item span,
+.sidebar.collapsed .theme-toggle span,
+.sidebar.collapsed .version-badge { display: none !important; }
+.sidebar.collapsed .status-copy {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.sidebar.collapsed .sidebar-logo img { width: 34px; height: 34px; }
+.sidebar.collapsed .sidebar-toggle { width: 100%; height: 24px; }
+.sidebar.collapsed .sidebar-user { justify-content: center; margin: 9px 8px; padding: 7px; }
+.sidebar.collapsed .sidebar-user-avatar { width: 36px; height: 36px; }
+.sidebar.collapsed .sidebar-maps { padding: 6px 8px 10px; }
+.sidebar.collapsed .sidebar-section-title { justify-content: center; margin: 6px 0 8px; }
+.sidebar.collapsed .sidebar-section-title i { font-size: 0.95rem; }
+.sidebar.collapsed .map-item {
+  justify-content: center;
+  min-height: 42px;
+  margin: 3px 0;
+  padding: 7px 0 !important;
+}
+.sidebar.collapsed .map-item-icon { margin: 0; }
+.sidebar.collapsed .folder-toggle-icon { display: none; }
+.sidebar.collapsed .map-item-right { position: absolute; top: 1px; right: 1px; margin: 0; }
+.sidebar.collapsed .map-item .badge { min-width: 17px; padding: 1px 4px; font-size: 0.58rem; }
+.sidebar.collapsed .sidebar-map-actions {
+  gap: 3px;
+  margin: 7px 0;
+  padding: 5px 0;
+  background: transparent;
+  border: 0;
+}
+.sidebar.collapsed .sidebar-action,
+.sidebar.collapsed .admin-menu-item,
+.sidebar.collapsed .theme-toggle {
+  justify-content: center;
+  width: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  margin: 0 auto;
+  padding: 0;
+  border-color: transparent;
+  border-radius: 10px;
+}
+.sidebar.collapsed .sidebar-action i,
+.sidebar.collapsed .admin-menu-item i,
+.sidebar.collapsed .theme-toggle i { margin: 0; }
+.sidebar.collapsed .admin-menu { margin: 0 8px; padding-top: 10px; }
+.sidebar.collapsed .sidebar-footer { justify-items: center; padding: 8px 5px 10px; }
+.sidebar.collapsed .lang-switcher .dropdown-menu { width: 150px; }
+.sidebar.collapsed .lang-switcher .dropdown-toggle::after { display: none; }
+.sidebar.collapsed .sidebar-logout-form { width: 100%; }
+.sidebar.collapsed .status-indicator {
+  justify-content: center;
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+}
+
+@media (max-height: 620px) and (min-width: 769px) {
+  .sidebar { overflow-y: auto; overflow-x: hidden; }
+  .sidebar-maps { flex: 0 0 auto; max-height: 36vh; }
+  .sidebar-footer { margin-top: 0; }
+}
+
+@media (max-height: 480px) {
+  .sidebar { overflow-y: auto; overflow-x: hidden; }
+  .sidebar-maps { flex: 0 0 auto; max-height: 30vh; }
+  .admin-menu { max-height: 32vh; overflow-y: auto; }
+  .sidebar-footer { margin-top: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar * { transition-duration: 0.01ms !important; }
 }
 
 /* ============================================================================
@@ -1001,6 +984,8 @@ body.resizing-sidebar .main-content {
 }
 
 .lv-device-labels__layer {
+  /* pan+zoom одним transform (deviceLabels.js): карточки лежат в координатах
+     графа и масштабируются вместе с узлами без пересчёта каждой карточки. */
   position: absolute;
   left: 0;
   top: 0;
@@ -1009,14 +994,21 @@ body.resizing-sidebar .main-content {
   transform-origin: 0 0;
 }
 
+/* Во время pan/zoom слой выносится на GPU-композитинг; после паузы класс
+   снимается, и текст перерисовывается чётко в итоговом масштабе. */
+.lv-device-labels.is-moving .lv-device-labels__layer {
+  will-change: transform;
+}
+
 .lv-dev-label {
   position: absolute;
   left: 0;
   top: 0;
   box-sizing: border-box;
   width: max-content;
-  max-width: 24em;
+  max-width: 16em; /* длинные названия переносятся, карточка не растягивает обзор */
   translate: -50% 0; /* центр карточки по центру узла; перенос — через transform */
+  transition: opacity 0.15s ease;
   padding: 0.4em 0.8em 0.42em;
   font-size: var(--lv-fs, 11px);
   line-height: 1.25;
@@ -1034,7 +1026,7 @@ body.resizing-sidebar .main-content {
   display: none;
 }
 
-/* Устройство без иконки: подпись по центру квадрата узла. */
+/* Устройство без иконки: подпись по центру узла. */
 .lv-dev-label.is-anchor-center {
   translate: -50% -50%;
 }
@@ -1072,13 +1064,20 @@ body.resizing-sidebar .main-content {
   border-color: #3b82f6;
 }
 
-/* Дальний зум: IP нечитаем — убираем строку; ещё дальше — убираем карточки. */
-.lv-labels--no-ip .lv-dev-label__ip {
+/* Разгрузка обзора (deviceLabels.js, cull): мешающая карточка сворачивается до
+   названия, а если и так не помещается — скрывается. */
+.lv-dev-label.is-compact .lv-dev-label__ip {
   display: none;
 }
 
+.lv-dev-label.is-culled {
+  opacity: 0;
+  visibility: hidden;
+}
+
 .lv-labels--off .lv-dev-label {
-  display: none;
+  /* visibility, а не display: раскладка сохраняется, кэш размеров остаётся верным */
+  visibility: hidden;
 }
 
 /* ============================================================================
@@ -1686,89 +1685,90 @@ modal-header,
 
 @media (max-width: 768px) {
   .sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    width: 280px !important;
-    background: var(--bg-sidebar);
-    backdrop-filter: blur(16px);
+    width: min(300px, 88vw) !important;
+    max-width: 88vw;
+    transform: translateX(-102%);
+    transition: transform 0.22s ease;
   }
-
-  .sidebar.show {
-    transform: translateX(0);
+  .sidebar.show { transform: translateX(0); }
+  .sidebar.collapsed { width: min(300px, 88vw) !important; overflow: hidden; }
+  .sidebar.collapsed .sidebar-header {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 0;
+    min-height: 66px;
+    padding: 12px 16px;
   }
-
-  .sidebar.collapsed {
-    width: 280px !important;
-  }
-
   .sidebar.collapsed .sidebar-logo .logo-text,
-  .sidebar.collapsed .sidebar-user span,
-  .sidebar.collapsed .sidebar-maps span,
-  .sidebar.collapsed .map-item .map-item-name,
-  .sidebar.collapsed .map-item-actions,
+  .sidebar.collapsed .sidebar-user-info,
+  .sidebar.collapsed .sidebar-section-title span,
+  .sidebar.collapsed .map-item-name,
+  .sidebar.collapsed .sidebar-action span,
   .sidebar.collapsed .admin-menu-item span,
   .sidebar.collapsed .theme-toggle span,
-  .sidebar.collapsed .status-indicator {
-    display: block !important;
+  .sidebar.collapsed .status-copy,
+  .sidebar.collapsed .version-badge { display: revert !important; }
+  .sidebar.collapsed .status-copy {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: nowrap;
+    border: 0;
   }
-
+  .sidebar.collapsed .sidebar-toggle { width: 36px; height: 36px; }
+  .sidebar.collapsed .sidebar-user { justify-content: flex-start; margin: 12px; padding: 9px 10px; }
+  .sidebar.collapsed .sidebar-maps { padding: 10px 12px 12px; }
+  .sidebar.collapsed .sidebar-section-title { justify-content: flex-start; margin: 4px 8px 9px; }
   .sidebar.collapsed .map-item {
     justify-content: flex-start;
-    padding: 8px 12px;
+    min-height: 39px;
+    margin: 2px 0;
+    padding: 7px 9px !important;
   }
-
-  .sidebar.collapsed .map-item .badge {
-    position: static;
+  .sidebar.collapsed .map-item-icon { margin-right: 9px; }
+  .sidebar.collapsed .folder-toggle-icon { display: inline-block; }
+  .sidebar.collapsed .map-item-right { position: static; margin-left: auto; }
+  .sidebar.collapsed .map-item .badge { min-width: 20px; padding: 2px 6px; font-size: 0.64rem; }
+  .sidebar.collapsed .sidebar-map-actions {
+    gap: 4px;
+    margin: 8px 0 4px;
+    padding: 7px;
+    background: var(--sidebar-panel);
+    border: 1px solid var(--sidebar-border);
   }
-
+  .sidebar.collapsed .sidebar-action,
   .sidebar.collapsed .admin-menu-item,
-  .sidebar.collapsed .theme-toggle,
-  .sidebar.collapsed .sidebar-maps .btn {
-    width: auto !important;
-    height: auto;
-    padding: 8px 12px;
-    border-radius: 14px;
+  .sidebar.collapsed .theme-toggle {
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    min-height: 37px;
     margin: 0;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    flex: 1; /* на мобильных они снова растягиваются */
+    padding: 7px 9px;
+    border-radius: 9px;
   }
-
+  .sidebar.collapsed .sidebar-action i,
   .sidebar.collapsed .admin-menu-item i,
-  .sidebar.collapsed .theme-toggle i,
-  .sidebar.collapsed .sidebar-maps .btn i {
-    margin-right: 8px;
+  .sidebar.collapsed .theme-toggle i { margin-right: 0; }
+  .sidebar.collapsed .sidebar-footer { justify-items: stretch; padding: 10px 12px 12px; }
+  .sidebar.collapsed .sidebar-logout-form { width: 100%; }
+  .sidebar.collapsed .lang-switcher .dropdown-toggle::after { display: inline-block; }
+  .sidebar.collapsed .status-indicator {
+    justify-content: flex-start;
+    width: auto;
+    min-height: 38px;
+    padding: 6px 9px;
+    background: var(--sidebar-panel);
+    border-color: var(--sidebar-border);
   }
-
-  .sidebar.collapsed .admin-menu-item span,
-  .sidebar.collapsed .theme-toggle span,
-  .sidebar.collapsed .sidebar-maps .btn span {
-    display: inline;
-  }
-
-  .sidebar.collapsed .d-flex {
-    flex-direction: row;
-  }
-
-  .main-content {
-    margin-left: 0 !important;
-  }
-
-  .sidebar-resizer {
-    display: none;
-  }
-
-  .mobile-menu-toggle {
-    display: flex;
-  }
-
-  .toolbar-shell {
-    margin-top: 60px;
-  }
-
-  .search-filter-bar .form-control {
-    width: 160px;
-  }
+  .sidebar-resizer { display: none; }
+  .main-content { margin-left: 0 !important; }
+  .mobile-menu-toggle { display: flex; }
+  .toolbar-shell { margin-top: 60px; }
+  .search-filter-bar .form-control { width: 160px; }
 }
 
 /* ============================================================================

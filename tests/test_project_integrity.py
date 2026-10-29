@@ -421,3 +421,27 @@ def test_device_label_cards_share_geometry_between_themes():
 
     index = (ROOT / "static/js/src/map/index.js").read_text(encoding="utf-8")
     assert "initDeviceLabels(cy);" in index
+    assert "initZoomLabelStyles(cy);" in index
+
+    # Карточки масштабируются вместе с узлами, но ОДНИМ transform общего слоя
+    # (pan+zoom), а не пересчётом каждой карточки на каждом кадре зума.
+    labels = (ROOT / "static/js/src/map/deviceLabels.js").read_text(encoding="utf-8")
+    assert "layer.style.transform" in labels
+    assert "scale(${Math.round(zoom * 10000) / 10000})" in labels
+    card_transform = labels.split("const transform = `translate(", 1)[1].split("`;", 1)[0]
+    assert "scale" not in card_transform, "у карточки не должно быть собственного scale"
+    assert "offsetWidth" in labels and "sizeStale" in labels, "размеры карточек кэшируются"
+    assert "cy.on('style'" not in labels and "node.visible()" in labels
+    assert "onNodeStyle" not in labels, "видимость не читается в обработчике style"
+    assert "syncDeviceLabelVisibility" in (ROOT / "static/js/src/map/search.js").read_text(encoding="utf-8")
+    assert "syncDeviceLabelVisibility" in (ROOT / "static/js/src/map/groupCollapse.js").read_text(encoding="utf-8")
+
+    # Главные причины тормозов зума не должны возвращаться.
+    scale = (ROOT / "static/js/src/map/labelScale.js").read_text(encoding="utf-8")
+    assert "cy.edges().updateStyle()" not in scale, "restyle всех рёбер на каждый шаг зума"
+    assert "bucketZoom" in scale and "staleVisibleEdges" in scale
+    assert ".scratch(" not in scale.split("export const STYLE_INTERVAL_MS", 1)[1], "scratch инвалидирует стиль элемента Cytoscape"
+    core = (ROOT / "static/js/src/map/core.js").read_text(encoding="utf-8")
+    assert "textureOnViewport: true" in core
+    emphasis = (ROOT / "static/js/src/map/zoomEmphasis.js").read_text(encoding="utf-8")
+    assert "n.data(group.dataKey" not in emphasis, "флаги подсветки не пишем в data"

@@ -1,5 +1,6 @@
 import { t } from '../i18n/i18n.js';
 import { refreshZoomEmphasis } from './zoomEmphasis.js';
+import { syncDeviceLabelVisibility } from './deviceLabels.js';
 import { registerCleanup } from './moduleRegistry.js';
 // search.js – поиск по имени/IP и фильтр по статусу
 let cy = null;
@@ -92,6 +93,9 @@ function applyFilterAndSearch() {
             node.hide();
         }
     });
+
+    // hide()/show() выше событий не порождают — карточкам нужно явно сообщить.
+    syncDeviceLabelVisibility();
 
     // Поиск: ТОЛЬКО ПОДСВЕТКА, без скрытия
     if (searchTerm) {

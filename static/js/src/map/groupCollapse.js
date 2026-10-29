@@ -14,6 +14,7 @@
 import { getCy } from './core.js';
 import { updateAllGroups } from './groupResize.js';
 import { refreshZoomEmphasis } from './zoomEmphasis.js';
+import { syncDeviceLabelVisibility } from './deviceLabels.js';
 
 const STORAGE_PREFIX = 'groupCollapseState';
 
@@ -270,6 +271,7 @@ export function syncCollapseView(cyArg) {
     });
 
     updateAllGroups();
+    syncDeviceLabelVisibility();   // hide()/show() потомков не порождают событий
     refreshZoomEmphasis();
 }
 
