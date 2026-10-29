@@ -40,23 +40,15 @@ globalThis.cancelAnimationFrame = () => {};
 const runFrames = () => { const f = frames; frames = []; f.forEach(fn => fn()); };
 
 // ── Фейковый cy ─────────────────────────────────────────────────────────────
-function makeNode(id, data, pos = { x: 0, y: 0 }, parent = null) {
+function makeNode(id, data, pos = { x: 0, y: 0 }) {
     const classes = new Set();
     const node = {
         _data: { id, ...data }, _pos: pos, _removed: false, _visible: true, length: 1,
         id: () => id, data: k => node._data[k], position: () => node._pos,
-        outerWidth: () => Number(node._data.width) || 60,
-        outerHeight: () => Number(node._data.height) || 60,
-        ancestors: () => {
-            const all = [];
-            for (let p = parent; p; p = p._parent) all.push(p);
-            return { filter: () => ({ forEach: fn => all.filter(g => g.data('isGroup')).forEach(fn) }) };
-        },
-        visible: () => node._visible, removed: () => node._removed,
+        outerHeight: () => 60, visible: () => node._visible, removed: () => node._removed,
         selected: () => false, isNode: () => true,
         hasClass: c => classes.has(c), addClass: c => classes.add(c), removeClass: c => classes.delete(c),
     };
-    node._parent = parent;
     return node;
 }
 function makeCy(container) {
@@ -211,25 +203,21 @@ test('ниже ZOOM_OFF карточки скрываются классом с�
 });
 
 await (async () => {
-    // cull: размеры кэшируются, а карточки избегают иконок и границ групп.
+    // cull: размеры измеряются один раз и кэшируются, zoom/pan не вызывают чтений DOM
     const container = new El('div'); const cy = makeCy(container);
     const dispose = initDeviceLabels(cy);
-    const first = makeNode('1', { name: 'a', iconUrl: '/i.png' }, { x: 0, y: 0 });
-    const second = makeNode('2', { name: 'b', iconUrl: '/i.png' }, { x: 0, y: 80 });
-    cy.add(first);
-    cy.add(second); // его иконка перекрывает стандартную позицию первой карточки
+    cy.add(makeNode('1', { name: 'a', iconUrl: '/i.png' }, { x: 0, y: 0 }));
+    cy.add(makeNode('2', { name: 'b', iconUrl: '/i.png' }, { x: 10, y: 0 })); // перекрывает первую
     runFrames();
     await sleep(200);
     const afterFirstCull = El.reads;
     assert.ok(afterFirstCull >= 2, 'первое измерение размеров выполнено');
-    assert.ok(Number(cards(container)[0].style.transform.match(/, (-?[\d.]+)px/)[1]) < 0,
-        'карточка смещена от нижней позиции, чтобы не перекрывать соседнее устройство');
     cy._zoom = 0.5; cy.emit('viewport'); runFrames();
     cy._pan = { x: 5, y: 5 }; cy.emit('viewport'); runFrames();
     await sleep(200);
     assert.equal(El.reads, afterFirstCull, 'zoom/pan не измеряют карточки заново');
     const states = cards(container).map(c => c.classList.contains('is-culled'));
-    assert.deepEqual(states, [false, false], 'оба устройства и обе подписи остаются видимы');
+    assert.deepEqual(states.sort(), [false, true], 'из двух перекрывающихся карточек одна скрыта');
     // смена названия инвалидирует кэш размера только у этой карточки
     const node = cy.getElementById('1');
     node._data.name = 'new-name'; cy.emit('data', node); runFrames();
@@ -237,21 +225,6 @@ await (async () => {
     assert.equal(El.reads - afterFirstCull >= 1 && El.reads - afterFirstCull <= 3, true, 'перемерена только изменённая карточка');
     dispose();
     passed++; console.log('ok - cull: кэш размеров, без чтений на zoom/pan, инвалидация по названию');
-})();
-
-await (async () => {
-    const container = new El('div'); const cy = makeCy(container);
-    const dispose = initDeviceLabels(cy);
-    const group = makeNode('g', { name: 'G', isGroup: true, width: 240, height: 180 }, { x: 0, y: 0 });
-    const node = makeNode('1', { name: 'edge-node', iconUrl: '/i.png' }, { x: 0, y: 45 }, group);
-    cy.add(group); cy.add(node); runFrames();
-    await sleep(180);
-    const card = cards(container)[0];
-    const y = Number(card.style.transform.match(/, (-?[\d.]+)px/)[1]);
-    assert.ok(y < 0, 'карточка перемещена над узлом, чтобы поместиться в группу');
-    assert.equal(card.classList.contains('is-culled'), false);
-    dispose();
-    passed++; console.log('ok - размещение карточки внутри границ группы');
 })();
 
 test('нет слушателя style: смена стиля узла не читает видимость и не будит слой', () => {

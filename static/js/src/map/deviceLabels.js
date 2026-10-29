@@ -47,8 +47,6 @@ const CULL_DELAY_MS = 120;      // debounce расчёта наложений п
 const CULL_PAD = 3;             // зазор между карточками, ед. графа
 const CULL_TOLERANCE = 0.12;    // допустимая доля наложения краёв
 const CULL_CELL = 120;          // ячейка сетки для поиска пересечений, ед. графа
-const GROUP_EDGE_INSET = 8;     // не прижимаем карточки к рамке группы
-const GROUP_HEADER_INSET = 30;  // оставляем заголовку группы свободную полосу сверху
 
 let current = null;
 
@@ -79,65 +77,8 @@ function createCard() {
     return {
         el, nameEl, ipEl: null, sig: '', transform: '', hidden: null,
         culled: false, compact: false, anchorCenter: false, priority: 1,
-        x: 0, y: 0, w: 0, h: 0, ipH: 0, sizeStale: true,
-        node: null, nodeRect: null, iconNode: false, placement: null, groupIds: []
+        x: 0, y: 0, w: 0, h: 0, ipH: 0, sizeStale: true
     };
-}
-
-function setCardPosition(card, x, y, anchorCenter) {
-    const transform = `translate(${round(x)}px, ${round(y)}px)`;
-    if (transform !== card.transform) {
-        card.transform = transform;
-        card.el.style.transform = transform;
-    }
-    if (card.anchorCenter !== anchorCenter) {
-        card.anchorCenter = anchorCenter;
-        card.el.classList.toggle('is-anchor-center', anchorCenter);
-    }
-    card.x = x;
-    card.y = y;
-}
-
-function groupAncestorsFor(node) {
-    if (!node || typeof node.ancestors !== 'function') return [];
-    try {
-        const ancestors = node.ancestors();
-        return ancestors && typeof ancestors.filter === 'function'
-            ? ancestors.filter('node[isGroup]')
-            : [];
-    } catch (e) { return []; }
-}
-
-function groupIdsFor(node) {
-    const ids = [];
-    groupAncestorsFor(node).forEach(group => ids.push(group.id()));
-    return ids;
-}
-
-function groupBoundsFor(node, cache = null) {
-    const groups = groupAncestorsFor(node);
-    if (!groups || typeof groups.forEach !== 'function') return [];
-    const bounds = [];
-    groups.forEach(group => {
-        const id = group.id();
-        if (cache && cache.has(id)) {
-            bounds.push(cache.get(id));
-            return;
-        }
-        const pos = group.position();
-        const width = Number(group.outerWidth && group.outerWidth()) || 0;
-        const height = Number(group.outerHeight && group.outerHeight()) || 0;
-        if (!pos || width <= 0 || height <= 0) return;
-        const rect = {
-            l: pos.x - width / 2 + GROUP_EDGE_INSET,
-            r: pos.x + width / 2 - GROUP_EDGE_INSET,
-            t: pos.y - height / 2 + GROUP_HEADER_INSET,
-            b: pos.y + height / 2 - GROUP_EDGE_INSET
-        };
-        if (cache) cache.set(id, rect);
-        bounds.push(rect);
-    });
-    return bounds;
 }
 
 /** Создаёт слой подписей для экземпляра cy. Возвращает dispose-функцию. */
@@ -245,50 +186,28 @@ export function initDeviceLabels(cy) {
             card.el.classList.toggle('is-monitoring-off', monitoringOff);
             card.el.classList.toggle('is-selected', selected);
             card.el.classList.toggle('is-highlight', highlighted);
+            card.el.classList.toggle('is-anchor-center', !iconNode);
+            card.anchorCenter = !iconNode;
             card.priority = (selected || highlighted) ? 3 : (status === 'down' || status === 'partial') && !monitoringOff ? 2 : 1;
             // Размер зависит только от названия/IP/шрифта; выделение и статус его не меняют.
             if (card.sizeSig !== `${name}\u0001${ipText}\u0001${fontSize}`) {
                 card.sizeSig = `${name}\u0001${ipText}\u0001${fontSize}`;
                 card.sizeStale = true;
-                card.placement = null;
             }
-            if (card.iconNode !== iconNode) card.placement = null;
-            card.iconNode = iconNode;
             changed = true;
         }
 
         // Координаты и габариты — в единицах графа; масштаб даёт transform слоя.
-        // Запоминаем прямоугольник узла как препятствие для карточек соседей.
         const pos = node.position();
-        const width = Number(node.outerWidth && node.outerWidth()) || 0;
-        const height = Number(node.outerHeight && node.outerHeight()) || 0;
-        const nodeRect = {
-            l: pos.x - width / 2,
-            r: pos.x + width / 2,
-            t: pos.y - height / 2,
-            b: pos.y + height / 2
-        };
-        if (!card.nodeRect || nodeRect.l !== card.nodeRect.l || nodeRect.r !== card.nodeRect.r
-            || nodeRect.t !== card.nodeRect.t || nodeRect.b !== card.nodeRect.b) {
-            card.nodeRect = nodeRect;
-            card.placement = null;
+        const x = pos.x;
+        const y = iconNode ? pos.y + node.outerHeight() / 2 + LABEL_GAP : pos.y;
+        const transform = `translate(${round(x)}px, ${round(y)}px)`;
+        if (transform !== card.transform) {
+            card.x = x;
+            card.y = y;
+            card.transform = transform;
+            card.el.style.transform = transform;
             changed = true;
-        }
-        card.node = node;
-        const groupIds = groupIdsFor(node);
-        if (groupIds.length !== card.groupIds.length || groupIds.some((id, i) => id !== card.groupIds[i])) {
-            card.groupIds = groupIds;
-            card.placement = null;
-            changed = true;
-        }
-
-        // На первом кадре показываем карточку в привычном месте; cull при
-        // необходимости переставит её, учитывая соседние узлы и группы.
-        if (!card.placement) {
-            const x = pos.x;
-            const y = iconNode ? nodeRect.b + LABEL_GAP : pos.y;
-            card.placement = { x, y, anchorCenter: !iconNode };
-            setCardPosition(card, x, y, !iconNode);
         }
         return changed;
     }
@@ -374,10 +293,12 @@ export function initDeviceLabels(cy) {
     }
 
     /**
-     * Раскладывает карточки по геометрии графа: сначала резервирует прямоугольники
-     * видимых устройств, затем для каждой карточки ищет свободную позицию вокруг
-     * её узла. Позиции проверяются относительно всех предков-групп, чтобы карточки
-     * оставались внутри рамок. Измерения берутся из кэша; DOM не читается на pan/zoom.
+     * Разгрузка обзора: карточки в порядке приоритета (проблемные/выбранные,
+     * затем остальные сверху вниз) занимают прямоугольники В КООРДИНАТАХ ГРАФА.
+     * Если полная карточка пересекается с уже занятым местом — пробуем компактную
+     * (только название), если и она мешает — скрываем. Карточка масштабируется
+     * вместе с узлом, поэтому результат не зависит от zoom и не «мигает».
+     * Размеры берутся из кэша; DOM читается только для устаревших карточек.
      */
     function cull() {
         cullTimer = 0;
@@ -387,17 +308,16 @@ export function initDeviceLabels(cy) {
         cards.forEach(card => { if (!card.hidden) items.push(card); });
         measureStale(items);
         const sized = items.filter(card => card.w > 0 && card.h > 0);
-        sized.sort((a, b) =>
-            (b.priority - a.priority)
-            || (a.nodeRect.t - b.nodeRect.t)
-            || (a.nodeRect.l - b.nodeRect.l)
-        );
+        sized.sort((a, b) => (b.priority - a.priority) || (a.y - b.y) || (a.x - b.x));
 
         const grid = new Map();
-        const intersects = (a, b) => {
+        // Касание/небольшое наложение краёв (до 12% площади меньшей карточки) не считаем помехой.
+        const hits = (a, b) => {
             const w = Math.min(a.r, b.r) - Math.max(a.l, b.l);
             const h = Math.min(a.b, b.b) - Math.max(a.t, b.t);
-            return w > 0 && h > 0 ? { w, h } : null;
+            if (w <= 0 || h <= 0) return false;
+            const smaller = Math.min((a.r - a.l) * (a.b - a.t), (b.r - b.l) * (b.b - b.t));
+            return w * h > smaller * CULL_TOLERANCE;
         };
         const cells = rect => {
             const out = [];
@@ -408,142 +328,36 @@ export function initDeviceLabels(cy) {
             }
             return out;
         };
-        const expand = (rect, pad) => ({
-            l: rect.l - pad, r: rect.r + pad, t: rect.t - pad, b: rect.b + pad
+        const overlaps = rect => cells(rect).some(key => {
+            const bucket = grid.get(key);
+            return bucket && bucket.some(o => hits(rect, o));
         });
-        const occupy = (rect, ownerId, kind) => cells(rect).forEach(key => {
+        const occupy = rect => cells(rect).forEach(key => {
             if (!grid.has(key)) grid.set(key, []);
-            grid.get(key).push({ rect, ownerId, kind });
+            grid.get(key).push(rect);
         });
-        const conflictsFor = (rect, ownerId) => {
-            const result = { node: false, labels: 0, overlapArea: 0 };
-            const seen = new Set();
-            cells(rect).forEach(key => {
-                const bucket = grid.get(key);
-                if (!bucket) return;
-                bucket.forEach(item => {
-                    if (item.ownerId === ownerId && item.kind === 'node') return;
-                    const dedupe = `${item.kind}:${item.ownerId}`;
-                    if (seen.has(dedupe)) return;
-                    seen.add(dedupe);
-                    const overlap = intersects(rect, item.rect);
-                    if (!overlap) return;
-                    if (item.kind === 'node') {
-                        result.node = true;
-                        return;
-                    }
-                    const intersectionArea = overlap.w * overlap.h;
-                    const smallerArea = Math.min(
-                        (rect.r - rect.l) * (rect.b - rect.t),
-                        (item.rect.r - item.rect.l) * (item.rect.b - item.rect.t)
-                    );
-                    if (intersectionArea > smallerArea * CULL_TOLERANCE) {
-                        result.labels++;
-                        result.overlapArea += intersectionArea;
-                    }
-                });
-            });
-            return result;
+        const rectFor = (card, h) => {
+            const sw = card.w + CULL_PAD;
+            const sh = h + CULL_PAD;
+            const top = card.anchorCenter ? card.y - sh / 2 : card.y;
+            return { l: card.x - sw / 2, r: card.x + sw / 2, t: top, b: top + sh };
         };
 
-        // Все узлы становятся препятствиями до раскладки карточек. Благодаря
-        // этому результат не зависит от того, какая карточка обрабатывается первой.
         sized.forEach(card => {
-            if (card.nodeRect) occupy(expand(card.nodeRect, CULL_PAD / 2), card.node.id(), 'node');
-        });
-
-        const rectFor = (card, placement, height) => {
-            const top = placement.anchorCenter ? placement.y - height / 2 : placement.y;
-            return {
-                l: placement.x - card.w / 2,
-                r: placement.x + card.w / 2,
-                t: top,
-                b: top + height
-            };
-        };
-        const fitsGroups = (rect, bounds) => bounds.every(group =>
-            rect.l >= group.l && rect.r <= group.r && rect.t >= group.t && rect.b <= group.b
-        );
-        const candidatesFor = (card, height) => {
-            const node = card.nodeRect;
-            const cx = (node.l + node.r) / 2;
-            const cy = (node.t + node.b) / 2;
-            if (!card.iconNode) return [{ x: cx, y: cy, anchorCenter: true }];
-
-            const gap = LABEL_GAP + CULL_PAD;
-            const candidates = [];
-            const add = (x, y) => candidates.push({ x, y, anchorCenter: false });
-            // Сначала привычное положение снизу, затем противоположная сторона.
-            add(cx, node.b + LABEL_GAP);
-            add(cx, node.t - LABEL_GAP - height);
-            add(node.r + gap + card.w / 2, cy - height / 2);
-            add(node.l - gap - card.w / 2, cy - height / 2);
-
-            // Если соседний узел перекрыл основное место, пробуем сдвинуть карточку
-            // вдоль стороны, сохраняя её близко к исходному устройству.
-            const dx = card.w / 2 + gap;
-            const dy = height / 2 + gap;
-            for (const offset of [-dx, dx, -2 * dx, 2 * dx]) {
-                add(cx + offset, node.b + LABEL_GAP);
-                add(cx + offset, node.t - LABEL_GAP - height);
-            }
-            for (const offset of [-dy, dy, -2 * dy, 2 * dy]) {
-                add(node.r + gap + card.w / 2, cy + offset - height / 2);
-                add(node.l - gap - card.w / 2, cy + offset - height / 2);
-            }
-            return candidates;
-        };
-        const uniqueCandidates = candidates => {
-            const seen = new Set();
-            return candidates.filter(candidate => {
-                const key = `${round(candidate.x)}:${round(candidate.y)}:${candidate.anchorCenter}`;
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
-        };
-        const choosePlacement = (card, height, groupBounds, allowLabelOverlap = false) => {
-            const options = [];
-            if (card.placement) options.push(card.placement);
-            options.push(...candidatesFor(card, height));
-            let best = null;
-            let bestConflict = Infinity;
-            for (const placement of uniqueCandidates(options)) {
-                const rect = rectFor(card, placement, height);
-                if (!fitsGroups(rect, groupBounds)) continue;
-                const conflict = conflictsFor(expand(rect, CULL_PAD / 2), card.node.id());
-                if (conflict.node) continue;
-                if (conflict.labels === 0) return { placement, rect };
-                if (allowLabelOverlap && conflict.overlapArea < bestConflict) {
-                    best = { placement, rect };
-                    bestConflict = conflict.overlapArea;
+            let culled = false;
+            let compact = false;
+            let rect = rectFor(card, card.h);
+            if (overlaps(rect)) {
+                if (card.ipEl) {
+                    compact = true;
+                    rect = rectFor(card, card.h - card.ipH);
+                }
+                if (!card.ipEl || overlaps(rect)) {
+                    // Выбранные и проблемные никогда не скрываем полностью.
+                    if (card.priority >= 2) compact = true; else culled = true;
                 }
             }
-            return best;
-        };
-
-        const groupBoundsCache = new Map();
-        sized.forEach(card => {
-            const groupBounds = groupBoundsFor(card.node, groupBoundsCache);
-            let compact = false;
-            let result = choosePlacement(card, card.h, groupBounds);
-            if (!result && card.ipEl) {
-                compact = true;
-                result = choosePlacement(card, card.h - card.ipH, groupBounds);
-            }
-            // Выбранные/аварийные карточки получают приоритет и могут слегка
-            // пересечься с другой карточкой; узлы и границы группы остаются запретом.
-            if (!result && card.priority >= 2) {
-                compact = Boolean(card.ipEl);
-                const height = compact ? card.h - card.ipH : card.h;
-                result = choosePlacement(card, height, groupBounds, true);
-            }
-            const culled = !result;
-            if (result) {
-                card.placement = result.placement;
-                setCardPosition(card, result.placement.x, result.placement.y, result.placement.anchorCenter);
-                occupy(expand(result.rect, CULL_PAD / 2), card.node.id(), 'label');
-            }
+            if (!culled) occupy(rect);
             // DOM пишем только при реальной смене состояния.
             if (card.compact !== compact) {
                 card.compact = compact;
