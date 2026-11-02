@@ -178,11 +178,11 @@ let wasDisconnected = false;
         sidebar.classList.toggle('collapsed');
         const icon = toggle.querySelector('i');
         if (sidebar.classList.contains('collapsed')) {
-            icon.classList.remove('fa-bars');
+            icon.classList.remove('fa-bars', 'fa-chevron-left');
             icon.classList.add('fa-chevron-right');
         } else {
-            icon.classList.remove('fa-chevron-right');
-            icon.classList.add('fa-bars');
+            icon.classList.remove('fa-bars', 'fa-chevron-right');
+            icon.classList.add('fa-chevron-left');
         }
         localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
     };
@@ -1113,7 +1113,7 @@ let wasDisconnected = false;
                 sidebar.classList.add('collapsed');
                 const icon = document.querySelector('#sidebarToggle i');
                 if (icon) {
-                    icon.classList.remove('fa-bars');
+                    icon.classList.remove('fa-bars', 'fa-chevron-left');
                     icon.classList.add('fa-chevron-right');
                 }
             }
@@ -1134,11 +1134,11 @@ let wasDisconnected = false;
         const toggleIcon = document.querySelector('.sidebar-toggle i');
         if (sidebar && toggleIcon) {
             if (sidebar.classList.contains('collapsed')) {
-                toggleIcon.classList.remove('fa-bars');
+                toggleIcon.classList.remove('fa-bars', 'fa-chevron-left');
                 toggleIcon.classList.add('fa-chevron-right');
             } else {
-                toggleIcon.classList.remove('fa-chevron-right');
-                toggleIcon.classList.add('fa-bars');
+                toggleIcon.classList.remove('fa-bars', 'fa-chevron-right');
+                toggleIcon.classList.add('fa-chevron-left');
             }
         }
         setInterval(() => {
