@@ -1800,3 +1800,78 @@ msgstr "VIEW"
 #~ "Concurrent ICMP checks. Applied after "
 #~ "restarting the service. Default is 150."
 
+
+msgid "Справочник типов сетевых устройств и их иконок"
+msgstr "Directory of network device types and their icons"
+
+msgid "Поиск по названию или ID"
+msgstr "Search by name or ID"
+
+msgid "Поиск типов устройств"
+msgstr "Search device types"
+
+msgid "типов"
+msgstr "types"
+
+msgid "Удалить тип устройства?"
+msgstr "Delete this device type?"
+
+msgid "Типы устройств ещё не добавлены"
+msgstr "No device types have been added yet"
+
+msgid "По вашему запросу ничего не найдено"
+msgstr "No matching results found"
+
+msgid "Добавить новый тип устройства"
+msgstr "Add a new device type"
+
+msgid "Укажите название, размеры и изображение"
+msgstr "Enter a name, dimensions, and image"
+
+msgid "Например, Router"
+msgstr "For example, Router"
+
+msgid "Иконка устройства"
+msgstr "Device icon"
+
+msgid "Выберите изображение. При редактировании оставьте поле пустым, чтобы сохранить текущую иконку."
+msgstr "Choose an image. When editing, leave this field empty to keep the current icon."
+
+msgid "Текущая иконка будет сохранена"
+msgstr "The current icon will be kept"
+
+msgid "Редактирование типа устройства"
+msgstr "Edit device type"
+
+msgid "Измените необходимые параметры типа"
+msgstr "Update the device type details"
+
+msgid "Выберите файл изображения."
+msgstr "Please select an image file."
+
+msgid "Пагинация типов устройств"
+msgstr "Device types pagination"
+
+msgid "На странице"
+msgstr "Per page"
+
+msgid "Количество записей на странице"
+msgstr "Rows per page"
+
+msgid "Предыдущая страница"
+msgstr "Previous page"
+
+msgid "Следующая страница"
+msgstr "Next page"
+
+msgid "Показано"
+msgstr "Showing"
+
+msgid "из"
+msgstr "of"
+
+msgid "Нет записей"
+msgstr "No entries"
+
+msgid "Страница"
+msgstr "Page"

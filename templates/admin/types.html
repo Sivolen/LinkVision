@@ -1,101 +1,395 @@
 {% extends "base.html" %}
-{% block content %}
-<h2 class="page-title">📦 {{ _('Типы устройств') }}</h2>
 
-<!-- Форма создания/редактирования -->
-<div class="admin-card">
-    <div class="card-header">
-        {% if edit_type %}
-        <i class="fas fa-edit"></i> {{ _('Редактировать тип') }}
-        {% else %}
-        <i class="fas fa-plus"></i> {{ _('Добавить новый тип') }}
-        {% endif %}
-    </div>
-    <div class="card-body">
-        <form action="{{ url_for('admin.edit_type', id=edit_type.id) if edit_type else url_for('admin.create_type') }}"
-              method="POST" enctype="multipart/form-data" class="row g-2" autocomplete="off">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
-            <div class="col-md-4">
-                <input type="text" name="name" class="form-control"
-                       placeholder="{{ _('Название типа') }}" value="{{ edit_type.name if edit_type else '' }}" required>
-            </div>
-            <div class="col-md-2">
-                <input type="number" name="width" class="form-control"
-                       placeholder="{{ _('Ширина (px)') }}" value="{{ edit_type.width if edit_type else '' }}">
-            </div>
-            <div class="col-md-2">
-                <input type="number" name="height" class="form-control"
-                       placeholder="{{ _('Высота (px)') }}" value="{{ edit_type.height if edit_type else '' }}">
-            </div>
-            <div class="col-md-3">
-                <input type="file" name="icon" class="form-control" accept="image/*">
-                {% if edit_type and edit_type.icon_filename %}
-                <small class="text-muted mt-2 d-block">
-                    {{ _('Текущая иконка:') }} <img src="{{ url_for('static', filename='uploads/icons/' + edit_type.icon_filename) }}" width="32" class="ms-2">
-                </small>
-                {% endif %}
-            </div>
-            <div class="col-md-1">
-                <button type="submit" class="btn btn-success w-100">
-                    <i class="fas fa-save"></i> {{ _('Обновить') if edit_type else _('Добавить') }}
-                </button>
-            </div>
-        </form>
-        {% if edit_type %}
-        <div class="mt-3">
-            <a href="{{ url_for('admin.types') }}" class="btn btn-secondary btn-sm">{{ _('Отмена') }}</a>
-            <a href="{{ url_for('admin.delete_type', id=edit_type.id) }}"
-               class="btn btn-danger btn-sm" onclick="return confirm('{{ _('Удалить тип? Все устройства этого типа потеряют иконку.') }}')">
-                <i class="fas fa-trash"></i> {{ _('Удалить тип') }}
-            </a>
+{% block extra_css %}
+<style>
+/* Device types page */
+.types-page { width: 100%; max-width: none; min-width: 0; margin: 0; }
+.types-page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.types-add-btn { display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:0 13px; border:1px solid var(--accent-color); border-radius:8px; background:var(--accent-color); color:#fff; font-size:12px; font-weight:600; box-shadow:none; transition:background .15s ease,border-color .15s ease; white-space:nowrap; }
+.types-add-btn:hover,.types-add-btn:focus-visible { background:var(--accent-hover); border-color:var(--accent-hover); color:#fff; }
+.types-page-header h2 { margin:0 0 4px; font-size:21px; font-weight:650; color:var(--text-primary); }
+.types-page-subtitle { color:var(--text-secondary); font-size:12px; margin:0; }
+.types-toolbar { display:flex; align-items:center; gap:10px; padding:12px; margin-bottom:12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; }
+.types-search { max-width:380px; position:relative; flex:1; }
+.types-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); font-size:12px; }
+.types-search input { padding-left:34px; height:36px; font-size:13px; }
+.types-table-wrap { width:100%; min-width:0; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; overflow:hidden; }
+.types-table { width:100%; border-collapse:separate; border-spacing:0; margin:0; font-size:13px; }
+.types-table thead th { padding:11px 14px; background:var(--bg-primary); color:var(--text-secondary); font-size:10px; font-weight:700; letter-spacing:.045em; text-transform:uppercase; border-bottom:1px solid var(--border-color); white-space:nowrap; }
+.types-table tbody td { padding:8px 14px; height:48px; vertical-align:middle; color:var(--text-primary); border-bottom:1px solid var(--border-color); }
+.types-table tbody tr:last-child td { border-bottom:0; }
+.types-table tbody tr:hover { background:var(--bg-primary); }
+.types-id { color:var(--text-secondary); font-weight:650; font-variant-numeric:tabular-nums; }
+.types-icon-preview { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-color); border-radius:7px; background:var(--bg-primary); }
+.types-icon-preview img { max-width:24px; max-height:24px; object-fit:contain; }
+.types-count { display:inline-flex; min-width:27px; justify-content:center; padding:3px 8px; border-radius:20px; background:rgba(13,202,240,.14); color:#087f98; font-size:11px; font-weight:700; }
+.types-actions { display:flex; justify-content:flex-end; gap:6px; }
+.types-actions .btn-action { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-color); border-radius:8px; background:transparent; color:var(--text-secondary); }
+.types-actions .btn-action:hover { background:var(--accent-color); color:#fff; border-color:var(--accent-color); }
+.types-empty { padding:32px 16px !important; text-align:center; color:var(--text-secondary) !important; }
+.types-pagination { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border-top:1px solid var(--border-color); background:var(--bg-secondary); }
+.types-pagination-info { color:var(--text-secondary); font-size:11px; white-space:nowrap; }
+.types-pagination-controls { display:flex; align-items:center; gap:4px; }
+.types-page-size { width:auto; min-width:68px; height:30px; padding:3px 25px 3px 8px; font-size:11px; border-color:var(--border-color); background-color:var(--bg-primary); color:var(--text-primary); }
+.types-page-btn { min-width:30px; height:30px; padding:0 8px; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--text-secondary); font-size:11px; }
+.types-page-btn:hover:not(:disabled) { background:var(--bg-primary); color:var(--text-primary); }
+.types-page-btn.active { background:var(--accent-color); border-color:var(--accent-color); color:#fff; }
+.types-page-btn:disabled { opacity:.35; cursor:default; }
+.types-page-ellipsis { padding:0 4px; color:var(--text-secondary); font-size:11px; }
+@media (max-width:600px) { .types-pagination { align-items:flex-start; flex-direction:column; } .types-pagination-controls { width:100%; justify-content:flex-end; flex-wrap:wrap; } }
+.types-modal .modal-content { border:1px solid var(--border-color); border-radius:14px; overflow:hidden; background:var(--bg-secondary); color:var(--text-primary); }
+.types-modal .modal-header,.types-modal .modal-footer { border-color:var(--border-color); padding:15px 18px; }
+.types-modal .modal-title { font-size:16px; font-weight:650; }
+.types-modal .modal-body { padding:18px; }
+.types-modal .form-label { font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:6px; }
+.types-modal .form-control { font-size:13px; min-height:38px; }
+.types-upload-zone { display:flex; align-items:center; gap:14px; padding:13px; border:1px dashed var(--border-color); border-radius:10px; background:var(--bg-primary); }
+.types-upload-preview { width:62px; height:62px; flex:0 0 62px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color); border-radius:9px; background:var(--bg-secondary); }
+.types-upload-preview img { max-width:48px; max-height:48px; object-fit:contain; }
+.types-upload-preview i { color:var(--text-secondary); font-size:20px; }
+.types-upload-help { color:var(--text-secondary); font-size:11px; margin-top:5px; }
+.types-current-image { display:block; font-size:11px; color:var(--text-secondary); margin-top:5px; }
+@media (max-width: 900px) {
+ .types-table-wrap { overflow-x:auto; }
+ .types-table { min-width:720px; }
+}
+@media (max-width: 600px) {
+ .types-page-header { align-items:center; }
+ .types-page-header h2 { font-size:18px; }
+ .types-toolbar { padding:9px; }
+ .types-search { max-width:none; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="types-page">
+    <div class="types-page-header">
+        <div>
+            <h2>{{ _('Типы устройств') }}</h2>
+            <p class="types-page-subtitle">{{ _('Справочник типов сетевых устройств и их иконок') }}</p>
         </div>
-        {% endif %}
+        <button type="button" class="types-add-btn" onclick="openDeviceTypeModal('create')">
+            <i class="fas fa-plus" aria-hidden="true"></i>{{ _('Добавить новый тип') }}
+        </button>
+    </div>
+
+    <div class="types-toolbar">
+        <div class="types-search">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input type="search" id="typesSearch" class="form-control" placeholder="{{ _('Поиск по названию или ID') }}" aria-label="{{ _('Поиск типов устройств') }}">
+        </div>
+        <span class="text-muted small" id="typesVisibleCount">{{ types|length }} {{ _('типов') }}</span>
+    </div>
+
+    <div class="types-table-wrap">
+        <table class="types-table" id="deviceTypesTable">
+            <thead>
+                <tr>
+                    <th style="width:72px">ID</th>
+                    <th>{{ _('Название') }}</th>
+                    <th style="width:110px">{{ _('Ширина') }}</th>
+                    <th style="width:110px">{{ _('Высота') }}</th>
+                    <th style="width:100px">{{ _('Иконка') }}</th>
+                    <th style="width:130px">{{ _('Устройств') }}</th>
+                    <th style="width:100px;text-align:right">{{ _('Действия') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for type in types %}
+                <tr class="device-type-row" data-search="{{ (type.name ~ ' ' ~ type.id)|lower }}">
+                    <td class="types-id">#{{ type.id }}</td>
+                    <td><strong>{{ type.name }}</strong></td>
+                    <td>{{ type.width or '—' }}</td>
+                    <td>{{ type.height or '—' }}</td>
+                    <td>
+                        <span class="types-icon-preview">
+                        {% if type.icon_filename %}
+                            <img src="{{ url_for('static', filename='uploads/icons/' + type.icon_filename) }}" alt="{{ type.name }}">
+                        {% else %}
+                            <i class="fas fa-image text-muted" aria-hidden="true"></i>
+                        {% endif %}
+                        </span>
+                    </td>
+                    <td><span class="types-count">{{ type.devices.count() }}</span></td>
+                    <td>
+                        <div class="types-actions">
+                            <button type="button" class="btn-action js-edit-device-type"
+                                    data-id="{{ type.id }}"
+                                    data-name="{{ type.name }}"
+                                    data-width="{{ type.width if type.width is not none else '' }}"
+                                    data-height="{{ type.height if type.height is not none else '' }}"
+                                    data-icon-url="{{ url_for('static', filename='uploads/icons/' + type.icon_filename) if type.icon_filename else '' }}"
+                                    data-edit-url="{{ url_for('admin.edit_type', id=type.id) }}"
+                                    title="{{ _('Редактировать') }}" aria-label="{{ _('Редактировать') }}">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('admin.delete_type', id=type.id) }}" class="m-0"
+                                  onsubmit="return confirm('{{ _('Удалить тип устройства?') }}')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-action" title="{{ _('Удалить') }}" aria-label="{{ _('Удалить') }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="types-empty">{{ _('Типы устройств ещё не добавлены') }}</td></tr>
+                {% endfor %}
+                <tr id="typesNoResults" hidden><td colspan="7" class="types-empty">{{ _('По вашему запросу ничего не найдено') }}</td></tr>
+            </tbody>
+        </table>
+        <div class="types-pagination" id="typesPagination" aria-label="{{ _('Пагинация типов устройств') }}">
+            <div class="types-pagination-info" id="typesPaginationInfo" aria-live="polite"></div>
+            <div class="types-pagination-controls">
+                <label class="types-pagination-info" for="typesPageSize">{{ _('На странице') }}</label>
+                <select class="form-select types-page-size" id="typesPageSize" aria-label="{{ _('Количество записей на странице') }}">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <button type="button" class="types-page-btn" id="typesPrevPage" aria-label="{{ _('Предыдущая страница') }}">‹</button>
+                <div id="typesPageNumbers" class="d-flex align-items-center gap-1"></div>
+                <button type="button" class="types-page-btn" id="typesNextPage" aria-label="{{ _('Следующая страница') }}">›</button>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Список типов -->
-<table class="modern-table">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>{{ _('Название') }}</th>
-            <th>{{ _('Ширина') }}</th>
-            <th>{{ _('Высота') }}</th>
-            <th>{{ _('Иконка') }}</th>
-            <th>{{ _('Устройств') }}</th>
-            <th>{{ _('Действия') }}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for type in types %}
-        <tr style="--i: {{ loop.index }}" class="{{ 'table-warning' if edit_type and edit_type.id == type.id else '' }}">
-            <td><strong>#{{ type.id }}</strong></td>
-            <td>{{ type.name }}</td>
-            <td>{{ type.width or '—' }}</td>
-            <td>{{ type.height or '—' }}</td>
-            <td>
-                {% if type.icon_filename %}
-                    <img src="{{ url_for('static', filename='uploads/icons/' + type.icon_filename) }}" width="40" height="40" style="object-fit: contain;" alt="icon">
-                {% else %}
-                    <span class="badge bg-secondary">{{ _('нет') }}</span>
-                {% endif %}
-            </td>
-            <td><span class="badge bg-info">{{ type.devices.count() }}</span></td>
-            <td class="text-end">
-                <div class="table-actions">
-                    <a href="{{ url_for('admin.edit_type', id=type.id) }}" class="btn-action" title="{{ _('Редактировать') }}">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                    <form method="POST" action="{{ url_for('admin.delete_type', id=type.id) }}" style="display: inline;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-action" onclick="return confirm('{{ _('Удалить тип?') }}')" title="{{ _('Удалить') }}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
+<!-- Универсальное модальное окно создания и редактирования -->
+<div class="modal fade types-modal" id="deviceTypeModal" tabindex="-1" aria-labelledby="deviceTypeModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="deviceTypeForm" method="POST" action="{{ url_for('admin.create_type') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="deviceTypeModalTitle">{{ _('Добавить новый тип устройства') }}</h5>
+                        <div class="types-page-subtitle" id="deviceTypeModalSubtitle">{{ _('Укажите название, размеры и изображение') }}</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Закрыть') }}"></button>
                 </div>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="deviceTypeName" class="form-label">{{ _('Название типа') }} *</label>
+                        <input type="text" class="form-control" id="deviceTypeName" name="name" maxlength="120" required placeholder="{{ _('Например, Router') }}">
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label for="deviceTypeWidth" class="form-label">{{ _('Ширина (px)') }}</label>
+                            <input type="number" class="form-control" id="deviceTypeWidth" name="width" min="1" max="2000" placeholder="—">
+                        </div>
+                        <div class="col-6">
+                            <label for="deviceTypeHeight" class="form-label">{{ _('Высота (px)') }}</label>
+                            <input type="number" class="form-control" id="deviceTypeHeight" name="height" min="1" max="2000" placeholder="—">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="deviceTypeIcon" class="form-label">{{ _('Иконка устройства') }}</label>
+                        <div class="types-upload-zone">
+                            <div class="types-upload-preview" id="deviceTypePreview"><i class="fas fa-image"></i></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <input type="file" class="form-control" id="deviceTypeIcon" name="icon" accept="image/*">
+                                <div class="types-upload-help">{{ _('Выберите изображение. При редактировании оставьте поле пустым, чтобы сохранить текущую иконку.') }}</div>
+                                <span class="types-current-image" id="deviceTypeCurrentImage" hidden>{{ _('Текущая иконка будет сохранена') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-3" id="deviceTypeSubmit">
+                        <i class="fas fa-plus me-1"></i>{{ _('Добавить') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const createUrl = {{ url_for('admin.create_type')|tojson }};
+    const editUrlTemplate = {{ url_for('admin.edit_type', id=0)|tojson }};
+    const defaultPreview = '<i class="fas fa-image" aria-hidden="true"></i>';
+    const modalElement = document.getElementById('deviceTypeModal');
+    const form = document.getElementById('deviceTypeForm');
+    const nameInput = document.getElementById('deviceTypeName');
+    const widthInput = document.getElementById('deviceTypeWidth');
+    const heightInput = document.getElementById('deviceTypeHeight');
+    const fileInput = document.getElementById('deviceTypeIcon');
+    const preview = document.getElementById('deviceTypePreview');
+    const currentImageNote = document.getElementById('deviceTypeCurrentImage');
+    const title = document.getElementById('deviceTypeModalTitle');
+    const subtitle = document.getElementById('deviceTypeModalSubtitle');
+    const submit = document.getElementById('deviceTypeSubmit');
+    let selectedPreviewUrl = null;
+
+    function resetPreview() {
+        if (selectedPreviewUrl) URL.revokeObjectURL(selectedPreviewUrl);
+        selectedPreviewUrl = null;
+        preview.innerHTML = defaultPreview;
+    }
+
+    window.openDeviceTypeModal = function (mode, id, name, width, height, iconUrl, editUrl) {
+        form.reset();
+        form.action = createUrl;
+        resetPreview();
+        currentImageNote.hidden = true;
+
+        if (mode === 'edit') {
+            title.textContent = {{ _('Редактирование типа устройства')|tojson }};
+            subtitle.textContent = {{ _('Измените необходимые параметры типа')|tojson }};
+            submit.innerHTML = '<i class="fas fa-save me-1"></i>' + {{ _('Сохранить')|tojson }};
+            form.action = editUrl || editUrlTemplate.replace(/0\/edit$/, '/' + encodeURIComponent(String(id)) + '/edit');
+            nameInput.value = name || '';
+            widthInput.value = width || '';
+            heightInput.value = height || '';
+            if (iconUrl) {
+                preview.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = iconUrl;
+                img.alt = '';
+                preview.appendChild(img);
+                currentImageNote.hidden = false;
+            }
+        } else {
+            title.textContent = {{ _('Добавить новый тип устройства')|tojson }};
+            subtitle.textContent = {{ _('Укажите название, размеры и изображение')|tojson }};
+            submit.innerHTML = '<i class="fas fa-plus me-1"></i>' + {{ _('Добавить')|tojson }};
+        }
+        if (!window.bootstrap || !bootstrap.Modal) {
+            console.error('LinkVision: Bootstrap Modal is not available.');
+            return;
+        }
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        window.setTimeout(() => nameInput.focus(), 150);
+    };
+
+    // Use data-* attributes instead of inline JavaScript. This safely handles
+    // names containing quotes and other characters, and avoids HTML/JS parsing errors.
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('.js-edit-device-type');
+        if (!button) return;
+        window.openDeviceTypeModal(
+            'edit',
+            button.dataset.id,
+            button.dataset.name,
+            button.dataset.width,
+            button.dataset.height,
+            button.dataset.iconUrl,
+            button.dataset.editUrl
+        );
+    });
+
+    fileInput.addEventListener('change', function () {
+        const file = this.files && this.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            this.value = '';
+            alert({{ _('Выберите файл изображения.')|tojson }});
+            return;
+        }
+        resetPreview();
+        selectedPreviewUrl = URL.createObjectURL(file);
+        const img = document.createElement('img');
+        img.src = selectedPreviewUrl;
+        img.alt = '';
+        preview.innerHTML = '';
+        preview.appendChild(img);
+        currentImageNote.hidden = true;
+    });
+
+    modalElement.addEventListener('hidden.bs.modal', resetPreview);
+
+    const search = document.getElementById('typesSearch');
+    const rows = Array.from(document.querySelectorAll('.device-type-row'));
+    const noResults = document.getElementById('typesNoResults');
+    const visibleCount = document.getElementById('typesVisibleCount');
+    const pageSizeSelect = document.getElementById('typesPageSize');
+    const paginationInfo = document.getElementById('typesPaginationInfo');
+    const pageNumbers = document.getElementById('typesPageNumbers');
+    const prevPage = document.getElementById('typesPrevPage');
+    const nextPage = document.getElementById('typesNextPage');
+    let currentPage = 1;
+    let pageSize = Number(pageSizeSelect.value) || 10;
+    let filteredRows = rows.slice();
+
+    function renderPagination() {
+        const total = filteredRows.length;
+        const pageCount = Math.max(1, Math.ceil(total / pageSize));
+        currentPage = Math.min(Math.max(1, currentPage), pageCount);
+        const startIndex = total ? (currentPage - 1) * pageSize : 0;
+        const endIndex = Math.min(startIndex + pageSize, total);
+
+        rows.forEach(row => { row.hidden = true; });
+        filteredRows.slice(startIndex, endIndex).forEach(row => { row.hidden = false; });
+
+        noResults.hidden = total !== 0 || rows.length === 0;
+        visibleCount.textContent = total + ' / ' + rows.length;
+        paginationInfo.textContent = total
+            ? {{ _('Показано')|tojson }} + ' ' + (startIndex + 1) + '–' + endIndex + ' ' + {{ _('из')|tojson }} + ' ' + total
+            : {{ _('Нет записей')|tojson }};
+
+        prevPage.disabled = currentPage <= 1 || total === 0;
+        nextPage.disabled = currentPage >= pageCount || total === 0;
+        pageNumbers.innerHTML = '';
+
+        const pages = [];
+        if (pageCount <= 7) {
+            for (let p = 1; p <= pageCount; p++) pages.push(p);
+        } else {
+            pages.push(1);
+            if (currentPage > 3) pages.push('…');
+            for (let p = Math.max(2, currentPage - 1); p <= Math.min(pageCount - 1, currentPage + 1); p++) pages.push(p);
+            if (currentPage < pageCount - 2) pages.push('…');
+            pages.push(pageCount);
+        }
+
+        pages.forEach(page => {
+            if (page === '…') {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'types-page-ellipsis';
+                ellipsis.textContent = '…';
+                pageNumbers.appendChild(ellipsis);
+                return;
+            }
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'types-page-btn' + (page === currentPage ? ' active' : '');
+            button.textContent = String(page);
+            button.setAttribute('aria-label', {{ _('Страница')|tojson }} + ' ' + page);
+            if (page === currentPage) button.setAttribute('aria-current', 'page');
+            button.addEventListener('click', function () {
+                currentPage = page;
+                renderPagination();
+            });
+            pageNumbers.appendChild(button);
+        });
+    }
+
+    function applySearch() {
+        const query = search.value.trim().toLocaleLowerCase();
+        filteredRows = rows.filter(row => row.dataset.search.includes(query));
+        currentPage = 1;
+        renderPagination();
+    }
+
+    search.addEventListener('input', applySearch);
+    pageSizeSelect.addEventListener('change', function () {
+        pageSize = Number(this.value) || 10;
+        currentPage = 1;
+        renderPagination();
+    });
+    prevPage.addEventListener('click', function () {
+        if (currentPage > 1) { currentPage--; renderPagination(); }
+    });
+    nextPage.addEventListener('click', function () {
+        const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+        if (currentPage < pageCount) { currentPage++; renderPagination(); }
+    });
+    renderPagination();
+})();
+</script>
 {% endblock %}
