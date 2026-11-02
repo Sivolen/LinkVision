@@ -154,8 +154,24 @@
                 <a href="{{ url_for('admin.types') }}" class="admin-menu-item">
                     <i class="fas fa-shapes"></i> <span>{{ _('Типы устройств') }}</span>
                 </a>
-                <a href="{{ url_for('admin.settings') }}" class="admin-menu-item">
-                    <i class="fas fa-cog"></i> <span>{{ _('Настройки') }}</span>
+                <div class="admin-menu-group {{ 'active' if request.endpoint in ['admin.monitoring_settings', 'admin.quality_profiles'] else '' }}">
+                    <button type="button" class="admin-menu-item admin-menu-toggle" data-bs-toggle="collapse"
+                            data-bs-target="#monitoringAdminMenu" aria-expanded="{{ 'true' if request.endpoint in ['admin.monitoring_settings', 'admin.quality_profiles'] else 'false' }}"
+                            aria-controls="monitoringAdminMenu">
+                        <i class="fas fa-heartbeat"></i><span>{{ _('Мониторинг') }}</span>
+                        <i class="fas fa-chevron-down admin-menu-chevron" aria-hidden="true"></i>
+                    </button>
+                    <div class="collapse {{ 'show' if request.endpoint in ['admin.monitoring_settings', 'admin.quality_profiles'] else '' }}" id="monitoringAdminMenu">
+                        <a href="{{ url_for('admin.monitoring_settings') }}" class="admin-menu-item admin-menu-subitem {{ 'active' if request.endpoint == 'admin.monitoring_settings' else '' }}">
+                            <i class="fas fa-sliders-h"></i><span>{{ _('Настройки') }}</span>
+                        </a>
+                        <a href="{{ url_for('admin.quality_profiles') }}" class="admin-menu-item admin-menu-subitem {{ 'active' if request.endpoint == 'admin.quality_profiles' else '' }}">
+                            <i class="fas fa-signal"></i><span>{{ _('Профили качества') }}</span>
+                        </a>
+                    </div>
+                </div>
+                <a href="{{ url_for('admin.settings') }}" class="admin-menu-item {{ 'active' if request.endpoint == 'admin.settings' else '' }}">
+                    <i class="fas fa-cog"></i> <span>{{ _('Системные настройки') }}</span>
                 </a>
                 <a href="{{ url_for('admin.maps_list') }}" class="admin-menu-item">
                     <i class="fas fa-map"></i> <span>{{ _('Карты') }}</span>

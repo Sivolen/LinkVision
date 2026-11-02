@@ -3909,3 +3909,109 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   .sidebar-heading-action { width: 30px; height: 30px; }
   .sidebar-map-actions-collapsed { display: none; }
 }
+
+/* Monitoring navigation and compact admin pages */
+.admin-menu-group { min-width: 0; }
+.admin-menu-toggle { width: 100%; text-align: left; cursor: pointer; }
+.admin-menu-chevron { margin-left: auto !important; margin-right: 2px !important; font-size: .68rem !important; transition: transform .16s ease; }
+.admin-menu-toggle[aria-expanded="true"] .admin-menu-chevron { transform: rotate(180deg); }
+.admin-menu-subitem { padding-left: 27px; min-height: 33px; font-size: .79rem; }
+.admin-page-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin: 0 0 14px; }
+.admin-page-header .page-title { margin:0; }
+.admin-page-header .btn { white-space:nowrap; }
+.quality-threshold-pair { display:flex; align-items:center; gap:8px; }
+.quality-threshold-pair .form-control { min-width:0; }
+@media (max-width: 700px) {
+ .admin-page-header { align-items:flex-start; flex-direction:column; }
+ .quality-profiles-table { min-width:720px; }
+}
+.sidebar.collapsed .admin-menu-toggle { justify-content:center; padding-left:0; padding-right:0; }
+.sidebar.collapsed .admin-menu-chevron,
+.sidebar.collapsed #monitoringAdminMenu { display:none !important; }
+.sidebar.collapsed .admin-menu-toggle i:first-child { margin:0; }
+
+/* Small, unobtrusive marker for the default quality profile. */
+.quality-default-star {
+  color: #d6a23a;
+  font-size: .82rem;
+  line-height: 1;
+  vertical-align: .04em;
+}
+
+/* Unified admin settings pages — aligned with the Device Types page */
+.settings-page { width:100%; max-width:none; min-width:0; margin:0; color:var(--text-primary); }
+.settings-page .types-page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.settings-page .types-page-header h2 { margin:0 0 4px; font-size:21px; font-weight:650; color:var(--text-primary); }
+.settings-page .types-page-subtitle { color:var(--text-secondary); font-size:12px; margin:0; }
+.settings-section { width:100%; min-width:0; margin:0 0 14px; overflow:hidden; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; }
+.settings-section-header { display:flex; align-items:center; gap:9px; min-height:43px; padding:11px 14px; color:var(--text-primary); background:var(--bg-primary); border-bottom:1px solid var(--border-color); font-size:12px; font-weight:650; }
+.settings-section-header i { color:var(--accent-color); font-size:13px; }
+.settings-section-body { padding:14px; color:var(--text-primary); font-size:13px; }
+.settings-section-body p { font-size:12px; line-height:1.55; }
+.settings-section-body .text-muted, .settings-section-body .form-text { color:var(--text-secondary)!important; }
+.settings-section-body .form-label { display:block; margin-bottom:6px; color:var(--text-secondary); font-size:11px; font-weight:650; }
+.settings-section-body .form-control, .settings-section-body .form-select { min-height:36px; border:1px solid var(--border-color); border-radius:8px; background-color:var(--bg-primary); color:var(--text-primary); font-size:12px; box-shadow:none; }
+.settings-section-body .form-control:focus, .settings-section-body .form-select:focus { border-color:var(--accent-color); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent-color) 14%, transparent); }
+.settings-section-body .btn { min-height:32px; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:600; }
+.settings-field { margin-bottom:14px; }
+.settings-field small { display:block; margin-top:5px; color:var(--text-secondary); font-size:10px; }
+.settings-actions { display:flex; justify-content:flex-end; padding-top:2px; }
+.settings-section .types-table { width:100%; border-collapse:separate; border-spacing:0; margin:0; font-size:12px; }
+.settings-section .types-table thead th { padding:11px 14px; background:var(--bg-primary); color:var(--text-secondary); font-size:10px; font-weight:700; letter-spacing:.045em; text-transform:uppercase; border-bottom:1px solid var(--border-color); white-space:nowrap; }
+.settings-section .types-table tbody td { padding:8px 14px; height:46px; vertical-align:middle; color:var(--text-primary); border-bottom:1px solid var(--border-color); }
+.settings-section .types-table tbody tr:last-child td { border-bottom:0; }
+.settings-section .types-table tbody tr:hover { background:var(--bg-primary); }
+.settings-section .table-responsive { margin:0; }
+.settings-section-warning .settings-section-header { background:rgba(255,193,7,.12); }
+.settings-section-warning .settings-section-header i { color:#c18b00; }
+.settings-page .modal-content { border:1px solid var(--border-color); border-radius:14px; background:var(--bg-secondary); color:var(--text-primary); }
+.settings-page .modal-header, .settings-page .modal-footer { border-color:var(--border-color); }
+.settings-page .modal-title { color:var(--text-primary); font-size:16px; font-weight:650; }
+.settings-page .modal-body { color:var(--text-primary); }
+.settings-page .quality-threshold-pair .form-control { min-width:0; }
+@media (max-width:900px) { .settings-page .table-responsive { overflow-x:auto; } .settings-page .types-table { min-width:680px; } }
+@media (max-width:600px) { .settings-page .types-page-header { align-items:center; } .settings-page .types-page-header h2 { font-size:18px; } .settings-section-body { padding:11px; } }
+
+
+/* Monitoring settings and quality profile actions: use the shared LinkVision accent. */
+.settings-page .types-page-header > .btn-primary,
+.settings-page .settings-actions .settings-save-btn,
+.settings-page .modal-footer .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+  background: var(--accent-color);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  box-shadow: none;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.settings-page .types-page-header > .btn-primary:hover,
+.settings-page .settings-actions .settings-save-btn:hover,
+.settings-page .modal-footer .btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #fff;
+  transform: none;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, .12);
+}
+.settings-page .settings-actions .settings-save-btn:focus-visible,
+.settings-page .types-page-header > .btn-primary:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+.settings-page .quality-default-star {
+  color: var(--accent-color);
+  font-size: .78rem;
+  line-height: 1;
+  vertical-align: .05em;
+  opacity: .9;
+}

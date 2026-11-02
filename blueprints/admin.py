@@ -215,6 +215,41 @@ def delete_type(id):
 # ============================================================================
 
 
+@admin_bp.route("/monitoring/settings", methods=["GET", "POST"])
+def monitoring_settings():
+    if request.method == "POST":
+        ping_count = request.form.get("ping_count")
+        ping_interval = request.form.get("ping_interval")
+        ping_timeout = request.form.get("ping_timeout")
+        history_retention_days = request.form.get("history_retention_days")
+        monitor_max_workers = request.form.get("monitor_max_workers")
+        try:
+            settings_service.update_ping_settings(
+                ping_count, ping_interval, ping_timeout,
+                history_retention_days, monitor_max_workers,
+            )
+            flash(_("Настройки сохранены"), "success")
+        except Exception as e:
+            admin_logger.error(f"Error updating monitoring settings: {e}")
+            flash(_("Ошибка при сохранении настроек"), "error")
+        return redirect(url_for("admin.monitoring_settings"))
+
+    values = settings_service.get_monitor_settings()
+    return render_template(
+        "admin/monitoring_settings.html",
+        count=values[0], interval=values[1], timeout=values[2],
+        history_retention_days=values[3], monitor_max_workers=values[4],
+    )
+
+
+@admin_bp.route("/monitoring/quality-profiles")
+def quality_profiles():
+    return render_template(
+        "admin/quality_profiles.html",
+        quality_profiles=quality_service.get_all_quality_profiles(),
+    )
+
+
 @admin_bp.route("/settings", methods=["GET", "POST"])
 def settings():
     # Информация о БД
@@ -230,25 +265,6 @@ def settings():
         db_mtime = None
 
     if request.method == "POST":
-        if "ping_count" in request.form:
-            ping_count = request.form.get("ping_count")
-            ping_interval = request.form.get("ping_interval")
-            ping_timeout = request.form.get("ping_timeout")
-            history_retention_days = request.form.get("history_retention_days")
-            monitor_max_workers = request.form.get("monitor_max_workers")
-            try:
-                settings_service.update_ping_settings(
-                    ping_count,
-                    ping_interval,
-                    ping_timeout,
-                    history_retention_days,
-                    monitor_max_workers,
-                )
-                flash(_("Настройки сохранены"))
-            except Exception as e:
-                admin_logger.error(f"Error updating settings: {e}")
-                flash(_("Ошибка при сохранении настроек"))
-            return redirect(url_for("admin.settings"))
         if "restore_backup" in request.form:
             return restore_backup_action()
         if "reset_rate_limit" in request.form:
@@ -256,23 +272,10 @@ def settings():
             flash(_("Счётчики rate limit успешно сброшены"), "success")
             return redirect(url_for("admin.settings"))
 
-    (
-        ping_count,
-        ping_interval,
-        ping_timeout,
-        history_retention_days,
-        monitor_max_workers,
-    ) = settings_service.get_monitor_settings()
     return render_template(
         "admin/settings.html",
-        count=ping_count,
-        interval=ping_interval,
-        timeout=ping_timeout,
-        history_retention_days=history_retention_days,
-        monitor_max_workers=monitor_max_workers,
         db_size=db_size,
         db_mtime=db_mtime,
-        quality_profiles=quality_service.get_all_quality_profiles(),
     )
 
 
@@ -314,7 +317,7 @@ def create_quality_profile():
         flash(_("Профиль качества создан"), "success")
     except ValueError as e:
         flash(str(e), "error")
-    return redirect(url_for("admin.settings"))
+    return redirect(url_for("admin.quality_profiles"))
 
 
 @admin_bp.route("/quality-profiles/<int:profile_id>", methods=["POST"])
@@ -327,7 +330,7 @@ def update_quality_profile(profile_id):
         flash(_("Профиль качества сохранён"), "success")
     except ValueError as e:
         flash(str(e), "error")
-    return redirect(url_for("admin.settings"))
+    return redirect(url_for("admin.quality_profiles"))
 
 
 @admin_bp.route("/quality-profiles/<int:profile_id>/default", methods=["POST"])
@@ -337,7 +340,7 @@ def set_default_quality_profile(profile_id):
         flash(_("Профиль назначен профилем по умолчанию"), "success")
     except ValueError as e:
         flash(str(e), "error")
-    return redirect(url_for("admin.settings"))
+    return redirect(url_for("admin.quality_profiles"))
 
 
 @admin_bp.route("/quality-profiles/<int:profile_id>/delete", methods=["POST"])
@@ -352,7 +355,7 @@ def delete_quality_profile(profile_id):
         )
     except ValueError as e:
         flash(str(e), "error")
-    return redirect(url_for("admin.settings"))
+    return redirect(url_for("admin.quality_profiles"))
 
 
 # ============================================================================
