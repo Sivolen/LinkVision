@@ -49,9 +49,9 @@ LinkVision - Современный дизайн (финальная верси�
   --accent-color: #6c8ebf;      /* приглушённый синий */
   --accent-hover: #7e9ec9;
   --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-  /* Графитовая поверхность без резкого чёрного контраста. */
-  --cy-background: #202630;
-  --cy-grid: #2b3542;
+  /* Карта использует тот же нейтральный фон, что и рабочая область страниц. */
+  --cy-background: var(--bg-primary);
+  --cy-grid: #2a2a2a;
   --lv-card-bg: #2e3849;
   --lv-card-border: #4a5870;
   --lv-card-name: #f8fafc;
