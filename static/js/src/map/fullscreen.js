@@ -13,6 +13,7 @@ function handleFullscreenChange() {
 
 function setFullscreenLayout(active) {
     document.getElementById('sidebar')?.classList.toggle('fullscreen-hidden', active);
+    document.querySelector('.app-topbar')?.classList.toggle('fullscreen-hidden', active);
     document.querySelector('.toolbar-shell')?.classList.toggle('fullscreen-hidden', active);
     document.querySelector('.mobile-menu-toggle')?.classList.toggle('fullscreen-hidden', active);
     document.querySelector('.map-container')?.classList.toggle('fullscreen-map', active);
