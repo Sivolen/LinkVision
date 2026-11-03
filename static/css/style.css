@@ -3542,6 +3542,57 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 .sidebar-user-roles { min-width: 0; }
 .sidebar-role-badge { white-space: nowrap; }
 
+.sidebar-system-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 0;
+  min-height: 36px;
+  border-bottom: 1px solid var(--sidebar-border);
+  padding-bottom: 8px;
+  margin-bottom: 2px;
+}
+.sidebar-system-actions > .theme-toggle,
+.sidebar-system-actions > .sidebar-logout-form,
+.sidebar-system-actions > .lang-switcher {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+}
+.sidebar-system-actions > .sidebar-logout-form {
+  border-left: 1px solid var(--sidebar-border);
+  border-right: 1px solid var(--sidebar-border);
+}
+.sidebar-system-actions .theme-toggle {
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  text-align: center;
+}
+.sidebar-system-actions .theme-toggle i {
+  flex: 0 0 auto;
+  width: 16px;
+  margin: 0;
+  font-size: 0.9rem;
+}
+.sidebar-system-actions .theme-toggle:hover,
+.sidebar-system-actions .theme-toggle:focus-visible {
+  background: var(--sidebar-hover);
+  border: 0;
+}
+.sidebar-system-actions .dropdown-toggle::after { display: none; }
+.sidebar-system-actions .dropdown-menu {
+  min-width: 145px;
+  width: max-content;
+  max-width: 190px;
+}
 .sidebar-footer { gap: 7px; }
 .status-indicator { min-width: 0; }
 .status-copy { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -3672,6 +3723,42 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
     gap: 7px;
     padding: 8px 5px 9px;
   }
+  .sidebar.collapsed .sidebar-system-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 0 0 7px;
+    margin: 0;
+  }
+  .sidebar.collapsed .sidebar-system-actions > .sidebar-logout-form {
+    width: 100%;
+    border: 0;
+  }
+  .sidebar.collapsed .sidebar-system-actions > .theme-toggle,
+  .sidebar.collapsed .sidebar-system-actions > .sidebar-logout-form,
+  .sidebar.collapsed .sidebar-system-actions > .lang-switcher {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    min-height: 36px;
+  }
+  .sidebar.collapsed .sidebar-system-actions .theme-toggle {
+    width: 38px;
+    min-width: 38px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+  }
+  .sidebar.collapsed .sidebar-system-actions .theme-toggle span { display: none !important; }
+  .sidebar.collapsed .sidebar-system-actions .theme-toggle i { margin: 0; }
+  .sidebar.collapsed .sidebar-system-actions .dropdown-menu {
+    position: fixed;
+    left: 68px !important;
+    top: auto !important;
+    width: 150px;
+  }
   .sidebar.collapsed .status-indicator {
     display: flex;
     justify-content: center;
@@ -3701,6 +3788,11 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   .sidebar.collapsed .theme-toggle span,
   .sidebar.collapsed .status-copy,
   .sidebar.collapsed .version-badge { display: initial !important; }
+  .sidebar.collapsed .sidebar-system-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    flex-direction: initial;
+  }
   .sidebar.collapsed .sidebar-action {
     justify-content: flex-start;
     width: 100%;
@@ -3708,6 +3800,9 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   }
   .sidebar.collapsed .sidebar-action span { display: inline !important; }
 }
+
+/* System controls are icon-only in the expanded and collapsed sidebar. */
+.sidebar-system-actions .theme-toggle span { display: none !important; }
 
 /* Map actions live in the section heading; collapsed rail uses one plus menu. */
 .sidebar-maps-heading {
@@ -4025,94 +4120,6 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
     min-height: 30px;
     padding: 0 28px 0 9px;
     line-height: 28px;
-}
-
-/* Global account controls sit above the page workspace. */
-.app-topbar {
-  position: relative;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-height: 38px;
-  margin: -8px 0 8px;
-}
-
-.app-topbar .app-topbar-button,
-.app-topbar .app-topbar-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  min-width: 38px;
-  height: 38px;
-  min-height: 38px;
-  padding: 0;
-  color: var(--text-primary);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  font-size: .88rem;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
-}
-
-.app-topbar .app-topbar-button:hover,
-.app-topbar .app-topbar-button:focus-visible,
-.app-topbar .app-topbar-avatar:hover,
-.app-topbar .app-topbar-avatar:focus-visible {
-  color: var(--accent-color);
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-  outline: none;
-}
-
-.app-topbar .theme-toggle i { width: auto; margin: 0; color: inherit; font-size: 1rem; }
-.app-topbar .dropdown-toggle::after { display: none; }
-.app-topbar .app-topbar-language .app-topbar-button { border-radius: 10px; }
-.app-topbar .app-topbar-avatar {
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-.app-topbar .app-topbar-menu {
-  min-width: 150px;
-  margin-top: 6px;
-  padding: 5px;
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 11px;
-  box-shadow: var(--card-shadow);
-}
-
-.app-topbar .app-topbar-menu .dropdown-item { color: var(--text-primary); border-radius: 7px; }
-.app-topbar .app-topbar-menu .dropdown-item:hover,
-.app-topbar .app-topbar-menu .dropdown-item:focus { color: var(--text-primary); background: var(--bg-primary); }
-.app-topbar .app-topbar-menu .dropdown-item.active { color: #fff; background: var(--accent-color); }
-.app-topbar-account-name { padding: 6px 9px; overflow: hidden; color: var(--text-secondary); font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
-.app-topbar-logout { display: flex; align-items: center; gap: 9px; }
-.app-topbar-logout i { width: 15px; color: #c16b74; text-align: center; }
-[data-theme="dark"] .app-topbar .app-topbar-menu .dropdown-divider { border-color: var(--border-color); }
-
-.main-content.has-app-topbar .map-container { height: calc(100vh - 190px); }
-@supports (height: 100dvh) {
-  .main-content.has-app-topbar .map-container { height: calc(100dvh - 190px); }
-}
-
-@media (max-width: 768px) {
-  .app-topbar { min-height: 40px; margin: -10px 0 8px; padding-left: 56px; }
-  .app-topbar .app-topbar-button,
-  .app-topbar .app-topbar-avatar { width: 36px; min-width: 36px; height: 36px; min-height: 36px; }
-  .toolbar-shell { margin-top: 0; }
-  .main-content.has-app-topbar .map-container { height: calc(100vh - 180px); }
-  @supports (height: 100dvh) {
-    .main-content.has-app-topbar .map-container { height: calc(100dvh - 180px); }
-  }
 }
 
 .users-page .users-modal .form-select {

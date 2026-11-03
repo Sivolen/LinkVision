@@ -111,7 +111,40 @@
             </ul>
         </div>
 
+        <!-- Компактные системные действия: тема, выход и язык -->
         <div class="sidebar-footer">
+            <div class="sidebar-system-actions" aria-label="{{ _('Системные действия') }}">
+                <button type="button" class="theme-toggle" onclick="toggleTheme()"
+                        title="{{ _('Переключить тему') }}" aria-label="{{ _('Переключить тему') }}">
+                    <i class="fas fa-moon" aria-hidden="true"></i><span>{{ _('Тема') }}</span>
+                </button>
+                <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-logout-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="theme-toggle sidebar-logout"
+                            title="{{ _('Выход') }}" aria-label="{{ _('Выход') }}">
+                        <i class="fas fa-sign-out-alt" aria-hidden="true"></i><span>{{ _('Выход') }}</span>
+                    </button>
+                </form>
+                <div class="lang-switcher dropdown">
+                    <button class="theme-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                            aria-expanded="false" title="{{ _('Язык') }}" aria-label="{{ _('Язык') }}">
+                        <i class="fas fa-globe" aria-hidden="true"></i><span>{{ available_languages[current_locale] }}</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        {% for code, label in available_languages.items() %}
+                        <li>
+                            <form action="{{ url_for('i18n.set_language', lang_code=code) }}" method="POST" class="m-0">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="next" value="{{ request.path }}">
+                                <button type="submit" class="dropdown-item {{ 'active' if code == current_locale else '' }}">
+                                    {{ label }}
+                                </button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
             {% if current_user.is_admin %}
             <div class="admin-menu mt-3 pt-3 border-top border-secondary">
                 <small class="text-muted d-block mb-2"><span>{{ _('Администрирование') }}</span></small>
@@ -162,54 +195,7 @@
     <!-- ====================================================================
          ОСНОВНОЙ КОНТЕНТ
          ==================================================================== -->
-    <div class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %} {% if hide_sidebar %}no-sidebar-forced{% endif %} {% if current_user.is_authenticated and not hide_sidebar %}has-app-topbar{% endif %}">
-        {% if current_user.is_authenticated and not hide_sidebar %}
-        <header class="app-topbar" aria-label="{{ _('Настройки пользователя') }}">
-            <button type="button" class="theme-toggle app-topbar-button" id="themeToggle"
-                    onclick="toggleTheme()" title="{{ _('Переключить тему') }}"
-                    aria-label="{{ _('Переключить тему') }}">
-                <i class="fas fa-moon" aria-hidden="true"></i>
-            </button>
-            <div class="dropdown lang-switcher app-topbar-language">
-                <button class="theme-toggle app-topbar-button dropdown-toggle" type="button"
-                        data-bs-toggle="dropdown" aria-expanded="false"
-                        title="{{ _('Язык') }}" aria-label="{{ _('Язык') }}">
-                    <span>{{ current_locale|upper }}</span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end app-topbar-menu">
-                    {% for code, label in available_languages.items() %}
-                    <li>
-                        <form action="{{ url_for('i18n.set_language', lang_code=code) }}" method="POST" class="m-0">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="next" value="{{ request.path }}">
-                            <button type="submit" class="dropdown-item {{ 'active' if code == current_locale else '' }}">
-                                {{ label }}
-                            </button>
-                        </form>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            <div class="dropdown app-topbar-account">
-                <button class="app-topbar-avatar dropdown-toggle" type="button" data-bs-toggle="dropdown"
-                        aria-expanded="false" title="{{ current_user.username }}" aria-label="{{ _('Профиль пользователя') }}">
-                    <i class="fas fa-user" aria-hidden="true"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end app-topbar-menu">
-                    <li class="app-topbar-account-name">{{ current_user.username }}</li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="dropdown-item app-topbar-logout">
-                                <i class="fas fa-sign-out-alt" aria-hidden="true"></i>{{ _('Выход') }}
-                            </button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
-        </header>
-        {% endif %}
+    <div class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %} {% if hide_sidebar %}no-sidebar-forced{% endif %}">
         <!-- Кнопка вызова мобильного меню (только для авторизованных и если не скрыта) -->
         {% if current_user.is_authenticated and not hide_sidebar %}
         <button class="mobile-menu-toggle" id="mobileMenuToggle" onclick="toggleMobileSidebar()">
