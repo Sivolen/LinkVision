@@ -65,6 +65,7 @@
   <div class="maps-search"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="mapsSearch" class="form-control" placeholder="{{ _('Поиск по названию или владельцу') }}" aria-label="{{ _('Поиск карт') }}"></div>
   <select id="mapsOwnerFilter" class="form-select maps-filter" aria-label="{{ _('Фильтр по владельцу') }}">
    <option value="all">{{ _('Все владельцы') }}</option>
+   {% if has_unowned_maps %}<option value="__unowned__">{{ _('Без владельца') }}</option>{% endif %}
    {% for owner in owners %}<option value="{{ owner.username|lower }}">{{ owner.username }}</option>{% endfor %}
   </select>
   <div class="maps-count" id="mapsCount">{{ maps|length }} {{ _('карт') }}</div>
@@ -74,9 +75,9 @@
    <thead><tr><th style="width:70px">ID</th><th>{{ _('Название') }}</th><th>{{ _('Владелец') }}</th><th>{{ _('Дата создания') }}</th><th style="width:110px;text-align:right">{{ _('Действия') }}</th></tr></thead>
    <tbody id="mapsTableBody">
    {% for map in maps %}
-    <tr class="maps-row" data-map-id="{{ map.id }}" data-name="{{ map.name|lower }}" data-owner="{{ map.owner.username|lower }}">
-     <td class="maps-id">#{{ map.id }}</td><td class="maps-name"><a href="{{ url_for('main.map_view', map_id=map.id) }}" class="text-reset text-decoration-none">{{ map.name }}</a></td>
-     <td class="maps-owner">{{ map.owner.username }}</td><td class="maps-date">{{ map.created_at.strftime('%Y-%m-%d %H:%M') if map.created_at else '—' }}</td>
+    <tr class="maps-row" data-map-id="{{ map.id }}" data-name="{{ map.name|lower }}" data-owner="{{ map.owner.username|lower if map.owner else '' }}" data-owner-search="{{ (map.owner.username if map.owner else _('Без владельца'))|lower }}">
+     <td class="maps-id">{{ map.id }}</td><td class="maps-name"><a href="{{ url_for('main.map_view', map_id=map.id) }}" class="text-reset text-decoration-none">{{ map.name }}</a></td>
+     <td class="maps-owner">{{ map.owner.username if map.owner else _('Без владельца') }}</td><td class="maps-date">{{ map.created_at.strftime('%Y-%m-%d %H:%M') if map.created_at else '—' }}</td>
      <td><div class="maps-actions">
       <button type="button" class="btn-action js-edit-map" data-map-id="{{ map.id }}" data-map-name="{{ map.name }}" data-edit-url="{{ url_for('admin.rename_map', id=map.id) }}" title="{{ _('Редактировать') }}" aria-label="{{ _('Редактировать') }}"><i class="fas fa-pen" aria-hidden="true"></i></button>
       <form method="POST" action="{{ url_for('admin.delete_map', id=map.id) }}" class="m-0"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn-action btn-action-danger" data-confirm-delete="map" title="{{ _('Удалить') }}" aria-label="{{ _('Удалить') }}"><i class="fas fa-trash" aria-hidden="true"></i></button></form>
@@ -137,9 +138,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
  function filteredRows() {
   const q = search.value.trim().toLocaleLowerCase();
+  const idQuery = q.replace(/^#\s*/, '');
   const owner = ownerFilter.value;
-  return rows.filter(row => (!q || row.dataset.name.includes(q) || row.dataset.owner.includes(q) || row.dataset.mapId.includes(q))
-   && (owner === 'all' || row.dataset.owner === owner));
+  return rows.filter(row => {
+   const matchesSearch = !q || row.dataset.name.includes(q) || row.dataset.ownerSearch.includes(q) || row.dataset.mapId.includes(idQuery);
+   const matchesOwner = owner === 'all' || (owner === '__unowned__' ? !row.dataset.owner : row.dataset.owner === owner);
+   return matchesSearch && matchesOwner;
+  });
  }
  function render() {
   const filtered = filteredRows();

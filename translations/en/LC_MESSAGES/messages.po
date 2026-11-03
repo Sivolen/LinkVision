@@ -1266,6 +1266,10 @@ msgstr "All system maps"
 msgid "Владелец"
 msgstr "Owner"
 
+#: templates/admin/maps.html
+msgid "Без владельца"
+msgstr "No owner"
+
 #: templates/admin/maps.html:11
 msgid "Дата создания"
 msgstr "Created date"

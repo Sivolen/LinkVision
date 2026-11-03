@@ -366,13 +366,19 @@ def delete_quality_profile(profile_id):
 @admin_bp.route("/maps")
 def maps_list():
     all_maps = Map.query.order_by(Map.id.asc()).all()
+    has_unowned_maps = any(map_obj.owner is None for map_obj in all_maps)
     owners_by_id = {
         map_obj.owner_id: map_obj.owner
         for map_obj in all_maps
         if map_obj.owner is not None
     }
     owners = sorted(owners_by_id.values(), key=lambda owner: owner.username.lower())
-    return render_template("admin/maps.html", maps=all_maps, owners=owners)
+    return render_template(
+        "admin/maps.html",
+        maps=all_maps,
+        owners=owners,
+        has_unowned_maps=has_unowned_maps,
+    )
 
 
 @admin_bp.route("/maps/rename/<int:id>", methods=["POST"])

@@ -21,7 +21,7 @@
    {% for user in users %}
     {% set role = 'admin' if user.is_admin else ('operator' if user.is_operator else 'user') %}
     <tr class="users-row" data-user-id="{{ user.id }}" data-username="{{ user.username|lower }}" data-role="{{ role }}">
-     <td class="users-id">#{{ user.id }}</td><td class="users-name">{{ user.username }}</td>
+     <td class="users-id">{{ user.id }}</td><td class="users-name">{{ user.username }}</td>
      <td>{% if user.is_admin %}<span class="users-role-badge users-role-admin">{{ _('Администратор') }}</span>{% elif user.is_operator %}<span class="users-role-badge users-role-operator">{{ _('Оператор') }}</span>{% else %}<span class="users-role-badge users-role-user">{{ _('Пользователь') }}</span>{% endif %}</td>
      <td class="users-date">{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '—' }}</td>
      <td><div class="users-actions">
@@ -84,8 +84,8 @@
  let current=1;
  const tr=k=>root.dataset[k]||'';
  function filtered(){
-  const q=search.value.trim().toLocaleLowerCase(), r=role.value;
-  return rows.filter(row=>(!q||row.dataset.username.toLocaleLowerCase().includes(q)||row.dataset.userId.includes(q))&&(r==='all'||row.dataset.role===r));
+  const q=search.value.trim().toLocaleLowerCase(), idQuery=q.replace(/^#\s*/, ''), r=role.value;
+  return rows.filter(row=>(!q||row.dataset.username.toLocaleLowerCase().includes(q)||row.dataset.userId.includes(idQuery))&&(r==='all'||row.dataset.role===r));
  }
  function renderPages(total){
   pages.replaceChildren();
