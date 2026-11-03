@@ -1,39 +1,181 @@
 {% extends "base.html" %}
-{% block content %}
-<h2 class="page-title">🗺️ {{ _('Все карты системы') }}</h2>
 
-<table class="modern-table">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>{{ _('Название') }}</th>
-            <th>{{ _('Владелец') }}</th>
-            <th>{{ _('Дата создания') }}</th>
-            <th>{{ _('Действия') }}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for map in maps %}
-        <tr style="--i: {{ loop.index }}">
-            <td><strong>#{{ map.id }}</strong></td>
-            <td>{{ map.name }}</td>
-            <td>{{ map.owner.username }}</td>
-            <td>{{ map.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td class="text-end">
-                <div class="table-actions">
-                    <a href="{{ url_for('main.map_view', map_id=map.id) }}" class="btn-action" title="{{ _('Открыть') }}">
-                        <i class="fas fa-external-link-alt"></i>
-                    </a>
-                    <form method="POST" action="{{ url_for('admin.delete_map', id=map.id) }}" style="display: inline;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-action" data-confirm-delete="map" title="{{ _('Удалить') }}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+{% block extra_css %}
+<style>
+.maps-page{width:100%;max-width:none;min-width:0;margin:0}
+.maps-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.maps-page-header h2{margin:0 0 4px;font-size:21px;font-weight:650;color:var(--text-primary)}
+.maps-page-subtitle{margin:0;color:var(--text-secondary);font-size:12px}
+.maps-add-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 15px;border:1px solid var(--accent-color);border-radius:8px;background:var(--accent-color);color:#fff;font-size:12px;font-weight:650;white-space:nowrap;transition:background .15s,border-color .15s}
+.maps-add-btn:hover,.maps-add-btn:focus-visible{background:var(--accent-hover);border-color:var(--accent-hover);color:#fff}
+.maps-toolbar{display:flex;align-items:center;gap:10px;padding:12px;margin-bottom:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px}
+.maps-search{position:relative;flex:1;min-width:220px}
+.maps-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-secondary);font-size:12px}
+.maps-search input{height:36px;padding-left:34px;font-size:13px}
+.maps-filter{width:auto;min-width:190px;max-width:240px;height:36px;font-size:13px}
+.maps-count{padding-left:12px;border-left:1px solid var(--border-color);color:var(--text-secondary);font-size:12px;white-space:nowrap}
+.maps-table-wrap{width:100%;min-width:0;overflow:hidden;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px}
+.maps-table{width:100%;margin:0;border-collapse:separate;border-spacing:0;font-size:13px}
+.maps-table thead th{padding:11px 14px;background:var(--bg-primary);color:var(--text-secondary);font-size:10px;font-weight:700;letter-spacing:.045em;text-transform:uppercase;white-space:nowrap;border-bottom:1px solid var(--border-color)}
+.maps-table tbody td{height:44px;padding:8px 14px;vertical-align:middle;color:var(--text-primary);border-bottom:1px solid var(--border-color)}
+.maps-table tbody tr:last-child td{border-bottom:0}
+.maps-table tbody tr:hover{background:var(--bg-primary)}
+.maps-id{color:var(--text-secondary);font-weight:650;font-variant-numeric:tabular-nums}
+.maps-name{font-weight:600}
+.maps-owner,.maps-date{color:var(--text-secondary);font-size:12px}
+.maps-actions{display:flex;justify-content:flex-end;gap:6px}
+.maps-actions .btn-action{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border-color);border-radius:8px;background:transparent;color:var(--text-secondary)}
+.maps-actions .btn-action:hover{border-color:var(--accent-color);background:var(--accent-color);color:#fff}
+.maps-actions .btn-action-danger:hover{border-color:#dc3545;background:#dc3545;color:#fff}
+.maps-empty{padding:32px 16px!important;text-align:center;color:var(--text-secondary)!important}
+.maps-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-top:1px solid var(--border-color);background:var(--bg-secondary)}
+.maps-pagination-info{color:var(--text-secondary);font-size:11px;white-space:nowrap}
+.maps-pagination-controls{display:flex;align-items:center;gap:4px}
+.maps-page-size{width:auto;min-width:68px;height:30px;padding:3px 25px 3px 8px;font-size:11px;border-color:var(--border-color);background-color:var(--bg-primary);color:var(--text-primary)}
+.maps-page-btn{min-width:30px;height:30px;padding:0 8px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--text-secondary);font-size:12px}
+.maps-page-btn:hover:not(:disabled){background:var(--bg-primary);color:var(--text-primary)}
+.maps-page-btn.active{background:var(--accent-color);border-color:var(--accent-color);color:#fff}
+.maps-page-btn:disabled{opacity:.35;cursor:default}
+.maps-modal .modal-content{overflow:hidden;border:1px solid var(--border-color);border-radius:14px;background:var(--bg-secondary);color:var(--text-primary)}
+.maps-modal .modal-header,.maps-modal .modal-footer{padding:15px 18px;border-color:var(--border-color)}
+.maps-modal .modal-title{color:var(--text-primary);font-size:16px;font-weight:650}
+.maps-modal .modal-subtitle{margin-top:3px;color:var(--text-secondary);font-size:11px}
+.maps-modal .modal-body{padding:18px}
+.maps-modal .form-label{margin-bottom:6px;color:var(--text-secondary);font-size:12px;font-weight:600}
+.maps-modal .form-control{min-height:38px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:13px;box-shadow:none}
+.maps-modal .form-control:focus{border-color:var(--accent-color);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent-color) 14%,transparent)}
+.maps-modal .modal-footer .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600}
+.maps-modal .btn-primary{border-color:var(--accent-color);background:var(--accent-color);color:#fff}
+.maps-modal .btn-primary:hover{border-color:var(--accent-hover);background:var(--accent-hover);color:#fff}
+.maps-modal .btn-secondary{border-color:var(--border-color);background:var(--bg-primary);color:var(--text-secondary)}
+@media(max-width:900px){.maps-table-wrap{overflow-x:auto}.maps-table{min-width:720px}}
+@media(max-width:600px){.maps-page-header{align-items:stretch;flex-direction:column}.maps-page-header h2{font-size:18px}.maps-add-btn{align-self:flex-start}.maps-toolbar{align-items:stretch;flex-wrap:wrap;padding:9px}.maps-search{flex:1 1 100%;min-width:0}.maps-filter{flex:1;max-width:none}.maps-count{align-self:center}.maps-pagination{align-items:flex-start;flex-direction:column}.maps-pagination-controls{width:100%;justify-content:flex-end;flex-wrap:wrap}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="maps-page" id="mapsPage"
+ data-label-shown="{{ _('Показано') }}" data-label-of="{{ _('из') }}"
+ data-label-page="{{ _('Страница') }}" data-label-empty="{{ _('Карты не найдены') }}">
+ <div class="maps-page-header">
+  <div><h2>{{ _('Все карты системы') }}</h2><p class="maps-page-subtitle">{{ _('Управление картами и доступом') }}</p></div>
+  <button type="button" class="maps-add-btn" id="openCreateMap"><i class="fas fa-plus" aria-hidden="true"></i>{{ _('Создать карту') }}</button>
+ </div>
+ <div class="maps-toolbar">
+  <div class="maps-search"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="mapsSearch" class="form-control" placeholder="{{ _('Поиск по названию или владельцу') }}" aria-label="{{ _('Поиск карт') }}"></div>
+  <select id="mapsOwnerFilter" class="form-select maps-filter" aria-label="{{ _('Фильтр по владельцу') }}">
+   <option value="all">{{ _('Все владельцы') }}</option>
+   {% for owner in owners %}<option value="{{ owner.username|lower }}">{{ owner.username }}</option>{% endfor %}
+  </select>
+  <div class="maps-count" id="mapsCount">{{ maps|length }} {{ _('карт') }}</div>
+ </div>
+ <div class="maps-table-wrap">
+  <table class="maps-table" id="mapsTable">
+   <thead><tr><th style="width:70px">ID</th><th>{{ _('Название') }}</th><th>{{ _('Владелец') }}</th><th>{{ _('Дата создания') }}</th><th style="width:110px;text-align:right">{{ _('Действия') }}</th></tr></thead>
+   <tbody id="mapsTableBody">
+   {% for map in maps %}
+    <tr class="maps-row" data-map-id="{{ map.id }}" data-name="{{ map.name|lower }}" data-owner="{{ map.owner.username|lower }}">
+     <td class="maps-id">#{{ map.id }}</td><td class="maps-name"><a href="{{ url_for('main.map_view', map_id=map.id) }}" class="text-reset text-decoration-none">{{ map.name }}</a></td>
+     <td class="maps-owner">{{ map.owner.username }}</td><td class="maps-date">{{ map.created_at.strftime('%Y-%m-%d %H:%M') if map.created_at else '—' }}</td>
+     <td><div class="maps-actions">
+      <button type="button" class="btn-action js-edit-map" data-map-id="{{ map.id }}" data-map-name="{{ map.name }}" data-edit-url="{{ url_for('admin.rename_map', id=map.id) }}" title="{{ _('Редактировать') }}" aria-label="{{ _('Редактировать') }}"><i class="fas fa-pen" aria-hidden="true"></i></button>
+      <form method="POST" action="{{ url_for('admin.delete_map', id=map.id) }}" class="m-0"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn-action btn-action-danger" data-confirm-delete="map" title="{{ _('Удалить') }}" aria-label="{{ _('Удалить') }}"><i class="fas fa-trash" aria-hidden="true"></i></button></form>
+     </div></td>
+    </tr>
+   {% endfor %}
+    <tr id="mapsNoResults" hidden><td colspan="5" class="maps-empty">{{ _('Карты не найдены') }}</td></tr>
+   </tbody>
+  </table>
+  <div class="maps-pagination" id="mapsPagination">
+   <div class="maps-pagination-info" id="mapsPaginationInfo" aria-live="polite"></div>
+   <div class="maps-pagination-controls"><label class="maps-pagination-info" for="mapsPageSize">{{ _('На странице') }}</label>
+    <select class="form-select maps-page-size" id="mapsPageSize" aria-label="{{ _('Количество записей на странице') }}"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option></select>
+    <button type="button" class="maps-page-btn" id="mapsFirstPage" aria-label="{{ _('Первая страница') }}">«</button>
+    <button type="button" class="maps-page-btn" id="mapsPrevPage" aria-label="{{ _('Предыдущая страница') }}">‹</button>
+    <div id="mapsPageNumbers" class="d-flex align-items-center gap-1"></div>
+    <button type="button" class="maps-page-btn" id="mapsNextPage" aria-label="{{ _('Следующая страница') }}">›</button>
+    <button type="button" class="maps-page-btn" id="mapsLastPage" aria-label="{{ _('Последняя страница') }}">»</button>
+   </div>
+  </div>
+ </div>
+</div>
+
+<div class="modal fade maps-modal" id="createMapModal" tabindex="-1" aria-labelledby="createMapModalTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+ <form method="POST" action="{{ url_for('main.create_map') }}" id="createMapForm"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="modal-header"><div><h5 class="modal-title" id="createMapModalTitle">{{ _('Создать карту') }}</h5><div class="modal-subtitle">{{ _('Создание новой карты системы') }}</div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Закрыть') }}"></button></div>
+  <div class="modal-body"><label class="form-label" for="newMapName">{{ _('Название карты') }}</label><input class="form-control" id="newMapName" name="name" maxlength="128" required autocomplete="off" placeholder="{{ _('Введите название карты') }}"></div>
+  <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button><button type="submit" class="btn btn-primary"><i class="fas fa-plus" aria-hidden="true"></i>{{ _('Создать') }}</button></div>
+ </form>
+</div></div></div>
+
+<div class="modal fade maps-modal" id="editMapModal" tabindex="-1" aria-labelledby="editMapModalTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+ <form method="POST" id="editMapForm"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="modal-header"><div><h5 class="modal-title" id="editMapModalTitle">{{ _('Редактировать карту') }}</h5><div class="modal-subtitle">{{ _('Изменение названия карты') }}</div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Закрыть') }}"></button></div>
+  <div class="modal-body"><label class="form-label" for="editMapName">{{ _('Название карты') }}</label><input class="form-control" id="editMapName" name="name" maxlength="128" required autocomplete="off"></div>
+  <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button><button type="submit" class="btn btn-primary"><i class="fas fa-save" aria-hidden="true"></i>{{ _('Сохранить') }}</button></div>
+ </form>
+</div></div></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+ const root = document.getElementById('mapsPage');
+ if (!root || !window.bootstrap) return;
+ const rows = Array.from(document.querySelectorAll('.maps-row'));
+ const search = document.getElementById('mapsSearch');
+ const ownerFilter = document.getElementById('mapsOwnerFilter');
+ const pageSize = document.getElementById('mapsPageSize');
+ const pageNumbers = document.getElementById('mapsPageNumbers');
+ const info = document.getElementById('mapsPaginationInfo');
+ const noResults = document.getElementById('mapsNoResults');
+ const count = document.getElementById('mapsCount');
+ let currentPage = 1;
+ const t = (key) => root.dataset[key] || '';
+ const createModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('createMapModal'));
+ const editModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editMapModal'));
+
+ function filteredRows() {
+  const q = search.value.trim().toLocaleLowerCase();
+  const owner = ownerFilter.value;
+  return rows.filter(row => (!q || row.dataset.name.includes(q) || row.dataset.owner.includes(q) || row.dataset.mapId.includes(q))
+   && (owner === 'all' || row.dataset.owner === owner));
+ }
+ function render() {
+  const filtered = filteredRows();
+  const size = Number(pageSize.value) || 10;
+  const pages = Math.max(1, Math.ceil(filtered.length / size));
+  currentPage = Math.min(currentPage, pages);
+  const start = filtered.length ? (currentPage - 1) * size : 0;
+  const end = Math.min(start + size, filtered.length);
+  rows.forEach(row => { row.hidden = true; });
+  filtered.slice(start, end).forEach(row => { row.hidden = false; });
+  noResults.hidden = filtered.length !== 0;
+  count.textContent = filtered.length + ' ' + {{ _('карт')|tojson }};
+  info.textContent = filtered.length ? `${t('labelShown')} ${start + 1}–${end} ${t('labelOf')} ${filtered.length}` : `${t('labelShown')} 0 ${t('labelOf')} 0`;
+  pageNumbers.replaceChildren();
+  const addPage = (n) => {
+   const b = document.createElement('button'); b.type = 'button'; b.className = 'maps-page-btn' + (n === currentPage ? ' active' : ''); b.textContent = n; b.setAttribute('aria-label', `${t('labelPage')} ${n}`); b.setAttribute('aria-current', n === currentPage ? 'page' : 'false');
+   b.addEventListener('click', () => { currentPage = n; render(); }); pageNumbers.appendChild(b);
+  };
+  if (pages <= 5) { for (let n=1;n<=pages;n++) addPage(n); }
+  else {
+   const first = Math.max(1, Math.min(currentPage - 2, pages - 4));
+   for (let n=first;n<first+5;n++) addPage(n);
+  }
+  [['mapsFirstPage',1],['mapsPrevPage',Math.max(1,currentPage-1)],['mapsNextPage',Math.min(pages,currentPage+1)],['mapsLastPage',pages]].forEach(([id,target]) => {
+   const b=document.getElementById(id); b.disabled=currentPage===target || !filtered.length; b.onclick=()=>{currentPage=target;render();};
+  });
+ }
+ [search,ownerFilter].forEach(el => el.addEventListener('input',()=>{currentPage=1;render();}));
+ pageSize.addEventListener('change',()=>{currentPage=1;render();});
+ document.getElementById('openCreateMap').addEventListener('click',()=>{document.getElementById('createMapForm').reset();createModal.show();});
+ document.querySelectorAll('.js-edit-map').forEach(button => button.addEventListener('click',()=>{
+  document.getElementById('editMapName').value=button.dataset.mapName;
+  document.getElementById('editMapForm').action=button.dataset.editUrl;
+  editModal.show();
+ }));
+ render();
+});
+</script>
 {% endblock %}

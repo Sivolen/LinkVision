@@ -365,8 +365,37 @@ def delete_quality_profile(profile_id):
 
 @admin_bp.route("/maps")
 def maps_list():
-    all_maps = Map.query.all()  # Пока оставим прямое обращение, можно вынести позже
-    return render_template("admin/maps.html", maps=all_maps)
+    all_maps = Map.query.order_by(Map.id.asc()).all()
+    owners_by_id = {
+        map_obj.owner_id: map_obj.owner
+        for map_obj in all_maps
+        if map_obj.owner is not None
+    }
+    owners = sorted(owners_by_id.values(), key=lambda owner: owner.username.lower())
+    return render_template("admin/maps.html", maps=all_maps, owners=owners)
+
+
+@admin_bp.route("/maps/rename/<int:id>", methods=["POST"])
+def rename_map(id):
+    map_obj = Map.query.get_or_404(id)
+    name = (request.form.get("name") or "").strip()
+    if not name:
+        flash(_("Название карты обязательно"))
+        return redirect(url_for("admin.maps_list"))
+    if len(name) > 128:
+        flash(_("Название карты не должно превышать 128 символов"))
+        return redirect(url_for("admin.maps_list"))
+    try:
+        map_obj.name = name
+        db.session.commit()
+        map_service.invalidate_all_sidebar_caches()
+        admin_logger.info(f"Map renamed: ID={map_obj.id}, name={name}")
+        flash(_("Название карты обновлено"))
+    except Exception as e:
+        db.session.rollback()
+        admin_logger.error(f"Error renaming map: {e}")
+        flash(_("Ошибка при переименовании карты"))
+    return redirect(url_for("admin.maps_list"))
 
 
 @admin_bp.route("/maps/delete/<int:id>", methods=["POST"])

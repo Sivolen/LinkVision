@@ -4086,3 +4086,46 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 [data-theme="dark"] .users-role-admin { color: #bfdbfe; background: rgba(59, 130, 246, .22); border: 1px solid rgba(96, 165, 250, .30); }
 [data-theme="dark"] .users-role-operator { color: #99f6e4; background: rgba(20, 184, 166, .18); border: 1px solid rgba(45, 212, 191, .28); }
 [data-theme="dark"] .users-role-user { color: #d1d5db; background: rgba(148, 163, 184, .13); border: 1px solid rgba(148, 163, 184, .25); }
+
+
+/* ==========================================================================
+   ADMIN SELECT ALIGNMENT — consistent control geometry on Users and Maps
+   ========================================================================== */
+.users-page .form-select,
+.maps-page .form-select {
+    box-sizing: border-box;
+    display: block;
+    line-height: 1.25;
+    text-align: left;
+    vertical-align: middle;
+    padding-top: 0;
+    padding-bottom: 0;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+}
+
+.users-page .users-filter,
+.maps-page .maps-filter {
+    height: 36px;
+    min-height: 36px;
+    padding-left: 12px;
+    padding-right: 36px;
+    display: flex;
+    align-items: center;
+}
+
+.users-page .users-page-size,
+.maps-page .maps-page-size {
+    height: 30px;
+    min-height: 30px;
+    padding: 0 28px 0 9px;
+    line-height: 28px;
+}
+
+.users-page .users-modal .form-select {
+    min-height: 38px;
+    height: 38px;
+    padding: 0 36px 0 12px;
+    line-height: 36px;
+    background-position: right 0.75rem center;
+}
