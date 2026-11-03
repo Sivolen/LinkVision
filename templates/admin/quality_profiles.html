@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="settings-page">
+<div class="types-page-header"><div><h2>{{ _('Профили качества') }}</h2><p class="types-page-subtitle">{{ _('Пороги потерь, задержки и джиттера для оценки качества связи') }}</p></div>
+<button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#qualityProfileModal" id="addQualityProfileBtn"><i class="fas fa-plus"></i> {{ _('Добавить профиль') }}</button></div>
+<section class="settings-section"><div class="settings-section-body">
+<p class="text-muted small">{{ _('Профиль по умолчанию применяется ко всем устройствам без явно назначенного профиля. Другой профиль можно назначить в карточке устройства.') }}</p>
+<div class="quality-legend mb-3"><span class="quality-legend-item"><span class="quality-legend-dot quality-legend-degraded"></span>{{ _('Снижено') }}</span><span class="quality-legend-item"><span class="quality-legend-dot quality-legend-bad"></span>{{ _('Плохо') }}</span></div>
+<div class="table-responsive"><table class="types-table quality-profiles-table"><thead><tr><th>{{ _('Профиль') }}</th><th>{{ _('Потери, %%') }}</th><th>{{ _('Задержка, мс') }}</th><th>{{ _('Джиттер, мс') }}</th><th class="text-end">{{ _('Действия') }}</th></tr></thead><tbody>
+{% for profile in quality_profiles %}
+<tr><td><strong>{{ profile.name }}</strong> {% if profile.is_default %}<i class="far fa-star quality-default-star ms-2" role="img" aria-label="{{ _('Профиль по умолчанию') }}" title="{{ _('Профиль по умолчанию') }}"></i>{% endif %}</td><td>{{ profile.loss_degraded_percent }} / {{ profile.loss_bad_percent }}</td><td>{{ profile.latency_degraded_ms }} / {{ profile.latency_bad_ms }}</td><td>{{ profile.jitter_degraded_ms }} / {{ profile.jitter_bad_ms }}</td>
+<td class="text-end"><div class="table-actions justify-content-end">
+<button type="button" class="btn-action quality-edit-btn" title="{{ _('Изменить') }}" data-bs-toggle="modal" data-bs-target="#qualityProfileModal" data-id="{{ profile.id }}" data-name="{{ profile.name|e }}" data-loss-degraded="{{ profile.loss_degraded_percent }}" data-loss-bad="{{ profile.loss_bad_percent }}" data-latency-degraded="{{ profile.latency_degraded_ms }}" data-latency-bad="{{ profile.latency_bad_ms }}" data-jitter-degraded="{{ profile.jitter_degraded_ms }}" data-jitter-bad="{{ profile.jitter_bad_ms }}"><i class="fas fa-pen"></i></button>
+{% if not profile.is_default %}
+<form method="POST" action="{{ url_for('admin.set_default_quality_profile', profile_id=profile.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn-action" type="submit" title="{{ _('Сделать профилем по умолчанию') }}"><i class="fas fa-star"></i></button></form>
+<form method="POST" action="{{ url_for('admin.delete_quality_profile', profile_id=profile.id) }}" onsubmit="return confirm({{ _('Удалить профиль? Устройства с этим профилем вернутся на профиль по умолчанию.')|tojson }});"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn-action" type="submit" title="{{ _('Удалить') }}"><i class="fas fa-trash"></i></button></form>{% endif %}</div></td></tr>
+{% else %}<tr><td colspan="5" class="text-center text-muted py-4">{{ _('Профили ещё не созданы') }}</td></tr>{% endfor %}</tbody></table></div></div></section>
+<div class="modal fade" id="qualityProfileModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><form method="POST" id="qualityProfileForm" action="{{ url_for('admin.create_quality_profile') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="modal-header"><h5 class="modal-title" id="qualityProfileModalTitle">{{ _('Новый профиль качества') }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Закрыть') }}"></button></div>
+<div class="modal-body"><div class="mb-3"><label class="form-label" for="qualityName">{{ _('Название профиля') }}</label><input class="form-control" id="qualityName" name="name" maxlength="80" required></div><div class="row g-3">
+<div class="col-md-4"><label class="form-label">{{ _('Потери, %%') }}</label><div class="quality-threshold-pair"><input class="form-control" type="number" min="0" step="0.1" name="loss_degraded_percent" id="lossDegraded" required aria-label="{{ _('Снижено') }}"><span>/</span><input class="form-control" type="number" min="0" step="0.1" name="loss_bad_percent" id="lossBad" required aria-label="{{ _('Плохо') }}"></div></div>
+<div class="col-md-4"><label class="form-label">{{ _('Задержка, мс') }}</label><div class="quality-threshold-pair"><input class="form-control" type="number" min="0" step="1" name="latency_degraded_ms" id="latencyDegraded" required aria-label="{{ _('Снижено') }}"><span>/</span><input class="form-control" type="number" min="0" step="1" name="latency_bad_ms" id="latencyBad" required aria-label="{{ _('Плохо') }}"></div></div>
+<div class="col-md-4"><label class="form-label">{{ _('Джиттер, мс') }}</label><div class="quality-threshold-pair"><input class="form-control" type="number" min="0" step="1" name="jitter_degraded_ms" id="jitterDegraded" required aria-label="{{ _('Снижено') }}"><span>/</span><input class="form-control" type="number" min="0" step="1" name="jitter_bad_ms" id="jitterBad" required aria-label="{{ _('Плохо') }}"></div></div></div><p class="form-text">{{ _('Первое значение — порог состояния «Снижено», второе — «Плохо». Значение «Плохо» должно быть больше значения «Снижено».') }}</p></div>
+<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button><button type="submit" class="btn btn-primary">{{ _('Сохранить') }}</button></div></form></div></div></div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+ const form=document.getElementById('qualityProfileForm'), title=document.getElementById('qualityProfileModalTitle');
+ const createUrl={{ url_for('admin.create_quality_profile')|tojson }}, updateUrl={{ url_for('admin.update_quality_profile', profile_id=0)|tojson }};
+ const fields=['qualityName','lossDegraded','lossBad','latencyDegraded','latencyBad','jitterDegraded','jitterBad'];
+ function fill(v){fields.forEach(k=>{document.getElementById(k).value=v[k] ?? '';});}
+ document.getElementById('addQualityProfileBtn').addEventListener('click',()=>{form.action=createUrl;title.textContent={{ _('Новый профиль качества')|tojson }};form.reset();fill({qualityName:'',lossDegraded:'1',lossBad:'5',latencyDegraded:'50',latencyBad:'100',jitterDegraded:'10',jitterBad:'30'});});
+ document.querySelectorAll('.quality-edit-btn').forEach(btn=>btn.addEventListener('click',()=>{const d=btn.dataset;form.action=updateUrl.replace(/0$/,d.id);title.textContent={{ _('Редактирование профиля')|tojson }};fill({qualityName:d.name,lossDegraded:d.lossDegraded,lossBad:d.lossBad,latencyDegraded:d.latencyDegraded,latencyBad:d.latencyBad,jitterDegraded:d.jitterDegraded,jitterBad:d.jitterBad});}));
+});
+</script>
+</div>
+{% endblock %}
