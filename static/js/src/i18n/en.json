@@ -233,6 +233,8 @@
     "tree": "Tree",
     "force": "Force-directed",
     "applyPrompt": "Apply layout \"{name}\"",
+    "selectedDevicesPrompt": "for selected devices only ({count})",
+    "selectAtLeastTwo": "Select at least two devices for a partial layout",
     "dirTopBottom": "top to bottom",
     "dirBottomTop": "bottom to top",
     "dirLeftRight": "left to right",

@@ -233,6 +233,8 @@
     "tree": "Дерево",
     "force": "Силовой",
     "applyPrompt": "Применить раскладку \"{name}\"",
+    "selectedDevicesPrompt": "только для выбранных устройств ({count})",
+    "selectAtLeastTwo": "Для частичной раскладки выберите минимум два устройства",
     "dirTopBottom": "сверху вниз",
     "dirBottomTop": "снизу вверх",
     "dirLeftRight": "слева направо",
