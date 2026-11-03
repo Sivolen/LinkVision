@@ -323,7 +323,8 @@ def test_monitor_pool_size_is_configurable_not_cpu_bound():
 
     for setting_key, where in (
         ("monitor_max_workers", ROOT / "app.py"),
-        ("monitor_max_workers", ROOT / "templates/admin/settings.html"),
+        # Поле вынесено с общей страницы настроек на страницу мониторинга.
+        ("monitor_max_workers", ROOT / "templates/admin/monitoring_settings.html"),
         ("monitor_max_workers", ROOT / "services/settings_service.py"),
     ):
         assert setting_key in where.read_text(

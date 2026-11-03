@@ -151,12 +151,8 @@ msgid "Восстановление файла .db доступно только
 msgstr "Restoring .db files is available only for SQLite."
 
 #: blueprints/admin.py:481
-msgid ""
-"База данных успешно восстановлена. Резервная копия предыдущей БД "
-"сохранена как .bak."
-msgstr ""
-"The database was restored successfully. A backup of the previous database"
-" was saved as .bak."
+msgid "База данных успешно восстановлена. Резервная копия предыдущей БД сохранена как .bak."
+msgstr "The database was restored successfully. A backup of the previous database was saved as .bak."
 
 #: blueprints/admin.py:489
 msgid "Ошибка при восстановлении базы данных. Текущая база данных не изменена."
@@ -205,11 +201,11 @@ msgstr "Operator cannot create maps"
 
 #: templates/403.html:28
 msgid "У вашей учётной записи недостаточно прав для просмотра этой страницы."
-msgstr ""
+msgstr "Your account does not have enough permissions to view this page."
 
 #: templates/403.html:29
 msgid "Если вы считаете, что это ошибка, обратитесь к администратору."
-msgstr ""
+msgstr "If you believe this is an error, please contact the administrator."
 
 #: templates/403.html:33 templates/no_maps.html:7
 msgid "На главную"
@@ -253,11 +249,9 @@ msgstr "Too many requests"
 
 #: templates/429.html:204
 msgid ""
-"Вы отправили слишком много запросов. Пожалуйста, подождите несколько "
-"минут перед повторной попыткой."
-msgstr ""
-"You have sent too many requests. Please wait a few minutes before trying "
-"again."
+"Вы отправили слишком много запросов. Пожалуйста, подождите несколько минут перед повторной "
+"попыткой."
+msgstr "You have sent too many requests. Please wait a few minutes before trying again."
 
 #: templates/429.html:209
 #, python-format
@@ -269,21 +263,18 @@ msgid "На страницу входа"
 msgstr "To the login page"
 
 #: templates/base.html:44
-#, fuzzy
 msgid "Профиль пользователя"
-msgstr "Username"
+msgstr "User profile"
 
 #: templates/base.html:63 templates/base.html:177
 msgid "Карты"
 msgstr "Maps"
 
 #: templates/base.html:66 templates/base.html:87 templates/base.html:90
-#, fuzzy
 msgid "Действия с картами"
-msgstr "Actions"
+msgstr "Map actions"
 
-#: templates/base.html:69 templates/base.html:93 templates/base.html:307
-#: templates/dashboard.html:42
+#: templates/base.html:69 templates/base.html:93 templates/base.html:307 templates/dashboard.html:42
 msgid "Новая карта"
 msgstr "New map"
 
@@ -296,14 +287,12 @@ msgid "Импорт карты"
 msgstr "Import map"
 
 #: templates/base.html:116
-#, fuzzy
 msgid "Системные действия"
-msgstr "Actions"
+msgstr "System actions"
 
 #: templates/base.html:118
-#, fuzzy
 msgid "Переключить тему"
-msgstr "Toggle minimap"
+msgstr "Toggle theme"
 
 #: templates/base.html:119
 msgid "Тема"
@@ -315,7 +304,7 @@ msgstr "Log out"
 
 #: templates/base.html:130
 msgid "Язык"
-msgstr ""
+msgstr "Language"
 
 #: templates/base.html:150
 msgid "Администрирование"
@@ -338,12 +327,10 @@ msgid "Настройки"
 msgstr "Settings"
 
 #: templates/admin/quality_profiles.html:3 templates/base.html:169
-#, fuzzy
 msgid "Профили качества"
 msgstr "Quality profiles"
 
 #: templates/admin/settings.html:3 templates/base.html:174
-#, fuzzy
 msgid "Системные настройки"
 msgstr "System settings"
 
@@ -356,18 +343,16 @@ msgid "Название папки"
 msgstr "Folder name"
 
 #: templates/admin/quality_profiles.html:23 templates/admin/types.html:201
-#: templates/admin/users.html:124 templates/base.html:233
-#: templates/base.html:255 templates/base.html:317 templates/base.html:351
-#: templates/base.html:370 templates/dashboard.html:52
-#: templates/map_view.html:308 templates/map_view.html:423
-#: templates/map_view.html:626 templates/map_view.html:708
+#: templates/admin/users.html:124 templates/base.html:233 templates/base.html:255
+#: templates/base.html:317 templates/base.html:351 templates/base.html:370 templates/dashboard.html:52
+#: templates/map_view.html:308 templates/map_view.html:423 templates/map_view.html:626
+#: templates/map_view.html:708
 msgid "Отмена"
 msgstr "Cancel"
 
 #: templates/admin/quality_profiles.html:23 templates/admin/types.html:244
-#: templates/admin/users.html:125 templates/base.html:234
-#: templates/base.html:352 templates/map_view.html:311
-#: templates/map_view.html:427 templates/map_view.html:711
+#: templates/admin/users.html:125 templates/base.html:234 templates/base.html:352
+#: templates/map_view.html:311 templates/map_view.html:427 templates/map_view.html:711
 msgid "Сохранить"
 msgstr "Save"
 
@@ -388,8 +373,7 @@ msgid "Права на папку"
 msgstr "Folder permissions"
 
 #: templates/base.html:272 templates/base.html:278 templates/map_view.html:271
-#: templates/map_view.html:301 templates/map_view.html:731
-#: templates/map_view.html:744
+#: templates/map_view.html:301 templates/map_view.html:731 templates/map_view.html:744
 msgid "Загрузка..."
 msgstr "Loading..."
 
@@ -409,9 +393,8 @@ msgstr "Editor"
 msgid "Админ папки"
 msgstr "Folder admin"
 
-#: templates/admin/types.html:203 templates/admin/types.html:260
-#: templates/admin/users.html:31 templates/base.html:285
-#: templates/base.html:293
+#: templates/admin/types.html:203 templates/admin/types.html:260 templates/admin/users.html:31
+#: templates/base.html:285 templates/base.html:293
 msgid "Добавить"
 msgstr "Add"
 
@@ -459,11 +442,9 @@ msgstr "Confirmation"
 msgid "Вы уверены?"
 msgstr "Are you sure?"
 
-#: templates/admin/maps.html:29 templates/admin/quality_profiles.html:15
-#: templates/admin/types.html:130 templates/admin/users.html:76
-#: templates/base.html:371 templates/dashboard.html:22
-#: templates/map_view.html:316 templates/map_view.html:425
-#: templates/map_view.html:710
+#: templates/admin/maps.html:29 templates/admin/quality_profiles.html:15 templates/admin/types.html:130
+#: templates/admin/users.html:76 templates/base.html:371 templates/dashboard.html:22
+#: templates/map_view.html:316 templates/map_view.html:425 templates/map_view.html:710
 msgid "Удалить"
 msgstr "Delete"
 
@@ -475,9 +456,8 @@ msgstr "Success"
 msgid "только что"
 msgstr "just now"
 
-#: templates/admin/quality_profiles.html:18 templates/admin/types.html:171
-#: templates/base.html:383 templates/map_view.html:448
-#: templates/map_view.html:586 templates/map_view.html:782
+#: templates/admin/quality_profiles.html:18 templates/admin/types.html:171 templates/base.html:383
+#: templates/map_view.html:448 templates/map_view.html:586 templates/map_view.html:782
 msgid "Закрыть"
 msgstr "Close"
 
@@ -545,7 +525,7 @@ msgstr "No account? Sign up"
 
 #: templates/map_view.html:22
 msgid "Прокрутить панель влево"
-msgstr ""
+msgstr "Scroll panel left"
 
 #: templates/map_view.html:27
 msgid "Редактирование"
@@ -584,9 +564,8 @@ msgid "Пан"
 msgstr "Pan"
 
 #: templates/map_view.html:41
-#, fuzzy
 msgid "Выделение устройств"
-msgstr "Selection mode"
+msgstr "Device selection"
 
 #: templates/map_view.html:41
 msgid "Режим выделения устройств"
@@ -625,9 +604,8 @@ msgid "Уменьшить масштаб"
 msgstr "Zoom out"
 
 #: templates/map_view.html:66
-#, fuzzy
 msgid "Подогнать карту / сбросить масштаб"
-msgstr "Reset zoom"
+msgstr "Fit map / reset zoom"
 
 #: templates/map_view.html:72
 msgid "Элементы"
@@ -698,9 +676,8 @@ msgid "Поиск и фильтр"
 msgstr "SEARCH & FILTER"
 
 #: templates/map_view.html:102
-#, fuzzy
 msgid "Открыть поиск"
-msgstr "Open"
+msgstr "Open search"
 
 #: templates/map_view.html:107
 msgid "Поиск по имени, IP или типу..."
@@ -751,9 +728,8 @@ msgid "Блокировка"
 msgstr "LOCK"
 
 #: templates/map_view.html:130
-#, fuzzy
 msgid "Блокировка перемещения"
-msgstr "LOCK"
+msgstr "Lock device movement"
 
 #: templates/map_view.html:130
 msgid "Заблокировать или разблокировать перемещение устройств"
@@ -764,9 +740,8 @@ msgid "Доступ"
 msgstr "ACCESS"
 
 #: templates/map_view.html:137
-#, fuzzy
 msgid "Права доступа"
-msgstr "Access permissions:"
+msgstr "Access permissions"
 
 #: templates/map_view.html:137
 msgid "Управление правами доступа к карте"
@@ -798,7 +773,7 @@ msgstr "Toggle minimap"
 
 #: templates/map_view.html:156
 msgid "Прокрутить панель вправо"
-msgstr ""
+msgstr "Scroll panel right"
 
 #: templates/map_view.html:174
 msgid "Обзор карты"
@@ -864,8 +839,7 @@ msgstr "Group"
 msgid "-- Без группы --"
 msgstr "-- No group --"
 
-#: templates/map_view.html:243 templates/map_view.html:510
-#: templates/map_view.html:699
+#: templates/map_view.html:243 templates/map_view.html:510 templates/map_view.html:699
 msgid "Размер шрифта (px)"
 msgstr "Font size (px)"
 
@@ -887,11 +861,11 @@ msgstr "-- Default --"
 
 #: templates/map_view.html:257
 msgid ""
-"Пороги потерь/задержки/джиттера, при которых устройство считается "
-"\"снижено\" или \"плохо\". Управляются в Настройках."
+"Пороги потерь/задержки/джиттера, при которых устройство считается \"снижено\" или \"плохо\". "
+"Управляются в Настройках."
 msgstr ""
-"Loss/latency/jitter thresholds at which a device is considered "
-"\"degraded\" or \"bad\". Managed in Settings."
+"Loss/latency/jitter thresholds at which a device is considered \"degraded\" or \"bad\". Managed "
+"in Settings."
 
 #: templates/map_view.html:265
 msgid "Время"
@@ -933,8 +907,7 @@ msgstr "Neighbor interface"
 msgid "Тип линии"
 msgstr "Line type"
 
-#: templates/map_view.html:313 templates/map_view.html:429
-#: templates/map_view.html:526
+#: templates/map_view.html:313 templates/map_view.html:429 templates/map_view.html:526
 msgid "Сохранение..."
 msgstr "Saving..."
 
@@ -962,8 +935,7 @@ msgstr "-- Manual --"
 msgid "Цвет линии"
 msgstr "Line color"
 
-#: templates/map_view.html:393 templates/map_view.html:504
-#: templates/map_view.html:687
+#: templates/map_view.html:393 templates/map_view.html:504 templates/map_view.html:687
 msgid "Свой цвет"
 msgstr "Custom color"
 
@@ -1047,13 +1019,11 @@ msgstr "Existing groups"
 msgid "Поиск по названию..."
 msgstr "Search by name..."
 
-#: templates/admin/maps.html:9 templates/admin/types.html:90
-#: templates/map_view.html:556
+#: templates/admin/maps.html:9 templates/admin/types.html:90 templates/map_view.html:556
 msgid "Название"
 msgstr "Name"
 
-#: templates/map_view.html:557 templates/map_view.html:666
-#: templates/map_view.html:668
+#: templates/map_view.html:557 templates/map_view.html:666 templates/map_view.html:668
 msgid "Цвет"
 msgstr "Color"
 
@@ -1061,9 +1031,8 @@ msgstr "Color"
 msgid "Устройств"
 msgstr "Devices"
 
-#: templates/admin/maps.html:12 templates/admin/quality_profiles.html:8
-#: templates/admin/types.html:95 templates/admin/users.html:46
-#: templates/map_view.html:559
+#: templates/admin/maps.html:12 templates/admin/quality_profiles.html:8 templates/admin/types.html:95
+#: templates/admin/users.html:46 templates/map_view.html:559
 msgid "Действия"
 msgstr "Actions"
 
@@ -1079,8 +1048,7 @@ msgstr "Create your first group above"
 msgid "Редактировать выбранные устройства"
 msgstr "Edit selected devices"
 
-#: templates/map_view.html:603 templates/map_view.html:609
-#: templates/map_view.html:617
+#: templates/map_view.html:603 templates/map_view.html:609 templates/map_view.html:617
 msgid "-- Не изменять --"
 msgstr "-- Keep unchanged --"
 
@@ -1152,8 +1120,7 @@ msgstr "Access permissions:"
 msgid "Текущие права доступа"
 msgstr "Current access permissions"
 
-#: templates/admin/users.html:24 templates/admin/users.html:111
-#: templates/map_view.html:742
+#: templates/admin/users.html:24 templates/admin/users.html:111 templates/map_view.html:742
 msgid "Пользователь"
 msgstr "User"
 
@@ -1202,12 +1169,8 @@ msgid "Нет доступных карт"
 msgstr "No maps available"
 
 #: templates/no_maps.html:5
-msgid ""
-"В системе пока нет ни одной карты. Обратитесь к администратору для "
-"создания карты."
-msgstr ""
-"There are no maps in the system yet. Contact the administrator to create "
-"one."
+msgid "В системе пока нет ни одной карты. Обратитесь к администратору для создания карты."
+msgstr "There are no maps in the system yet. Contact the administrator to create one."
 
 #: templates/no_maps.html:7
 msgid "Вы можете вернуться на главную страницу позже."
@@ -1255,11 +1218,11 @@ msgstr "Restore from file"
 
 #: templates/admin/backups.html:26 templates/admin/settings.html:18
 msgid ""
-"Внимание! Восстановление заменит текущую базу данных. Все текущие данные "
-"будут потеряны. Рекомендуется предварительно сделать резервную копию."
+"Внимание! Восстановление заменит текущую базу данных. Все текущие данные будут потеряны. "
+"Рекомендуется предварительно сделать резервную копию."
 msgstr ""
-"Warning! Restoring will replace the current database. All current data "
-"will be lost. It is recommended to make a backup first."
+"Warning! Restoring will replace the current database. All current data will be lost. It is "
+"recommended to make a backup first."
 
 #: templates/admin/backups.html:29 templates/admin/settings.html:23
 msgid "Выберите файл базы данных (.db)"
@@ -1286,7 +1249,6 @@ msgid "Настройки мониторинга"
 msgstr "Monitoring settings"
 
 #: templates/admin/monitoring_settings.html:3
-#, fuzzy
 msgid "Параметры проверки доступности устройств"
 msgstr "Device availability check parameters"
 
@@ -1324,23 +1286,17 @@ msgstr "Monitoring threads"
 
 #: templates/admin/monitoring_settings.html:29
 msgid ""
-"Количество параллельных проверок устройств. Применяется со следующего "
-"цикла. По умолчанию — 150, максимум — 300."
-msgstr ""
-"Number of devices checked in parallel. Takes effect from the next cycle. "
-"Default 150, maximum 300."
+"Количество параллельных проверок устройств. Применяется со следующего цикла. По умолчанию — 150, "
+"максимум — 300."
+msgstr "Number of devices checked in parallel. Takes effect from the next cycle. Default 150, maximum 300."
 
 #: templates/admin/monitoring_settings.html:32
 msgid "Хранить историю мониторинга (дни)"
 msgstr "Keep monitoring history (days)"
 
 #: templates/admin/monitoring_settings.html:34
-msgid ""
-"Хранится история UP/DOWN и пятиминутные агрегаты качества ICMP. По "
-"умолчанию — 7 дней."
-msgstr ""
-"UP/DOWN history and five-minute ICMP quality aggregates are kept here. "
-"Default is 7 days."
+msgid "Хранится история UP/DOWN и пятиминутные агрегаты качества ICMP. По умолчанию — 7 дней."
+msgstr "UP/DOWN history and five-minute ICMP quality aggregates are kept here. Default is 7 days."
 
 #: templates/admin/monitoring_settings.html:38
 msgid "Сохранить настройки"
@@ -1348,32 +1304,25 @@ msgstr "Save settings"
 
 #: templates/admin/quality_profiles.html:3
 msgid "Пороги потерь, задержки и джиттера для оценки качества связи"
-msgstr ""
+msgstr "Packet loss, latency and jitter thresholds used to assess link quality"
 
 #: templates/admin/quality_profiles.html:4
-#, fuzzy
 msgid "Добавить профиль"
 msgstr "Add profile"
 
 #: templates/admin/quality_profiles.html:6
-#, fuzzy
 msgid ""
-"Профиль по умолчанию применяется ко всем устройствам без явно "
-"назначенного профиля. Другой профиль можно назначить в карточке "
-"устройства."
-msgstr "Default profile for all devices without an explicitly assigned profile"
+"Профиль по умолчанию применяется ко всем устройствам без явно назначенного профиля. Другой "
+"профиль можно назначить в карточке устройства."
+msgstr "The default profile applies to all devices without an explicitly assigned profile. A different profile can be assigned in the device card."
 
-#: templates/admin/quality_profiles.html:7
-#: templates/admin/quality_profiles.html:20
-#: templates/admin/quality_profiles.html:21
-#: templates/admin/quality_profiles.html:22
+#: templates/admin/quality_profiles.html:7 templates/admin/quality_profiles.html:20
+#: templates/admin/quality_profiles.html:21 templates/admin/quality_profiles.html:22
 msgid "Снижено"
 msgstr "Degraded"
 
-#: templates/admin/quality_profiles.html:7
-#: templates/admin/quality_profiles.html:20
-#: templates/admin/quality_profiles.html:21
-#: templates/admin/quality_profiles.html:22
+#: templates/admin/quality_profiles.html:7 templates/admin/quality_profiles.html:20
+#: templates/admin/quality_profiles.html:21 templates/admin/quality_profiles.html:22
 msgid "Плохо"
 msgstr "Bad"
 
@@ -1381,19 +1330,16 @@ msgstr "Bad"
 msgid "Профиль"
 msgstr "Profile"
 
-#: templates/admin/quality_profiles.html:8
-#: templates/admin/quality_profiles.html:20
+#: templates/admin/quality_profiles.html:8 templates/admin/quality_profiles.html:20
 #, python-format
 msgid "Потери, %%"
 msgstr "Loss, %%"
 
-#: templates/admin/quality_profiles.html:8
-#: templates/admin/quality_profiles.html:21
+#: templates/admin/quality_profiles.html:8 templates/admin/quality_profiles.html:21
 msgid "Задержка, мс"
 msgstr "Latency, ms"
 
-#: templates/admin/quality_profiles.html:8
-#: templates/admin/quality_profiles.html:22
+#: templates/admin/quality_profiles.html:8 templates/admin/quality_profiles.html:22
 msgid "Джиттер, мс"
 msgstr "Jitter, ms"
 
@@ -1402,44 +1348,36 @@ msgid "По умолчанию"
 msgstr "Default"
 
 #: templates/admin/quality_profiles.html:12
-#, fuzzy
 msgid "Изменить"
-msgstr "Apply"
+msgstr "Edit"
 
 #: templates/admin/quality_profiles.html:14
 msgid "Сделать профилем по умолчанию"
 msgstr "Set as default profile"
 
 #: templates/admin/quality_profiles.html:15
-msgid ""
-"Удалить профиль? Устройства с этим профилем вернутся на профиль по "
-"умолчанию."
+msgid "Удалить профиль? Устройства с этим профилем вернутся на профиль по умолчанию."
 msgstr "Delete profile? Devices using it will fall back to the default profile."
 
 #: templates/admin/quality_profiles.html:16
-#, fuzzy
 msgid "Профили ещё не созданы"
 msgstr "No profiles have been created yet"
 
-#: templates/admin/quality_profiles.html:18
-#: templates/admin/quality_profiles.html:30
-#, fuzzy
+#: templates/admin/quality_profiles.html:18 templates/admin/quality_profiles.html:30
 msgid "Новый профиль качества"
 msgstr "New quality profile"
 
 #: templates/admin/quality_profiles.html:19
-#, fuzzy
 msgid "Название профиля"
 msgstr "Profile name"
 
 #: templates/admin/quality_profiles.html:22
 msgid ""
-"Первое значение — порог состояния «Снижено», второе — «Плохо». Значение "
-"«Плохо» должно быть больше значения «Снижено»."
-msgstr ""
+"Первое значение — порог состояния «Снижено», второе — «Плохо». Значение «Плохо» должно быть "
+"больше значения «Снижено»."
+msgstr "The first value is the threshold for the \"Degraded\" state, the second one for \"Bad\". The \"Bad\" value must be greater than the \"Degraded\" value."
 
 #: templates/admin/quality_profiles.html:31
-#, fuzzy
 msgid "Редактирование профиля"
 msgstr "Edit profile"
 
@@ -1453,11 +1391,11 @@ msgstr "Reset limits"
 
 #: templates/admin/settings.html:38
 msgid ""
-"Если пользователи жалуются на «Слишком много запросов» (ошибка 429), "
-"нажмите кнопку ниже для сброса счётчиков."
+"Если пользователи жалуются на «Слишком много запросов» (ошибка 429), нажмите кнопку ниже для "
+"сброса счётчиков."
 msgstr ""
-"If users complain about \"Too many requests\" (error 429), click the "
-"button below to reset the counters."
+"If users complain about \"Too many requests\" (error 429), click the button below to reset the "
+"counters."
 
 #: templates/admin/settings.html:43
 msgid "Сбросить счётчики"
@@ -1509,7 +1447,7 @@ msgstr "No device types have been added yet"
 
 #: templates/admin/types.html:140
 msgid "По вашему запросу ничего не найдено"
-msgstr "No matching results found"
+msgstr "No users match your search"
 
 #: templates/admin/types.html:143
 msgid "Пагинация типов устройств"
@@ -1552,12 +1490,8 @@ msgid "Иконка устройства"
 msgstr "Device icon"
 
 #: templates/admin/types.html:194
-msgid ""
-"Выберите изображение. При редактировании оставьте поле пустым, чтобы "
-"сохранить текущую иконку."
-msgstr ""
-"Choose an image. When editing, leave this field empty to keep the current"
-" icon."
+msgid "Выберите изображение. При редактировании оставьте поле пустым, чтобы сохранить текущую иконку."
+msgstr "Choose an image. When editing, leave this field empty to keep the current icon."
 
 #: templates/admin/types.html:195
 msgid "Текущая иконка будет сохранена"
@@ -1599,8 +1533,7 @@ msgstr "User management"
 msgid "Добавить нового пользователя"
 msgstr "Add a new user"
 
-#: templates/admin/users.html:14 templates/admin/users.html:42
-#: templates/admin/users.html:97
+#: templates/admin/users.html:14 templates/admin/users.html:42 templates/admin/users.html:97
 msgid "Имя пользователя"
 msgstr "Username"
 
@@ -1608,8 +1541,7 @@ msgstr "Username"
 msgid "Пароль"
 msgstr "Password"
 
-#: templates/admin/users.html:25 templates/admin/users.html:44
-#: templates/admin/users.html:115
+#: templates/admin/users.html:25 templates/admin/users.html:44 templates/admin/users.html:115
 msgid "Оператор"
 msgstr "Operator"
 
@@ -1657,6 +1589,45 @@ msgstr "Repeat new password"
 msgid "Сменить пароль"
 msgstr "Change password"
 
+msgid "Создание и управление учётными записями системы"
+msgstr "Create and manage system accounts"
+
+msgid "Добавить пользователя"
+msgstr "Add user"
+
+msgid "Поиск по имени пользователя или ID"
+msgstr "Search by username or ID"
+
+msgid "Поиск пользователей"
+msgstr "Search users"
+
+msgid "Фильтр по роли"
+msgstr "Filter by role"
+
+msgid "Все роли"
+msgstr "All roles"
+
+msgid "Сбросить фильтры"
+msgstr "Reset filters"
+
+msgid "Пользователи ещё не добавлены"
+msgstr "No users have been added yet"
+
+msgid "Пагинация пользователей"
+msgstr "User pagination"
+
+msgid "Создание новой учётной записи"
+msgstr "Create a new account"
+
+msgid "Показать пароль"
+msgstr "Show password"
+
+msgid "Редактирование пользователя"
+msgstr "Edit user"
+
+msgid "Измените имя, пароль или роль учётной записи"
+msgstr "Change the username, password, or account role"
+
 #~ msgid "Джиттер, мс (снижено/плохо)"
 #~ msgstr "Jitter, ms (degraded/bad)"
 
@@ -1681,12 +1652,8 @@ msgstr "Change password"
 #~ msgid "Воркеров мониторинга"
 #~ msgstr "Monitoring workers"
 
-#~ msgid ""
-#~ "Одновременных ICMP-проверок. Применяется после "
-#~ "перезапуска сервиса. По умолчанию — 150."
-#~ msgstr ""
-#~ "Concurrent ICMP checks. Applied after "
-#~ "restarting the service. Default is 150."
+#~ msgid "Одновременных ICMP-проверок. Применяется после перезапуска сервиса. По умолчанию — 150."
+#~ msgstr "Concurrent ICMP checks. Applied after restarting the service. Default is 150."
 
 #~ msgid "Доступ запрещен. Требуются права администратора."
 #~ msgstr "Access denied. Administrator rights required."
@@ -1695,36 +1662,27 @@ msgstr "Change password"
 #~ msgstr "The database file is corrupted or is not a valid SQLite database."
 
 #~ msgid ""
-#~ "Резервная копия несовместима с текущей "
-#~ "версией LinkVision: отсутствуют таблицы "
-#~ "({tables}). Текущая база данных не "
+#~ "Резервная копия несовместима с текущей версией LinkVision:"
+#~ " отсутствуют таблицы ({tables}). Текущая база данных не"
+#~ " изменена."
+#~ msgstr ""
+#~ "The backup is incompatible with the current "
+#~ "LinkVision version: missing tables ({tables}). The current"
+#~ " database was not changed."
+
+#~ msgid ""
+#~ "Резервная копия создана в несовместимой версии LinkVision."
+#~ " Отсутствуют поля: {fields}. Текущая база данных не "
 #~ "изменена."
 #~ msgstr ""
-#~ "The backup is incompatible with the "
-#~ "current LinkVision version: missing tables "
-#~ "({tables}). The current database was not"
-#~ " changed."
-
-#~ msgid ""
-#~ "Резервная копия создана в несовместимой "
-#~ "версии LinkVision. Отсутствуют поля: {fields}."
-#~ " Текущая база данных не изменена."
-#~ msgstr ""
-#~ "The backup was created by an "
-#~ "incompatible LinkVision version. Missing "
-#~ "fields: {fields}. The current database "
-#~ "was not changed."
+#~ "The backup was created by an incompatible LinkVision"
+#~ " version. Missing fields: {fields}. The current "
+#~ "database was not changed."
 
 #~ msgid "Не удалось проверить файл базы данных. Текущая база данных не изменена."
-#~ msgstr ""
-#~ "The database file could not be "
-#~ "validated. The current database was not"
-#~ " changed."
+#~ msgstr "The database file could not be validated. The current database was not changed."
 
-#~ msgid ""
-#~ "База данных восстановлена. Пожалуйста, "
-#~ "перезапустите приложение для применения "
-#~ "изменений."
+#~ msgid "База данных восстановлена. Пожалуйста, перезапустите приложение для применения изменений."
 #~ msgstr "Database restored. Please restart the application to apply the changes."
 
 #~ msgid "Ошибка при восстановлении базы данных"
@@ -1740,21 +1698,18 @@ msgstr "Change password"
 #~ msgstr "Manage access permissions"
 
 #~ msgid ""
-#~ "Пороги, при которых устройство считается "
-#~ "\"снижено\" (degraded) или \"плохо\" (bad) "
-#~ "по потерям/задержке/джиттеру. Профиль \"По "
-#~ "умолчанию\" действует на все устройства "
-#~ "без явно назначенного профиля — "
-#~ "назначить другой профиль конкретному "
-#~ "устройству можно в его карточке."
+#~ "Пороги, при которых устройство считается \"снижено\" "
+#~ "(degraded) или \"плохо\" (bad) по потерям/задержке/джиттеру. "
+#~ "Профиль \"По умолчанию\" действует на все устройства "
+#~ "без явно назначенного профиля — назначить другой "
+#~ "профиль конкретному устройству можно в его карточке."
 #~ msgstr ""
-#~ "Thresholds at which a device is "
-#~ "considered \"degraded\" or \"bad\" by "
-#~ "loss/latency/jitter. The \"Default\" profile "
-#~ "applies to all devices without an "
-#~ "explicitly assigned profile — a "
-#~ "different profile can be assigned to "
-#~ "a specific device from its card."
+#~ "Thresholds at which a device is considered "
+#~ "\"degraded\" or \"bad\" by loss/latency/jitter. The "
+#~ "\"Default\" profile applies to all devices without "
+#~ "an explicitly assigned profile — a different profile"
+#~ " can be assigned to a specific device from "
+#~ "its card."
 
 #~ msgid "такой же оранжевый ободок, как у устройства на карте"
 #~ msgstr "same orange ring as a device on the map"

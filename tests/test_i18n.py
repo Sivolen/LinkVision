@@ -242,37 +242,61 @@ class TestBatch5Admin:
                 html = render_template("admin/users.html", users=[])
         assert 'lang="en"' in html
         assert "User management" in html  # заголовок
-        assert "Add a new user" in html
+        assert "Add user" in html  # кнопка «Добавить пользователя»
         assert "Registration date" in html  # шапка таблицы
         assert "Управление пользователями" not in html
 
     def test_admin_settings_translated_en(self, app):
+        # /admin/settings — только обслуживание БД и сброс rate limit: поля
+        # мониторинга и профили качества вынесены на отдельные страницы.
         from flask import render_template
         from flask_babel import force_locale
 
         with app.test_request_context("/admin/settings"):
             with force_locale("en"):
+                html = render_template("admin/settings.html", db_size=0, db_mtime=None)
+        assert "System settings" in html  # заголовок
+        assert "Backup" in html  # секция резервного копирования
+        assert "Unknown" in html  # db_mtime=None → «Неизвестно»
+        assert "Reset limits" in html
+        assert "Системные настройки" not in html
+
+    def test_admin_monitoring_settings_translated_en(self, app):
+        # Реальный роут (blueprints/admin.py::monitoring_settings) передаёт ровно
+        # этот контекст — тест должен рендерить с тем же контрактом.
+        from flask import render_template
+        from flask_babel import force_locale
+
+        with app.test_request_context("/admin/monitoring/settings"):
+            with force_locale("en"):
                 html = render_template(
-                    "admin/settings.html",
+                    "admin/monitoring_settings.html",
                     count=4,
                     interval=10,
                     timeout=1.0,
                     history_retention_days=7,
                     monitor_max_workers=150,
-                    db_size=0,
-                    db_mtime=None,
-                    # Реальный роут (blueprints/admin.py::settings) всегда передаёт
-                    # quality_profiles — тест должен рендерить с тем же контрактом,
-                    # а не только с исторической частью контекста.
-                    quality_profiles=[],
                 )
-        assert "Monitoring settings" in html
-        assert "Unknown" in html  # db_mtime=None → «Неизвестно»
-        assert "Reset limits" in html
-        assert "Connection quality profiles" in html  # заголовок нового блока
+        assert "Monitoring settings" in html  # заголовок
         assert "ICMP timeout" in html  # поле ping_timeout
         assert "Keep monitoring history" in html  # поле history_retention_days
         assert "Monitoring threads" in html  # поле monitor_max_workers
+
+    def test_admin_quality_profiles_translated_en(self, app):
+        # Реальный роут (blueprints/admin.py::quality_profiles) — см. контракт контекста.
+        from flask import render_template
+        from flask_babel import force_locale
+
+        with app.test_request_context("/admin/monitoring/quality-profiles"):
+            with force_locale("en"):
+                html = render_template(
+                    "admin/quality_profiles.html", quality_profiles=[]
+                )
+        assert "Quality profiles" in html  # заголовок
+        assert "Add profile" in html
+        assert "Profile name" in html
+        assert "Degraded" in html  # легенда порогов
+        assert "Профили качества" not in html
 
 
 class TestCatalogIntegrity:

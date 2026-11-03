@@ -4015,3 +4015,74 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   vertical-align: .05em;
   opacity: .9;
 }
+
+
+/* User management page — aligned with the Device Types admin page. */
+
+.users-page{width:100%;max-width:none;min-width:0;margin:0;color:var(--text-primary)}
+.users-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 18px}
+.users-page-header h2{margin:0 0 4px;color:var(--text-primary);font-size:21px;font-weight:650}
+.users-page-subtitle{margin:0;color:var(--text-secondary);font-size:12px}
+.users-add-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 14px;border:1px solid var(--accent-color);border-radius:8px;background:var(--accent-color);color:#fff;font-size:12px;font-weight:600;white-space:nowrap;transition:background .15s,border-color .15s}
+.users-add-btn:hover,.users-add-btn:focus-visible{background:var(--accent-hover);border-color:var(--accent-hover);color:#fff}
+.users-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px;margin-bottom:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px}
+.users-search{position:relative;flex:1 1 260px;max-width:420px;min-width:180px}
+.users-search>i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-secondary);font-size:12px;pointer-events:none}
+.users-search .form-control{height:36px;padding-left:34px;font-size:13px}
+.users-filter{flex:0 1 210px;min-width:160px;height:36px;font-size:12px;border-color:var(--border-color);background:var(--bg-primary);color:var(--text-primary)}
+.users-reset-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:6px 11px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-secondary);font-size:11px;font-weight:600}
+.users-reset-btn:hover{border-color:var(--accent-color);color:var(--accent-color)}
+.users-table-wrap{width:100%;min-width:0;overflow:hidden;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px}
+.users-table{width:100%;margin:0;border-collapse:separate;border-spacing:0;font-size:13px}
+.users-table thead th{padding:11px 14px;background:var(--bg-primary);color:var(--text-secondary);border-bottom:1px solid var(--border-color);font-size:10px;font-weight:700;letter-spacing:.045em;text-transform:uppercase;white-space:nowrap}
+.users-table tbody td{height:48px;padding:8px 14px;vertical-align:middle;color:var(--text-primary);border-bottom:1px solid var(--border-color)}
+.users-table tbody tr:last-child td{border-bottom:0}
+.users-table tbody tr:hover{background:var(--bg-primary)}
+.users-id{color:var(--text-secondary)!important;font-weight:650;font-variant-numeric:tabular-nums}
+.users-name{font-weight:600}
+.users-role-badge{display:inline-flex;align-items:center;min-height:22px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.users-role-admin{color:#245f91;background:rgba(70,130,180,.15)}
+.users-role-operator{color:#16745b;background:rgba(25,135,84,.13)}
+.users-role-user{color:var(--text-secondary);background:var(--bg-primary);border:1px solid var(--border-color)}
+.users-date{color:var(--text-secondary);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.users-actions{display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.users-actions .btn-action{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border-color);border-radius:8px;background:transparent;color:var(--text-secondary)}
+.users-actions .btn-action:hover{background:var(--accent-color);color:#fff;border-color:var(--accent-color)}
+.users-actions .btn-action-danger:hover{background:#dc3545;border-color:#dc3545;color:#fff}
+.users-empty{padding:34px 16px!important;text-align:center;color:var(--text-secondary)!important}
+.users-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-top:1px solid var(--border-color);background:var(--bg-secondary)}
+.users-pagination-info{color:var(--text-secondary);font-size:11px;white-space:nowrap}
+.users-pagination-controls{display:flex;align-items:center;gap:4px}
+.users-page-size{width:auto;min-width:68px;height:30px;padding:3px 25px 3px 8px;font-size:11px;border-color:var(--border-color);background:var(--bg-primary);color:var(--text-primary)}
+.users-page-btn{min-width:30px;height:30px;padding:0 8px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--text-secondary);font-size:11px}
+.users-page-btn:hover:not(:disabled){background:var(--bg-primary);color:var(--text-primary)}
+.users-page-btn.active{background:var(--accent-color);border-color:var(--accent-color);color:#fff}
+.users-page-btn:disabled{opacity:.35;cursor:default}
+.users-page-ellipsis{padding:0 4px;color:var(--text-secondary);font-size:11px}
+.users-modal .modal-content{overflow:hidden;border:1px solid var(--border-color);border-radius:14px;background:var(--bg-secondary);color:var(--text-primary)}
+.users-modal .modal-header,.users-modal .modal-footer{padding:15px 18px;border-color:var(--border-color)}
+.users-modal .modal-title{color:var(--text-primary);font-size:16px;font-weight:650}
+.users-modal .modal-subtitle{margin-top:3px;color:var(--text-secondary);font-size:11px}
+.users-modal .modal-body{padding:18px}
+.users-modal .form-label{margin-bottom:6px;color:var(--text-secondary);font-size:12px;font-weight:600}
+.users-modal .form-control,.users-modal .form-select{min-height:38px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:13px;box-shadow:none}
+.users-modal .form-control:focus,.users-modal .form-select:focus{border-color:var(--accent-color);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent-color) 14%,transparent)}
+.users-modal .modal-footer .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600}
+.users-modal .btn-primary{border-color:var(--accent-color);background:var(--accent-color);color:#fff}
+.users-modal .btn-primary:hover{border-color:var(--accent-hover);background:var(--accent-hover);color:#fff}
+.users-modal .btn-secondary{border-color:var(--border-color);background:var(--bg-primary);color:var(--text-secondary)}
+.users-modal .btn-secondary:hover{border-color:var(--text-secondary);background:var(--bg-primary);color:var(--text-primary)}
+.users-password-wrap{position:relative}
+.users-password-wrap .form-control{padding-right:42px}
+.users-password-toggle{position:absolute;top:50%;right:10px;transform:translateY(-50%);padding:5px;border:0;background:transparent;color:var(--text-secondary);cursor:pointer}
+.users-password-toggle:hover{color:var(--accent-color)}
+@media(max-width:900px){.users-table-wrap{overflow-x:auto}.users-table{min-width:760px}}
+@media(max-width:600px){.users-page-header{align-items:stretch;flex-direction:column}.users-page-header h2{font-size:18px}.users-add-btn{align-self:flex-start}.users-toolbar{align-items:stretch;padding:9px}.users-search,.users-filter{flex:1 1 100%;max-width:none}.users-reset-btn{align-self:flex-start}.users-pagination{align-items:flex-start;flex-direction:column}.users-pagination-controls{width:100%;justify-content:flex-end;flex-wrap:wrap}}
+
+
+
+/* Improve role badge contrast in the dark theme. */
+[data-theme="dark"] .users-role-badge { font-weight: 650; }
+[data-theme="dark"] .users-role-admin { color: #bfdbfe; background: rgba(59, 130, 246, .22); border: 1px solid rgba(96, 165, 250, .30); }
+[data-theme="dark"] .users-role-operator { color: #99f6e4; background: rgba(20, 184, 166, .18); border: 1px solid rgba(45, 212, 191, .28); }
+[data-theme="dark"] .users-role-user { color: #d1d5db; background: rgba(148, 163, 184, .13); border: 1px solid rgba(148, 163, 184, .25); }

@@ -1,197 +1,129 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h2 class="page-title">👥 {{ _('Управление пользователями') }}</h2>
-
-<!-- Карточка создания нового пользователя -->
-<div class="admin-card">
-    <div class="card-header">
-        <i class="fas fa-plus"></i> {{ _('Добавить нового пользователя') }}
-    </div>
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('admin.create_user') }}" class="row g-2" autocomplete="off">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
-            <div class="col-md-4">
-                <input type="text" name="username" class="form-control" placeholder="{{ _('Имя пользователя') }}" required>
-            </div>
-            <div class="col-md-4">
-                <div class="password-field-wrapper">
-                    <input type="password" name="password" id="create_password" class="form-control" placeholder="{{ _('Пароль') }}" required autocomplete="new-password">
-                    <i class="fas fa-eye toggle-password" onclick="togglePassword('create_password')"></i>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <select name="role" class="form-select">
-                    <option value="user" selected>{{ _('Пользователь') }}</option>
-                    <option value="operator">{{ _('Оператор') }}</option>
-                    <option value="admin">{{ _('Администратор') }}</option>
-                </select>
-            </div>
-            <div class="col-md-1">
-                <button type="submit" class="btn btn-success w-100">
-                    <i class="fas fa-save"></i> {{ _('Добавить') }}
-                </button>
-            </div>
-        </form>
-    </div>
+<div class="users-page" id="usersPage"
+ data-label-shown="{{ _('Показано') }}" data-label-of="{{ _('из') }}" data-label-page="{{ _('Страница') }}">
+ <div class="users-page-header">
+  <div><h2>{{ _('Управление пользователями') }}</h2><p class="users-page-subtitle">{{ _('Создание и управление учётными записями системы') }}</p></div>
+  <button type="button" class="users-add-btn" id="openCreateUser"><i class="fas fa-plus" aria-hidden="true"></i>{{ _('Добавить пользователя') }}</button>
+ </div>
+ <div class="users-toolbar">
+  <div class="users-search"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="usersSearch" class="form-control" placeholder="{{ _('Поиск по имени пользователя или ID') }}" aria-label="{{ _('Поиск пользователей') }}"></div>
+  <select id="usersRoleFilter" class="form-select users-filter" aria-label="{{ _('Фильтр по роли') }}">
+   <option value="all">{{ _('Все роли') }}</option><option value="admin">{{ _('Администратор') }}</option><option value="operator">{{ _('Оператор') }}</option><option value="user">{{ _('Пользователь') }}</option>
+  </select>
+  <button type="button" class="users-reset-btn" id="usersReset"><i class="fas fa-rotate-left" aria-hidden="true"></i>{{ _('Сбросить фильтры') }}</button>
+ </div>
+ <div class="users-table-wrap">
+  <table class="users-table" id="usersTable">
+   <thead><tr><th style="width:80px">ID</th><th>{{ _('Имя пользователя') }}</th><th style="width:180px">{{ _('Роль') }}</th><th style="width:190px">{{ _('Дата регистрации') }}</th><th style="width:110px;text-align:right">{{ _('Действия') }}</th></tr></thead>
+   <tbody id="usersTableBody">
+   {% for user in users %}
+    {% set role = 'admin' if user.is_admin else ('operator' if user.is_operator else 'user') %}
+    <tr class="users-row" data-user-id="{{ user.id }}" data-username="{{ user.username|lower }}" data-role="{{ role }}">
+     <td class="users-id">#{{ user.id }}</td><td class="users-name">{{ user.username }}</td>
+     <td>{% if user.is_admin %}<span class="users-role-badge users-role-admin">{{ _('Администратор') }}</span>{% elif user.is_operator %}<span class="users-role-badge users-role-operator">{{ _('Оператор') }}</span>{% else %}<span class="users-role-badge users-role-user">{{ _('Пользователь') }}</span>{% endif %}</td>
+     <td class="users-date">{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '—' }}</td>
+     <td><div class="users-actions">
+      <button type="button" class="btn-action js-edit-user" data-username="{{ user.username }}" data-role="{{ role }}" data-edit-url="{{ url_for('admin.edit_user', id=user.id) }}" title="{{ _('Редактировать') }}" aria-label="{{ _('Редактировать') }}"><i class="fas fa-pen" aria-hidden="true"></i></button>
+      <form method="POST" action="{{ url_for('admin.delete_user', id=user.id) }}" class="m-0"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn-action btn-action-danger" data-confirm-delete="user" title="{{ _('Удалить') }}" aria-label="{{ _('Удалить') }}"><i class="fas fa-trash" aria-hidden="true"></i></button></form>
+     </div></td>
+    </tr>
+   {% else %}<tr><td colspan="5" class="users-empty">{{ _('Пользователи ещё не добавлены') }}</td></tr>{% endfor %}
+    <tr id="usersNoResults" hidden><td colspan="5" class="users-empty">{{ _('По вашему запросу ничего не найдено') }}</td></tr>
+   </tbody>
+  </table>
+  <div class="users-pagination" id="usersPagination" aria-label="{{ _('Пагинация пользователей') }}">
+   <div class="users-pagination-info" id="usersPaginationInfo" aria-live="polite"></div>
+   <div class="users-pagination-controls"><label class="users-pagination-info" for="usersPageSize">{{ _('На странице') }}</label>
+    <select class="form-select users-page-size" id="usersPageSize" aria-label="{{ _('Количество записей на странице') }}"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option></select>
+    <button type="button" class="users-page-btn" id="usersPrevPage" aria-label="{{ _('Предыдущая страница') }}">‹</button><div id="usersPageNumbers" class="d-flex align-items-center gap-1"></div><button type="button" class="users-page-btn" id="usersNextPage" aria-label="{{ _('Следующая страница') }}">›</button>
+   </div>
+  </div>
+ </div>
 </div>
-<!-- Карточка со списком пользователей -->
-<table class="modern-table">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>{{ _('Имя пользователя') }}</th>
-            <th>{{ _('Админ') }}</th>
-            <th>{{ _('Оператор') }}</th>
-            <th>{{ _('Дата регистрации') }}</th>
-            <th>{{ _('Действия') }}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for user in users %}
-        <tr style="--i: {{ loop.index }}">
-            <td><strong>#{{ user.id }}</strong></td>
-            <td>{{ user.username }}</td>
-            <td>
-                {% if user.is_admin %}
-                <span class="badge bg-success">{{ _('Да') }}</span>
-                {% else %}
-                <span class="badge bg-secondary">{{ _('Нет') }}</span>
-                {% endif %}
-            </td>
-            <td>
-                {% if user.is_operator %}
-                <span class="badge bg-info">{{ _('Да') }}</span>
-                {% else %}
-                <span class="badge bg-secondary">{{ _('Нет') }}</span>
-                {% endif %}
-            </td>
-            <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
-            <td class="text-end">
-                <div class="table-actions">
-                    <button class="btn-action" onclick="openEditUserModal({{ user.id }}, '{{ user.username }}', '{% if user.is_admin %}admin{% elif user.is_operator %}operator{% else %}user{% endif %}')" title="{{ _('Редактировать') }}">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <form method="POST" action="{{ url_for('admin.delete_user', id=user.id) }}" style="display: inline;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn-action" data-confirm-delete="user" title="{{ _('Удалить') }}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
 
-<!-- Модальное окно редактирования пользователя -->
-<div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" id="editUserForm" autocomplete="off">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" autocomplete="off">
-                <div class="modal-header">...</div>
-                <div class="modal-body">
-                    <input type="hidden" name="user_id" id="edit_user_id">
-                    <div class="mb-3">
-                        <label class="form-label">{{ _('Имя пользователя') }}</label>
-                        <input type="text" name="username" id="edit_username" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ _('Новый пароль (оставьте пустым, чтобы не менять)') }}</label>
-                        <div class="password-field-wrapper">
-                            <input type="password" name="password" id="edit_password" class="form-control" autocomplete="off">
-                            <i class="fas fa-eye toggle-password" onclick="togglePassword('edit_password')"></i>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">{{ _('Роль') }}</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="role" id="edit_role_user" value="user">
-                            <label class="form-check-label" for="edit_role_user">{{ _('Пользователь') }}</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="role" id="edit_role_operator" value="operator">
-                            <label class="form-check-label" for="edit_role_operator">{{ _('Оператор') }}</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="role" id="edit_role_admin" value="admin">
-                            <label class="form-check-label" for="edit_role_admin">{{ _('Администратор') }}</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
-                    <button type="submit" class="btn btn-primary">{{ _('Сохранить') }}</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<div class="modal fade users-modal" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+ <form method="POST" action="{{ url_for('admin.create_user') }}" id="createUserForm" autocomplete="off"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="modal-header"><div><h5 class="modal-title" id="createUserModalTitle">{{ _('Добавить пользователя') }}</h5><div class="modal-subtitle">{{ _('Создание новой учётной записи') }}</div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Закрыть') }}"></button></div>
+  <div class="modal-body">
+   <div class="mb-3"><label class="form-label" for="createUsername">{{ _('Имя пользователя') }} *</label><input type="text" class="form-control" id="createUsername" name="username" maxlength="64" required autocomplete="off"></div>
+   <div class="mb-3"><label class="form-label" for="createPassword">{{ _('Пароль') }} *</label><div class="users-password-wrap"><input type="password" class="form-control" id="createPassword" name="password" required autocomplete="new-password"><button type="button" class="users-password-toggle" data-password-target="createPassword" aria-label="{{ _('Показать пароль') }}"><i class="fas fa-eye" aria-hidden="true"></i></button></div></div>
+   <div><label class="form-label" for="createRole">{{ _('Роль') }}</label><select class="form-select" id="createRole" name="role"><option value="user" selected>{{ _('Пользователь') }}</option><option value="operator">{{ _('Оператор') }}</option><option value="admin">{{ _('Администратор') }}</option></select></div>
+  </div>
+  <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button><button type="submit" class="btn btn-primary"><i class="fas fa-plus" aria-hidden="true"></i>{{ _('Добавить') }}</button></div>
+ </form>
+</div></div></div>
+
+<div class="modal fade users-modal" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+ <form method="POST" id="editUserForm" autocomplete="off"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="modal-header"><div><h5 class="modal-title" id="editUserModalTitle">{{ _('Редактирование пользователя') }}</h5><div class="modal-subtitle">{{ _('Измените имя, пароль или роль учётной записи') }}</div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Закрыть') }}"></button></div>
+  <div class="modal-body">
+   <div class="mb-3"><label class="form-label" for="editUsername">{{ _('Имя пользователя') }} *</label><input type="text" class="form-control" id="editUsername" name="username" maxlength="64" required autocomplete="off"></div>
+   <div class="mb-3"><label class="form-label" for="editPassword">{{ _('Новый пароль (оставьте пустым, чтобы не менять)') }}</label><div class="users-password-wrap"><input type="password" class="form-control" id="editPassword" name="password" autocomplete="new-password"><button type="button" class="users-password-toggle" data-password-target="editPassword" aria-label="{{ _('Показать пароль') }}"><i class="fas fa-eye" aria-hidden="true"></i></button></div></div>
+   <div><label class="form-label" for="editRole">{{ _('Роль') }}</label><select class="form-select" id="editRole" name="role"><option value="user">{{ _('Пользователь') }}</option><option value="operator">{{ _('Оператор') }}</option><option value="admin">{{ _('Администратор') }}</option></select></div>
+  </div>
+  <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button><button type="submit" class="btn btn-primary"><i class="fas fa-save" aria-hidden="true"></i>{{ _('Сохранить') }}</button></div>
+ </form>
+</div></div></div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-function togglePassword(fieldId) {
-    const field = document.getElementById(fieldId);
-    // Ищем иконку внутри того же родительского контейнера
-    const wrapper = field.closest('.password-field-wrapper');
-    const icon = wrapper.querySelector('.toggle-password');
-    if (field.type === "password") {
-        field.type = "text";
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    } else {
-        field.type = "password";
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-    }
-}
-
-function openEditUserModal(id, username, role) {
-    document.getElementById('edit_user_id').value = id;
-    document.getElementById('edit_username').value = username;
-    document.getElementById('edit_password').value = '';
-
-    // Сбрасываем радио-кнопки
-    document.getElementById('edit_role_user').checked = false;
-    document.getElementById('edit_role_operator').checked = false;
-    document.getElementById('edit_role_admin').checked = false;
-
-    // Устанавливаем нужную роль
-    if (role === 'admin') {
-        document.getElementById('edit_role_admin').checked = true;
-    } else if (role === 'operator') {
-        document.getElementById('edit_role_operator').checked = true;
-    } else {
-        document.getElementById('edit_role_user').checked = true;
-    }
-
-    // Устанавливаем action формы
-    document.getElementById('editUserForm').action = `/admin/users/edit/${id}`;
-
-    // Показываем модальное окно
-    const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
-    modal.show();
-}
+(() => {
+ 'use strict';
+ const root=document.getElementById('usersPage');
+ if(!root||root.dataset.initialized==='1') return;
+ root.dataset.initialized='1';
+ const rows=Array.from(document.querySelectorAll('#usersTableBody .users-row'));
+ const $=id=>document.getElementById(id);
+ const search=$('usersSearch'), role=$('usersRoleFilter'), size=$('usersPageSize');
+ const info=$('usersPaginationInfo'), pages=$('usersPageNumbers'), prev=$('usersPrevPage'), next=$('usersNextPage'), empty=$('usersNoResults');
+ const createModal=bootstrap.Modal.getOrCreateInstance($('createUserModal'));
+ const editModal=bootstrap.Modal.getOrCreateInstance($('editUserModal'));
+ let current=1;
+ const tr=k=>root.dataset[k]||'';
+ function filtered(){
+  const q=search.value.trim().toLocaleLowerCase(), r=role.value;
+  return rows.filter(row=>(!q||row.dataset.username.toLocaleLowerCase().includes(q)||row.dataset.userId.includes(q))&&(r==='all'||row.dataset.role===r));
+ }
+ function renderPages(total){
+  pages.replaceChildren();
+  const nums=[...new Set([1,total,current-1,current,current+1])].filter(n=>n>=1&&n<=total).sort((a,b)=>a-b);
+  let last=0;
+  nums.forEach(n=>{
+   if(n-last>1){const dots=document.createElement('span');dots.className='users-page-ellipsis';dots.textContent='…';pages.append(dots);}
+   const b=document.createElement('button');b.type='button';b.className='users-page-btn'+(n===current?' active':'');b.textContent=String(n);b.setAttribute('aria-label',`${tr('labelPage')} ${n}`);
+   if(n===current)b.setAttribute('aria-current','page');
+   b.addEventListener('click',()=>{current=n;render();});pages.append(b);last=n;
+  });
+ }
+ function render(){
+  const result=filtered(), per=Number(size.value)||10, total=result.length, totalPages=Math.max(1,Math.ceil(total/per));
+  current=Math.min(current,totalPages);
+  const start=total?(current-1)*per:0, end=Math.min(start+per,total), visible=new Set(result.slice(start,end));
+  rows.forEach(row=>{row.hidden=!visible.has(row);});
+  empty.hidden=total!==0;
+  info.textContent=total?`${tr('labelShown')} ${start+1}–${end} ${tr('labelOf')} ${total}`:`${tr('labelShown')} 0 ${tr('labelOf')} 0`;
+  prev.disabled=!total||current<=1;next.disabled=!total||current>=totalPages;
+  renderPages(totalPages);
+  $('usersPagination').hidden=rows.length===0;
+ }
+ search.addEventListener('input',()=>{current=1;render();});
+ role.addEventListener('change',()=>{current=1;render();});
+ size.addEventListener('change',()=>{current=1;render();});
+ $('usersReset').addEventListener('click',()=>{search.value='';role.value='all';current=1;render();});
+ prev.addEventListener('click',()=>{if(current>1){current--;render();}});
+ next.addEventListener('click',()=>{const n=Math.ceil(filtered().length/(Number(size.value)||10));if(current<n){current++;render();}});
+ $('openCreateUser').addEventListener('click',()=>{$('createUserForm').reset();createModal.show();});
+ document.querySelectorAll('.js-edit-user').forEach(button=>button.addEventListener('click',()=>{
+  $('editUsername').value=button.dataset.username||'';$('editPassword').value='';$('editRole').value=button.dataset.role||'user';$('editUserForm').action=button.dataset.editUrl;editModal.show();
+ }));
+ document.querySelectorAll('.users-password-toggle').forEach(button=>button.addEventListener('click',()=>{
+  const input=$(button.dataset.passwordTarget), icon=button.querySelector('i'), show=input.type==='password';
+  input.type=show?'text':'password';icon.classList.toggle('fa-eye',!show);icon.classList.toggle('fa-eye-slash',show);
+ }));
+ render();
+})();
 </script>
-
-<style>
-/* Стили для обёртки поля с иконкой */
-.password-field-wrapper {
-    position: relative;
-}
-.password-field-wrapper .toggle-password {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    color: var(--text-secondary);
-    z-index: 10;
-    font-size: 1.1rem;
-    transition: color 0.2s;
-}
-.password-field-wrapper .toggle-password:hover {
-    color: var(--accent-color);
-}
-/* Для модального окна больше не нужны дополнительные корректировки */
-</style>
 {% endblock %}
