@@ -3,6 +3,7 @@ import { t } from '../i18n/i18n.js';
 let cy = null;
 let linkModeActive = false;
 let sourceNode = null;
+let selectModeWheelZoomHandler = null;
 
 const MODE_LABELS = {
     pan: 'modes.pan',
@@ -18,6 +19,48 @@ const MODE_CLASSES = {
 
 export function initModes(instance) {
     cy = instance;
+    if (selectModeWheelZoomHandler) {
+        document.removeEventListener('wheel', selectModeWheelZoomHandler, true);
+    }
+    selectModeWheelZoomHandler = event => {
+        const activeCy = cy;
+        const container = activeCy?.container();
+        if (
+            !activeCy
+            || window.currentMode !== 'select'
+            || !activeCy.zoomingEnabled()
+            || !activeCy.userZoomingEnabled()
+            || !container?.contains(event.target)
+        ) return;
+
+        const rect = container.getBoundingClientRect();
+        let delta = event.deltaY;
+        if (event.deltaMode === 1) delta *= 33;
+        else if (event.deltaMode === 2) delta *= Math.max(rect.height, 100);
+        if (!Number.isFinite(delta) || delta === 0) return;
+
+        // Cytoscape's built-in wheel handler requires panningEnabled, so in
+        // select mode it ignores the wheel. Handle that gesture here while
+        // keeping panning disabled for all normal pointer interactions. The
+        // factor matches Cytoscape's default calibrated response for a common
+        // ~100px mouse-wheel event (about 3% zoom per notch).
+        event.preventDefault();
+        const level = activeCy.zoom() * Math.pow(10, -delta * 0.00012);
+        const wasPanningEnabled = activeCy.panningEnabled();
+        activeCy.panningEnabled(true);
+        try {
+            activeCy.zoom({
+                level,
+                renderedPosition: {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top
+                }
+            });
+        } finally {
+            activeCy.panningEnabled(wasPanningEnabled);
+        }
+    };
+    document.addEventListener('wheel', selectModeWheelZoomHandler, { capture: true, passive: false });
     setMode('pan');
 }
 
@@ -37,6 +80,8 @@ export function setMode(mode) {
     if (mode === 'select') {
         cy.boxSelectionEnabled(true);
         cy.autounselectify(false);
+        // Wheel zoom is handled separately because Cytoscape disables its
+        // built-in wheel handler whenever panning is disabled.
         cy.panningEnabled(false);
         cy.userPanningEnabled(false);
         document.body.style.cursor = 'crosshair';

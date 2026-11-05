@@ -67,7 +67,6 @@ export function initCy(mapId, onReady) {
         autounselectify: true,
         minZoom: 0.1,
         maxZoom: 5,
-        wheelSensitivity: 1, // было 2 — резкий зум; Cytoscape рекомендует 1
         fit: false
         // textureOnViewport НЕ включаем: на время жеста Cytoscape рисует снимок
         // исходной области (прямоугольник размером с холст). При отдалении за его
