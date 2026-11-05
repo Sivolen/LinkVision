@@ -49,10 +49,19 @@ let wasDisconnected = false;
                 return;
             }
 
-            const modalTitle = modalEl.querySelector('.modal-title');
-            const modalMessage = modalEl.querySelector('.modal-body');
-            const confirmBtn = modalEl.querySelector('.btn-danger');
-            const cancelBtn = modalEl.querySelector('.btn-secondary');
+            // The confirm button's class changes with the requested variant,
+            // so it cannot be used as its selector on the next invocation.
+            const modalTitle = modalEl.querySelector('#confirmModalTitle');
+            const modalMessage = modalEl.querySelector('#confirmModalMessage');
+            const confirmBtn = modalEl.querySelector('#confirmModalConfirmBtn');
+            const cancelBtn = modalEl.querySelector('#confirmModalCancelBtn');
+            if (!modalTitle || !modalMessage || !confirmBtn || !cancelBtn) {
+                const confirmed = confirm(`${opts.title}\n\n${opts.message}`);
+                if (confirmed && opts.onConfirm) opts.onConfirm();
+                else if (!confirmed && opts.onCancel) opts.onCancel();
+                resolve(confirmed);
+                return;
+            }
 
             modalTitle.textContent = opts.title;
             modalMessage.textContent = opts.message;
@@ -110,7 +119,7 @@ let wasDisconnected = false;
             cancelBtn.addEventListener('click', onCancelClick);
             modalEl.addEventListener('hidden.bs.modal', onHidden);
 
-            const modal = new bootstrap.Modal(modalEl);
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
         });
     };
