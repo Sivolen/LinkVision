@@ -3,7 +3,7 @@ import { loadBackground, setElementsLoaded, setBackgroundLoaded, markUserInterac
 import { loadElements } from './elements.js';
 import { initInteractions } from './interactions.js';
 import { initNewNodeFeedback } from './newNodeFeedback.js';
-import { initModes, setMode, isLinkMode } from './modes.js';
+import { initModes, setMode, isLinkMode, withTemporaryPanning } from './modes.js';
 import { initResync, scheduleResync, isMapBusy } from './resync.js';
 import { initViewport, saveViewportToServer, withViewportRestore } from './viewport.js';
 import { initLayout } from './layout.js';
@@ -516,15 +516,19 @@ window.clearSkipNextMapUpdate = () => {
 };
 window.zoomIn = () => {
     const cy = window.cy;
-    if (cy) cy.zoom({ level: cy.zoom() * 1.2, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+    if (cy) withTemporaryPanning(cy, () => {
+        cy.zoom({ level: cy.zoom() * 1.2, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+    });
 };
 window.zoomOut = () => {
     const cy = window.cy;
-    if (cy) cy.zoom({ level: cy.zoom() * 0.8, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+    if (cy) withTemporaryPanning(cy, () => {
+        cy.zoom({ level: cy.zoom() * 0.8, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+    });
 };
 window.resetZoom = () => {
     const cy = window.cy;
-    if (cy) cy.fit(null, 50);
+    if (cy) withTemporaryPanning(cy, () => cy.fit(null, 50));
 };
 window.fitImageToView = fitImageToView;
 window.initMap = initMap;

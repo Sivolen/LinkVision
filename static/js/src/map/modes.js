@@ -17,6 +17,16 @@ const MODE_CLASSES = {
     link: 'mode-link'
 };
 
+export function withTemporaryPanning(instance, callback) {
+    const wasPanningEnabled = instance.panningEnabled();
+    if (!wasPanningEnabled) instance.panningEnabled(true);
+    try {
+        return callback();
+    } finally {
+        if (!wasPanningEnabled) instance.panningEnabled(false);
+    }
+}
+
 export function initModes(instance) {
     cy = instance;
     if (selectModeWheelZoomHandler) {
@@ -46,9 +56,7 @@ export function initModes(instance) {
         // ~100px mouse-wheel event (about 3% zoom per notch).
         event.preventDefault();
         const level = activeCy.zoom() * Math.pow(10, -delta * 0.00012);
-        const wasPanningEnabled = activeCy.panningEnabled();
-        activeCy.panningEnabled(true);
-        try {
+        withTemporaryPanning(activeCy, () => {
             activeCy.zoom({
                 level,
                 renderedPosition: {
@@ -56,9 +64,7 @@ export function initModes(instance) {
                     y: event.clientY - rect.top
                 }
             });
-        } finally {
-            activeCy.panningEnabled(wasPanningEnabled);
-        }
+        });
     };
     document.addEventListener('wheel', selectModeWheelZoomHandler, { capture: true, passive: false });
     setMode('pan');
