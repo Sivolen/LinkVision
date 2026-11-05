@@ -159,9 +159,11 @@ if [[ "${DATABASE_URL:-}" == postgresql://* || "${DATABASE_URL:-}" == postgres:/
     warn "PostgreSQL detected. The installer does not mutate an existing PostgreSQL schema."
     warn "For an existing database, apply the supported schema migration before starting LinkVision."
 else
-    chmod +x "$SCRIPT_DIR/apply_migrations.sh"
-    "$SCRIPT_DIR/apply_migrations.sh"
+    "$VENV_PYTHON" "$SCRIPT_DIR/manage.py" migrate
 fi
+
+info "Checking the first administrator account..."
+"$VENV_PYTHON" "$SCRIPT_DIR/manage.py" create-admin
 
 info "Creating upload/log directories..."
 mkdir -p "$SCRIPT_DIR/static/uploads/icons" \
@@ -227,8 +229,8 @@ echo
 echo "Production/systemd logs:"
 echo "  sudo journalctl -u linkvision.service -n 50"
 echo
-echo "First admin password (printed once by the application):"
-echo "  sudo journalctl -u linkvision.service -n 100 | grep -A2 'Temporary admin password'"
+echo "If administrator access is lost, reset it locally with:"
+echo "  $VENV_PYTHON $SCRIPT_DIR/manage.py reset-admin-password admin"
 echo
 if [[ "$INSTALL_SERVICE" != "true" || $EUID -ne 0 ]]; then
     warn "If this is a production HTTPS deployment, set SESSION_COOKIE_SECURE=True and BEHIND_PROXY=True in .env before exposing the application."

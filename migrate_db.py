@@ -530,6 +530,24 @@ def run_migration():
         print("Все структурные миграции и индексы применены одной транзакцией.")
 
 
+def run_full_migration():
+    """Run SQLite migrations, validate the resulting schema, and update its marker."""
+    db_path = _db_path()
+    run_migration()
+
+    from models import db
+    from services.db.schema_service import mark_sqlite_schema, validate_sqlite_database
+
+    result = validate_sqlite_database(db_path, db.metadata, expected_version=None)
+    if not result.valid:
+        raise RuntimeError(
+            f"Схема после миграций несовместима: {result.message}"
+        )
+
+    mark_sqlite_schema(db_path, Config.DB_SCHEMA_VERSION)
+    print(f"Схема LinkVision {Config.DB_SCHEMA_VERSION} подтверждена.")
+
+
 def add_indexes():
     """Совместимый режим: добавить индексы без повторного применения миграций."""
     engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)

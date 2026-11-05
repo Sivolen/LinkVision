@@ -73,7 +73,7 @@ from services.db.schema_service import (
 from utils.logger import app_logger
 
 
-def create_app():
+def create_app(*, start_background_services=True, allow_unconfigured_admin=False):
     app = Flask(__name__)
     app.config.from_object(Config)
     if (
@@ -175,22 +175,13 @@ def create_app():
         if database_uri.startswith("sqlite:///") and sqlite_path:
             mark_sqlite_schema(sqlite_path, Config.DB_SCHEMA_VERSION)
 
-        # --- Создание администратора, если ни одного нет ---
-        if not User.query.filter_by(is_admin=True).first():
-            admin = User(username="admin", is_admin=True)
-            default_password = secrets.token_urlsafe(16)
-            admin.set_password(default_password)
-            admin.must_change_password = True
-            db.session.add(admin)
-            db.session.commit()
-
-            # В лог — без пароля
-            app_logger.warning(
-                "Создан администратор admin. Пароль выведен в консоль при первом запуске."
-            )
-            # В консоль — печатаем напрямую, не через ротируемый файловый логгер
-            print(
-                f"\n{'='*60}\n  Temporary admin password: {default_password}\n{'='*60}\n"
+        # Не создаём учётную запись с паролем, который можно потерять в выводе
+        # фоновой службы. Первичного администратора настраивают через manage.py.
+        has_admin = User.query.filter_by(is_admin=True).first() is not None
+        if not has_admin and not allow_unconfigured_admin:
+            raise RuntimeError(
+                "Администратор ещё не создан. Выполните `python manage.py create-admin` "
+                "из каталога проекта и запустите приложение снова."
             )
 
         # --- Настройки мониторинга, если ещё не заданы ---
@@ -214,7 +205,8 @@ def create_app():
 
         db.session.commit()
 
-        init_monitor(app)
+        if start_background_services:
+            init_monitor(app)
 
     @socketio.on("join_room")
     def handle_join_room(room):
@@ -245,8 +237,9 @@ def create_app():
     def handle_disconnect():
         app_logger.info(f"Клиент отключился: {request.sid}")  # type: ignore
 
-    start_monitor()
-    atexit.register(stop_monitor)
+    if start_background_services:
+        start_monitor()
+        atexit.register(stop_monitor)
 
     @app.route("/static/uploads/maps/<path:filename>")
     @login_required
