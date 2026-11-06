@@ -23,6 +23,37 @@ function chartTime(ts) {
     return new Intl.DateTimeFormat(getLocale(), { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).format(d);
 }
 
+function interactivePoints(points, x, top, height, width, left, right, describe) {
+    const step = points.length > 1 ? (width-left-right)/(points.length-1) : width-left-right;
+    return points.map((point, i) => {
+        const start = Math.max(left, x(i)-step/2);
+        const end = Math.min(width-right, x(i)+step/2);
+        return `<rect x="${start}" y="${top}" width="${end-start}" height="${height}" class="quality-chart-hit" tabindex="0" aria-label="${esc(describe(point))}" data-tooltip="${esc(describe(point))}"/>`;
+    }).join('');
+}
+
+function enableChartTooltips(chart) {
+    chart.querySelectorAll('.quality-chart-frame').forEach(frame => {
+        const tooltip = frame.querySelector('.quality-chart-tooltip');
+        const hide = () => { tooltip.hidden = true; };
+        frame.querySelectorAll('.quality-chart-hit').forEach(hit => {
+            const show = () => {
+                tooltip.textContent = hit.dataset.tooltip;
+                tooltip.hidden = false;
+                const frameBox = frame.getBoundingClientRect();
+                const hitBox = hit.getBoundingClientRect();
+                const half = tooltip.offsetWidth / 2;
+                tooltip.style.left = `${Math.max(half + 4, Math.min(hitBox.left + hitBox.width/2 - frameBox.left, frameBox.width - half - 4))}px`;
+                tooltip.style.top = `${Math.max(8, hitBox.top - frameBox.top)}px`;
+            };
+            hit.addEventListener('pointerenter', show);
+            hit.addEventListener('focus', show);
+            hit.addEventListener('pointerleave', hide);
+            hit.addEventListener('blur', hide);
+        });
+    });
+}
+
 function normaliseItems(data) {
     const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
     return items.filter(Boolean).map(x => ({ ...x, _time: new Date(x.timestamp).getTime() }))
@@ -60,7 +91,8 @@ function makeSeriesChart(items, series, title, aria, suffix, step) {
         return `<text x="${x(i).toFixed(1)}" y="${height-12}" text-anchor="${anchor}" class="quality-chart-axis">${esc(chartTime(points[i].time))}</text>`;
     }).join('');
     const legend=series.map((s,i)=>`<span class="quality-chart-legend-item quality-chart-series-${i}"><i></i>${esc(s.label)}</span>`).join('');
-    return `<div class="quality-chart-title">${esc(title)}</div><div class="quality-chart-legend">${legend}</div><svg viewBox="0 0 ${width} ${height}" class="quality-chart-svg" role="img" aria-label="${esc(aria)}">${grid}${lines}${dots}${labels}<text x="14" y="${top+ph/2}" transform="rotate(-90 14 ${top+ph/2})" text-anchor="middle" class="quality-chart-axis">${esc(suffix.trim())}</text></svg>`;
+    const hits=interactivePoints(points,x,top,ph,width,left,right,p=>`${chartTime(p.time)}\n${series.map((s,i)=>`${s.label}: ${value(p.values[i],suffix)}`).join('\n')}`);
+    return `<div class="quality-chart-title">${esc(title)}</div><div class="quality-chart-legend">${legend}</div><div class="quality-chart-frame"><svg viewBox="0 0 ${width} ${height}" class="quality-chart-svg" role="img" aria-label="${esc(aria)}">${grid}${lines}${dots}${labels}<text x="14" y="${top+ph/2}" transform="rotate(-90 14 ${top+ph/2})" text-anchor="middle" class="quality-chart-axis">${esc(suffix.trim())}</text>${hits}</svg><div class="quality-chart-tooltip" role="status" hidden></div></div>`;
 }
 
 function makeLossChart(items) {
@@ -78,7 +110,8 @@ function makeLossChart(items) {
         const anchor = pos === 0 ? 'start' : pos === arr.length - 1 ? 'end' : 'middle';
         return `<text x="${x(i).toFixed(1)}" y="${height-12}" text-anchor="${anchor}" class="quality-chart-axis">${esc(chartTime(points[i].time))}</text>`;
     }).join('');
-    return `<div class="quality-chart-title">${esc(tr('modal.quality.lossChartTitle','Потери пакетов'))}</div><svg viewBox="0 0 ${width} ${height}" class="quality-chart-svg" role="img" aria-label="${esc(tr('modal.quality.lossChartLabel','График потерь пакетов'))}">${grid}<polyline points="${line}" class="quality-chart-line quality-chart-loss" fill="none"/>${dots}${lossLabels}</svg>`;
+    const hits=interactivePoints(points,x,top,ph,width,left,right,p=>`${chartTime(p.time)}\n${tr('modal.quality.loss','Потери')}: ${value(p.value,' %')}`);
+    return `<div class="quality-chart-title">${esc(tr('modal.quality.lossChartTitle','Потери пакетов'))}</div><div class="quality-chart-frame"><svg viewBox="0 0 ${width} ${height}" class="quality-chart-svg" role="img" aria-label="${esc(tr('modal.quality.lossChartLabel','График потерь пакетов'))}">${grid}<polyline points="${line}" class="quality-chart-line quality-chart-loss" fill="none"/>${dots}${lossLabels}${hits}</svg><div class="quality-chart-tooltip" role="status" hidden></div></div>`;
 }
 
 function renderCharts(chart, data, current) {
@@ -103,6 +136,7 @@ function renderCharts(chart, data, current) {
     chart.innerHTML = main + makeLossChart(items) +
         `<div class="quality-chart-caption">${esc(tr('modal.quality.chartPeriod','Одна точка = один 5-минутный агрегат мониторинга'))}` +
         ` · ${esc(tr('modal.quality.chartPoints','Точек'))}: ${items.length}</div>`;
+    enableChartTooltips(chart);
 }
 
 export function renderDeviceQuality(data, current=null) {
@@ -119,8 +153,8 @@ export function renderDeviceQuality(data, current=null) {
     const statuses=latest.metric_status || current?.quality_metric_status || data?.metric_status || {};
     const reasons=Object.entries(statuses).filter(([,s])=>s==='bad'||s==='degraded').map(([m,s])=>`${metricLabel(m)}: ${qualityLabel(s)}`);
     const reasonText=reasons.length?reasons.join(', '):tr('modal.quality.noProblems','Проблем по отдельным метрикам не обнаружено');
-    const card=(m,v,suffix)=>`<div class="col-6 col-md-3"><div class="quality-metric-card ${metricClass(statuses[m])}"><strong>${esc(metricLabel(m))}</strong><div class="quality-metric-value">${value(v,suffix)}</div><small>${esc(qualityLabel(statuses[m]||'unknown'))}</small></div></div>`;
-    summary.innerHTML=`<div class="row g-2">${card('latency',latest.latency_avg_ms,' ms')}${card('jitter',latest.jitter_ms,' ms')}${card('loss',latest.loss_percent,' %')}<div class="col-6 col-md-3"><div class="quality-metric-card quality-overall quality-${esc(latest.quality)}"><strong>${esc(tr('modal.quality.status','Качество'))}</strong><div class="quality-metric-value">${esc(qualityLabel(latest.quality))}</div><small>${esc(reasonText)}</small></div></div></div>`;
+    const card=(m,v,suffix)=>`<div class="quality-metric-card ${metricClass(statuses[m])}"><strong>${esc(metricLabel(m))}</strong><div class="quality-metric-value">${value(v,suffix)}</div><small>${esc(qualityLabel(statuses[m]||'unknown'))}</small></div>`;
+    summary.innerHTML=`<div class="quality-metrics">${card('latency',latest.latency_avg_ms,' ms')}${card('jitter',latest.jitter_ms,' ms')}${card('loss',latest.loss_percent,' %')}</div><div class="quality-summary"><strong>${esc(tr('modal.quality.status','Качество'))}: ${esc(qualityLabel(latest.quality))}</strong><span>${esc(reasonText)}</span></div>`;
     renderCharts(chart,data,current);
 }
 

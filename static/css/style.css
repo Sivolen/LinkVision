@@ -2914,6 +2914,27 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   overflow: visible;
   color: var(--text-primary, currentColor);
 }
+.quality-chart-frame { position: relative; }
+.quality-chart-hit { fill: transparent; cursor: default; }
+.quality-chart-hit:focus-visible { fill: rgba(70, 130, 180, .12); outline: none; }
+.quality-chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  width: 190px;
+  max-width: 80%;
+  padding: 7px 10px;
+  transform: translate(-50%, -100%);
+  white-space: pre-line;
+  pointer-events: none;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+  font-size: .78rem;
+  line-height: 1.4;
+}
+.quality-chart-tooltip[hidden] { display: none; }
 
 .quality-chart-grid {
   stroke: currentColor;
@@ -2946,12 +2967,21 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 }
 
 /* Детализация качества: каждая метрика подсвечивается независимо от общего статуса. */
+.quality-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .quality-metric-card {
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: .65rem .75rem;
   min-height: 86px;
   background: var(--bg-primary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.quality-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; margin-top: 10px; color: var(--text-secondary); font-size: .8rem; }
+.quality-summary strong { color: var(--text-primary); }
+.quality-summary span { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 420px) {
+  .quality-metrics { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
 }
 .quality-metric-card small { opacity: .72; }
 .quality-metric-value { font-size: 1.08rem; font-weight: 600; margin: .12rem 0; }
@@ -2960,7 +2990,7 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 .quality-metric-degraded { border-color: #fd7e14; box-shadow: inset 4px 0 0 #fd7e14; }
 .quality-metric-degraded small { color: #fd7e14; font-weight: 600; }
 .quality-metric-good { border-color: #198754; box-shadow: inset 4px 0 0 #198754; }
-.quality-overall { overflow: hidden; }
+.quality-overall { min-height: 0; overflow-wrap: anywhere; }
 .quality-chart-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: .15rem; font-size: .8rem; }
 .quality-chart-legend-item i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: .3rem; background: currentColor; }
 .quality-chart-series-0 { color: #0d6efd; stroke: #0d6efd; fill: #0d6efd; }
