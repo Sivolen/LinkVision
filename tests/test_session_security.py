@@ -1,6 +1,6 @@
 from extensions import db, socketio
 from models import User
-from services.session_security import load_session_user, watch_socket_session
+from services.session_security import load_session_user, SocketSessionWatcher
 
 
 def test_temporary_password_blocks_pages_and_api(app, client, login):
@@ -61,22 +61,83 @@ def test_password_change_keeps_current_session_and_revokes_other(app, client, lo
     assert "/auth/login" in other.get("/admin/users").location
 
 
-def test_socket_watchdog_disconnects_after_password_reset(app, monkeypatch):
-    with app.app_context():
-        user = User.query.filter_by(username="admin").first()
-        session_id = user.get_id()
+def test_shared_watcher_disconnects_only_invalid_sessions(app, monkeypatch):
+    from sqlalchemy import event
 
-    def reset_password(_seconds):
-        with app.app_context():
-            user = User.query.filter_by(username="admin").first()
-            user.set_password("ResetSocket123!")
-            db.session.commit()
-
+    watcher = SocketSessionWatcher(app)
+    tasks = []
     disconnected = []
-    monkeypatch.setattr(socketio, "sleep", reset_password)
-    monkeypatch.setattr(socketio.server.manager, "is_connected", lambda *args: True)
+    monkeypatch.setattr(
+        socketio, "start_background_task", lambda task: tasks.append(task)
+    )
     monkeypatch.setattr(
         socketio.server, "disconnect", lambda sid, namespace: disconnected.append(sid)
     )
-    watch_socket_session(app, "review-socket", session_id)
-    assert disconnected == ["review-socket"]
+    with app.app_context():
+        admin = User.query.filter_by(username="admin").first()
+        other = User.query.filter_by(username="testuser").first()
+        admin_id, other_id = admin.id, other.id
+        admin_session, other_session = admin.get_id(), other.get_id()
+
+    watcher.register("admin-1", admin_session)
+    watcher.register("admin-2", admin_session)
+    watcher.register("other", other_session)
+    assert len(tasks) == 1
+
+    queries = []
+    with app.app_context():
+
+        def count_queries(conn, cursor, statement, parameters, context, executemany):
+            if statement.lstrip().upper().startswith("SELECT"):
+                queries.append(statement)
+
+        event.listen(db.engine, "before_cursor_execute", count_queries)
+        watcher.check_sessions()
+        event.remove(db.engine, "before_cursor_execute", count_queries)
+        assert len(queries) == 1
+        assert disconnected == []
+        admin = db.session.get(User, admin_id)
+        admin.set_password("ResetSocket123!")
+        db.session.commit()
+
+    watcher.check_sessions()
+    assert set(disconnected) == {"admin-1", "admin-2"}
+    assert watcher._sessions == {"other": other_session}
+    watcher.unregister("other")
+    assert not watcher._sessions
+
+
+def test_watcher_rejects_password_change_and_deleted_user(app, monkeypatch):
+    watcher = SocketSessionWatcher(app)
+    disconnected = []
+    monkeypatch.setattr(socketio, "start_background_task", lambda task: None)
+    monkeypatch.setattr(
+        socketio.server, "disconnect", lambda sid, namespace: disconnected.append(sid)
+    )
+    with app.app_context():
+        admin = User.query.filter_by(username="admin").first()
+        other = User.query.filter_by(username="testuser").first()
+        watcher.register("forced", admin.get_id())
+        watcher.register("deleted", other.get_id())
+        admin.must_change_password = True
+        db.session.delete(other)
+        db.session.commit()
+    watcher.check_sessions()
+    assert set(disconnected) == {"forced", "deleted"}
+
+
+def test_watcher_restarts_after_last_socket_disconnects(app, monkeypatch):
+    watcher = SocketSessionWatcher(app)
+    tasks = []
+    monkeypatch.setattr(
+        socketio, "start_background_task", lambda task: tasks.append(task)
+    )
+    monkeypatch.setattr(socketio, "sleep", lambda seconds: None)
+    with app.app_context():
+        session_id = User.query.filter_by(username="admin").first().get_id()
+    watcher.register("first", session_id)
+    watcher.unregister("first")
+    tasks[0]()
+    assert not watcher._running
+    watcher.register("second", session_id)
+    assert watcher._running and len(tasks) == 2

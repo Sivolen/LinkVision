@@ -71,7 +71,7 @@ from services.db.schema_service import (
     validate_database_schema,
 )
 from utils.logger import app_logger
-from services.session_security import socket_user_allowed, watch_socket_session
+from services.session_security import socket_user_allowed, SocketSessionWatcher
 
 
 def create_app(*, start_background_services=True, allow_unconfigured_admin=False):
@@ -106,7 +106,6 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
     # GET-запросы не проверяются (безопасно, не меняют состояние).
     # POST/PUT/DELETE требуют X-CSRFToken заголовок.
     # Фронтенд уже добавляет его через http.js.
-
 
     with app.app_context():
         # db.create_all()
@@ -206,6 +205,8 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
         if start_background_services:
             init_monitor(app)
 
+    socket_session_watcher = SocketSessionWatcher(app)
+
     @socketio.on("join_room")
     def handle_join_room(room):
         if not socket_user_allowed(session.get("_user_id")):
@@ -233,11 +234,12 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
         session_id = session.get("_user_id")
         if not socket_user_allowed(session_id):
             return False
-        socketio.start_background_task(watch_socket_session, app, request.sid, session_id)
+        socket_session_watcher.register(request.sid, session_id)
         app_logger.info(f"Клиент подключился: {request.sid}")  # type: ignore
 
     @socketio.on("disconnect")
-    def handle_disconnect():
+    def handle_disconnect(reason=None):
+        socket_session_watcher.unregister(request.sid)
         app_logger.info(f"Клиент отключился: {request.sid}")  # type: ignore
 
     if start_background_services:
