@@ -3,6 +3,7 @@
 """
 
 from datetime import datetime, timedelta
+from math import ceil
 from typing import Any, Dict, List, Optional, Tuple
 
 from extensions import db
@@ -95,42 +96,109 @@ def get_device_quality_snapshot(device: Device) -> Dict[str, Any]:
 
 
 def get_device_quality_history(device_id: int, hours: int = 24) -> Dict[str, Any]:
-    """Return every persisted quality aggregate in the requested time range.
+    """Return five-minute history for a day, grouped for longer periods.
 
-    History rows are 5-minute aggregates; they are deliberately NOT collapsed
-    into a daily average. The current live sample is returned separately so the
-    UI can show it without pretending it is a historical 5-minute point.
+    The latest actual observation and current live sample remain separate from
+    the grouped time series. Original database records are never modified.
     """
     hours = max(1, min(int(hours or 24), 720))
     cutoff = datetime.now() - timedelta(hours=hours)
     thresholds = get_device_quality_thresholds(device_id)
+    interval_seconds = 300 if hours <= 24 else 300 * ceil(hours / 24)
     items = (
         DeviceQualityHistory.query.filter(
             DeviceQualityHistory.device_id == device_id,
             DeviceQualityHistory.timestamp >= cutoff,
         )
         .order_by(DeviceQualityHistory.timestamp.asc(), DeviceQualityHistory.id.asc())
-        .all()
+        .yield_per(500)
     )
 
+    def serialize(item):
+        return {
+            "id": item.id,
+            "timestamp": item.timestamp.isoformat(),
+            "samples": item.samples,
+            "loss_percent": item.loss_percent,
+            "latency_min_ms": item.latency_min_ms,
+            "latency_avg_ms": item.latency_avg_ms,
+            "latency_max_ms": item.latency_max_ms,
+            "jitter_ms": item.jitter_ms,
+            "quality": item.quality,
+            "metric_status": get_metric_statuses(
+                item.latency_avg_ms, item.jitter_ms, item.loss_percent, thresholds
+            ),
+        }
+
     records = []
-    for item in items:
+    latest = None
+    bucket = []
+    current_bucket = None
+
+    def flush_bucket():
+        if not bucket:
+            return
+        if interval_seconds == 300:
+            records.extend(serialize(row) for row in bucket)
+            return
+        total_samples = sum(row.samples for row in bucket)
+
+        def weighted(field, weight):
+            values = [(getattr(row, field), weight(row)) for row in bucket]
+            values = [(value, w) for value, w in values if value is not None and w > 0]
+            denominator = sum(w for _, w in values)
+            return (
+                sum(value * w for value, w in values) / denominator
+                if denominator
+                else None
+            )
+
+        sent_weight = lambda row: max(row.samples, 0)
+        received_weight = lambda row: max(row.samples, 0) * (1 - row.loss_percent / 100)
+        loss = weighted("loss_percent", sent_weight)
+        latency = weighted("latency_avg_ms", received_weight)
+        jitter = weighted("jitter_ms", received_weight)
+        statuses = get_metric_statuses(latency, jitter, loss, thresholds)
+        quality = (
+            "bad"
+            if "bad" in statuses.values()
+            else (
+                "degraded"
+                if "degraded" in statuses.values()
+                else "good" if "good" in statuses.values() else "unknown"
+            )
+        )
+        minimums = [
+            row.latency_min_ms for row in bucket if row.latency_min_ms is not None
+        ]
+        maximums = [
+            row.latency_max_ms for row in bucket if row.latency_max_ms is not None
+        ]
         records.append(
             {
-                "id": item.id,
-                "timestamp": item.timestamp.isoformat(),
-                "samples": item.samples,
-                "loss_percent": item.loss_percent,
-                "latency_min_ms": item.latency_min_ms,
-                "latency_avg_ms": item.latency_avg_ms,
-                "latency_max_ms": item.latency_max_ms,
-                "jitter_ms": item.jitter_ms,
-                "quality": item.quality,
-                "metric_status": get_metric_statuses(
-                    item.latency_avg_ms, item.jitter_ms, item.loss_percent, thresholds
-                ),
+                "id": None,
+                "timestamp": bucket[-1].timestamp.isoformat(),
+                "samples": total_samples,
+                "loss_percent": loss,
+                "latency_min_ms": min(minimums) if minimums else None,
+                "latency_avg_ms": latency,
+                "latency_max_ms": max(maximums) if maximums else None,
+                "jitter_ms": jitter,
+                "quality": quality,
+                "metric_status": statuses,
             }
         )
+
+    for item in items:
+        latest = item
+        bucket_id = int((item.timestamp - cutoff).total_seconds() // interval_seconds)
+        if bucket and bucket_id != current_bucket:
+            flush_bucket()
+            bucket.clear()
+        current_bucket = bucket_id
+        bucket.append(item)
+    flush_bucket()
+    latest = serialize(latest) if latest else None
 
     # Live snapshot is deliberately separate from persisted 5-minute history.
     # This lets the UI draw the current point even when the first history
@@ -154,10 +222,9 @@ def get_device_quality_history(device_id: int, hours: int = 24) -> Dict[str, Any
             ),
         }
 
-    latest = records[-1] if records else None
     return {
         "hours": hours,
-        "interval_seconds": 300,
+        "interval_seconds": interval_seconds,
         "count": len(records),
         "latest": latest,
         "items": records,
