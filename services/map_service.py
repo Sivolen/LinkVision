@@ -628,7 +628,10 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
                     "height": height,
                     "group_id": dev.group_id,
                 },
-                "position": {"x": dev.pos_x or 100, "y": dev.pos_y or 100},
+                "position": {
+                    "x": dev.pos_x if dev.pos_x is not None else 100,
+                    "y": dev.pos_y if dev.pos_y is not None else 100,
+                },
             }
         )
 
