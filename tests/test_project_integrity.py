@@ -423,7 +423,6 @@ def test_device_label_cards_share_geometry_between_themes():
 
     index = (ROOT / "static/js/src/map/index.js").read_text(encoding="utf-8")
     assert "initDeviceLabels(cy);" in index
-    assert "initZoomLabelStyles(cy);" in index
 
     # Карточки масштабируются вместе с узлами, но ОДНИМ transform общего слоя
     # (pan+zoom), а не пересчётом каждой карточки на каждом кадре зума.

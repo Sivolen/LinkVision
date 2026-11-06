@@ -276,7 +276,6 @@ export function initMap(id) {
         }
 
         if (node.data('status') === newStatus) {
-            cy.style().update();
             refreshZoomEmphasis();
             return;
         }
@@ -296,7 +295,6 @@ export function initMap(id) {
                     updateSidebarCounter(mapId, (newStatus === 'down' || newStatus === 'partial'));
                 });
             });
-            cy.style().update();
             refreshZoomEmphasis();
             if (typeof refreshAllCollapsedStatuses === 'function') refreshAllCollapsedStatuses();
             statusBatch = [];
@@ -374,8 +372,7 @@ export function initMap(id) {
                 }
             });
         });
-        // Принудительно обновляем стили (для применения селекторов статусов)
-        cy.style().update();
+        // Cytoscape обновляет стили изменённых узлов при записи data внутри batch.
         refreshZoomEmphasis();
         if (typeof refreshAllCollapsedStatuses === 'function') refreshAllCollapsedStatuses();
     });
