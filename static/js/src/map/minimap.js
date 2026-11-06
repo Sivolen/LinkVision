@@ -10,6 +10,8 @@ let detachPointerHandlers = null;
 let toggleHandler = null;
 let resizeObserver = null;
 let snapshotRetryCount = 0;
+let lastSnapshotAt = 0;
+const SNAPSHOT_MIN_INTERVAL_MS = 1500;
 let world = null;  // {x, y, w, h} — «мир» превью в модельных координатах
 let scale = 1;     // px мини-карты на единицу модели
 const KEY = 'minimapVisible';
@@ -123,7 +125,7 @@ export function initMinimap(instance) {
         visible = !visible;
         localStorage.setItem(KEY, visible);
         applyVisibility();
-        if (visible) refresh();
+        if (visible) scheduleRefresh();
     };
     window.toggleMinimap = toggleHandler;
 
@@ -144,7 +146,7 @@ function scheduleRefresh() {
         // Даём Cytoscape закончить текущий кадр после загрузки/изменения графа.
         // Иначе первый cy.png() может снять ещё не готовый canvas.
         requestAnimationFrame(() => requestAnimationFrame(refresh));
-    }, 250);
+    }, Math.max(250, lastSnapshotAt ? SNAPSHOT_MIN_INTERVAL_MS - (Date.now() - lastSnapshotAt) : 0));
 }
 
 function retrySnapshot() {
@@ -218,6 +220,7 @@ function refresh() {
             cy.forceRender();
             imgEl.src = cy.png({ full: true, bg: 'transparent', maxWidth: iw * 2, maxHeight: ih * 2 });
             snapshotRetryCount = 0;
+            lastSnapshotAt = Date.now();
         } catch (error) {
             // На первом кадре рендерер/иконки ещё могут быть не готовы.
             // Повторяем автоматически, вместо ожидания ручного toggle.
@@ -278,6 +281,7 @@ export function cleanup() {
         refreshTimer = null;
     }
     snapshotRetryCount = 0;
+    lastSnapshotAt = 0;
     cy = null;
     panel = inner = bgEl = imgEl = rectEl = null;
     world = null;
