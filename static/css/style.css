@@ -2910,7 +2910,7 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 .quality-chart-svg {
   display: block;
   width: 100%;
-  min-height: 220px;
+  height: auto;
   overflow: visible;
   color: var(--text-primary, currentColor);
 }
@@ -2945,12 +2945,13 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 .quality-chart-axis {
   fill: currentColor;
   opacity: .65;
-  font-size: 11px;
+  font-size: 15px;
 }
 
-.quality-chart-line {
+polyline.quality-chart-line {
   stroke: currentColor;
-  stroke-width: 2.5;
+  fill: none;
+  stroke-width: 1.8;
   vector-effect: non-scaling-stroke;
 }
 
@@ -2959,6 +2960,21 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
   stroke: var(--bg-primary, #fff);
   stroke-width: 1.5;
 }
+
+#deviceModal #deleteDeviceBtn {
+  color: #b83242;
+  background: transparent;
+  border-color: #d9a5ac;
+}
+#deviceModal #deleteDeviceBtn:hover,
+#deviceModal #deleteDeviceBtn:focus-visible {
+  color: #fff;
+  background: #bb3445;
+  border-color: #bb3445;
+}
+[data-theme="dark"] #deviceModal #deleteDeviceBtn { color: #ffadb7; border-color: #a35a64; }
+[data-theme="dark"] #deviceModal #deleteDeviceBtn:hover,
+[data-theme="dark"] #deviceModal #deleteDeviceBtn:focus-visible { color: #fff; }
 
 .quality-chart-caption {
   margin-top: .25rem;
@@ -2996,6 +3012,12 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 .quality-chart-series-0 { color: #0d6efd; stroke: #0d6efd; fill: #0d6efd; }
 .quality-chart-series-1 { color: #6f42c1; stroke: #6f42c1; fill: #6f42c1; }
 .quality-chart-loss { color: #dc3545; stroke: #dc3545; fill: #dc3545; }
+[data-theme="dark"] .quality-chart-series-0 { color: #82baff; stroke: #82baff; fill: #82baff; }
+[data-theme="dark"] .quality-chart-series-1 { color: #c4a1ff; stroke: #c4a1ff; fill: #c4a1ff; }
+[data-theme="dark"] .quality-chart-loss { color: #ff9aa5; stroke: #ff9aa5; fill: #ff9aa5; }
+/* Lines stay unfilled even when the series has a fill color for its points. */
+polyline.quality-chart-line,
+[data-theme="dark"] polyline.quality-chart-line { fill: none; }
 /* ============================================================================
    LinkVision map toolbar — consolidated responsive styles
    Keep toolbar rules in one place to avoid cascade conflicts.
