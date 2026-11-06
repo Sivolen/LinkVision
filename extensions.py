@@ -46,8 +46,13 @@ babel = Babel()
 
 
 def init_extensions(app):
+    # Imported after extensions/models initialize: session validation uses User.
+    from services.session_security import load_session_user, enforce_password_change
+
     db.init_app(app)
     login_manager.init_app(app)
+    login_manager.user_loader(load_session_user)
+    app.before_request(enforce_password_change)
     socketio.init_app(app)
     # locale_selector — API Flask-Babel 3.x+/4.x (передаётся в init_app,
     # а не декоратором @babel.localeselector, как было в 2.x).

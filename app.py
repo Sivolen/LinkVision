@@ -44,7 +44,7 @@ def ensure_env_file():
 
 ensure_env_file()
 
-from flask import Flask, request, render_template, jsonify, send_from_directory
+from flask import Flask, request, render_template, jsonify, send_from_directory, session
 from flask_login import current_user, login_required
 from flask_socketio import join_room
 from flask_wtf.csrf import CSRFProtect, generate_csrf
@@ -54,7 +54,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.exceptions import HTTPException
 
 from config import Config
-from extensions import db, login_manager, socketio, init_extensions
+from extensions import db, socketio, init_extensions
 from models import User, DeviceType, Settings, Device
 from blueprints.auth import auth_bp
 from blueprints.admin import admin_bp
@@ -71,6 +71,7 @@ from services.db.schema_service import (
     validate_database_schema,
 )
 from utils.logger import app_logger
+from services.session_security import socket_user_allowed, watch_socket_session
 
 
 def create_app(*, start_background_services=True, allow_unconfigured_admin=False):
@@ -106,9 +107,6 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
     # POST/PUT/DELETE требуют X-CSRFToken заголовок.
     # Фронтенд уже добавляет его через http.js.
 
-    @login_manager.user_loader
-    def load_user(user_id):
-        return db.session.get(User, int(user_id))
 
     with app.app_context():
         # db.create_all()
@@ -210,7 +208,8 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
 
     @socketio.on("join_room")
     def handle_join_room(room):
-        if not current_user.is_authenticated:
+        if not socket_user_allowed(session.get("_user_id")):
+            socketio.server.disconnect(request.sid, namespace="/")
             return
 
         # комнаты вида "map_<id>"
@@ -230,7 +229,11 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
         app_logger.info(f"Клиент присоединился к комнате {room}")
 
     @socketio.on("connect")
-    def handle_connect():
+    def handle_connect(auth=None):
+        session_id = session.get("_user_id")
+        if not socket_user_allowed(session_id):
+            return False
+        socketio.start_background_task(watch_socket_session, app, request.sid, session_id)
         app_logger.info(f"Клиент подключился: {request.sid}")  # type: ignore
 
     @socketio.on("disconnect")
@@ -314,7 +317,10 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
 
     @socketio.on("request_status")
     def handle_request_status(data):
-        if not isinstance(data, dict) or not current_user.is_authenticated:
+        if not socket_user_allowed(session.get("_user_id")):
+            socketio.server.disconnect(request.sid, namespace="/")
+            return
+        if not isinstance(data, dict):
             return
         try:
             map_id = int(data.get("map_id"))

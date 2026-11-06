@@ -1,4 +1,5 @@
 from datetime import datetime
+import hashlib
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
@@ -23,6 +24,12 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+
+    def get_id(self):
+        # Changing the password invalidates every previously issued login ID,
+        # including remember cookies, without storing another database secret.
+        digest = hashlib.sha256((self.password_hash or '').encode()).hexdigest()
+        return f"{self.id}:{digest}"
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)

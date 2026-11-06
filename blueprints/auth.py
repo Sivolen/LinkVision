@@ -109,7 +109,8 @@ def change_password():
             return redirect(url_for("auth.change_password"))
 
         # Используем сервис для смены пароля
-        change_user_password(current_user.id, form.new_password.data)
+        user = change_user_password(current_user.id, form.new_password.data)
+        login_user(user)  # Refresh this session after password-based login ID changes.
 
         log_auth_action("password_changed", current_user.id, current_user.username)
         auth_logger.info(f"Пароль изменён: {current_user.username}")

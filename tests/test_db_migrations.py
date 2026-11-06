@@ -1,10 +1,54 @@
 """Regression tests for the supported SQLite schema migration path."""
 
 import sqlite3
+import pytest
 
 import migrate_db
 from models import db
 from services.db.schema_service import validate_sqlite_database
+
+
+def test_failed_final_validation_does_not_update_schema_marker(tmp_path, monkeypatch):
+    from services.db import schema_service
+
+    path = tmp_path / "invalid.db"
+    _create_legacy_database(path)
+    monkeypatch.setattr(
+        migrate_db.Config, "SQLALCHEMY_DATABASE_URI", f"sqlite:///{path}"
+    )
+    monkeypatch.setattr(
+        schema_service,
+        "validate_sqlite_database",
+        lambda *args, **kwargs: schema_service.SchemaValidationResult(
+            False, "review failure"
+        ),
+    )
+    writes = []
+    monkeypatch.setattr(
+        schema_service, "mark_sqlite_schema", lambda *args: writes.append(args)
+    )
+    with pytest.raises(RuntimeError, match="review failure"):
+        migrate_db.run_full_migration()
+    assert not writes
+
+
+def test_full_migration_validates_marker_and_preserves_data_on_repeat(
+    tmp_path, monkeypatch
+):
+    path = tmp_path / "full.db"
+    _create_legacy_database(path)
+    monkeypatch.setattr(
+        migrate_db.Config, "SQLALCHEMY_DATABASE_URI", f"sqlite:///{path}"
+    )
+    migrate_db.run_full_migration()
+    migrate_db.run_full_migration()
+    result = validate_sqlite_database(
+        str(path), db.metadata, expected_version=migrate_db.Config.DB_SCHEMA_VERSION
+    )
+    assert result.valid, result.message
+    assert len(list(tmp_path.glob("full.db.migration_backup_*"))) == 2
+    with sqlite3.connect(path) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM device").fetchone()[0] == 1
 
 
 def _create_legacy_database(path):

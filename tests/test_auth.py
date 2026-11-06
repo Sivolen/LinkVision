@@ -228,8 +228,8 @@ class TestAuthChangePassword:
 
         try:
             # Войти через сессию
-            with client.session_transaction() as sess:
-                sess["_user_id"] = str(uid)
+            with app.app_context(), client.session_transaction() as sess:
+                sess["_user_id"] = db.session.get(User, uid).get_id()
                 sess["_fresh"] = True
 
             # Сменить пароль
@@ -267,8 +267,8 @@ class TestAuthChangePassword:
             uid = user.id
 
         try:
-            with client.session_transaction() as sess:
-                sess["_user_id"] = str(uid)
+            with app.app_context(), client.session_transaction() as sess:
+                sess["_user_id"] = db.session.get(User, uid).get_id()
                 sess["_fresh"] = True
 
             resp = client.post(
@@ -300,8 +300,8 @@ class TestAuthChangePassword:
             uid = user.id
 
         try:
-            with client.session_transaction() as sess:
-                sess["_user_id"] = str(uid)
+            with app.app_context(), client.session_transaction() as sess:
+                sess["_user_id"] = db.session.get(User, uid).get_id()
                 sess["_fresh"] = True
 
             resp = client.post(
@@ -341,8 +341,8 @@ class TestAuthLogout:
             uid = user.id
 
         try:
-            with client.session_transaction() as sess:
-                sess["_user_id"] = str(uid)
+            with app.app_context(), client.session_transaction() as sess:
+                sess["_user_id"] = db.session.get(User, uid).get_id()
                 sess["_fresh"] = True
 
             resp = client.post("/auth/logout", follow_redirects=False)

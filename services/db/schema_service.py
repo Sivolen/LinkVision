@@ -1,6 +1,6 @@
 """Database schema validation and the SQLite compatibility marker.
 
-LinkVision currently uses ``apply_migrations.sh`` as its only supported
+LinkVision currently uses ``manage.py migrate`` as its only supported
 migration entrypoint.  There is intentionally no checked-in Alembic revision
 chain, so application startup must never silently mutate an existing database.
 """

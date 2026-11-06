@@ -73,7 +73,7 @@ def test_monitor_uses_rolling_quality_window_before_live_classification():
 
 def test_migrations_have_single_entrypoint():
     script = (ROOT / "apply_migrations.sh").read_text(encoding="utf-8")
-    assert '"$PYTHON_BIN" "$ROOT_DIR/migrate_db.py"' in script
+    assert '"$PYTHON_BIN" "$ROOT_DIR/manage.py" migrate' in script
     assert "migrate_ordering.py" not in script
     assert "migrate_quality.py" not in script
     assert "migrate_quality_profile.py" not in script
@@ -87,13 +87,14 @@ def test_schema_marker_uses_db_schema_version_not_release_version():
     уже существующей базы ровно после применения миграций.
     """
     migration_sources = {
-        "apply_migrations.sh": (ROOT / "apply_migrations.sh").read_text(
+        "migrate_db.py": (ROOT / "migrate_db.py").read_text(
             encoding="utf-8"
         ),
         "fix_db.py": (ROOT / "fix_db.py").read_text(encoding="utf-8"),
     }
     for name, source in migration_sources.items():
-        assert "mark_sqlite_schema(path, Config.DB_SCHEMA_VERSION)" in source, name
+        assert "Config.DB_SCHEMA_VERSION)" in source, name
+        assert "mark_sqlite_schema(" in source, name
         assert "Config.VERSION)" not in source, name
 
     admin_source = (ROOT / "blueprints/admin.py").read_text(encoding="utf-8")
@@ -351,7 +352,7 @@ def test_flask_migrate_is_not_advertised_as_the_project_migration_engine():
 
 def test_install_uses_single_migration_entrypoint():
     install = (ROOT / "install.sh").read_text(encoding="utf-8")
-    assert "apply_migrations.sh" in install
+    assert '"$VENV_PYTHON" "$SCRIPT_DIR/manage.py" migrate' in install
     assert "flask db upgrade" not in install
     assert "fix_db.py" not in install
 

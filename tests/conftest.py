@@ -6,7 +6,7 @@ import os
 import pytest
 from datetime import timedelta
 from flask import Flask, render_template
-from extensions import db, init_extensions, login_manager
+from extensions import db, init_extensions
 from models import User, Map, Device, DeviceType
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -110,11 +110,6 @@ def app():
     def access_denied(e):
         return render_template("403.html", hide_sidebar=True), 403
 
-    # Настройка login_manager
-    @login_manager.user_loader
-    def load_user(user_id):
-        return db.session.get(User, int(user_id))
-
     with app.app_context():
         # Create all tables
         db.create_all()
@@ -191,9 +186,9 @@ def app():
 
         db.session.commit()
 
-        yield app
+    yield app
 
-        # Cleanup
+    with app.app_context():
         db.session.remove()
         db.drop_all()
 
@@ -223,8 +218,9 @@ def login(client, app):
             u = User.query.filter_by(username=username).first()
             assert u is not None, f"Нет тестового пользователя {username}"
             uid = u.id
+            session_id = u.get_id()
         with client.session_transaction() as sess:
-            sess["_user_id"] = str(uid)
+            sess["_user_id"] = session_id
             sess["_fresh"] = True
         return uid
 

@@ -18,17 +18,13 @@ def _login(client, app, username):
     from models import User
 
     with app.app_context():
-        uid = User.query.filter_by(username=username).first().id
+        user = User.query.filter_by(username=username).first()
+        uid = user.id
+        session_id = user.get_id()
     with client.session_transaction() as sess:
-        sess["_user_id"] = str(uid)
+        sess["_user_id"] = session_id
         sess["_fresh"] = True
     return uid
-
-
-# ПРИМЕЧАНИЕ по тестам локали: conftest держит app_context открытым на всё время
-# фикстуры, а Flask-Babel кэширует выбранную локаль на текущем контексте. Поэтому
-# в ОДНОМ тесте считается только ПЕРВАЯ локаль-определяющая отрисовка — все проверки
-# рендера делаем одним запросом на тест (в проде каждый запрос — свой контекст).
 
 
 class TestLocaleSelection:
