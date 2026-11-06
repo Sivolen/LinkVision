@@ -4166,6 +4166,30 @@ polyline.quality-chart-line,
   border-top: 1px solid var(--sidebar-border);
 }
 .sidebar-footer .status-indicator { order: 2; }
+/* Readable secondary labels and consistent destructive actions across dialogs. */
+.types-table thead th,
+.users-table thead th,
+.settings-section .types-table thead th { font-size: 11px; }
+.types-pagination-info,
+.users-pagination,
+.status-indicator { font-size: 12px; }
+.btn-action-danger,
+.types-actions .btn-action-danger {
+  color: #ad4050;
+  border-color: color-mix(in srgb, #ad4050 35%, var(--border-color));
+}
+.btn-action-danger:hover,
+.btn-action-danger:focus-visible,
+.types-actions .btn-action-danger:hover,
+.types-actions .btn-action-danger:focus-visible {
+  color: #fff;
+  background: #b6384a;
+  border-color: #b6384a;
+}
+[data-theme="dark"] .btn-action-danger,
+[data-theme="dark"] .types-actions .btn-action-danger { color: #ffb1bc; border-color: #92555f; }
+[data-theme="dark"] .btn-action-danger:hover,
+[data-theme="dark"] .types-actions .btn-action-danger:hover { color: #fff; }
 .settings-page .settings-section-body .btn-primary {
   background: var(--accent-color);
   border-color: var(--accent-color);

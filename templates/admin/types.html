@@ -23,6 +23,10 @@
 .types-icon-preview { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-color); border-radius:7px; background:var(--bg-primary); }
 .types-icon-preview img { max-width:24px; max-height:24px; object-fit:contain; }
 .types-count { display:inline-flex; min-width:27px; justify-content:center; padding:3px 8px; border-radius:20px; background:rgba(13,202,240,.14); color:#087f98; font-size:11px; font-weight:700; }
+[data-theme="dark"] .types-count { background:#27464c; color:#a6e8f0; }
+[data-theme="dark"] .types-icon-preview { background:#3a3d42; border-color:#686c73; }
+[data-theme="dark"] .types-icon-preview i { color:#b9c4d2 !important; }
+.types-visible-count { color:var(--text-secondary); font-size:12px; }
 .types-actions { display:flex; justify-content:flex-end; gap:6px; }
 .types-actions .btn-action { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-color); border-radius:8px; background:transparent; color:var(--text-secondary); }
 .types-actions .btn-action:hover { background:var(--accent-color); color:#fff; border-color:var(--accent-color); }
@@ -79,7 +83,7 @@
             <i class="fas fa-search" aria-hidden="true"></i>
             <input type="search" id="typesSearch" class="form-control" placeholder="{{ _('Поиск по названию или ID') }}" aria-label="{{ _('Поиск типов устройств') }}">
         </div>
-        <span class="text-muted small" id="typesVisibleCount">{{ types|length }} {{ _('типов') }}</span>
+        <span class="types-visible-count" id="typesVisibleCount">{{ types|length }} {{ _('типов') }}</span>
     </div>
 
     <div class="types-table-wrap">
@@ -107,7 +111,22 @@
                         {% if type.icon_filename %}
                             <img src="{{ url_for('static', filename='uploads/icons/' + type.icon_filename) }}" alt="{{ type.name }}">
                         {% else %}
-                            <i class="fas fa-image text-muted" aria-hidden="true"></i>
+                            {% set icon_name = type.name|lower %}
+                            {% if 'router' in icon_name or 'маршрут' in icon_name %}
+                                <i class="fas fa-route" aria-hidden="true" title="{{ _('Иконка не задана') }}"></i>
+                            {% elif 'switch' in icon_name or 'коммут' in icon_name %}
+                                <i class="fas fa-network-wired" aria-hidden="true" title="{{ _('Иконка не задана') }}"></i>
+                            {% elif 'server' in icon_name or 'сервер' in icon_name %}
+                                <i class="fas fa-server" aria-hidden="true" title="{{ _('Иконка не задана') }}"></i>
+                            {% elif icon_name == 'pc' or 'computer' in icon_name %}
+                                <i class="fas fa-desktop" aria-hidden="true" title="{{ _('Иконка не задана') }}"></i>
+                            {% elif 'firewall' in icon_name %}
+                                <i class="fas fa-shield-alt" aria-hidden="true" title="{{ _('Иконка не задана') }}"></i>
+                            {% elif 'cloud' in icon_name %}
+                                <i class="fas fa-cloud" aria-hidden="true" title="{{ _('Иконка не задана') }}"></i>
+                            {% else %}
+                                <i class="fas fa-network-wired" aria-hidden="true" title="{{ _('Иконка не задана') }}"></i>
+                            {% endif %}
                         {% endif %}
                         </span>
                     </td>
@@ -127,7 +146,7 @@
                             <form method="POST" action="{{ url_for('admin.delete_type', id=type.id) }}" class="m-0"
                                   onsubmit="return confirm('{{ _('Удалить тип устройства?') }}')">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn-action" title="{{ _('Удалить') }}" aria-label="{{ _('Удалить') }}">
+                                <button type="submit" class="btn-action btn-action-danger" title="{{ _('Удалить') }}" aria-label="{{ _('Удалить') }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </form>

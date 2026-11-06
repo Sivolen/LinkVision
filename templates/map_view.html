@@ -25,10 +25,10 @@
     <div class="toolbar">
     {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group toolbar-section toolbar-section-edit edit-tools" data-label="{{ _('Редактирование') }}">
-        <button class="toolbar-btn" onclick="openDeviceModal()" aria-label="{{ _('Добавить устройство') }}">
+        <button class="toolbar-btn" onclick="openDeviceModal()" title="{{ _('Добавить устройство') }}" aria-label="{{ _('Добавить устройство') }}">
             <i class="fas fa-plus" aria-hidden="true"></i> <span class="btn-label">{{ _('Устройство') }}</span>
         </button>
-        <button class="toolbar-btn" onclick="startLinkMode()" aria-label="{{ _('Создать связь') }}">
+        <button class="toolbar-btn" onclick="startLinkMode()" title="{{ _('Создать связь') }}" aria-label="{{ _('Создать связь') }}">
             <i class="fas fa-link" aria-hidden="true"></i> <span class="btn-label">{{ _('Связь') }}</span>
         </button>
     </div>
@@ -50,7 +50,7 @@
 
     {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group toolbar-section toolbar-section-selection edit-tools" id="bulkEditGroup" style="display:none;" data-label="{{ _('Выбор') }}">
-        <button class="toolbar-btn toolbar-btn-icon-only" onclick="openBulkEditModal()" aria-label="{{ _('Массовое редактирование выбранных устройств') }}">
+        <button class="toolbar-btn toolbar-btn-icon-only" onclick="openBulkEditModal()" title="{{ _('Массовое редактирование выбранных устройств') }}" aria-label="{{ _('Массовое редактирование выбранных устройств') }}">
             <i class="fas fa-edit" aria-hidden="true"></i> <span class="btn-label">{{ _('Редактировать выбранные') }}</span>
         </button>
     </div>
@@ -70,16 +70,16 @@
 
     {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group toolbar-section toolbar-section-elements edit-tools" data-label="{{ _('Элементы') }}">
-        <button class="toolbar-btn" onclick="openGroupManager()" aria-label="{{ _('Управление группами устройств') }}">
+        <button class="toolbar-btn" onclick="openGroupManager()" title="{{ _('Управление группами устройств') }}" aria-label="{{ _('Управление группами устройств') }}">
             <i class="fas fa-layer-group" aria-hidden="true"></i> <span class="btn-label">{{ _('Группы') }}</span>
         </button>
-        <button class="toolbar-btn" onclick="openShapeModal()" aria-label="{{ _('Создать фигуру') }}">
+        <button class="toolbar-btn" onclick="openShapeModal()" title="{{ _('Создать фигуру') }}" aria-label="{{ _('Создать фигуру') }}">
             <i class="fas fa-shapes" aria-hidden="true"></i> <span class="btn-label">{{ _('Фигура') }}</span>
         </button>
     </div>
     <div class="toolbar-group toolbar-section toolbar-section-layout edit-tools" data-label="{{ _('Раскладка') }}">
         <div class="dropdown">
-            <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-label="{{ _('Автораскладка карты') }}">
+            <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" title="{{ _('Автораскладка карты') }}" aria-label="{{ _('Автораскладка карты') }}">
                 <i class="fas fa-project-diagram" aria-hidden="true"></i> <span class="btn-label">{{ _('Автораскладка') }}</span>
             </button>
             <ul class="dropdown-menu">
