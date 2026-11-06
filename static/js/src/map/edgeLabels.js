@@ -22,8 +22,7 @@ export function updateEdgeLabel(edge) {
     } else {
         label = `${tgtIface} ↔ ${srcIface}`;
     }
-    edge.data('label', label);
-    edge.emit('style');
+    if (edge.data('label') !== label) edge.data('label', label);
 }
 
 export function updateEdgeLabelsForNode(node) {

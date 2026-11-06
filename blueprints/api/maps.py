@@ -138,6 +138,7 @@ def import_map_route():
 
     try:
         map_obj = map_service.import_map(data, current_user)
+        map_service.invalidate_all_sidebar_caches()
         notify_map_updated(map_obj.id)
         return jsonify({"id": map_obj.id, "status": "imported"})
     except ValueError as e:

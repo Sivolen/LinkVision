@@ -54,6 +54,17 @@ function parseColor(value) {
     return null;
 }
 
+// Keep saved link colors intact while making dark links visible on the dark canvas.
+function edgeColor(edge) {
+    const original = edge.data('color') || '#6c757d';
+    if (!isDarkTheme()) return original;
+    const rgb = parseColor(original);
+    if (!rgb) return original;
+    const brightness = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+    const mix = Math.max(0, Math.min(0.55, (0.62 - brightness) / (1 - brightness)));
+    return `rgb(${rgb.map(channel => Math.round(channel + (255 - channel) * mix)).join(', ')})`;
+}
+
 // Цвет группы с учётом темы. В тёмной теме пользовательский цвет подмешивается
 // к нейтральному серо-голубому — без этого жёлтый/оранжевый цвет группы при
 // малой прозрачности даёт грязно-коричневую заливку на графитовом фоне.
@@ -380,7 +391,7 @@ export const CY_STYLE = [
         selector: 'edge',
         style: {
             'width': function(edge) { return edge.data('width') || 2; },
-            'line-color': function(edge) { return edge.data('color') || '#6c757d'; },
+            'line-color': edgeColor,
             'line-style': function(edge) { return edge.data('style') || 'solid'; },
             'curve-style': 'bezier',
             'control-point-step-size': 40,

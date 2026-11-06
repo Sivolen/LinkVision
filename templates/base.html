@@ -47,10 +47,10 @@
                 <span class="sidebar-user-name">{{ current_user.username }}</span>
                 <span class="sidebar-user-roles">
                     {% if current_user.is_admin %}
-                    <span class="sidebar-role-badge bg-warning text-dark">Admin</span>
+                    <span class="sidebar-role-badge">Admin</span>
                     {% endif %}
                     {% if current_user.is_operator %}
-                    <span class="sidebar-role-badge bg-info text-dark">Operator</span>
+                    <span class="sidebar-role-badge">Operator</span>
                     {% endif %}
                 </span>
             </div>
@@ -113,6 +113,39 @@
 
         <!-- Компактные системные действия: тема, выход и язык -->
         <div class="sidebar-footer">
+            {% if current_user.is_admin %}
+            <div class="admin-menu">
+                <div class="admin-menu-heading">{{ _('Администрирование') }}</div>
+                <a href="{{ url_for('admin.users') }}" class="admin-menu-item {{ 'active' if request.endpoint == 'admin.users' else '' }}">
+                    <i class="fas fa-users"></i> <span>{{ _('Пользователи') }}</span>
+                </a>
+                <a href="{{ url_for('admin.types') }}" class="admin-menu-item {{ 'active' if request.endpoint == 'admin.types' else '' }}">
+                    <i class="fas fa-shapes"></i> <span>{{ _('Типы устройств') }}</span>
+                </a>
+                <div class="admin-menu-group {{ 'active' if request.endpoint in ['admin.monitoring_settings', 'admin.quality_profiles'] else '' }}">
+                    <button type="button" class="admin-menu-item admin-menu-toggle" data-bs-toggle="collapse"
+                            data-bs-target="#monitoringAdminMenu" aria-expanded="{{ 'true' if request.endpoint in ['admin.monitoring_settings', 'admin.quality_profiles'] else 'false' }}"
+                            aria-controls="monitoringAdminMenu">
+                        <i class="fas fa-heartbeat"></i><span>{{ _('Мониторинг') }}</span>
+                        <i class="fas fa-chevron-down admin-menu-chevron" aria-hidden="true"></i>
+                    </button>
+                    <div class="collapse {{ 'show' if request.endpoint in ['admin.monitoring_settings', 'admin.quality_profiles'] else '' }}" id="monitoringAdminMenu">
+                        <a href="{{ url_for('admin.monitoring_settings') }}" class="admin-menu-item admin-menu-subitem {{ 'active' if request.endpoint == 'admin.monitoring_settings' else '' }}">
+                            <i class="fas fa-sliders-h"></i><span>{{ _('Настройки') }}</span>
+                        </a>
+                        <a href="{{ url_for('admin.quality_profiles') }}" class="admin-menu-item admin-menu-subitem {{ 'active' if request.endpoint == 'admin.quality_profiles' else '' }}">
+                            <i class="fas fa-signal"></i><span>{{ _('Профили качества') }}</span>
+                        </a>
+                    </div>
+                </div>
+                <a href="{{ url_for('admin.settings') }}" class="admin-menu-item {{ 'active' if request.endpoint == 'admin.settings' else '' }}">
+                    <i class="fas fa-cog"></i> <span>{{ _('Системные настройки') }}</span>
+                </a>
+                <a href="{{ url_for('admin.maps_list') }}" class="admin-menu-item {{ 'active' if request.endpoint == 'admin.maps_list' else '' }}">
+                    <i class="fas fa-map"></i> <span>{{ _('Карты') }}</span>
+                </a>
+            </div>
+            {% endif %}
             <div class="sidebar-system-actions" aria-label="{{ _('Системные действия') }}">
                 <button type="button" class="theme-toggle" onclick="toggleTheme()"
                         title="{{ _('Переключить тему') }}" aria-label="{{ _('Переключить тему') }}">
@@ -145,39 +178,6 @@
                     </ul>
                 </div>
             </div>
-            {% if current_user.is_admin %}
-            <div class="admin-menu mt-3 pt-3 border-top border-secondary">
-                <small class="text-muted d-block mb-2"><span>{{ _('Администрирование') }}</span></small>
-                <a href="{{ url_for('admin.users') }}" class="admin-menu-item">
-                    <i class="fas fa-users"></i> <span>{{ _('Пользователи') }}</span>
-                </a>
-                <a href="{{ url_for('admin.types') }}" class="admin-menu-item">
-                    <i class="fas fa-shapes"></i> <span>{{ _('Типы устройств') }}</span>
-                </a>
-                <div class="admin-menu-group {{ 'active' if request.endpoint in ['admin.monitoring_settings', 'admin.quality_profiles'] else '' }}">
-                    <button type="button" class="admin-menu-item admin-menu-toggle" data-bs-toggle="collapse"
-                            data-bs-target="#monitoringAdminMenu" aria-expanded="{{ 'true' if request.endpoint in ['admin.monitoring_settings', 'admin.quality_profiles'] else 'false' }}"
-                            aria-controls="monitoringAdminMenu">
-                        <i class="fas fa-heartbeat"></i><span>{{ _('Мониторинг') }}</span>
-                        <i class="fas fa-chevron-down admin-menu-chevron" aria-hidden="true"></i>
-                    </button>
-                    <div class="collapse {{ 'show' if request.endpoint in ['admin.monitoring_settings', 'admin.quality_profiles'] else '' }}" id="monitoringAdminMenu">
-                        <a href="{{ url_for('admin.monitoring_settings') }}" class="admin-menu-item admin-menu-subitem {{ 'active' if request.endpoint == 'admin.monitoring_settings' else '' }}">
-                            <i class="fas fa-sliders-h"></i><span>{{ _('Настройки') }}</span>
-                        </a>
-                        <a href="{{ url_for('admin.quality_profiles') }}" class="admin-menu-item admin-menu-subitem {{ 'active' if request.endpoint == 'admin.quality_profiles' else '' }}">
-                            <i class="fas fa-signal"></i><span>{{ _('Профили качества') }}</span>
-                        </a>
-                    </div>
-                </div>
-                <a href="{{ url_for('admin.settings') }}" class="admin-menu-item {{ 'active' if request.endpoint == 'admin.settings' else '' }}">
-                    <i class="fas fa-cog"></i> <span>{{ _('Системные настройки') }}</span>
-                </a>
-                <a href="{{ url_for('admin.maps_list') }}" class="admin-menu-item">
-                    <i class="fas fa-map"></i> <span>{{ _('Карты') }}</span>
-                </a>
-            </div>
-            {% endif %}
             <!-- Индикатор состояния бэкенда и версия -->
             <div class="status-indicator">
                 <div class="status-dot" id="backend-status-dot"></div>

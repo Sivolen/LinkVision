@@ -39,31 +39,30 @@ LinkVision - Современный дизайн (финальная верси�
 ТЁМНАЯ ТЕМА (обновлённая конфигурация)
 ============================================================================ */
 [data-theme="dark"] {
-  /* Основные фоны – тёплый тёмно-серый вместо сине-чёрного */
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #2d2d2d;
-  --text-primary: #e0e0e0;
-  --text-secondary: #b0b0b0;
+  /* Графитовые поверхности с мягким контрастом между слоями. */
+  --bg-primary: #242528;
+  --bg-secondary: #303236;
+  --text-primary: #f0f0f1;
+  --text-secondary: #c0c2c6;
   --text-sidebar: #f0f0f0;
-  --border-color: #404040;
+  --border-color: #494c51;
   --accent-color: #6c8ebf;      /* приглушённый синий */
   --accent-hover: #7e9ec9;
   --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-  /* Карта использует тот же нейтральный фон, что и рабочая область страниц. */
-  --cy-background: var(--bg-primary);
-  --cy-grid: #2a2a2a;
-  --lv-card-bg: #2e3849;
-  --lv-card-border: #4a5870;
+  --cy-background: #292b2e;
+  --cy-grid: #4a4d52;
+  --lv-card-bg: #34373c;
+  --lv-card-border: #5b6068;
   --lv-card-name: #f8fafc;
   --lv-card-ip: #a9b8cd;
   --lv-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 5px 12px -2px rgba(0, 0, 0, 0.6);
-  --sidebar-surface: #1d2732;
-  --sidebar-panel: #222e3a;
-  --sidebar-hover: #293745;
-  --sidebar-active-bg: #254665;
+  --sidebar-surface: #2c2e32;
+  --sidebar-panel: #34373b;
+  --sidebar-hover: #3a3e43;
+  --sidebar-active-bg: #3b5268;
   --sidebar-active-text: #d8edff;
-  --sidebar-border: #334353;
-  --sidebar-muted: #9aacc0;
+  --sidebar-border: #484c52;
+  --sidebar-muted: #b0b4ba;
   --sidebar-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
 }
 
@@ -4086,6 +4085,59 @@ TOAST УВЕДОМЛЕНИЯ — в стиле приложения
 [data-theme="dark"] .users-role-admin { color: #bfdbfe; background: rgba(59, 130, 246, .22); border: 1px solid rgba(96, 165, 250, .30); }
 [data-theme="dark"] .users-role-operator { color: #99f6e4; background: rgba(20, 184, 166, .18); border: 1px solid rgba(45, 212, 191, .28); }
 [data-theme="dark"] .users-role-user { color: #d1d5db; background: rgba(148, 163, 184, .13); border: 1px solid rgba(148, 163, 184, .25); }
+
+/* Shared navigation and administrative surfaces. */
+.sidebar-role-badge {
+  color: var(--sidebar-active-text);
+  background: var(--sidebar-active-bg);
+}
+.sidebar-footer { gap: 8px; }
+.sidebar-footer .admin-menu {
+  order: 0;
+  margin: 0;
+  padding: 0 0 8px;
+  border: 0;
+}
+.admin-menu-heading {
+  margin: 0 8px 8px;
+  color: var(--sidebar-muted);
+  font-size: .69rem;
+  font-weight: 650;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
+.sidebar-system-actions {
+  order: 1;
+  margin: 0;
+  padding: 6px 0 0;
+  border: 0;
+  border-top: 1px solid var(--sidebar-border);
+}
+.sidebar-footer .status-indicator { order: 2; }
+.settings-page .settings-section-body .btn-primary {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+}
+.settings-page .settings-section-body .btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.settings-section-body .text-danger {
+  padding: 10px 12px;
+  border: 1px solid #efcbd0;
+  border-radius: 8px;
+  background: #fff4f5;
+  color: #a33545 !important;
+}
+[data-theme="dark"] .settings-section-body .text-danger {
+  border-color: #75454e;
+  background: #3e2d35;
+  color: #ffbfc6 !important;
+}
+@media (min-width: 769px) {
+  .sidebar.collapsed .admin-menu-heading { display: none; }
+}
 
 
 /* ==========================================================================
