@@ -264,18 +264,6 @@ export const CY_STYLE = [
             'underlay-padding': '10px'
         }
     },
-    // Выделенный узел — overlay вместо border-width, чтобы не менять bounding box
-    {
-        selector: 'node:selected, node[selected]',
-        style: {
-            'overlay-color': '#007bff',
-            'overlay-opacity': 0.25,
-            'overlay-padding': '4px',
-            'border-color': '#007bff',
-            'background-color': 'rgba(0,123,255,0.1)',
-            'z-index': 20
-        }
-    },
     {
         selector: '.cy-node-highlight',
         style: {
@@ -484,5 +472,19 @@ export const CY_STYLE = [
     {
         selector: 'node.lv-html-label',
         style: { 'label': '' }
+    },
+    // Selection must follow status, quality, monitoring and hover rules so
+    // every selected device keeps the same visible outline.
+    {
+        selector: 'node[!isGroup][!isShape]:selected',
+        style: {
+            'overlay-color': '#3b82f6',
+            'overlay-opacity': 0.38,
+            'overlay-padding': '6px',
+            'border-color': '#3b82f6',
+            'border-style': 'solid',
+            'border-opacity': 1,
+            'z-index': 20
+        }
     }
 ];

@@ -136,7 +136,7 @@ export function resetLinkMode() {
     linkModeActive = false;
     if (sourceNode && cy) {
         sourceNode.removeClass('cy-link-source');
-        sourceNode.selected(false);
+        sourceNode.unselect();
     }
     sourceNode = null;
     document.body.style.cursor = 'default';

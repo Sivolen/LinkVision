@@ -1076,6 +1076,11 @@ body.resizing-sidebar .main-content { transition: none; }
   border-color: #3b82f6;
 }
 
+.lv-dev-label.is-selected {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
 /* Разгрузка обзора (deviceLabels.js, cull): мешающая карточка сворачивается до
    названия, а если и так не помещается — скрывается. */
 .lv-dev-label.is-compact .lv-dev-label__ip {
