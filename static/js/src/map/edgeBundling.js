@@ -14,6 +14,8 @@ import { getCy } from './core.js';
 import { registerCleanup } from './moduleRegistry.js';
 
 let updateTimeout = null;
+// Последний применённый изгиб: сравниваем сам объект ребра, а не только id.
+let appliedCurves = new Map();
 const UPDATE_DELAY = 150; // задержка для пакетного обновления (как в edgeLabels.js)
 
 const ANGLE_BUCKET_DEG = 10; // рёбра с разницей курса меньше этого считаем "почти параллельными"
@@ -23,7 +25,7 @@ const CURVE_SPACING = 26;    // перпендикулярный шаг межд
 // как набор параллельных линий, а не как пересекающиеся мешки.
 const CP_WEIGHTS = '0.2 0.8';
 
-function recompute(cy) {
+export function recomputeEdgeCurves(cy) {
     // Пересчёт обходит все рёбра и узлы карты. Во время перетаскивания
     // геометрия меняется непрерывно, поэтому откладываем полный проход до
     // отпускания узла, иначе крупная карта получает лишнюю нагрузку.
@@ -33,14 +35,8 @@ function recompute(cy) {
     }
 
     cy.batch(() => {
-        // Сбрасываем прошлый ручной изгиб — при каждом пересчёте решаем заново,
-        // т.к. узлы могли переместиться и расклад "кто с кем параллелен" изменился.
-        cy.edges().forEach(edge => {
-            if (edge.data('_manualCurve')) {
-                edge.removeStyle('curve-style control-point-distances control-point-weights');
-                edge.removeData('_manualCurve');
-            }
-        });
+        // Сначала вычисляем новый результат без изменения стилей графа.
+        const nextCurves = new Map();
 
         const assigned = new Set(); // id рёбер, которым уже назначили изгиб на этом проходе
 
@@ -90,15 +86,29 @@ function recompute(cy) {
                     const sign = g.edge.source().id() === nid ? 1 : -1;
                     const distance = Math.round(offset * sign);
 
-                    g.edge.data('_manualCurve', true);
-                    g.edge.style({
-                        'curve-style': 'unbundled-bezier',
-                        'control-point-distances': `${distance} ${distance}`,
-                        'control-point-weights': CP_WEIGHTS,
-                    });
+                    nextCurves.set(g.edge.id(), { edge: g.edge, distance });
                 });
             });
         });
+
+        // Обновляем лишь изменившиеся рёбра. Удалённые рёбра уже не нуждаются
+        // в очистке; при повторном использовании id проверяем ссылку на объект.
+        appliedCurves.forEach((old, id) => {
+            const next = nextCurves.get(id);
+            if ((!next || next.edge !== old.edge) && !old.edge.removed()) {
+                old.edge.removeStyle('curve-style control-point-distances control-point-weights');
+            }
+        });
+        nextCurves.forEach((next, id) => {
+            const old = appliedCurves.get(id);
+            if (old && old.edge === next.edge && old.distance === next.distance) return;
+            next.edge.style({
+                'curve-style': 'unbundled-bezier',
+                'control-point-distances': `${next.distance} ${next.distance}`,
+                'control-point-weights': CP_WEIGHTS,
+            });
+        });
+        appliedCurves = nextCurves;
     });
 }
 
@@ -112,7 +122,7 @@ export function updateEdgeCurves() {
         const cy = getCy();
         updateTimeout = null;
         if (!cy) return;
-        recompute(cy);
+        recomputeEdgeCurves(cy);
     }, UPDATE_DELAY);
 }
 
@@ -125,6 +135,10 @@ export function cleanup() {
         clearTimeout(updateTimeout);
         updateTimeout = null;
     }
+    appliedCurves.forEach(({ edge }) => {
+        if (!edge.removed()) edge.removeStyle('curve-style control-point-distances control-point-weights');
+    });
+    appliedCurves.clear();
 }
 
 // Саморегистрация в общем реестре очистки (см. moduleRegistry.js)
