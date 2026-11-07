@@ -262,6 +262,7 @@ function updateLockButton() {
  */
 function applyEditPermission(canEdit) {
     window.canEditMap = canEdit;
+    window.dispatchEvent(new CustomEvent('linkvision:edit-permission-changed', { detail: { canEdit } }));
     updateLockPermissions(canEdit);
     updateEditToolsDisabledState(canEdit);
 }
@@ -285,8 +286,8 @@ function applyEditPermission(canEdit) {
  * window.refreshUndoRedoButtons (см. undoRedo.js).
  */
 function updateEditToolsDisabledState(canEdit) {
-    document.querySelectorAll('.toolbar .edit-tools button').forEach((btn) => {
-        if (btn.id === 'undoBtn' || btn.id === 'redoBtn') return;
+    document.querySelectorAll('.toolbar .edit-tools button, .toolbar .map-layout-menu button').forEach((btn) => {
+        if (btn.dataset.mapAction === 'undo' || btn.dataset.mapAction === 'redo') return;
         btn.disabled = !canEdit;
     });
     if (typeof window.refreshUndoRedoButtons === 'function') {

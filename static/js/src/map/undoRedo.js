@@ -135,15 +135,15 @@ export function initUndoRedo(cy) {
         });
     }
     function updateButtons() {
-        const undoBtn = document.getElementById('undoBtn');
-        const redoBtn = document.getElementById('redoBtn');
+        const undoBtns = document.querySelectorAll('[data-map-action="undo"]');
+        const redoBtns = document.querySelectorAll('[data-map-action="redo"]');
         // И границы истории, И текущее право редактирования карты — если
         // карта заблокирована для нас (canEditMap=false), сохранить откат
         // всё равно не получится (бэкенд отклонит), поэтому кнопка тоже
         // должна выглядеть неактивной, а не просто кликабельной вхолостую.
         const canEdit = window.canEditMap !== false;
-        if (undoBtn) undoBtn.disabled = (currentIndex <= 0) || !canEdit;
-        if (redoBtn) redoBtn.disabled = (currentIndex >= history.length - 1) || !canEdit;
+        undoBtns.forEach(button => { button.disabled = (currentIndex <= 0) || !canEdit; });
+        redoBtns.forEach(button => { button.disabled = (currentIndex >= history.length - 1) || !canEdit; });
     }
     // Позволяет lock.js пересчитать disabled после изменения прав
     // редактирования (не связанного с историей отмены), не трогая саму

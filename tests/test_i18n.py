@@ -221,7 +221,8 @@ class TestBatch4MapView:
             mid = Map.query.filter_by(name="Own Map").first().id
         html = client.get(f"/map/{mid}?lang=en").get_data(as_text=True)
         assert 'lang="en"' in html
-        assert "Add device" in html  # тулбар (edit-tools)
+        # В переработанной панели это меню «Add» с отдельным пунктом «Device».
+        assert "Add" in html and "Device" in html
         assert "Device groups" in html  # модалка групп
         assert "Добавить устройство" not in html
 

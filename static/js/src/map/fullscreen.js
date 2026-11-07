@@ -19,8 +19,10 @@ function setFullscreenLayout(active) {
 
     const exitBtn = document.getElementById('exitFullscreenBtn');
     if (exitBtn) exitBtn.style.display = active ? 'flex' : 'none';
-    const fullBtn = document.getElementById('fullscreenBtn');
-    if (fullBtn) fullBtn.innerHTML = `<i class="fas fa-${active ? 'compress' : 'expand'}"></i>`;
+    document.querySelectorAll('[data-map-action="fullscreen"]').forEach(button => {
+        const icon = button.querySelector('i');
+        if (icon) icon.className = `fas fa-${active ? 'compress' : 'expand'}${button.classList.contains('dropdown-item') ? ' fa-fw me-2' : ''}`;
+    });
 }
 
 function resizeMap(fit = false) {

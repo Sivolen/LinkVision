@@ -18,9 +18,14 @@ import { registerCleanup } from './moduleRegistry.js';
 import { isViewportGesture } from './labelScale.js';
 
 const ZOOM_THRESHOLD = 0.5;   // выше этого зума компенсация не нужна — рамка и так видна
+const DARK_DOWN_AURA = '#c85d6d';
 
 function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
+}
+
+function isDarkTheme() {
+    return document.documentElement?.dataset?.theme === 'dark';
 }
 
 // Устройство с ВЫКЛЮЧЕННЫМ мониторингом (серое) не подсвечиваем, даже если у
@@ -85,7 +90,7 @@ const EMPHASIS_GROUPS = [
         baseOverlayPadding: 4,   // базовое значение из styles.js (единицы графа)
         maxOverlayPaddingGraphUnits: 40,
         minOverlayOpacity: 0.2,
-        maxOverlayOpacity: 0.55, // насколько плотным становится гало на максимальном отдалении
+        maxOverlayOpacity: 0.42, // на тёмном графите плотное красное пятно выглядит тяжелее, чем помогает
     },
     {
         // Подсветка результатов поиска (.cy-node-highlight в styles.js) — та же
@@ -129,6 +134,10 @@ let activeCy = null;
 let zoomHandler = null;
 let runTimer = 0;
 let destroyHandler = null;
+let themeObserver = null;
+let elementsLoadedHandler = null;
+let viewportReadyHandler = null;
+let postLoadTimers = [];
 
 const RUN_INTERVAL_MS = 100;    // не чаще раза в 100 мс во время жеста зума
 const ZOOM_EPSILON = 0.02;      // изменение масштаба меньше 2% — стили те же
@@ -151,18 +160,55 @@ function applyToNode(n, entry, styles) {
     const borderWidth = Math.max(...active.map(s => s.borderWidth));
     const overlayPadding = Math.max(...active.map(s => s.overlayPadding));
     const overlayOpacity = Math.max(...active.map(s => s.overlayOpacity));
-    const sig = `${borderWidth.toFixed(2)}|${overlayPadding.toFixed(2)}|${overlayOpacity.toFixed(3)}`;
+    // На графите обычный #dc3545 даёт слишком жёсткие красные пятна при
+    // overview-zoom. Меняем только down-ауру, не жёлтый partial и не
+    // рабочий контур устройства на обычном масштабе.
+    const overlayColor = isDarkTheme() && n.data('status') === 'down' ? DARK_DOWN_AURA : null;
+    const sig = `${borderWidth.toFixed(2)}|${overlayPadding.toFixed(2)}|${overlayOpacity.toFixed(3)}|${overlayColor || ''}`;
     if (entry.sig === sig) return;
     entry.sig = sig;
     n.style({
         'border-width': borderWidth,
         'overlay-padding': `${overlayPadding}px`,
-        'overlay-opacity': overlayOpacity
+        'overlay-opacity': overlayOpacity,
+        'overlay-color': overlayColor
     });
 }
 
 function clearNode(n) {
     n.removeStyle('border-width overlay-padding overlay-opacity');
+}
+
+// Начальная карта собирается из нескольких независимых асинхронных частей:
+// элементов, фоновой подложки, resize Cytoscape и сохранённого viewport.
+// На реальных больших картах их порядок зависит от кеша браузера. Повторяем
+// дешёвый полный проход только в стартовом окне, чтобы итоговый zoom точно
+// получил ауры без участия пользователя.
+function refreshAfterInitialLoad(cy) {
+    postLoadTimers.forEach(clearTimeout);
+    postLoadTimers = [];
+    const run = () => {
+        if (activeCy === cy) recompute(true);
+    };
+    run();
+    [180, 800].forEach(delay => {
+        postLoadTimers.push(setTimeout(run, delay));
+    });
+}
+
+// Сигналы elements:loaded и viewport-ready нужны, но в реальном приложении
+// после них ещё могут завершиться восстановление групп, socket-resync или
+// отложенное применение статусов. Любой из этих старых обработчиков умеет
+// записать bypass-стиль узла и тем самым снять только что рассчитанную ауру.
+// Поэтому у нового графа есть короткое окно финальной синхронизации,
+// независимое от порядка асинхронной загрузки. Это не интервал: всего четыре
+// полных прохода в первые секунды и затем никаких лишних обходов 400+ узлов.
+function scheduleStartupRefreshes(cy) {
+    [120, 500, 1500, 3500].forEach(delay => {
+        postLoadTimers.push(setTimeout(() => {
+            if (activeCy === cy) recompute(true);
+        }, delay));
+    });
 }
 
 /**
@@ -239,6 +285,43 @@ export function initZoomEmphasis(cy) {
     destroyHandler = () => cleanup(true);
     cy.on('zoom', zoomHandler);
     cy.on('destroy', destroyHandler);
+    // loadElements() сначала заполняет пустой граф, а затем может выполнить
+    // автоматический fit. Первый recompute в init в этот момент не видит
+    // устройств или видит старый zoom; два кадра после elements:loaded дают
+    // Cytoscape завершить fit и сразу рисуют ауры без ручного wheel-zoom.
+    elementsLoadedHandler = () => {
+        const loadedCy = cy;
+        const afterFrame = typeof requestAnimationFrame === 'function'
+            ? requestAnimationFrame
+            : callback => setTimeout(callback, 0);
+        afterFrame(() => afterFrame(() => {
+            if (activeCy === loadedCy) refreshAfterInitialLoad(loadedCy);
+        }));
+    };
+    window.addEventListener('elements:loaded', elementsLoadedHandler);
+    // Для карт с фоновой подложкой final fit может состояться после
+    // elements:loaded. background.js сообщает об этом отдельным событием.
+    viewportReadyHandler = () => {
+        const readyCy = cy;
+        const afterFrame = typeof requestAnimationFrame === 'function'
+            ? requestAnimationFrame
+            : callback => setTimeout(callback, 0);
+        afterFrame(() => afterFrame(() => {
+            if (activeCy === readyCy) refreshAfterInitialLoad(readyCy);
+        }));
+    };
+    window.addEventListener('linkvision:viewport-ready', viewportReadyHandler);
+    // В unit-тесте граф создаётся без DOM-контейнера: там стартовая
+    // асинхронная цепочка отсутствует и нужны только явные события.
+    if (document.getElementById('cy')) scheduleStartupRefreshes(cy);
+    // Theme is a DOM attribute, so Cytoscape does not emit a zoom/data event
+    // when it changes. Reapply the overview aura without touching viewport.
+    if (document.documentElement && typeof MutationObserver !== 'undefined') {
+        themeObserver = new MutationObserver(records => {
+            if (records.some(record => record.attributeName === 'data-theme')) recompute(true);
+        });
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
     recompute(true);
 }
 
@@ -261,6 +344,8 @@ export function refreshZoomEmphasis() {
 export function cleanup(destroying = false) {
     clearTimeout(runTimer);
     runTimer = 0;
+    postLoadTimers.forEach(clearTimeout);
+    postLoadTimers = [];
     const cy = activeCy;
     if (cy) {
         try {
@@ -276,8 +361,14 @@ export function cleanup(destroying = false) {
             });
         }
     }
+    if (elementsLoadedHandler) window.removeEventListener('elements:loaded', elementsLoadedHandler);
+    if (viewportReadyHandler) window.removeEventListener('linkvision:viewport-ready', viewportReadyHandler);
     zoomHandler = null;
     destroyHandler = null;
+    elementsLoadedHandler = null;
+    viewportReadyHandler = null;
+    themeObserver?.disconnect();
+    themeObserver = null;
     activeCy = null;
     emphasized.clear();
     wasEmphasizing = false;

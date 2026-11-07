@@ -6,8 +6,21 @@
 import assert from 'node:assert/strict';
 
 const timers = [];
-globalThis.window = { addEventListener() {}, removeEventListener() {} };
+const windowHandlers = new Map();
+globalThis.window = {
+    addEventListener(event, handler) {
+        const handlers = windowHandlers.get(event) || [];
+        handlers.push(handler);
+        windowHandlers.set(event, handlers);
+    },
+    removeEventListener(event, handler) {
+        const handlers = windowHandlers.get(event) || [];
+        windowHandlers.set(event, handlers.filter(item => item !== handler));
+    }
+};
 globalThis.document = { getElementById: () => null };
+globalThis.requestAnimationFrame = callback => { callback(); return 0; };
+const emitWindow = event => (windowHandlers.get(event) || []).slice().forEach(handler => handler());
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function makeNode(id, data, classes = []) {
@@ -138,6 +151,26 @@ assert.ok(both.styles['border-width'], 'после поиска остаётся
     cyD._zoom = 0.1; cyD.emit('zoom'); await sleep(200);
     assert.equal(n._writes, writesBefore, 'после destroy зум ничего не делает');
     ok('destroy графа снимает обработчики и состояние');
+}
+
+// После F5 граф сначала пуст, затем элементы и фоновая подложка приходят
+// асинхронно. Final fit может быть ПОСЛЕ elements:loaded, поэтому аура должна
+// примениться на сигнал готового viewport, не дожидаясь ручного zoom.
+{
+    const lateNodes = [];
+    const lateCy = makeCy(lateNodes);
+    lateCy._zoom = 1;
+    cleanup();
+    initZoomEmphasis(lateCy);
+    const lateDown = makeNode('late-down', { status: 'down' });
+    lateNodes.push(lateDown);
+    emitWindow('elements:loaded');
+    assert.equal(lateDown._writes || 0, 0, 'до final fit при zoom=1 аура не применяется');
+    lateCy._zoom = 0.2;
+    emitWindow('linkvision:viewport-ready');
+    assert.ok(lateDown.styles['border-width'], 'поздно загруженный DOWN получает рамку');
+    assert.ok(lateDown.styles['overlay-padding'], 'поздно загруженный DOWN получает ауру');
+    ok('final viewport применяет ауры после асинхронной загрузки карты');
 }
 
 cleanup();

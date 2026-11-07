@@ -550,8 +550,6 @@ export function initInteractions(cy) {
         }
         if (node.data('isShape')) {
             if (typeof window.openShapeModal === 'function') window.openShapeModal(node);
-        } else {
-            if (typeof window.openDeviceModal === 'function') window.openDeviceModal(node);
         }
     });
 
@@ -825,7 +823,7 @@ export function initInteractions(cy) {
         const deviceIp = node.data('ip');
 
         const items = [
-            { icon: 'fa-edit', label: t('contextMenu.edit'), action: () => window.openDeviceModal(node) },
+            { icon: 'fa-edit', label: t('contextMenu.edit'), action: () => window.dispatchEvent(new CustomEvent('linkvision:inspect-device', { detail: { node, tab: 'settings' } })) },
             { icon: 'fa-copy', label: t('contextMenu.copyDevice'), action: () => copyDeviceConfiguration(node) },
             { icon: 'fa-trash', label: t('common.delete'), action: () => {
                 if (typeof window.deleteDevice === 'function') window.deleteDevice(deviceId);
@@ -842,18 +840,7 @@ export function initInteractions(cy) {
                 }
             }});
         }
-        items.push({ icon: 'fa-history', label: t('contextMenu.history'), action: () => {
-            if (typeof window.openDeviceModal === 'function') {
-                window.openDeviceModal(node);
-                setTimeout(() => {
-                    const historyTab = document.querySelector('a[href="#device-history"]');
-                    if (historyTab) {
-                        const tab = new bootstrap.Tab(historyTab);
-                        tab.show();
-                    }
-                }, 300);
-            }
-        }});
+        items.push({ icon: 'fa-history', label: t('contextMenu.history'), action: () => window.dispatchEvent(new CustomEvent('linkvision:inspect-device', { detail: { node, tab: 'history' } })) });
         showContextMenu(items, x, y);
     });
 

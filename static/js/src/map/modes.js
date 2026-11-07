@@ -95,6 +95,10 @@ export function startLinkMode(clickedNode = null) {
     }
     resetLinkMode();
     linkModeActive = true;
+    // The inspector is a read-only aid for pan mode. Leaving it over the
+    // canvas while choosing endpoints obscures the second device and makes it
+    // look as if a click in link mode opened a card.
+    window.dispatchEvent(new CustomEvent('linkvision:link-mode-changed', { detail: { active: true } }));
     if (clickedNode) {
         sourceNode = clickedNode;
         sourceNode.addClass('cy-link-source');
@@ -109,6 +113,7 @@ export function startLinkMode(clickedNode = null) {
 
 export function resetLinkMode() {
     linkModeActive = false;
+    window.dispatchEvent(new CustomEvent('linkvision:link-mode-changed', { detail: { active: false } }));
     if (sourceNode && cy) {
         sourceNode.removeClass('cy-link-source');
         sourceNode.unselect();

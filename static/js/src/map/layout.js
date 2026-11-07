@@ -19,6 +19,10 @@ export function initLayout(cy) {
 
     const applyLayout = (layoutName, direction = null, selectedDevices = null) => {
         if (activeCy !== cy || String(window.currentMapId) !== String(mapId)) return;
+        if (window.canEditMap !== true) {
+            showToast(t('toast.errorTitle'), t('common.accessDenied'), 'error');
+            return;
+        }
         if (layoutRunning) return;
         layoutRunning = true;
         const partial = Boolean(selectedDevices && selectedDevices.length);
@@ -70,6 +74,10 @@ export function initLayout(cy) {
     };
 
     const confirmLayout = async (layoutName, direction = null) => {
+        if (window.canEditMap !== true) {
+            showToast(t('toast.errorTitle'), t('common.accessDenied'), 'error');
+            return;
+        }
         const names = {
             grid: t('layout.grid'),
             circle: t('layout.circle'),
@@ -103,7 +111,7 @@ export function initLayout(cy) {
             confirmText: t('layout.apply'),
             variant: 'primary'
         });
-        if (confirmed && activeCy === cy && String(window.currentMapId) === String(mapId)) {
+        if (confirmed && activeCy === cy && String(window.currentMapId) === String(mapId) && window.canEditMap === true) {
             await flushPendingDragSaves();
             const selectedDevices = cy.nodes(':selected').filter(node =>
                 !node.data('isGroup') && !node.data('isShape')

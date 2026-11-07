@@ -154,6 +154,10 @@ function checkReadyAndFit() {
         }
         updateBackgroundTransform();
         enforcePanBounds();
+        // Элементы и фон могут загрузиться в любом порядке. Этот сигнал
+        // означает, что начальный viewport уже установлен окончательно —
+        // потребители не должны ориентироваться на прежний zoom по умолчанию.
+        window.dispatchEvent(new CustomEvent('linkvision:viewport-ready'));
     }
 }
 

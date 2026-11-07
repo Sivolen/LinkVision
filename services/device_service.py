@@ -180,6 +180,7 @@ def get_device_details(device_id: int) -> Dict[str, Any]:
         "group_id": device.group_id,
         "group_name": group.name if group else None,
         "monitoring_enabled": device.monitoring_enabled,
+        "quality_profile_id": device.quality_profile_id,
         **get_device_quality_snapshot(device),
         "quality_history": get_device_quality_history(device_id),
         "history": history,

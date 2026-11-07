@@ -42,14 +42,6 @@
     </div>
     {% endif %}
 
-    {% if can_toggle_lock %}
-    <div class="toolbar-group toolbar-section toolbar-section-lock" data-label="{{ _('Блокировка') }}">
-        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="{{ _('Блокировка перемещения') }}" aria-label="{{ _('Блокировка перемещения') }}">
-            <i class="fas fa-lock-open" aria-hidden="true"></i>
-        </button>
-    </div>
-    {% endif %}
-
     <div class="toolbar-group toolbar-section toolbar-section-mode" data-label="{{ _('Режим') }}">
         <button class="toolbar-btn" id="panMode" onclick="setMode('pan')" title="{{ _('Перемещение карты') }}" aria-label="{{ _('Режим перемещения карты') }}">
             <i class="fas fa-hand-paper" aria-hidden="true"></i> <span class="btn-label">{{ _('Пан') }}</span>
@@ -103,23 +95,35 @@
     </div>
     {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group toolbar-section toolbar-section-history edit-tools" data-label="{{ _('История') }}">
-        <button class="toolbar-btn" id="undoBtn" onclick="undo()" title="{{ _('Отменить (Ctrl+Z)') }}" aria-label="{{ _('Отменить последнее действие') }}" disabled>
+        <button class="toolbar-btn" id="undoBtn" data-map-action="undo" onclick="undo()" title="{{ _('Отменить (Ctrl+Z)') }}" aria-label="{{ _('Отменить последнее действие') }}" disabled>
             <i class="fas fa-undo-alt" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" id="redoBtn" onclick="redo()" title="{{ _('Повторить (Ctrl+Y)') }}" aria-label="{{ _('Повторить отменённое действие') }}" disabled>
+        <button class="toolbar-btn" id="redoBtn" data-map-action="redo" onclick="redo()" title="{{ _('Повторить (Ctrl+Y)') }}" aria-label="{{ _('Повторить отменённое действие') }}" disabled>
             <i class="fas fa-redo-alt" aria-hidden="true"></i>
         </button>
     </div>
     {% endif %}
     <div class="toolbar-group toolbar-section toolbar-section-view" data-label="{{ _('Вид') }}">
-        <button class="toolbar-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="{{ _('Полноэкранный режим') }}" aria-label="{{ _('Переключить полноэкранный режим') }}">
+        <button class="toolbar-btn" id="fullscreenBtn" data-map-action="fullscreen" onclick="toggleFullscreen()" title="{{ _('Полноэкранный режим') }}" aria-label="{{ _('Переключить полноэкранный режим') }}">
             <i class="fas fa-expand" aria-hidden="true"></i>
         </button>
     </div>
+    {% if can_toggle_lock %}
+    <div class="toolbar-group toolbar-section toolbar-section-lock map-lock-control" data-label="{{ _('Блокировка') }}">
+        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="{{ _('Блокировка перемещения') }}" aria-label="{{ _('Блокировка перемещения') }}">
+            <i class="fas fa-lock-open" aria-hidden="true"></i>
+        </button>
+    </div>
+    {% endif %}
     <div class="dropdown map-more-menu">
         <button type="button" class="toolbar-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="{{ _('Дополнительно') }}" aria-label="{{ _('Дополнительно') }}"><i class="fas fa-ellipsis-v" aria-hidden="true"></i></button>
         <ul class="dropdown-menu dropdown-menu-end">
             <li><button type="button" class="dropdown-item" id="minimapToggle" onclick="toggleMinimap()"><i class="fas fa-map fa-fw me-2" aria-hidden="true"></i>{{ _('Мини-карта (обзор)') }}</button></li>
+            <li class="map-more-compact-only"><button type="button" class="dropdown-item" data-map-action="fullscreen" onclick="toggleFullscreen()"><i class="fas fa-expand fa-fw me-2" aria-hidden="true"></i>{{ _('Полноэкранный режим') }}</button></li>
+            {% if can_toggle_lock or can_edit %}
+            <li class="map-more-compact-only"><button type="button" class="dropdown-item" data-map-action="undo" onclick="undo()" disabled><i class="fas fa-undo-alt fa-fw me-2" aria-hidden="true"></i>{{ _('Отменить') }}</button></li>
+            <li class="map-more-compact-only"><button type="button" class="dropdown-item" data-map-action="redo" onclick="redo()" disabled><i class="fas fa-redo-alt fa-fw me-2" aria-hidden="true"></i>{{ _('Повторить') }}</button></li>
+            {% endif %}
             {% if current_user.is_admin %}<li><button type="button" class="dropdown-item" onclick="openPermissionsModal({{ map.id }}, {{ map.name|tojson|forceescape }})"><i class="fas fa-users-cog fa-fw me-2" aria-hidden="true"></i>{{ _('Права доступа') }}</button></li>{% endif %}
             {% if can_toggle_lock or can_edit %}
             <li><hr class="dropdown-divider"></li>
@@ -170,7 +174,8 @@
     <aside id="mapDeviceInspector" class="map-device-inspector" aria-label="{{ _('Устройство') }}"
            data-up-label="{{ _('Доступно') }}" data-down-label="{{ _('Недоступно') }}"
            data-partial-label="{{ _('Частично доступно') }}" data-unknown-label="{{ _('Неизвестно') }}"
-           data-monitoring-off-label="{{ _('Мониторинг отключён') }}" hidden>
+           data-monitoring-off-label="{{ _('Мониторинг отключён') }}"
+           data-can-edit="{{ 'true' if can_edit else 'false' }}" hidden>
         <div class="map-inspector-heading">
             <div><strong id="inspectorName"></strong><span id="inspectorStatus" class="map-inspector-status"></span></div>
             <button type="button" id="inspectorClose" aria-label="{{ _('Закрыть') }}"><i class="fas fa-times" aria-hidden="true"></i></button>
@@ -178,8 +183,9 @@
         <div class="map-inspector-ip"><span id="inspectorIp"></span><button type="button" id="inspectorCopyIp" title="{{ _('Копировать IP') }}" aria-label="{{ _('Копировать IP') }}"><i class="fas fa-copy" aria-hidden="true"></i></button></div>
         <div class="map-inspector-tabs" role="tablist" aria-label="{{ _('Устройство') }}">
             <button type="button" class="active" data-inspector-tab="overview" role="tab" aria-selected="true">{{ _('Обзор') }}</button>
-            <button type="button" data-inspector-tab="quality" role="tab" aria-selected="false">{{ _('Качество') }}</button>
             <button type="button" data-inspector-tab="links" role="tab" aria-selected="false">{{ _('Связи') }}</button>
+            <button type="button" data-inspector-tab="history" role="tab" aria-selected="false">{{ _('История') }}</button>
+            {% if can_edit %}<button type="button" data-inspector-tab="settings" role="tab" aria-selected="false">{{ _('Настройки') }}</button>{% endif %}
         </div>
         <div class="map-inspector-body">
         <div class="map-inspector-facts">
@@ -200,12 +206,34 @@
             <h3>{{ _('Последние события') }}</h3>
             <div id="inspectorEvents" class="map-inspector-events"></div>
         </section>
+        <section class="map-inspector-section map-inspector-history-section" aria-live="polite">
+            <h3>{{ _('История') }}</h3>
+            <div id="inspectorHistory" class="map-inspector-history"></div>
+            <div id="inspectorHistoryPagination" class="map-inspector-pagination" hidden>
+                <button type="button" id="inspectorHistoryPrev" aria-label="{{ _('Предыдущая страница') }}">‹</button>
+                <span id="inspectorHistoryPage"></span>
+                <button type="button" id="inspectorHistoryNext" aria-label="{{ _('Следующая страница') }}">›</button>
+            </div>
+        </section>
         <section class="map-inspector-section">
             <h3>{{ _('Связи') }} <span id="inspectorNeighborCount"></span></h3>
             <div id="inspectorNeighbors" class="map-inspector-neighbors"></div>
         </section>
+        {% if can_edit %}
+        <section class="map-inspector-settings-section">
+            <form id="inspectorSettingsForm">
+                <label>{{ _('Имя') }} *<input type="text" id="inspectorEditName" required></label>
+                <div class="map-inspector-ip-fields"><span>{{ _('IP-адреса') }}</span><div id="inspectorEditIps"></div><button type="button" id="inspectorAddIp" class="map-inspector-add-ip"><i class="fas fa-plus" aria-hidden="true"></i> {{ _('Добавить IP') }}</button></div>
+                <label>{{ _('Тип устройства') }} *<select id="inspectorEditType" required></select></label>
+                <label>{{ _('Группа') }}<select id="inspectorEditGroup"></select></label>
+                <label>{{ _('Профиль качества связи') }}<select id="inspectorEditQualityProfile"></select></label>
+                <label>{{ _('Размер шрифта (px)') }}<input type="number" id="inspectorEditFontSize" min="8" max="48" step="1"></label>
+                <label class="map-inspector-check"><input type="checkbox" id="inspectorEditMonitoring"> {{ _('Мониторинг включён') }}</label>
+                <button type="submit" id="inspectorSave" class="map-inspector-save">{{ _('Сохранить') }}</button>
+            </form>
+        </section>
+        {% endif %}
         </div>
-        <button type="button" id="inspectorOpen" class="map-inspector-open">{{ _('Открыть карточку') }}</button>
     </aside>
 </div>
 <div class="map-bottom-bar" aria-label="{{ _('Состояние карты и масштаб') }}">

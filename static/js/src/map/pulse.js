@@ -7,10 +7,26 @@ const minOpacity = 0.15;
 const maxOpacity = 0.45;
 const PULSE_DURATION = 30000; // 30 секунд
 const PULSE_INTERVAL_MS = 100; // Увеличено с 50мс для производительности
+const OVERVIEW_ZOOM_THRESHOLD = 0.5;
+
+function downPulseColor() {
+    // Same muted ruby as the overview aura: bright bootstrap-red is too
+    // luminous against the graphite map surface in the dark theme.
+    return document.documentElement?.dataset?.theme === 'dark' ? '#c85d6d' : '#dc3545';
+}
+
+function isOverviewZoom(node) {
+    const zoom = node?.cy?.().zoom?.();
+    return Number.isFinite(zoom) && zoom < OVERVIEW_ZOOM_THRESHOLD;
+}
 
 export function initPulse(cy) {}
 
 export function addPulsingNode(cy, node, type = 'down') {
+    // На общем плане status-аура из zoomEmphasis.js — устойчивый индикатор
+    // проблемы. Короткая пульсация не должна каждую 100 мс перетирать её
+    // opacity и визуально «сбрасывать» ореол сразу после F5.
+    if (isOverviewZoom(node)) return;
     const id = node.id();
     const existing = pulsingNodes.get(id);
 
@@ -24,7 +40,7 @@ export function addPulsingNode(cy, node, type = 'down') {
         node.style('overlay-opacity', null);
     }
 
-    const overlayColor = (type === 'down') ? '#dc3545' : '#ffc107';
+    const overlayColor = (type === 'down') ? downPulseColor() : '#ffc107';
     node.style('overlay-color', overlayColor);
     node.style('overlay-opacity', minOpacity);
 
@@ -36,8 +52,12 @@ export function addPulsingNode(cy, node, type = 'down') {
                 pulsingNodes.delete(id);
                 const n = cy.getElementById(id);
                 if (n.length) {
-                    n.style('overlay-opacity', null);
-                    n.style('overlay-color', null);
+                    // На overview-zoom bypass-стили принадлежат постоянной
+                    // ауре. Не снимать их по окончании короткой пульсации.
+                    if (!isOverviewZoom(n)) {
+                        n.style('overlay-opacity', null);
+                        n.style('overlay-color', null);
+                    }
                 }
                 if (pulsingNodes.size === 0 && pulseInterval) {
                     clearInterval(pulseInterval);
@@ -58,7 +78,8 @@ export function addPulsingNode(cy, node, type = 'down') {
                 pulsingNodes.forEach((data, nodeId) => {
                     const n = cy.getElementById(nodeId);
                     if (n.length) {
-                        n.style('overlay-opacity', opacity);
+                        // При отдалении не конкурируем с zoomEmphasis.
+                        if (!isOverviewZoom(n)) n.style('overlay-opacity', opacity);
                     } else {
                         clearTimeout(data.timeoutId);
                         pulsingNodes.delete(nodeId);
