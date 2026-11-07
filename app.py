@@ -240,7 +240,7 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
     @socketio.on("disconnect")
     def handle_disconnect(reason=None):
         socket_session_watcher.unregister(request.sid)
-        app_logger.info(f"Клиент отключился: {request.sid}")  # type: ignore
+        app_logger.info("Клиент отключился: %s, причина: %s", request.sid, reason or "unknown")
 
     if start_background_services:
         start_monitor()

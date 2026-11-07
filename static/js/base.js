@@ -1355,7 +1355,7 @@ let wasDisconnected = false;
                 }
             });
             window.socket.on('disconnect', (reason) => {
-                Logger.debug('Socket disconnected (global):', reason);
+                Logger.warn('Socket disconnected (global):', reason);
                 markConnectionLost();
                 if (reason === 'io server disconnect') {
                     // Если причина — истёкшая сессия, проверка версии получит

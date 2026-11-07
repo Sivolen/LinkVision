@@ -254,7 +254,7 @@ function recompute(full = true) {
                 const id = n.id();
                 seen.add(id);
                 let entry = emphasized.get(id);
-                if (!entry) { entry = { groups, sig: '' }; emphasized.set(id, entry); }
+                if (!entry || entry.node !== n) { entry = { node: n, groups, sig: '' }; emphasized.set(id, entry); }
                 else if (entry.groups.join() !== groups.join()) { entry.groups = groups; entry.sig = ''; }
                 applyToNode(n, entry, styles);
             });

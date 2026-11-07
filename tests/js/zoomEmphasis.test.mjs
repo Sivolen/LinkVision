@@ -153,6 +153,23 @@ assert.ok(both.styles['border-width'], 'после поиска остаётся
     ok('destroy графа снимает обработчики и состояние');
 }
 
+// Полная синхронизация заменяет объекты узлов с теми же ID.
+{
+    const first = makeNode('same-id', { status: 'down' });
+    const replacementNodes = [first];
+    const graph = makeCy(replacementNodes);
+    cleanup();
+    initZoomEmphasis(graph);
+    const replacement = makeNode('same-id', { status: 'down' });
+    replacementNodes[0] = replacement;
+    refreshZoomEmphasis();
+    assert.ok(replacement.styles['overlay-padding'], 'новый узел получает ауру без изменения zoom');
+    assert.equal(replacement._writes, 1);
+    refreshZoomEmphasis();
+    assert.equal(replacement._writes, 1, 'неизменный узел повторно не стилизуется');
+    ok('замена узла с тем же ID восстанавливает ауру');
+}
+
 // После F5 граф сначала пуст, затем элементы и фоновая подложка приходят
 // асинхронно. Final fit может быть ПОСЛЕ elements:loaded, поэтому аура должна
 // примениться на сигнал готового viewport, не дожидаясь ручного zoom.
