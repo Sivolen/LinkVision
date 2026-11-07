@@ -176,7 +176,7 @@ function applyToNode(n, entry, styles) {
 }
 
 function clearNode(n) {
-    n.removeStyle('border-width overlay-padding overlay-opacity');
+    n.removeStyle('border-width overlay-padding overlay-opacity overlay-color');
 }
 
 // Начальная карта собирается из нескольких независимых асинхронных частей:

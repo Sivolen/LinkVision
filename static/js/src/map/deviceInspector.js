@@ -34,6 +34,9 @@ export function initDeviceInspector(cy) {
     let request = null;
     let requestId = 0;
     let copyFeedbackTimer = null;
+    let settingsReady = false;
+    let saving = false;
+    let historyRequestId = 0;
     let historyState = { page: 1, pages: 1 };
     const copyLabel = copyIp.getAttribute('aria-label') || copyIp.getAttribute('title') || '';
     const setSettingsEnabled = canEdit => {
@@ -131,20 +134,21 @@ export function initDeviceInspector(cy) {
     };
     const loadHistory = async (page = 1, node = currentNode) => {
         if (!node || !historyBox) return;
+        const historyId = ++historyRequestId;
         historyBox.textContent = '…';
         try {
             const response = await fetch(`/api/device/${encodeURIComponent(node.id())}/history?page=${page}&per_page=10`);
             if (!response.ok) throw new Error('history');
             const data = await response.json();
-            if (currentNode !== node || panel.hidden) return;
+            if (historyId !== historyRequestId || currentNode !== node || panel.hidden) return;
             const items = Array.isArray(data) ? data.slice((page - 1) * 10, page * 10) : (data.items || []);
             const pages = Array.isArray(data) ? Math.max(1, Math.ceil(data.length / 10)) : (data.pages || 1);
             renderHistory(items, Array.isArray(data) ? page : (data.page || page), pages);
         } catch (_) {
-            historyBox.textContent = t('common.loadError');
+            if (historyId === historyRequestId && currentNode === node && !panel.hidden) historyBox.textContent = t('common.loadError');
         }
     };
-    const populateSettings = async details => {
+    const populateSettings = async (details, node, id) => {
         if (!settingsForm) return;
         field('inspectorEditName').value = details.name || currentNode?.data('name') || '';
         ipFields?.replaceChildren();
@@ -158,14 +162,19 @@ export function initDeviceInspector(cy) {
                 fetch(`/api/map/${encodeURIComponent(window.currentMapId)}/groups`),
                 fetch('/api/quality-profiles')
             ]);
+            if (!typesResponse.ok || !groupsResponse.ok || !profilesResponse.ok) throw new Error('settings');
             const [types, groups, profiles] = await Promise.all([
                 typesResponse.ok ? typesResponse.json() : [], groupsResponse.ok ? groupsResponse.json() : [], profilesResponse.ok ? profilesResponse.json() : []
             ]);
-            if (!currentNode) return;
+            if (id !== requestId || currentNode !== node || panel.hidden) return;
             setOptions(field('inspectorEditType'), types, details.type_id, t('modal.device.selectTypeOpt'));
             setOptions(field('inspectorEditGroup'), groups, details.group_id, t('modal.device.noGroupOpt'));
             setOptions(field('inspectorEditQualityProfile'), profiles, details.quality_profile_id, t('modal.device.defaultQualityProfileOpt'), true);
-        } catch (_) { /* The form remains usable with already loaded values. */ }
+            settingsReady = true;
+            setSettingsEnabled(window.canEditMap === true && !saving);
+        } catch (_) {
+            if (id === requestId && currentNode === node && !panel.hidden) showToast(t('toast.errorTitle'), t('common.loadError'), 'error');
+        }
     };
     const renderNode = node => {
         field('inspectorName').textContent = node.data('name') || node.id();
@@ -211,7 +220,7 @@ export function initDeviceInspector(cy) {
             field('inspectorLoss').textContent = formatMetric(details.quality_loss_percent, '%');
             field('inspectorJitter').textContent = formatMetric(details.quality_jitter_ms, timeUnit());
             renderQualityPreview(chart, details.quality_history, details);
-            populateSettings(details);
+            populateSettings(details, node, id);
             const events = field('inspectorEvents');
             events.replaceChildren();
             const history = Array.isArray(details.history?.items) ? details.history.items.slice(0, 3) : [];
@@ -252,29 +261,33 @@ export function initDeviceInspector(cy) {
             field('inspectorNeighbors').textContent = t('common.loadError');
         }
     };
-    const show = (event, tab = 'overview') => {
+    const show = (event, tab = 'overview', explicit = false) => {
         const node = event.target;
         const pointer = event.originalEvent;
         if (
-            window.currentMode !== 'pan' || isLinkMode() || node.data('isGroup') || node.data('isShape')
+            (!explicit && window.currentMode !== 'pan') || isLinkMode() || node.data('isGroup') || node.data('isShape')
             || pointer?.ctrlKey || pointer?.metaKey || pointer?.shiftKey
         ) return;
         currentNode = node;
         selectTab(tab);
-        setSettingsEnabled(window.canEditMap === true);
+        settingsReady = false;
+        setSettingsEnabled(false);
         renderNode(node);
         loadDetails(node);
         loadHistory(1);
     };
     const hide = () => {
         requestId++;
+        historyRequestId++;
+        settingsReady = false;
         request?.abort();
         panel.hidden = true;
         currentNode = null;
     };
     const saveSettings = async event => {
         event.preventDefault();
-        if (!currentNode || window.canEditMap !== true) return;
+        if (!currentNode || window.canEditMap !== true || !settingsReady || saving) return;
+        const node = currentNode;
         const name = field('inspectorEditName').value.trim();
         const typeId = field('inspectorEditType').value;
         const ips = [...ipFields.querySelectorAll('.inspector-edit-ip')].map(input => input.value.trim()).filter(Boolean);
@@ -291,19 +304,22 @@ export function initDeviceInspector(cy) {
             font_size: fontSizeText === '' ? null : Number(fontSizeText)
         };
         const save = field('inspectorSave');
+        saving = true;
         save.disabled = true;
         try {
-            await http.put(`/api/device/${encodeURIComponent(currentNode.id())}`, data);
-            if (typeof window.updateDevice === 'function') window.updateDevice({ id: currentNode.id(), ...data });
-            currentNode.data('fontSize', data.font_size);
-            cy.style().update();
-            renderNode(currentNode);
-            loadDetails(currentNode);
+            await http.put(`/api/device/${encodeURIComponent(node.id())}`, data);
+            if (!node.removed() && typeof window.updateDevice === 'function') window.updateDevice({ id: node.id(), ...data });
+            if (!node.removed()) node.data('fontSize', data.font_size);
+            if (currentNode === node && !panel.hidden) {
+                renderNode(node);
+                loadDetails(node);
+            }
             showToast(t('toast.successTitle'), t('modal.device.updated'), 'success');
         } catch (error) {
             showToast(t('toast.errorTitle'), error.message || t('modal.device.saveFail'), 'error');
         } finally {
-            save.disabled = false;
+            saving = false;
+            setSettingsEnabled(window.canEditMap === true && settingsReady);
         }
     };
     const copyAddress = async () => {
@@ -343,12 +359,11 @@ export function initDeviceInspector(cy) {
     const onData = event => { if (currentNode === event.target) renderNode(currentNode); };
     const onModeChange = event => { if (event.detail.mode !== 'pan') hide(); };
     const onLinkModeChange = event => { if (event.detail?.active) hide(); };
-    const onEditPermissionChange = event => setSettingsEnabled(event.detail?.canEdit === true);
+    const onEditPermissionChange = event => setSettingsEnabled(event.detail?.canEdit === true && settingsReady && !saving);
     const onInspectRequest = event => {
         const node = event.detail?.node;
         if (!node?.nonempty?.()) return;
-        show({ target: node });
-        if (event.detail?.tab) selectTab(event.detail.tab === 'settings' && !settingsForm ? 'overview' : event.detail.tab);
+        show({ target: node }, event.detail?.tab === 'settings' && !settingsForm ? 'overview' : (event.detail?.tab || 'overview'), true);
     };
     const onAddIp = () => addIpField();
     const onCanvasTap = event => {

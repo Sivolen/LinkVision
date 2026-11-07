@@ -37,19 +37,22 @@ export function initMapSummary(cy) {
             makeStat(partial, partialLabel, 'partial'),
             makeStat(down, downLabel, 'down')
         );
-        zoomValue.textContent = `${Math.round(cy.zoom() * 100)}%`;
     };
     const schedule = () => {
         if (scheduled) return;
         scheduled = true;
         frame = requestAnimationFrame(render);
     };
-    cy.on('add remove data zoom', schedule);
+    const updateZoom = () => { zoomValue.textContent = `${Math.round(cy.zoom() * 100)}%`; };
+    cy.on('add remove data', schedule);
+    cy.on('zoom', updateZoom);
+    updateZoom();
     const onFilterChange = event => { filtered = Boolean(event.detail?.filtered); schedule(); };
     window.addEventListener('linkvision:map-filter-changed', onFilterChange);
     schedule();
     return () => {
-        cy.off('add remove data zoom', schedule);
+        cy.off('add remove data', schedule);
+        cy.off('zoom', updateZoom);
         window.removeEventListener('linkvision:map-filter-changed', onFilterChange);
         cancelAnimationFrame(frame);
     };
