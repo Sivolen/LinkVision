@@ -18,6 +18,7 @@
     window.canEditMap = {{ 'true' if can_edit else 'false' }};
 </script>
 
+<div class="map-view-layout">
 <div class="toolbar-shell">
     <button type="button" class="toolbar-scroll-btn" aria-label="{{ _('Прокрутить панель влево') }}" onclick="document.querySelector('.toolbar').scrollBy({ left: -240, behavior: 'smooth' })">
         <i class="fas fa-chevron-left" aria-hidden="true"></i>
@@ -25,11 +26,26 @@
     <div class="toolbar">
     {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group toolbar-section toolbar-section-edit edit-tools" data-label="{{ _('Редактирование') }}">
-        <button class="toolbar-btn" onclick="openDeviceModal()" title="{{ _('Добавить устройство') }}" aria-label="{{ _('Добавить устройство') }}">
-            <i class="fas fa-plus" aria-hidden="true"></i> <span class="btn-label">{{ _('Устройство') }}</span>
-        </button>
+        <div class="dropdown map-add-menu">
+            <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="{{ _('Добавить') }}" aria-label="{{ _('Добавить') }}">
+                <i class="fas fa-plus" aria-hidden="true"></i> <span class="btn-label">{{ _('Добавить') }}</span>
+            </button>
+            <ul class="dropdown-menu">
+                <li><button type="button" class="dropdown-item" onclick="openDeviceModal()"><i class="fas fa-server fa-fw me-2" aria-hidden="true"></i>{{ _('Устройство') }}</button></li>
+                <li><button type="button" class="dropdown-item" onclick="openGroupManager()"><i class="fas fa-layer-group fa-fw me-2" aria-hidden="true"></i>{{ _('Группы') }}</button></li>
+                <li><button type="button" class="dropdown-item" onclick="openShapeModal()"><i class="fas fa-shapes fa-fw me-2" aria-hidden="true"></i>{{ _('Фигура') }}</button></li>
+            </ul>
+        </div>
         <button class="toolbar-btn" onclick="startLinkMode()" title="{{ _('Создать связь') }}" aria-label="{{ _('Создать связь') }}">
             <i class="fas fa-link" aria-hidden="true"></i> <span class="btn-label">{{ _('Связь') }}</span>
+        </button>
+    </div>
+    {% endif %}
+
+    {% if can_toggle_lock %}
+    <div class="toolbar-group toolbar-section toolbar-section-lock" data-label="{{ _('Блокировка') }}">
+        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="{{ _('Блокировка перемещения') }}" aria-label="{{ _('Блокировка перемещения') }}">
+            <i class="fas fa-lock-open" aria-hidden="true"></i>
         </button>
     </div>
     {% endif %}
@@ -41,11 +57,6 @@
         <button class="toolbar-btn" id="selectMode" onclick="setMode('select')" title="{{ _('Выделение устройств') }}" aria-label="{{ _('Режим выделения устройств') }}">
             <i class="fas fa-object-group" aria-hidden="true"></i> <span class="btn-label">{{ _('Выделение') }}</span>
         </button>
-    </div>
-
-    <!-- Индикатор текущего режима -->
-    <div class="toolbar-group toolbar-section toolbar-section-status" data-label="{{ _('Состояние') }}">
-        <span id="modeIndicator" class="mode-badge" role="status" aria-live="polite">{{ _('Просмотр') }}</span>
     </div>
 
     {% if can_toggle_lock or can_edit %}
@@ -68,34 +79,6 @@
         </button>
     </div>
 
-    {% if can_toggle_lock or can_edit %}
-    <div class="toolbar-group toolbar-section toolbar-section-elements edit-tools" data-label="{{ _('Элементы') }}">
-        <button class="toolbar-btn" onclick="openGroupManager()" title="{{ _('Управление группами устройств') }}" aria-label="{{ _('Управление группами устройств') }}">
-            <i class="fas fa-layer-group" aria-hidden="true"></i> <span class="btn-label">{{ _('Группы') }}</span>
-        </button>
-        <button class="toolbar-btn" onclick="openShapeModal()" title="{{ _('Создать фигуру') }}" aria-label="{{ _('Создать фигуру') }}">
-            <i class="fas fa-shapes" aria-hidden="true"></i> <span class="btn-label">{{ _('Фигура') }}</span>
-        </button>
-    </div>
-    <div class="toolbar-group toolbar-section toolbar-section-layout edit-tools" data-label="{{ _('Раскладка') }}">
-        <div class="dropdown">
-            <button class="toolbar-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" title="{{ _('Автораскладка карты') }}" aria-label="{{ _('Автораскладка карты') }}">
-                <i class="fas fa-project-diagram" aria-hidden="true"></i> <span class="btn-label">{{ _('Автораскладка') }}</span>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('grid')">{{ _('Сетка (grid)') }}</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('circle')">{{ _('Круг (circle)') }}</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('concentric')">{{ _('Концентрический (concentric)') }}</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'downward')">{{ _('Дерево (сверху → вниз)') }}</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'upward')">{{ _('Дерево (снизу → вверх)') }}</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'rightward')">{{ _('Дерево (слева → направо)') }}</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('breadthfirst', 'leftward')">{{ _('Дерево (справа → налево)') }}</a></li>
-                <li><a class="dropdown-item" href="#" onclick="confirmLayout('cose')">{{ _('Силовой (cose)') }}</a></li>
-            </ul>
-        </div>
-    </div>
-    {% endif %}
-
     <div class="search-filter-bar toolbar-group toolbar-section toolbar-section-search" data-label="{{ _('Поиск и фильтр') }}">
         <div class="input-group">
             <span class="input-group-text bg-secondary text-white" role="button" tabindex="0"
@@ -105,11 +88,14 @@
                 <i class="fas fa-search" aria-hidden="true"></i>
             </span>
             <input type="text" id="searchInput" class="form-control" placeholder="{{ _('Поиск по имени, IP или типу...') }}">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ _('Фильтр') }}</button>
+            <button type="button" class="toolbar-search-clear" onclick="clearSearch()" title="{{ _('Сбросить поиск') }}" aria-label="{{ _('Сбросить поиск') }}"><i class="fas fa-times" aria-hidden="true"></i></button>
+            <button class="btn btn-outline-secondary dropdown-toggle toolbar-filter-button" type="button" data-bs-toggle="dropdown" data-default-label="{{ _('Фильтр') }}">{{ _('Фильтр') }}</button>
             <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="#" onclick="filterByStatus('all')">{{ _('Все устройства') }}</a></li>
-                <li><a class="dropdown-item" href="#" onclick="filterByStatus('true')">{{ _('Только UP') }}</a></li>
-                <li><a class="dropdown-item" href="#" onclick="filterByStatus('false')">{{ _('Только DOWN') }}</a></li>
+                <li><button type="button" class="dropdown-item" data-filter-value="all" onclick="filterByStatus('all')">{{ _('Все устройства') }}</button></li>
+                <li><button type="button" class="dropdown-item" data-filter-value="up" onclick="filterByStatus('up')">{{ _('Только UP') }}</button></li>
+                <li><button type="button" class="dropdown-item" data-filter-value="down" onclick="filterByStatus('down')">{{ _('Только DOWN') }}</button></li>
+                <li><button type="button" class="dropdown-item" data-filter-value="quality" onclick="filterByStatus('quality')">{{ _('Проблемы качества') }}</button></li>
+                <li><button type="button" class="dropdown-item" data-filter-value="unmonitored" onclick="filterByStatus('unmonitored')">{{ _('Мониторинг отключён') }}</button></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="#" onclick="clearSearch()">{{ _('Сбросить поиск') }}</a></li>
             </ul>
@@ -125,27 +111,33 @@
         </button>
     </div>
     {% endif %}
-    {% if can_toggle_lock %}
-    <div class="toolbar-group toolbar-section toolbar-section-lock" data-label="{{ _('Блокировка') }}">
-        <button class="toolbar-btn" id="lockMode" onclick="toggleLock()" title="{{ _('Блокировка перемещения') }}" aria-label="{{ _('Заблокировать или разблокировать перемещение устройств') }}">
-            <i class="fas fa-lock-open" aria-hidden="true"></i>
-        </button>
-    </div>
-    {% endif %}
-    {% if current_user.is_admin %}
-    <div class="toolbar-group toolbar-section toolbar-section-permissions" data-label="{{ _('Доступ') }}">
-        <button class="toolbar-btn" onclick="openPermissionsModal({{ map.id }}, '{{ map.name }}')" title="{{ _('Права доступа') }}" aria-label="{{ _('Управление правами доступа к карте') }}">
-            <i class="fas fa-users-cog" aria-hidden="true"></i> <span class="btn-label">{{ _('Права') }}</span>
-        </button>
-    </div>
-    {% endif %}
     <div class="toolbar-group toolbar-section toolbar-section-view" data-label="{{ _('Вид') }}">
         <button class="toolbar-btn" id="fullscreenBtn" onclick="toggleFullscreen()" title="{{ _('Полноэкранный режим') }}" aria-label="{{ _('Переключить полноэкранный режим') }}">
             <i class="fas fa-expand" aria-hidden="true"></i>
         </button>
-        <button class="toolbar-btn" id="minimapToggle" onclick="toggleMinimap()" title="{{ _('Мини-карта (обзор)') }}" aria-label="{{ _('Переключить мини-карту') }}">
-            <i class="fas fa-map" aria-hidden="true"></i>
-        </button>
+    </div>
+    <div class="dropdown map-more-menu">
+        <button type="button" class="toolbar-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="{{ _('Дополнительно') }}" aria-label="{{ _('Дополнительно') }}"><i class="fas fa-ellipsis-v" aria-hidden="true"></i></button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><button type="button" class="dropdown-item" id="minimapToggle" onclick="toggleMinimap()"><i class="fas fa-map fa-fw me-2" aria-hidden="true"></i>{{ _('Мини-карта (обзор)') }}</button></li>
+            {% if current_user.is_admin %}<li><button type="button" class="dropdown-item" onclick="openPermissionsModal({{ map.id }}, {{ map.name|tojson|forceescape }})"><i class="fas fa-users-cog fa-fw me-2" aria-hidden="true"></i>{{ _('Права доступа') }}</button></li>{% endif %}
+            {% if can_toggle_lock or can_edit %}
+            <li><hr class="dropdown-divider"></li>
+            <li class="dropend map-layout-menu">
+                <button type="button" class="dropdown-item dropdown-toggle" aria-expanded="false" onclick="event.stopPropagation(); const menu=this.nextElementSibling; const expanded=menu.classList.toggle('show'); this.setAttribute('aria-expanded', expanded);">{{ _('Автораскладка карты') }}</button>
+                <ul class="dropdown-menu">
+                    <li><button type="button" class="dropdown-item" onclick="confirmLayout('grid')">{{ _('Сетка (grid)') }}</button></li>
+                    <li><button type="button" class="dropdown-item" onclick="confirmLayout('circle')">{{ _('Круг (circle)') }}</button></li>
+                    <li><button type="button" class="dropdown-item" onclick="confirmLayout('concentric')">{{ _('Концентрический (concentric)') }}</button></li>
+                    <li><button type="button" class="dropdown-item" onclick="confirmLayout('breadthfirst', 'downward')">{{ _('Дерево (сверху → вниз)') }}</button></li>
+                    <li><button type="button" class="dropdown-item" onclick="confirmLayout('breadthfirst', 'upward')">{{ _('Дерево (снизу → вверх)') }}</button></li>
+                    <li><button type="button" class="dropdown-item" onclick="confirmLayout('breadthfirst', 'rightward')">{{ _('Дерево (слева → направо)') }}</button></li>
+                    <li><button type="button" class="dropdown-item" onclick="confirmLayout('breadthfirst', 'leftward')">{{ _('Дерево (справа → налево)') }}</button></li>
+                    <li><button type="button" class="dropdown-item" onclick="confirmLayout('cose')">{{ _('Силовой (cose)') }}</button></li>
+                </ul>
+            </li>
+            {% endif %}
+        </ul>
     </div>
 <!--    <div class="toolbar-group">-->
 <!--        <button class="toolbar-btn" onclick="saveLayout()">-->
@@ -175,6 +167,59 @@
             <div class="minimap-viewport"></div>
         </div>
     </div>
+    <aside id="mapDeviceInspector" class="map-device-inspector" aria-label="{{ _('Устройство') }}"
+           data-up-label="{{ _('Доступно') }}" data-down-label="{{ _('Недоступно') }}"
+           data-partial-label="{{ _('Частично доступно') }}" data-unknown-label="{{ _('Неизвестно') }}"
+           data-monitoring-off-label="{{ _('Мониторинг отключён') }}" hidden>
+        <div class="map-inspector-heading">
+            <div><strong id="inspectorName"></strong><span id="inspectorStatus" class="map-inspector-status"></span></div>
+            <button type="button" id="inspectorClose" aria-label="{{ _('Закрыть') }}"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
+        <div class="map-inspector-ip"><span id="inspectorIp"></span><button type="button" id="inspectorCopyIp" title="{{ _('Копировать IP') }}" aria-label="{{ _('Копировать IP') }}"><i class="fas fa-copy" aria-hidden="true"></i></button></div>
+        <div class="map-inspector-tabs" role="tablist" aria-label="{{ _('Устройство') }}">
+            <button type="button" class="active" data-inspector-tab="overview" role="tab" aria-selected="true">{{ _('Обзор') }}</button>
+            <button type="button" data-inspector-tab="quality" role="tab" aria-selected="false">{{ _('Качество') }}</button>
+            <button type="button" data-inspector-tab="links" role="tab" aria-selected="false">{{ _('Связи') }}</button>
+        </div>
+        <div class="map-inspector-body">
+        <div class="map-inspector-facts">
+            <div id="inspectorGroupRow" hidden><span>{{ _('Группа') }}</span><strong id="inspectorGroup">—</strong></div>
+            <div><span>{{ _('Тип устройства') }}</span><strong id="inspectorType">—</strong></div>
+            <div><span>{{ _('Последняя проверка') }}</span><strong id="inspectorLastCheck">—</strong></div>
+        </div>
+        <div class="map-inspector-metrics">
+            <div><span>RTT</span><strong id="inspectorLatency">—</strong></div>
+            <div><span>{{ _('Потери') }}</span><strong id="inspectorLoss">—</strong></div>
+            <div><span>{{ _('Джиттер') }}</span><strong id="inspectorJitter">—</strong></div>
+        </div>
+        <section class="map-inspector-section">
+            <h3>{{ _('Качество') }}</h3>
+            <div id="inspectorQualityChart" class="map-inspector-chart"></div>
+        </section>
+        <section id="inspectorEventsSection" class="map-inspector-section map-inspector-events-section" hidden>
+            <h3>{{ _('Последние события') }}</h3>
+            <div id="inspectorEvents" class="map-inspector-events"></div>
+        </section>
+        <section class="map-inspector-section">
+            <h3>{{ _('Связи') }} <span id="inspectorNeighborCount"></span></h3>
+            <div id="inspectorNeighbors" class="map-inspector-neighbors"></div>
+        </section>
+        </div>
+        <button type="button" id="inspectorOpen" class="map-inspector-open">{{ _('Открыть карточку') }}</button>
+    </aside>
+</div>
+<div class="map-bottom-bar" aria-label="{{ _('Состояние карты и масштаб') }}">
+    <span id="mapDeviceSummary" class="map-device-summary" role="status"
+          data-total-label="{{ _('всего') }}" data-up-label="{{ _('доступны') }}"
+          data-partial-label="{{ _('частично') }}" data-down-label="{{ _('недоступны') }}"
+          data-filtered-label="{{ _('показано') }}"></span>
+    <div class="map-bottom-zoom">
+        <button type="button" onclick="zoomOut()" aria-label="{{ _('Уменьшить масштаб') }}">−</button>
+        <span id="mapZoomValue">100%</span>
+        <button type="button" onclick="zoomIn()" aria-label="{{ _('Увеличить масштаб') }}">+</button>
+        <button type="button" onclick="resetZoom()" title="{{ _('Подогнать карту / сбросить масштаб') }}" aria-label="{{ _('Подогнать карту / сбросить масштаб') }}"><i class="fas fa-compress-arrows-alt" aria-hidden="true"></i></button>
+    </div>
+</div>
 </div>
 <button id="exitFullscreenBtn" class="exit-fullscreen-btn" style="display: none;" onclick="exitFullscreen()" title="{{ _('Выйти из полноэкранного режима') }}" aria-label="{{ _('Выйти из полноэкранного режима') }}">
     <i class="fas fa-times" aria-hidden="true"></i> {{ _('Выйти') }}

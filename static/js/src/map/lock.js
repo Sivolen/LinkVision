@@ -239,11 +239,13 @@ function updateLockButton() {
 
     if (isLocked) {
         lockBtn.classList.add('active');
-        lockBtn.innerHTML = '<i class="fas fa-lock"></i>';
+        if (lockBtn.classList.contains('dropdown-item')) lockBtn.querySelector('i').className = 'fas fa-lock fa-fw me-2';
+        else lockBtn.innerHTML = '<i class="fas fa-lock"></i>';
         lockBtn.title = canEdit ? t('lock.btnUnlock') : t('lock.btnLockedNoRights');
     } else {
         lockBtn.classList.remove('active');
-        lockBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
+        if (lockBtn.classList.contains('dropdown-item')) lockBtn.querySelector('i').className = 'fas fa-lock-open fa-fw me-2';
+        else lockBtn.innerHTML = '<i class="fas fa-lock-open"></i>';
         lockBtn.title = canEdit ? t('lock.btnLock') : t('lock.btnNoRightsLock');
     }
 }

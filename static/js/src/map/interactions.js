@@ -532,29 +532,10 @@ export function initInteractions(cy) {
             }
             return;
         }
-        // Cytoscape handles plain clicks, Ctrl-clicks and box selection in select mode.
-        // selected() only reads state, so there is no manual selection here.
-        if (node.data('isShape') || window.currentMode === 'select') return;
-        // копирование IP с задержкой
-        if (window.copyTimer) clearTimeout(window.copyTimer);
-        window.copyTimer = setTimeout(() => {
-            const ip = node.data('ip');
-            if (ip && ip.trim()) {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(ip).then(() => {
-                        if (typeof showToast === 'function') showToast(t('contextMenu.copied'), `IP ${ip}`, 'info');
-                    }).catch(() => {
-                        fallbackCopy(ip);
-                    });
-                } else {
-                    fallbackCopy(ip);
-                }
-            }
-        }, 200);
+        // Selection and quick device inspection are handled by their own modules.
     });
 
     cy.on('dbltap', 'node', function(evt) {
-        if (window.copyTimer) clearTimeout(window.copyTimer);
         const node = evt.target;
         if (node.data('isGroup')) {
             // Сворачивание/разворачивание группы по двойному клику.

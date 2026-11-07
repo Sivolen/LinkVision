@@ -551,6 +551,25 @@ let wasDisconnected = false;
         window.loadSidebarMaps();
     };
 
+    window.filterSidebarMaps = function(query) {
+        const list = document.getElementById('sidebarMapList');
+        if (!list || !lastSidebarTree) return;
+        const term = query.trim().toLocaleLowerCase();
+        const filterNode = node => {
+            if (node.type !== 'folder') return node.name.toLocaleLowerCase().includes(term) ? node : null;
+            const children = (node.children || []).map(filterNode).filter(Boolean);
+            return node.name.toLocaleLowerCase().includes(term) ? node : children.length ? { ...node, children } : null;
+        };
+        const tree = term ? { ...lastSidebarTree, children: (lastSidebarTree.children || []).map(filterNode).filter(Boolean) } : lastSidebarTree;
+        const expanded = getExpandedFolderIds();
+        if (term) {
+            const expand = node => { if (node.type === 'folder') { expanded.add(node.id); (node.children || []).forEach(expand); } };
+            (tree.children || []).forEach(expand);
+        }
+        list.replaceChildren();
+        renderSidebarNode(list, tree, 0, expanded);
+    };
+
     window.loadSidebarMaps = function() {
         fetch('/api/sidebar-tree', { cache: 'no-store' })
             .then(res => res.ok ? res.json() : { id: null, children: [] })
@@ -558,8 +577,7 @@ let wasDisconnected = false;
                 lastSidebarTree = tree;
                 const list = document.getElementById('sidebarMapList');
                 if (!list) return;
-                list.innerHTML = '';
-                renderSidebarNode(list, tree, 0, getExpandedFolderIds());
+                window.filterSidebarMaps(document.getElementById('sidebarMapSearch')?.value || '');
             })
             .catch(err => Logger.error('Error loading sidebar tree:', err));
     };

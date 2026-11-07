@@ -165,6 +165,7 @@ def get_device_details(device_id: int) -> Dict[str, Any]:
                 }
             )
 
+    group = db.session.get(Group, device.group_id) if device.group_id else None
     return {
         "id": device.id,
         "name": device.name,
@@ -177,6 +178,7 @@ def get_device_details(device_id: int) -> Dict[str, Any]:
         "last_check": device.last_check.isoformat() if device.last_check else None,
         "map_id": device.map_id,
         "group_id": device.group_id,
+        "group_name": group.name if group else None,
         "monitoring_enabled": device.monitoring_enabled,
         **get_device_quality_snapshot(device),
         "quality_history": get_device_quality_history(device_id),

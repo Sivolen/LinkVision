@@ -5,18 +5,6 @@ let linkModeActive = false;
 let sourceNode = null;
 let selectModeWheelZoomHandler = null;
 
-const MODE_LABELS = {
-    pan: 'modes.pan',
-    select: 'modes.select',
-    link: 'modes.link'
-};
-
-const MODE_CLASSES = {
-    pan: 'mode-view',
-    select: 'mode-edit',
-    link: 'mode-link'
-};
-
 export function withTemporaryPanning(instance, callback) {
     const wasPanningEnabled = instance.panningEnabled();
     if (!wasPanningEnabled) instance.panningEnabled(true);
@@ -80,9 +68,6 @@ export function setMode(mode) {
     if (panBtn) panBtn.classList.toggle('active', mode === 'pan');
     if (selectBtn) selectBtn.classList.toggle('active', mode === 'select');
 
-    // Обновляем индикатор режима
-    updateModeIndicator(mode);
-
     if (mode === 'select') {
         cy.boxSelectionEnabled(true);
         cy.autounselectify(false);
@@ -100,15 +85,7 @@ export function setMode(mode) {
     }
     cy.style().update();
     window.currentMode = mode; // для внешних проверок
-}
-
-function updateModeIndicator(mode) {
-    const indicator = document.getElementById('modeIndicator');
-    if (!indicator) return;
-
-    const label = MODE_LABELS[mode] ? t(MODE_LABELS[mode]) : mode;
-    indicator.textContent = label;
-    indicator.className = 'mode-badge ' + (MODE_CLASSES[mode] || '');
+    window.dispatchEvent(new CustomEvent('linkvision:mode-changed', { detail: { mode } }));
 }
 
 export function startLinkMode(clickedNode = null) {
@@ -118,8 +95,6 @@ export function startLinkMode(clickedNode = null) {
     }
     resetLinkMode();
     linkModeActive = true;
-    updateModeIndicator('link');
-
     if (clickedNode) {
         sourceNode = clickedNode;
         sourceNode.addClass('cy-link-source');
@@ -145,8 +120,6 @@ export function resetLinkMode() {
 
     // Возвращаем индикатор в режим просмотра
     const currentMode = window.currentMode || 'pan';
-    updateModeIndicator(currentMode);
-
     if (cy) {
         cy.elements().deselect();
         cy.nodes().forEach(node => {

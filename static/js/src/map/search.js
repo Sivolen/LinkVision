@@ -30,10 +30,24 @@ export function initSearch(instance) {
     searchInputElement.addEventListener('keypress', handleSearchKeypress);
     window.filterByStatus = (status) => {
         currentFilter = status;
+        const button = document.querySelector('.toolbar-filter-button');
+        const selected = document.querySelector(`[data-filter-value="${status}"]`);
+        if (button) {
+            button.textContent = status === 'all' ? button.dataset.defaultLabel : selected?.textContent || button.dataset.defaultLabel;
+            button.classList.toggle('is-filtered', status !== 'all');
+        }
+        document.querySelectorAll('[data-filter-value]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.filterValue === status)));
         applyFilterAndSearch();
     };
     window.clearSearch = () => {
         if (searchInputElement) searchInputElement.value = '';
+        currentFilter = 'all';
+        const button = document.querySelector('.toolbar-filter-button');
+        if (button) {
+            button.textContent = button.dataset.defaultLabel;
+            button.classList.remove('is-filtered');
+        }
+        document.querySelectorAll('[data-filter-value]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.filterValue === 'all')));
         applyFilterAndSearch();
     };
 }
@@ -81,12 +95,15 @@ function applyFilterAndSearch() {
 
     // Применяем фильтр по статусу (скрываем/показываем)
     cy.nodes().forEach(node => {
-        if (node.data('isGroup')) {
+        if (node.data('isGroup') || node.data('isShape')) {
             node.show();
             return;
         }
         const nodeStatus = node.data('status');
-        const statusOk = currentFilter === 'all' || nodeStatus === currentFilter;
+        const statusOk = currentFilter === 'all' ||
+            (currentFilter === 'quality' && ['bad', 'degraded'].includes(node.data('quality_status'))) ||
+            (currentFilter === 'unmonitored' && node.data('monitoring_enabled') === 'false') ||
+            nodeStatus === currentFilter;
         if (statusOk) {
             node.show();
         } else {
@@ -96,6 +113,7 @@ function applyFilterAndSearch() {
 
     // hide()/show() выше событий не порождают — карточкам нужно явно сообщить.
     syncDeviceLabelVisibility();
+    window.dispatchEvent(new CustomEvent('linkvision:map-filter-changed', { detail: { filtered: currentFilter !== 'all' } }));
 
     // Поиск: ТОЛЬКО ПОДСВЕТКА, без скрытия
     if (searchTerm) {
@@ -135,6 +153,7 @@ export function cleanup() {
     if (window.clearSearch) delete window.clearSearch;
     searchInputElement = null;
     cy = null;
+    currentFilter = 'all';
     lastSearchCount = -1;
 }
 

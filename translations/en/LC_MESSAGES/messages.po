@@ -17,6 +17,48 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
+msgid "Светлая"
+msgstr "Light"
+
+msgid "Тёмная"
+msgstr "Dark"
+
+msgid "Состояние карты и масштаб"
+msgstr "Map status and zoom"
+
+msgid "всего"
+msgstr "total"
+
+msgid "доступны"
+msgstr "online"
+
+msgid "частично"
+msgstr "partial"
+
+msgid "недоступны"
+msgstr "offline"
+
+msgid "Доступно"
+msgstr "Online"
+
+msgid "Недоступно"
+msgstr "Offline"
+
+msgid "Частично доступно"
+msgstr "Partially online"
+
+msgid "Копировать IP"
+msgstr "Copy IP"
+
+msgid "Потери"
+msgstr "Loss"
+
+msgid "Джиттер"
+msgstr "Jitter"
+
+msgid "Открыть карточку"
+msgstr "Open device details"
+
 #: blueprints/admin.py:71
 msgid "Имя пользователя и пароль обязательны"
 msgstr "Username and password are required"
@@ -408,6 +450,30 @@ msgstr "Folder admin"
 #: templates/base.html:293
 msgid "Добавить"
 msgstr "Add"
+
+msgid "Дополнительно"
+msgstr "More"
+
+msgid "Последние события"
+msgstr "Recent events"
+
+msgid "Обзор"
+msgstr "Overview"
+
+msgid "Связи"
+msgstr "Links"
+
+msgid "Последняя проверка"
+msgstr "Last check"
+
+msgid "Проблемы качества"
+msgstr "Quality issues"
+
+msgid "Мониторинг отключён"
+msgstr "Monitoring disabled"
+
+msgid "показано"
+msgstr "shown"
 
 #: templates/base.html:287
 msgid "Всем операторам"

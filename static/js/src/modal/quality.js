@@ -6,7 +6,9 @@ function tr(key, fallback) {
     return translated === key ? fallback : translated;
 }
 function value(v, suffix = '') {
-    return v === null || v === undefined || !Number.isFinite(Number(v)) ? '—' : `${Number(v).toFixed(2)}${suffix}`;
+    if (v === null || v === undefined || !Number.isFinite(Number(v))) return '—';
+    const number = new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 1 }).format(Number(v));
+    return `${number}${suffix}`;
 }
 function qualityLabel(q) { return tr(`modal.quality.value.${q}`, q); }
 function metricLabel(m) { return tr(`modal.quality.metric.${m}`, m); }
@@ -137,6 +139,10 @@ function renderCharts(chart, data, current) {
         `<div class="quality-chart-caption">${esc(tr('modal.quality.chartPeriod','Одна точка = один 5-минутный агрегат мониторинга'))}` +
         ` · ${esc(tr('modal.quality.chartPoints','Точек'))}: ${items.length}</div>`;
     enableChartTooltips(chart);
+}
+
+export function renderQualityPreview(container, data, current = null) {
+    renderCharts(container, data, current);
 }
 
 export function renderDeviceQuality(data, current=null) {

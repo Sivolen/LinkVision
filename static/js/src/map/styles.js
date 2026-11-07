@@ -194,7 +194,8 @@ export const CY_STYLE = [
             'shape': 'round-rectangle',
             'width': 60,
             'height': 60,
-            'background-color': '#d4edda',
+            'background-color': themed('labelBg'),
+            'background-opacity': 0.98,
             'border-width': 3,
             'border-color': '#28a745',
             'border-style': 'solid',
@@ -211,7 +212,8 @@ export const CY_STYLE = [
             'shape': 'round-rectangle',
             'width': 60,
             'height': 60,
-            'background-color': '#f8d7da',
+            'background-color': themed('labelBg'),
+            'background-opacity': 0.98,
             'border-width': 3,
             'border-color': '#dc3545',
             'border-style': 'dashed',
@@ -232,7 +234,8 @@ export const CY_STYLE = [
             'shape': 'round-rectangle',
             'width': 60,
             'height': 60,
-            'background-color': '#fff3cd',
+            'background-color': themed('labelBg'),
+            'background-opacity': 0.98,
             'border-width': 3,
             'border-color': '#ffc107',
             'border-style': 'solid',
@@ -290,33 +293,51 @@ export const CY_STYLE = [
     {
         selector: 'node[isGroup]',
         style: {
-            'shape': 'rectangle',
+            'shape': 'round-rectangle',
             'background-color': groupColor,
             'background-opacity': themed('groupFillOpacity'),
             'border-color': groupColor,
-            'border-width': 1,
+            'border-width': 1.5,
             'border-opacity': themed('groupBorderOpacity'),
-            'border-style': 'dashed',
+            'border-style': 'solid',
             'label': 'data(name)',
-            'font-size': node => node.data('fontSize') + 'px',
+            // Название зоны остаётся читаемым и на общем масштабе карты.
+            // labelScale.js обновляет стиль групп только при смене корзины zoom,
+            // поэтому это не создаёт работы на каждом кадре pan/zoom.
+            'font-size': node => {
+                // Group labels must recede on the overview.  Keeping a fixed
+                // screen size at low zoom makes them cover devices on dense
+                // maps, so use a modest zoom-aware target instead.
+                const zoom = Math.max(node.cy().zoom(), 0.01);
+                const requested = Math.min(10, Math.max(7, Number(node.data('fontSize')) || 10));
+                const screenSize = Math.min(requested, Math.max(2.5, requested * Math.sqrt(zoom)));
+                return `${Math.max(3, Math.min(72, screenSize / zoom))}px`;
+            },
             'font-weight': 'bold',
             'text-valign': 'top',
             'text-halign': 'center',
-            'padding': '10px',
-            'compound-sizing-wrt-labels': 'include',
+            // Keep the compound boundary close to its devices. A large padding
+            // grows with zoom and starts covering neighbouring devices.
+            // The label itself is not part of the compound bounds (see below), so
+            // this does not alter an existing saved layout.
+            'padding': '8px',
+            // Подпись группы не должна менять её сохранённую геометрию.
+            // Иначе на общем масштабе длинный заголовок растягивает контейнер
+            // и разъезжаются его дочерние узлы.
+            'compound-sizing-wrt-labels': 'exclude',
             'min-width': '80px',
             'min-height': '60px',
-            'bounds-expansion': '20',
+            'bounds-expansion': '8',
             'color': themed('text'),
-            'text-background-color': themed('labelBg'),
-            'text-background-opacity': 0.97,
-            'text-background-padding': '5px',
-            'text-background-shape': 'roundrectangle',
-            'text-border-color': themed('labelBorder'),
-            'text-border-width': 1,
-            'text-border-opacity': 1,
+            // A group is one visual region.  A separate white label pill looks
+            // detached on a dense plan and obscures the group boundary.
+            'text-background-opacity': 0,
+            'text-border-opacity': 0,
             'text-outline-width': 0,
-            'text-margin-y': 4,
+            'text-margin-x': 0,
+            // Cytoscape measures a compound label from its outer top edge;
+            // a negative offset places it in the reserved header strip.
+            'text-margin-y': -8,
             'z-index': 0
         }
     },
@@ -333,8 +354,11 @@ export const CY_STYLE = [
             'label': 'data(name)',
             'font-size': '12px',
             'font-weight': 'bold',
-            'text-valign': 'center',
+            'text-valign': 'top',
             'text-halign': 'center',
+            'text-margin-x': 0,
+            'text-margin-y': -10,
+            'padding': 12,
             'background-color': groupColor,
             'background-opacity': 0.22
         }

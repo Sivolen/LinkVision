@@ -1,6 +1,7 @@
 // zoomEmphasis.js – усиление видимости статуса down/partial, деградации
 // ICMP-качества (quality_status=bad/degraded при status=up) и результатов
-// поиска при отдалении карты.
+// поиска при отдалении карты. Здоровые устройства получают только тонкую
+// зелёную рамку без ауры — иначе статус UP на общем плане выглядит серым.
 //
 // Проблема: border-width/overlay-padding в styles.js заданы в единицах графа,
 // а не в экранных пикселях — при zoom "вписать всю карту" на 200+ устройствах
@@ -35,6 +36,11 @@ function isStatusTarget(n) {
     return (s === 'down' || s === 'partial') && !isMonitoringOff(n);
 }
 
+function isHealthyUpTarget(n) {
+    const quality = n.data('quality_status');
+    return n.data('status') === 'up' && !isMonitoringOff(n) && quality !== 'bad' && quality !== 'degraded';
+}
+
 function isSearchTarget(n) {
     return n.hasClass('cy-node-highlight');
 }
@@ -50,11 +56,25 @@ function isQualityTarget(n) {
     return (q === 'bad' || q === 'degraded') && n.data('status') === 'up' && !isMonitoringOff(n);
 }
 
-// Три независимые группы усиления — свой data-флаг на группу, чтобы
+// Независимые группы усиления — свой data-флаг на группу, чтобы
 // status-авария, quality-деградация и подсветка поиска не затирали
 // состояние друг друга на одном и том же узле (узел вполне может быть
 // одновременно, например, quality=bad и найден поиском).
 const EMPHASIS_GROUPS = [
+    {
+        // UP не получает ауру: ему нужна лишь тонкая различимая зелёная
+        // рамка, чтобы устройства без иконки не выглядели серыми.
+        dataKey: '_zoomEmphasisUp',
+        isTarget: isHealthyUpTarget,
+        minBorderPx: 1.75,
+        baseBorder: 3,
+        maxBorderGraphUnits: 10,
+        minOverlayPaddingPx: 0,
+        baseOverlayPadding: 0,
+        maxOverlayPaddingGraphUnits: 0,
+        minOverlayOpacity: 0,
+        maxOverlayOpacity: 0,
+    },
     {
         dataKey: '_zoomEmphasisStatus',
         isTarget: isStatusTarget,

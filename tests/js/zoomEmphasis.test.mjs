@@ -59,10 +59,10 @@ const cy = makeCy(nodes);
 initZoomEmphasis(cy);
 assert.equal(cy.nodeWalks, 1, 'инициализация — один полный проход');
 assert.ok(nodes[1].styles['border-width'] >= 3 && nodes[1].styles['overlay-padding']);
-assert.equal(nodes[0]._writes, 0, 'здоровый узел не трогается');
+assert.ok(nodes[0].styles['border-width'] >= 3, 'здоровый UP получает различимую рамку');
 assert.equal(nodes[4]._writes, 0, 'узел с выключенным мониторингом не подсвечивается');
 assert.ok(nodes[2]._writes === 1 && nodes[3]._writes === 1);
-ok('усиление получают только аварии, деградация качества и результаты поиска');
+ok('статусы, качество и результаты поиска получают нужное усиление');
 
 // Зум: быстрый путь — без обхода всех узлов и без data-записей
 cy._zoom = 0.12; cy.emit('zoom'); await sleep(200);
@@ -78,8 +78,8 @@ nodes[0].data().status = 'down';
 nodes[1].data().status = 'up';
 refreshZoomEmphasis();
 assert.ok(nodes[0].styles['border-width']);
-assert.equal(Object.keys(nodes[1].styles).length, 0);
-ok('refreshZoomEmphasis снимает усиление с восстановившихся и даёт новым');
+assert.ok(nodes[1].styles['border-width'], 'восстановившийся узел сохраняет тонкую UP-рамку');
+ok('refreshZoomEmphasis меняет усиление статуса и сохраняет рамку UP');
 
 // Переход через порог 0.5 — полный проход и снятие усиления
 cy._zoom = 0.8; cy.emit('zoom'); await sleep(200);
@@ -106,7 +106,7 @@ ok('флаги состояния не пишутся в data (нет событ
     assert.equal(both._removed || 0, 0, 'стиль не снимался');
     both.hasClass = () => false;            // поиск сброшен
     refreshZoomEmphasis();
-    assert.equal(Object.keys(both.styles).length, 0);
+assert.ok(both.styles['border-width'], 'после поиска остаётся рамка UP');
     ok('статус и поиск на одном узле не конфликтуют');
 }
 
@@ -120,7 +120,7 @@ ok('флаги состояния не пишутся в data (нет событ
     n.data().status = 'up';                 // изменилось, пока Map ещё помнит узел
     initZoomEmphasis(cyR);                  // повторная инициализация
     assert.equal(cyR.handlerCount(), 2, 'один zoom и один destroy, без дублей');
-    assert.equal(Object.keys(n.styles).length, 0, 'старое усиление снято');
+    assert.ok(n.styles['border-width'], 'после восстановления остаётся рамка UP');
     ok('повторная инициализация очищает состояние и не дублирует обработчики');
 }
 
