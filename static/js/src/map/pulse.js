@@ -9,6 +9,17 @@ const PULSE_DURATION = 30000; // 30 секунд
 const PULSE_INTERVAL_MS = 100; // Увеличено с 50мс для производительности
 const OVERVIEW_ZOOM_THRESHOLD = 0.5;
 
+function isViewportBusy(cy) {
+    try {
+        const renderer = cy?.renderer?.();
+        return Boolean(renderer && (renderer.pinching || renderer.swipePanning ||
+            (renderer.hoverData && renderer.hoverData.dragging) ||
+            (renderer.data && renderer.data.wheelZooming))) || Boolean(cy?.animated?.());
+    } catch (error) {
+        return false;
+    }
+}
+
 function downPulseColor() {
     // Same muted ruby as the overview aura: bright bootstrap-red is too
     // luminous against the graphite map surface in the dark theme.
@@ -70,6 +81,9 @@ export function addPulsingNode(cy, node, type = 'down') {
     if (!pulseInterval && pulsingNodes.size > 0) {
         pulsePhase = 0;
         pulseInterval = setInterval(() => {
+            // При навигации каждый bypass-style вызывает лишний redraw canvas.
+            // Пульсация продолжится с текущей фазы сразу после жеста.
+            if (isViewportBusy(cy)) return;
             pulsePhase += pulseStep;
             if (pulsePhase > 1) pulsePhase -= 2;
             const opacity = minOpacity + (maxOpacity - minOpacity) * (0.5 + 0.5 * Math.sin(pulsePhase * Math.PI));
@@ -79,7 +93,7 @@ export function addPulsingNode(cy, node, type = 'down') {
                     const n = cy.getElementById(nodeId);
                     if (n.length) {
                         // При отдалении не конкурируем с zoomEmphasis.
-                        if (!isOverviewZoom(n)) n.style('overlay-opacity', opacity);
+                        if (!isOverviewZoom(n) && n.visible()) n.style('overlay-opacity', opacity);
                     } else {
                         clearTimeout(data.timeoutId);
                         pulsingNodes.delete(nodeId);

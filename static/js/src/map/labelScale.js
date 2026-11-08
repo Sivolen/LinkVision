@@ -178,6 +178,9 @@ export function initZoomLabelStyles(cy) {
     };
     const onPan = () => {
         if (!active) return;
+        // На общем плане подписи рёбер полностью скрыты. Не ставим даже
+        // отложенный обход всех рёбер, пока они не могут быть показаны.
+        if (Math.max(viewState.zoom, applied) < EDGE_LABEL_MIN_ZOOM) return;
         clearTimeout(sweepTimer);
         sweepTimer = setTimeout(sweep, PAN_SWEEP_MS);
     };

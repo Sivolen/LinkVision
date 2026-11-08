@@ -1,5 +1,6 @@
 // background.js – работа с фоновым изображением
 import { getCy } from './core.js';
+import { registerCleanup } from './moduleRegistry.js';
 
 let bgImageWidth = null;
 let bgImageHeight = null;
@@ -10,6 +11,11 @@ let skipAutoFit = false;
 // Пользователь начал взаимодействовать с картой (скролл/зум/перетаскивание) —
 // значит начальный авто-фит применять уже нельзя, иначе будет «телепортация».
 let userInteracted = false;
+let transformFrame = 0;
+let lastGridSize = null;
+let lastGridPosition = null;
+let lastGridImage = null;
+let lastBackgroundTransform = null;
 
 export function markUserInteracted() { userInteracted = true; }
 export function resetUserInteracted() { userInteracted = false; }
@@ -41,6 +47,8 @@ export function loadBackground(bgUrl) {
             bgEl.classList.add('has-image');
         }
         setBackgroundLoaded(true);
+        resetTransformCache();
+        updateBackgroundTransform();
     };
     img.onerror = () => {
         console.error('Failed to load background');
@@ -51,6 +59,25 @@ export function loadBackground(bgUrl) {
 
 // Базовый шаг сетки в координатах карты (см. .cy-canvas в style.css)
 const GRID_STEP = 25;
+
+function resetTransformCache() {
+    lastGridSize = null;
+    lastGridPosition = null;
+    lastGridImage = null;
+    lastBackgroundTransform = null;
+}
+
+/**
+ * Pan/zoom может приходить десятки раз за кадр. Сетка следует за картой в
+ * следующем кадре браузера, а серия событий схлопывается в одну запись CSS.
+ */
+export function scheduleBackgroundTransform() {
+    if (transformFrame) return;
+    transformFrame = requestAnimationFrame(() => {
+        transformFrame = 0;
+        updateBackgroundTransform();
+    });
+}
 
 export function updateBackgroundTransform() {
     const cy = getCy();
@@ -70,23 +97,50 @@ export function updateBackgroundTransform() {
         // прозрачность точек с уменьшением шага (через color-mix), а при шаге
         // < ~7px прячем сетку совсем. При приближении — точки полные.
         const alpha = Math.max(0, Math.min(1, (cell - 7) / (GRID_STEP - 7)));
-        cyEl.style.backgroundSize = `${cell}px ${cell}px`;
-        cyEl.style.backgroundPosition = `${pan.x}px ${pan.y}px`;
-        cyEl.style.backgroundImage = alpha <= 0
+        const gridSize = `${cell}px ${cell}px`;
+        const gridPosition = `${pan.x}px ${pan.y}px`;
+        const gridImage = alpha <= 0
             ? 'none'
             : `radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--cy-grid) ${Math.round(alpha * 100)}%, transparent) 1px, transparent 1px)`;
+        if (gridSize !== lastGridSize) {
+            cyEl.style.backgroundSize = gridSize;
+            lastGridSize = gridSize;
+        }
+        if (gridPosition !== lastGridPosition) {
+            cyEl.style.backgroundPosition = gridPosition;
+            lastGridPosition = gridPosition;
+        }
+        if (gridImage !== lastGridImage) {
+            cyEl.style.backgroundImage = gridImage;
+            lastGridImage = gridImage;
+        }
     }
 
     // Фото-подложка (если задана) едет тем же трансформом
     const bgEl = document.getElementById('cy-background');
     if (!bgEl) return;
     if (!bgImageWidth || !bgImageHeight) {
-        bgEl.style.transform = 'none';
+        if (lastBackgroundTransform !== 'none') {
+            bgEl.style.transform = 'none';
+            lastBackgroundTransform = 'none';
+        }
         return;
     }
-    bgEl.style.transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
-    bgEl.style.transformOrigin = '0 0';
+    const transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
+    if (transform !== lastBackgroundTransform) {
+        bgEl.style.transform = transform;
+        bgEl.style.transformOrigin = '0 0';
+        lastBackgroundTransform = transform;
+    }
 }
+
+export function cleanupBackgroundTransform() {
+    if (transformFrame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(transformFrame);
+    transformFrame = 0;
+    resetTransformCache();
+}
+
+registerCleanup(cleanupBackgroundTransform);
 
 export function enforcePanBounds() {
     const cy = getCy();

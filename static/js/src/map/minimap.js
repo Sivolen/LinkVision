@@ -6,6 +6,8 @@ let cy = null;
 let panel = null, inner = null, bgEl = null, imgEl = null, rectEl = null;
 let visible = true;
 let refreshTimer = null;
+let refreshFrame = 0;
+let refreshInnerFrame = 0;
 let detachPointerHandlers = null;
 let toggleHandler = null;
 let resizeObserver = null;
@@ -144,8 +146,17 @@ function scheduleRefresh() {
     refreshTimer = setTimeout(() => {
         refreshTimer = null;
         // Даём Cytoscape закончить текущий кадр после загрузки/изменения графа.
-        // Иначе первый cy.png() может снять ещё не готовый canvas.
-        requestAnimationFrame(() => requestAnimationFrame(refresh));
+        // Иначе первый cy.png() может снять ещё не готовый canvas. Идентификаторы
+        // кадров храним, чтобы callback старой карты не снимал canvas уже после
+        // переключения на другую карту.
+        const scheduledCy = cy;
+        refreshFrame = requestAnimationFrame(() => {
+            refreshFrame = 0;
+            refreshInnerFrame = requestAnimationFrame(() => {
+                refreshInnerFrame = 0;
+                if (cy === scheduledCy) refresh();
+            });
+        });
     }, Math.max(250, lastSnapshotAt ? SNAPSHOT_MIN_INTERVAL_MS - (Date.now() - lastSnapshotAt) : 0));
 }
 
@@ -280,6 +291,10 @@ export function cleanup() {
         clearTimeout(refreshTimer);
         refreshTimer = null;
     }
+    if (refreshFrame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(refreshFrame);
+    if (refreshInnerFrame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(refreshInnerFrame);
+    refreshFrame = 0;
+    refreshInnerFrame = 0;
     snapshotRetryCount = 0;
     lastSnapshotAt = 0;
     cy = null;

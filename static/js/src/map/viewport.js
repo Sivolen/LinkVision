@@ -1,6 +1,6 @@
 // viewport.js – сохранение/восстановление панорамирования и зума
 import { getCy } from './core.js';
-import { updateBackgroundTransform, enforcePanBounds, isElementsLoaded } from './background.js';
+import { updateBackgroundTransform, scheduleBackgroundTransform, enforcePanBounds, isElementsLoaded } from './background.js';
 import { http } from '../utils/http.js';
 import { registerCleanup } from './moduleRegistry.js';
 
@@ -8,7 +8,7 @@ let viewportTimeout = null;
 
 export function initViewport(cy) {
     cy.on('pan zoom', () => {
-        updateBackgroundTransform();
+        scheduleBackgroundTransform();
         enforcePanBounds();
         saveViewportToServer();
     });
