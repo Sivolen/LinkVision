@@ -7,6 +7,7 @@
 // Cytoscape (размеры в единицах графа). Для них стили — функции от zoom, а
 // этот модуль пересчитывает их при изменении масштаба (initZoomLabelStyles).
 import { registerCleanup } from './moduleRegistry.js';
+import { isWheelZoomActive } from './modes.js';
 
 export const SCALE_MIN = 0.72;       // минимальный коэффициент для canvas-подписей групп
 export const EDGE_SCALE_MIN = 0.85;  // подписи рёбер: 9.5px × 0.85 ≈ 8px
@@ -80,7 +81,7 @@ export function minScreenWidth(minPx, maxUnits) {
 export function isViewportGesture(cy) {
     try {
         const r = cy.renderer();
-        return Boolean(r && (r.pinching || r.swipePanning || (r.hoverData && r.hoverData.dragging)
+        return isWheelZoomActive() || Boolean(r && (r.pinching || r.swipePanning || (r.hoverData && r.hoverData.dragging)
             || (r.data && r.data.wheelZooming))) || Boolean(cy.animated && cy.animated());
     } catch (e) {
         return false;

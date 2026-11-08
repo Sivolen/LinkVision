@@ -1,4 +1,5 @@
 // pulse.js – пульсация для down (красная) и partial (жёлтая) с таймаутом 30 секунд
+import { isWheelZoomActive } from './modes.js';
 let pulsingNodes = new Map(); // id -> { type, timeoutId }
 let pulseInterval = null;
 let pulsePhase = 0;
@@ -12,7 +13,7 @@ const OVERVIEW_ZOOM_THRESHOLD = 0.5;
 function isViewportBusy(cy) {
     try {
         const renderer = cy?.renderer?.();
-        return Boolean(renderer && (renderer.pinching || renderer.swipePanning ||
+        return isWheelZoomActive() || Boolean(renderer && (renderer.pinching || renderer.swipePanning ||
             (renderer.hoverData && renderer.hoverData.dragging) ||
             (renderer.data && renderer.data.wheelZooming))) || Boolean(cy?.animated?.());
     } catch (error) {

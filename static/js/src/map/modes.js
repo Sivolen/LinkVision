@@ -1,9 +1,26 @@
 import { t } from '../i18n/i18n.js';
+import { registerCleanup } from './moduleRegistry.js';
+import { markUserInteracted } from './background.js';
 // modes.js – режимы pan / select / link mode
 let cy = null;
 let linkModeActive = false;
 let sourceNode = null;
-let selectModeWheelZoomHandler = null;
+let wheelZoomHandler = null;
+let wheelGestureTimer = null;
+
+export function isWheelZoomActive() {
+    return wheelGestureTimer !== null;
+}
+
+function cleanupWheelZoom() {
+    if (wheelZoomHandler) document.removeEventListener('wheel', wheelZoomHandler, true);
+    if (wheelGestureTimer !== null) clearTimeout(wheelGestureTimer);
+    wheelZoomHandler = null;
+    wheelGestureTimer = null;
+    cy = null;
+}
+
+registerCleanup(cleanupWheelZoom);
 
 export function withTemporaryPanning(instance, callback) {
     const wasPanningEnabled = instance.panningEnabled();
@@ -16,18 +33,17 @@ export function withTemporaryPanning(instance, callback) {
 }
 
 export function initModes(instance) {
+    cleanupWheelZoom();
     cy = instance;
-    if (selectModeWheelZoomHandler) {
-        document.removeEventListener('wheel', selectModeWheelZoomHandler, true);
-    }
-    selectModeWheelZoomHandler = event => {
+    wheelZoomHandler = event => {
         const activeCy = cy;
         const container = activeCy?.container();
         if (
             !activeCy
-            || window.currentMode !== 'select'
+            || !['pan', 'select'].includes(window.currentMode)
             || !activeCy.zoomingEnabled()
             || !activeCy.userZoomingEnabled()
+            || event.buttons
             || !container?.contains(event.target)
         ) return;
 
@@ -37,12 +53,14 @@ export function initModes(instance) {
         else if (event.deltaMode === 2) delta *= Math.max(rect.height, 100);
         if (!Number.isFinite(delta) || delta === 0) return;
 
-        // Cytoscape's built-in wheel handler requires panningEnabled, so in
-        // select mode it ignores the wheel. Handle that gesture here while
-        // keeping panning disabled for all normal pointer interactions. The
-        // factor matches Cytoscape's default calibrated response for a common
-        // ~100px mouse-wheel event (about 3% zoom per notch).
+        // Use one predictable response in both modes. Cytoscape's wheel
+        // calibration can misclassify Firefox's first events and multiply the
+        // zoom by 2.56 per notch. Stop propagation so it cannot also handle it.
         event.preventDefault();
+        event.stopPropagation();
+        markUserInteracted();
+        if (wheelGestureTimer !== null) clearTimeout(wheelGestureTimer);
+        wheelGestureTimer = setTimeout(() => { wheelGestureTimer = null; }, 150);
         const level = activeCy.zoom() * Math.pow(10, -delta * 0.00012);
         withTemporaryPanning(activeCy, () => {
             activeCy.zoom({
@@ -54,7 +72,7 @@ export function initModes(instance) {
             });
         });
     };
-    document.addEventListener('wheel', selectModeWheelZoomHandler, { capture: true, passive: false });
+    document.addEventListener('wheel', wheelZoomHandler, { capture: true, passive: false });
     setMode('pan');
 }
 
