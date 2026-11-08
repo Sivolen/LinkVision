@@ -1,5 +1,7 @@
 {
   "common": {
+    "close": "Close",
+    "edit": "Edit",
     "confirmTitle": "Confirmation",
     "areYouSure": "Are you sure?",
     "delete": "Delete",
@@ -252,6 +254,9 @@
     "saving": "Saving",
     "savingPositions": "Saving positions...",
     "savedPositions": "Saved positions for {count} devices"
+  },
+  "layers": {
+    "title": "Map layers", "showAll": "Show all", "create": "New layer", "empty": "No layers yet", "namePrompt": "Layer name", "renamePrompt": "New layer name", "descriptionPrompt": "Layer description (optional)", "deleteQuestion": "Delete layer “{name}”?", "assignSelection": "Assign selected elements to this layer", "selectElements": "Select devices or links on the map", "elementCount": "Devices: {devices}; links: {links}", "loadFailed": "Failed to load layers", "saveFailed": "Failed to save layer visibility", "createFailed": "Failed to create layer"
   },
   "search": {
     "notFound": "Nothing found for \"{term}\"",

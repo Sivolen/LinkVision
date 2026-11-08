@@ -15,6 +15,7 @@ import { getCy } from './core.js';
 import { updateAllGroups } from './groupResize.js';
 import { refreshZoomEmphasis } from './zoomEmphasis.js';
 import { syncDeviceLabelVisibility } from './deviceLabels.js';
+import { applyMapVisibility } from './visibility.js';
 
 const STORAGE_PREFIX = 'groupCollapseState';
 
@@ -269,6 +270,11 @@ export function syncCollapseView(cyArg) {
         syncProxyEdges(cy);
         syncBubbleStatus(cy);
     });
+
+    // Collapse owns only its temporary `_hiddenByCollapse` markers. Layer and
+    // status visibility remain the final authority, otherwise expandGroup()
+    // can accidentally resurrect a hidden layer.
+    applyMapVisibility();
 
     updateAllGroups();
     syncDeviceLabelVisibility();   // hide()/show() потомков не порождают событий

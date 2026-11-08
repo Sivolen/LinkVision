@@ -116,6 +116,10 @@
         </button>
     </div>
     {% endif %}
+    <div class="toolbar-group toolbar-section toolbar-section-layers" data-label="{{ _('Слои') }}">
+        <button class="toolbar-btn" id="layersToggle" type="button" title="{{ _('Слои') }}" aria-label="{{ _('Слои') }}"><i class="fas fa-layer-group" aria-hidden="true"></i></button>
+        <div id="mapLayersPanel" class="map-layers-panel" hidden></div>
+    </div>
     <div class="dropdown map-more-menu">
         <button type="button" class="toolbar-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="{{ _('Дополнительно') }}" aria-label="{{ _('Дополнительно') }}"><i class="fas fa-ellipsis-v" aria-hidden="true"></i></button>
         <ul class="dropdown-menu dropdown-menu-end">

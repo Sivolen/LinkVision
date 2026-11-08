@@ -71,7 +71,7 @@ class Config:
     BABEL_DEFAULT_LOCALE = "ru"
     BABEL_TRANSLATION_DIRECTORIES = "translations"
 
-    VERSION = "2.2.87"
+    VERSION = "2.2.88"
     # Хеш собранных фронтенд-файлов. Позволяет клиентам заметить обновление
     # (и обойти кэш браузера), даже если VERSION забыли поднять. Считается один
     # раз при старте процесса — после `npm run build` нужен рестарт сервиса.
@@ -84,7 +84,7 @@ class Config:
     # Версия схемы меняется только при миграции БД. Она отделена от VERSION,
     # чтобы выпуск исправления без изменения таблиц не блокировал запуск уже
     # существующей SQLite-базы.
-    DB_SCHEMA_VERSION = "2.2.5"
+    DB_SCHEMA_VERSION = "2.2.6"
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
     LOG_FOLDER = os.path.join(BASE_DIR, "logs")
     LOG_MAX_BYTES = 10 * 1024 * 1024

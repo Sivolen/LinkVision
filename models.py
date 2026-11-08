@@ -166,6 +166,21 @@ class Link(db.Model):
     font_size = db.Column(db.Integer, default=8)
 
 
+# Membership tables deliberately contain no map_id: an object can only be
+# assigned through the layer API, which validates that both objects belong to
+# the same map.  Keeping this normalized also makes deletion of a layer safe.
+map_layer_device = db.Table(
+    "map_layer_device",
+    db.Column("layer_id", db.Integer, db.ForeignKey("map_layer.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("device_id", db.Integer, db.ForeignKey("device.id", ondelete="CASCADE"), primary_key=True),
+)
+map_layer_link = db.Table(
+    "map_layer_link",
+    db.Column("layer_id", db.Integer, db.ForeignKey("map_layer.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("link_id", db.Integer, db.ForeignKey("link.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
 class Settings(db.Model):
     key = db.Column(db.String(64), primary_key=True)
     value = db.Column(db.String(256))
@@ -194,6 +209,27 @@ class Map(db.Model):
     links = db.relationship(
         "Link", backref="map", cascade="all, delete-orphan", lazy="dynamic"
     )
+
+
+class MapLayer(db.Model):
+    """A named, ordered layer of devices and links on one map."""
+
+    __tablename__ = "map_layer"
+    __table_args__ = (
+        db.UniqueConstraint("map_id", "name", name="uq_map_layer_name"),
+        db.Index("ix_map_layer_map_position", "map_id", "position"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    map_id = db.Column(db.Integer, db.ForeignKey("map.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = db.Column(db.String(64), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+
+    map = db.relationship("Map", backref=db.backref("layers", cascade="all, delete-orphan", lazy="dynamic"))
+    devices = db.relationship("Device", secondary=map_layer_device, backref=db.backref("map_layers", lazy="select"), lazy="select")
+    links = db.relationship("Link", secondary=map_layer_link, backref=db.backref("map_layers", lazy="select"), lazy="select")
 
 
 class MapFolder(db.Model):
@@ -376,6 +412,9 @@ class UserMapSettings(db.Model):
     pan_x = db.Column(db.Float, default=0)
     pan_y = db.Column(db.Float, default=0)
     zoom = db.Column(db.Float, default=1)
+    # NULL means "all layers visible" (the default); [] intentionally means
+    # that this user hid every layer on this map.
+    visible_layer_ids = db.Column(db.JSON, nullable=True)
 
     user = db.relationship("User", backref="map_settings")
     map = db.relationship("Map", backref="user_settings")

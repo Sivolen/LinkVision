@@ -8,6 +8,8 @@ import { initResync, scheduleResync, isMapBusy } from './resync.js';
 import { initViewport, saveViewportToServer, withViewportRestore } from './viewport.js';
 import { initLayout } from './layout.js';
 import { initSearch } from './search.js';
+import { initVisibility, applyMapVisibility } from './visibility.js';
+import { initLayers, refreshLayers } from './layers.js';
 import { initLock } from './lock.js';
 import { initFullscreen } from './fullscreen.js';
 import { initPulse, addPulsingNode, removePulsingNode } from './pulse.js';
@@ -109,6 +111,8 @@ export function initMap(id) {
         // "иногда нужно обновить страницу, чтобы всё обновилось".
         const handleSocketConnect = () => {
             joinMapRoom();
+            // Layer events missed while disconnected must be recovered too.
+            if (window.__mapLoadedOnce) refreshLayers().catch(error => console.warn('Layer resync failed:', error));
             // Событий, которые сервер разослал, пока мы были отключены, мы не
             // получим (Socket.IO их не буферизует после разрыва соединения) —
             // поэтому после (пере)подключения принудительно перечитываем
@@ -176,7 +180,9 @@ export function initMap(id) {
     initModes(cy);
     initViewport(cy);
     initLayout(cy);
+    initVisibility(cy);
     initSearch(cy);
+    initLayers(id);
     initLock(cy);
     initFullscreen();
     initZoomEmphasis(cy);
@@ -220,6 +226,10 @@ export function initMap(id) {
     window.addEventListener('elements:loaded', markLoadedOnce, { once: true });
     registerMapCleanup(() => window.removeEventListener('elements:loaded', markLoadedOnce));
 
+    window.addEventListener('elements:loaded', applyMapVisibility);
+    registerMapCleanup(() => {
+        window.removeEventListener('elements:loaded', applyMapVisibility);
+    });
     loadElements(mapId);
 
     // Оптимизированный batch для обновлений статусов
@@ -244,6 +254,7 @@ export function initMap(id) {
         window.socket.on(event, handler);
         registerMapCleanup(() => window.socket.off(event, handler));
     };
+    onMapEvent(window.socket, mapId, 'layers_updated', () => refreshLayers().catch(() => {}));
 
     listenSocket('device_status', (data) => {
         const node = cy.getElementById(String(data.id));

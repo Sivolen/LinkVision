@@ -124,3 +124,8 @@ def notify_shape_updated(map_id, shape_data, skip_sid=None):
 def notify_shape_deleted(map_id, shape_id, skip_sid=None):
     """Уведомление об удалении фигуры."""
     _notify(map_id, "shape_deleted", {"shape_id": shape_id}, skip_sid)
+
+
+def notify_layers_updated(map_id, action="updated", skip_sid=None):
+    """Layer definitions/assignments changed; clients refresh only layer data."""
+    _notify(map_id, "layers_updated", {"action": action}, skip_sid)

@@ -434,7 +434,8 @@ def test_device_label_cards_share_geometry_between_themes():
     assert "offsetWidth" in labels and "sizeStale" in labels, "размеры карточек кэшируются"
     assert "cy.on('style'" not in labels and "node.visible()" in labels
     assert "onNodeStyle" not in labels, "видимость не читается в обработчике style"
-    assert "syncDeviceLabelVisibility" in (ROOT / "static/js/src/map/search.js").read_text(encoding="utf-8")
+    assert "applyMapVisibility" in (ROOT / "static/js/src/map/search.js").read_text(encoding="utf-8")
+    assert "syncDeviceLabelVisibility" in (ROOT / "static/js/src/map/visibility.js").read_text(encoding="utf-8")
     assert "syncDeviceLabelVisibility" in (ROOT / "static/js/src/map/groupCollapse.js").read_text(encoding="utf-8")
 
     # Главные причины тормозов зума не должны возвращаться.

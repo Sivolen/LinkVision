@@ -4584,6 +4584,7 @@ polyline.quality-chart-line,
 .map-view-layout .toolbar-section-lock .toolbar-btn,
 .map-view-layout .toolbar-section-history .toolbar-btn,
 .map-view-layout .toolbar-section-view .toolbar-btn,
+.map-view-layout .toolbar-section-layers .toolbar-btn,
 .map-view-layout .map-more-menu > .toolbar-btn {
   border-color: var(--border-color);
   background: var(--bg-primary);
@@ -4680,3 +4681,27 @@ polyline.quality-chart-line,
 .connection-notice strong { display: block; margin-bottom: .25rem; }
 .connection-notice a { display: inline-block; margin-top: .4rem; }
 .connection-notice-close { position: absolute; right: .6rem; top: .4rem; border: 0; background: transparent; color: inherit; font-size: 1.4rem; line-height: 1; cursor: pointer; }
+/* Per-map layer popover: it lives in the toolbar but is fixed-size so it does
+   not change toolbar wrapping on small viewports. */
+.toolbar-section-layers { position: relative; order: 8; margin-left: 4px; }
+.map-layers-panel { position:absolute; top:calc(100% + 8px); left:auto; right:0; z-index:1060; width:min(320px, calc(100vw - 24px)); max-height:min(420px, 65vh); overflow:auto; padding:12px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-secondary); color:var(--text-color); box-shadow:var(--card-shadow); }
+.map-layers-head,.map-layers-actions,.map-layer-row,.map-layer-row label { display:flex; align-items:center; }
+.map-layers-head { justify-content:space-between; margin:-12px -12px 10px; padding:11px 12px; border-bottom:1px solid var(--border-color); font-size:13px; }
+.map-layers-actions { gap:8px; margin-bottom:8px; }
+.map-layers-panel .btn { min-height:32px; border-radius:8px; font-size:12px; font-weight:600; box-shadow:none; }
+.map-layers-panel .btn-outline-primary { color:var(--text-color); background:var(--bg-primary); border-color:var(--border-color); }
+.map-layers-panel .btn-outline-primary:hover { color:#fff; background:#3b82c4; border-color:#3b82c4; }
+.map-layers-panel .btn-primary { background:#3b82c4; border-color:#3b82c4; }
+.map-layers-panel .btn-primary:hover { background:#2f70ad; border-color:#2f70ad; }
+.map-layers-list { display:grid; gap:5px; }
+.map-layer-row { justify-content:space-between; gap:5px; border:1px solid transparent; border-radius:9px; padding:6px 7px; background:var(--bg-primary); }
+.map-layer-row:hover { border-color:var(--border-color); background:var(--hover-bg, rgba(52,152,219,.09)); }
+.map-layer-row label { min-width:0; flex:1; gap:8px; cursor:pointer; }
+.map-layer-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.map-layer-count { display:inline-flex; align-items:center; gap:4px; margin-left:auto; padding:2px 6px; border:1px solid var(--border-color); border-radius:999px; color:var(--text-secondary); background:var(--bg-secondary); font-size:11px; white-space:nowrap; }
+.map-layer-count .fa-link { margin-left:3px; }
+.map-layer-controls { display:flex; align-items:center; gap:2px; }
+.map-layer-controls .btn-link { min-height:26px; padding:0 5px; color:var(--text-muted); text-decoration:none; }
+.map-layer-controls .btn-link:hover { color:#3b82c4; background:rgba(59,130,196,.10); }
+.map-layer-controls .text-danger:hover { color:#dc3545 !important; background:rgba(220,53,69,.10); }
+.map-layers-empty { margin:10px 0 2px; color:var(--text-muted); }

@@ -21,6 +21,7 @@ from . import (
     permissions,
     audit,
     folders,
+    layers,
 )  # noqa: E402
 
 # Регистрация подблюпринтов
@@ -32,3 +33,4 @@ api_bp.register_blueprint(maps.maps_bp)
 api_bp.register_blueprint(permissions.permissions_bp)
 api_bp.register_blueprint(audit.audit_bp)
 api_bp.register_blueprint(folders.folders_bp)
+api_bp.register_blueprint(layers.layers_bp)

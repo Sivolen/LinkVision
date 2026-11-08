@@ -1,5 +1,7 @@
 {
   "common": {
+    "close": "Закрыть",
+    "edit": "Редактировать",
     "confirmTitle": "Подтверждение",
     "areYouSure": "Вы уверены?",
     "delete": "Удалить",
@@ -252,6 +254,9 @@
     "saving": "Сохранение",
     "savingPositions": "Сохранение позиций...",
     "savedPositions": "Сохранены позиции {count} устройств"
+  },
+  "layers": {
+    "title": "Слои карты", "showAll": "Показать все", "create": "Новый слой", "empty": "Слоёв пока нет", "namePrompt": "Название слоя", "renamePrompt": "Новое название слоя", "descriptionPrompt": "Описание слоя (необязательно)", "deleteQuestion": "Удалить слой «{name}»?", "assignSelection": "Назначить выделенные элементы этому слою", "selectElements": "Выделите устройства или связи на карте", "elementCount": "Устройств: {devices}; связей: {links}", "loadFailed": "Не удалось загрузить слои", "saveFailed": "Не удалось сохранить видимость слоёв", "createFailed": "Не удалось создать слой"
   },
   "search": {
     "notFound": "Ничего не найдено по запросу \"{term}\"",

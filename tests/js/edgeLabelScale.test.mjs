@@ -9,6 +9,9 @@
  */
 import assert from 'node:assert/strict';
 
+// labelScale imports the wheel gesture module, which exposes browser helpers.
+globalThis.window = globalThis.window || {};
+
 const scale = await import('../../static/js/src/map/labelScale.js');
 const {
     SCALE_MIN, SCALE_MAX, EDGE_SCALE_MIN, EDGE_LABEL_MIN_ZOOM, EDGE_LABEL_FULL_ZOOM,

@@ -1,6 +1,6 @@
 import { t } from '../i18n/i18n.js';
 import { refreshZoomEmphasis } from './zoomEmphasis.js';
-import { syncDeviceLabelVisibility } from './deviceLabels.js';
+import { setStatusFilter, applyMapVisibility } from './visibility.js';
 import { registerCleanup } from './moduleRegistry.js';
 // search.js – поиск по имени/IP и фильтр по статусу
 let cy = null;
@@ -30,6 +30,7 @@ export function initSearch(instance) {
     searchInputElement.addEventListener('keypress', handleSearchKeypress);
     window.filterByStatus = (status) => {
         currentFilter = status;
+        setStatusFilter(status);
         const button = document.querySelector('.toolbar-filter-button');
         const selected = document.querySelector(`[data-filter-value="${status}"]`);
         if (button) {
@@ -42,6 +43,7 @@ export function initSearch(instance) {
     window.clearSearch = () => {
         if (searchInputElement) searchInputElement.value = '';
         currentFilter = 'all';
+        setStatusFilter('all');
         const button = document.querySelector('.toolbar-filter-button');
         if (button) {
             button.textContent = button.dataset.defaultLabel;
@@ -93,27 +95,7 @@ function applyFilterAndSearch() {
     // Сброс подсветки
     cy.nodes().removeClass('cy-node-highlight');
 
-    // Применяем фильтр по статусу (скрываем/показываем)
-    cy.nodes().forEach(node => {
-        if (node.data('isGroup') || node.data('isShape')) {
-            node.show();
-            return;
-        }
-        const nodeStatus = node.data('status');
-        const statusOk = currentFilter === 'all' ||
-            (currentFilter === 'quality' && ['bad', 'degraded'].includes(node.data('quality_status'))) ||
-            (currentFilter === 'unmonitored' && node.data('monitoring_enabled') === 'false') ||
-            nodeStatus === currentFilter;
-        if (statusOk) {
-            node.show();
-        } else {
-            node.hide();
-        }
-    });
-
-    // hide()/show() выше событий не порождают — карточкам нужно явно сообщить.
-    syncDeviceLabelVisibility();
-    window.dispatchEvent(new CustomEvent('linkvision:map-filter-changed', { detail: { filtered: currentFilter !== 'all' } }));
+    applyMapVisibility();
 
     // Поиск: ТОЛЬКО ПОДСВЕТКА, без скрытия
     if (searchTerm) {

@@ -206,6 +206,50 @@ def _migrate_nested_groups(conn):
         )
 
 
+def _ensure_map_layers(conn):
+    """Install layers and the per-user visibility preference without data loss."""
+    tables = _table_names(conn)
+    if "map_layer" not in tables:
+        print("Создание map_layer")
+        conn.execute(text("""
+            CREATE TABLE map_layer (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                map_id INTEGER NOT NULL,
+                name VARCHAR(64) NOT NULL,
+                description VARCHAR(255),
+                position INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(map_id) REFERENCES map(id) ON DELETE CASCADE,
+                CONSTRAINT uq_map_layer_name UNIQUE (map_id, name)
+            )
+        """))
+    if "map_layer_device" not in tables:
+        conn.execute(text("""
+            CREATE TABLE map_layer_device (
+                layer_id INTEGER NOT NULL, device_id INTEGER NOT NULL,
+                PRIMARY KEY (layer_id, device_id),
+                FOREIGN KEY(layer_id) REFERENCES map_layer(id) ON DELETE CASCADE,
+                FOREIGN KEY(device_id) REFERENCES device(id) ON DELETE CASCADE
+            )
+        """))
+    if "map_layer_link" not in tables:
+        conn.execute(text("""
+            CREATE TABLE map_layer_link (
+                layer_id INTEGER NOT NULL, link_id INTEGER NOT NULL,
+                PRIMARY KEY (layer_id, link_id),
+                FOREIGN KEY(layer_id) REFERENCES map_layer(id) ON DELETE CASCADE,
+                FOREIGN KEY(link_id) REFERENCES link(id) ON DELETE CASCADE
+            )
+        """))
+    if "ix_map_layer_map_id" not in _index_names(conn, "map_layer"):
+        conn.execute(text("CREATE INDEX ix_map_layer_map_id ON map_layer(map_id)"))
+    if "ix_map_layer_map_position" not in _index_names(conn, "map_layer"):
+        conn.execute(text("CREATE INDEX ix_map_layer_map_position ON map_layer(map_id, position)"))
+    if "visible_layer_ids" not in _columns(conn, "user_map_settings"):
+        conn.execute(text("ALTER TABLE user_map_settings ADD COLUMN visible_layer_ids JSON"))
+
+
 def _ensure_supported_schema_objects(conn):
     """Apply all structural migrations required by the current ORM schema."""
     _require_base_tables(conn)
@@ -214,6 +258,7 @@ def _ensure_supported_schema_objects(conn):
     _migrate_user_locale(conn)
     _migrate_nested_groups(conn)
     _ensure_permission_tables(conn)
+    _ensure_map_layers(conn)
 
 
 def _require_base_tables(conn):
