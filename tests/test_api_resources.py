@@ -778,3 +778,20 @@ class TestDataValidation:
 
         # require_map_access проверяет can_view_map — для несуществующей карты 403
         assert resp.status_code == 403
+
+
+def test_layout_rejects_locked_map_even_for_admin(app, client):
+    login(client, "admin", "Admin123!")
+    with app.app_context():
+        map_obj = Map.query.filter_by(name="Locked Map").one()
+        device = Device(map_id=map_obj.id, name="locked layout", pos_x=10, pos_y=20)
+        db.session.add(device)
+        db.session.commit()
+        device_id, map_id = device.id, map_obj.id
+    payload = {"operation": "layout", "positions": [{"id": device_id, "x": 30, "y": 40}]}
+    assert client.put("/api/devices/positions", json=payload).status_code == 403
+    with app.app_context():
+        assert (db.session.get(Device, device_id).pos_x, db.session.get(Device, device_id).pos_y) == (10, 20)
+        db.session.get(Map, map_id).is_locked = False
+        db.session.commit()
+    assert client.put("/api/devices/positions", json=payload).status_code == 200

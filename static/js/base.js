@@ -1186,6 +1186,68 @@ let wasDisconnected = false;
             let versionReloadScheduled = false;
             let manualReconnectTimer = null;
             let manualReconnectAttempt = 0;
+            let disconnectTimes = [];
+            let lastFrequentNotice = 0;
+            let lastMonitorNotice = 0;
+
+            // Separate notices do not share the global toast used by other actions.
+            const showConnectionNotice = (title, message, { persistent = false, settings = false, kind = 'connection' } = {}) => {
+                let container = document.getElementById('connection-notices');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'connection-notices';
+                    container.className = 'connection-notices';
+                    document.body.appendChild(container);
+                }
+                container.querySelectorAll('.connection-notice').forEach(item => { if (item.dataset.kind === kind) item.remove(); });
+                const notice = document.createElement('div');
+                notice.dataset.kind = kind;
+                notice.className = 'connection-notice';
+                notice.setAttribute('role', 'status');
+                const heading = document.createElement('strong');
+                heading.textContent = title;
+                const body = document.createElement('div');
+                body.textContent = message;
+                const close = document.createElement('button');
+                close.type = 'button';
+                close.className = 'connection-notice-close';
+                close.setAttribute('aria-label', t('connection.dismiss'));
+                close.textContent = '×';
+                close.addEventListener('click', () => notice.remove());
+                notice.append(heading, close, body);
+                if (settings) {
+                    const link = document.createElement('a');
+                    link.href = '/admin/monitoring/settings';
+                    link.textContent = t('connection.monitorSettings');
+                    notice.appendChild(link);
+                }
+                container.appendChild(notice);
+                if (!persistent) window.setTimeout(() => notice.remove(), 10000);
+            };
+
+            const checkMonitorHealth = async () => {
+                if (!window.isAdmin || document.visibilityState !== 'visible') return;
+                try {
+                    const response = await fetch('/admin/monitor-health', { cache: 'no-store', credentials: 'same-origin' });
+                    if (!response.ok || response.redirected) return;
+                    const health = await response.json();
+                    const now = Date.now();
+                    if (health.consecutive_overruns < 3) {
+                        document.querySelectorAll('#connection-notices .connection-notice').forEach(item => { if (item.dataset.kind === 'monitor') item.remove(); });
+                        lastMonitorNotice = 0;
+                    }
+                    if (health.consecutive_overruns >= 3 && health.age_seconds != null &&
+                        health.age_seconds < Math.max(300, health.interval * 3) &&
+                        now - lastMonitorNotice >= 300000) {
+                        lastMonitorNotice = now;
+                        showConnectionNotice(t('connection.monitorTitle'), t('connection.monitorMsg', {
+                            elapsed: Number(health.elapsed).toFixed(1), interval: health.interval
+                        }), { persistent: true, settings: true, kind: 'monitor' });
+                    }
+                } catch (error) {
+                    Logger.debug('Monitor health check failed:', error);
+                }
+            };
 
             // Пользователь сейчас что-то делает (модалка, перетаскивание, режим
             // создания связи, несохранённые запросы) — авто-reload потерял бы
@@ -1340,6 +1402,14 @@ let wasDisconnected = false;
                 }
                 updateBackendStatus(true);
                 if (wasDisconnected) {
+                    const now = Date.now();
+                    disconnectTimes = disconnectTimes.filter(time => now - time < 300000);
+                    if (disconnectTimes.length >= 3 && now - lastFrequentNotice >= 300000) {
+                        lastFrequentNotice = now;
+                        showConnectionNotice(t('connection.frequentTitle'), t('connection.frequentMsg', { count: disconnectTimes.length }), { persistent: true, kind: 'frequent' });
+                    } else {
+                        showConnectionNotice(t('connection.interruptedTitle'), t('connection.interruptedMsg'));
+                    }
                     connectionToast = showToast(t('connection.restoredTitle'), t('connection.restoredMsg'), 'success', { autoHide: 3000 });
                     wasDisconnected = false;
                     if (connectionToast) {
@@ -1356,6 +1426,9 @@ let wasDisconnected = false;
             });
             window.socket.on('disconnect', (reason) => {
                 Logger.warn('Socket disconnected (global):', reason);
+                if (!wasDisconnected) {
+                    disconnectTimes.push(Date.now());
+                }
                 markConnectionLost();
                 if (reason === 'io server disconnect') {
                     // Если причина — истёкшая сессия, проверка версии получит
@@ -1376,6 +1449,10 @@ let wasDisconnected = false;
 
             // Start with a version check and keep long-running displays current.
             checkServerVersion();
+            if (window.isAdmin) {
+                checkMonitorHealth();
+                window.setInterval(checkMonitorHealth, 30000);
+            }
             window.setInterval(() => {
                 if (document.visibilityState === 'visible') checkServerVersion();
             }, 60 * 1000);

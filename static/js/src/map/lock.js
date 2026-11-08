@@ -42,7 +42,9 @@ export function initLock(instance) {
     }
 
     // Инициализируем window.dragLocked для совместимости
-    window.dragLocked = false;
+    window.dragLocked = window.initialMapLocked === true;
+    mapLockStates.set(currentMapId, window.dragLocked);
+    applyDragLockToCanvas(window.dragLocked);
 
     // Сразу устанавливаем кнопку в "разблокировано" (будет обновлено после загрузки)
     updateLockButton();
@@ -211,6 +213,8 @@ function passthroughEls() {
 function applyDragLockToCanvas(isLocked) {
     // Класс на body — CSS отключает панель редактирования (.map-locked .edit-tools).
     document.body.classList.toggle('map-locked', !!isLocked);
+    updateEditToolsDisabledState(window.canEditMap === true);
+    window.dispatchEvent(new CustomEvent('linkvision:drag-lock-changed', { detail: { locked: !!isLocked } }));
     if (!cy) return;
     cy.autoungrabify(!!isLocked);
     const bg = passthroughEls();
@@ -288,7 +292,11 @@ function applyEditPermission(canEdit) {
 function updateEditToolsDisabledState(canEdit) {
     document.querySelectorAll('.toolbar .edit-tools button, .toolbar .map-layout-menu button').forEach((btn) => {
         if (btn.dataset.mapAction === 'undo' || btn.dataset.mapAction === 'redo') return;
-        btn.disabled = !canEdit;
+        btn.disabled = !canEdit || (btn.closest('.map-layout-menu') && isDragLocked());
+        if (btn.disabled && btn.matches('.dropdown-toggle')) {
+            btn.setAttribute('aria-expanded', 'false');
+            btn.nextElementSibling?.classList.remove('show');
+        }
     });
     if (typeof window.refreshUndoRedoButtons === 'function') {
         window.refreshUndoRedoButtons();

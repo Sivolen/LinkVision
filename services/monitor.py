@@ -53,6 +53,38 @@ QUALITY_PERSIST_SECONDS = 300
 QUALITY_RETENTION_DAYS = 7
 _last_history_cleanup = 0
 QUALITY_LIVE_MIN_SAMPLES = 8
+_monitor_health_lock = threading.Lock()
+_monitor_health = {
+    "consecutive_overruns": 0,
+    "elapsed": None,
+    "interval": None,
+    "updated_at": None,
+}
+
+
+def get_monitor_health():
+    """Return the latest completed monitoring-cycle snapshot for administrators."""
+    with _monitor_health_lock:
+        result = dict(_monitor_health)
+    result["age_seconds"] = (
+        max(0, time.time() - result["updated_at"]) if result["updated_at"] else None
+    )
+    return result
+
+
+def _record_monitor_health(elapsed, interval, successful=True):
+    with _monitor_health_lock:
+        previous = (
+            _monitor_health["consecutive_overruns"]
+            if _monitor_health["interval"] == interval
+            else 0
+        )
+        _monitor_health["consecutive_overruns"] = (
+            previous + 1 if successful and interval > 0 and elapsed > interval else 0
+        )
+        _monitor_health.update(
+            elapsed=elapsed, interval=interval, updated_at=time.time()
+        )
 
 
 def init_monitor(app):
@@ -80,6 +112,10 @@ def init_monitor(app):
         _executor_worker_count = max_workers
         _monitor_stop_event.clear()
         _monitor_stop_flag = False
+        with _monitor_health_lock:
+            _monitor_health.update(
+                consecutive_overruns=0, elapsed=None, interval=None, updated_at=None
+            )
         monitor_logger.info(f"Monitor initialized with {max_workers} workers")
 
 
@@ -417,6 +453,7 @@ def monitor_loop():
     while not _monitor_stop_event.is_set() and not _monitor_stop_flag:
         cycle_count += 1
         start_time = time.time()
+        cycle_successful = True
         monitor_logger.debug(f"Monitor cycle {cycle_count} starting")
         try:
             if app_instance is None or _executor is None:
@@ -856,10 +893,12 @@ def monitor_loop():
                 monitor_logger.debug("No status changes this cycle")
 
         except Exception as e:
+            cycle_successful = False
             monitor_logger.error(f"Monitor error: {e}")
             monitor_logger.exception("Monitor error")
 
         elapsed = time.time() - start_time
+        _record_monitor_health(elapsed, ping_interval, cycle_successful)
         interval_ratio = (elapsed / ping_interval * 100.0) if ping_interval > 0 else 0.0
         with _active_checks_lock:
             peak_active_checks = _peak_active_checks

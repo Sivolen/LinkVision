@@ -7,10 +7,13 @@ import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 import { registerCleanup } from './moduleRegistry.js';
 import { flushPendingDragSaves } from './interactions.js';
+import { isDragLocked } from './lock.js';
 
 let layoutRunning = false;
 let activeCy = null;
 let activeLayout = null;
+let cancelLayout = null;
+let detachLockListener = null;
 
 export function initLayout(cy) {
     cleanup();
@@ -19,7 +22,7 @@ export function initLayout(cy) {
 
     const applyLayout = (layoutName, direction = null, selectedDevices = null) => {
         if (activeCy !== cy || String(window.currentMapId) !== String(mapId)) return;
-        if (window.canEditMap !== true) {
+        if (window.canEditMap !== true || isDragLocked()) {
             showToast(t('toast.errorTitle'), t('common.accessDenied'), 'error');
             return;
         }
@@ -60,21 +63,32 @@ export function initLayout(cy) {
             }
             // Можно также указать корневой узел, если нужно (layoutOptions.roots = [...])
         }
+        const originalPositions = layoutElements.nodes().filter(node => !node.data('isGroup')).map(node => ({ node, position: { ...node.position() } }));
+        let cancelled = false;
+        cancelLayout = () => {
+            cancelled = true;
+            layout.stop();
+        };
         const layout = layoutElements.layout(layoutOptions);
         activeLayout = layout;
         layout.on('layoutstop', () => {
             if (activeLayout === layout) activeLayout = null;
+            cancelLayout = null;
             layoutRunning = false;
+            if (cancelled || isDragLocked()) {
+                if (activeCy === cy) cy.batch(() => originalPositions.forEach(({ node, position }) => { if (!node.removed()) node.position(position); }));
+                return;
+            }
             if (activeCy === cy && String(window.currentMapId) === String(mapId)) {
                 if (partial) separateFromStationary(cy, selectedDevices);
-                saveAllPositions(cy, mapId, partial ? selectedDevices : null);
+                saveAllPositions(cy, mapId, partial ? selectedDevices : null, originalPositions);
             }
         });
         layout.run();
     };
 
     const confirmLayout = async (layoutName, direction = null) => {
-        if (window.canEditMap !== true) {
+        if (window.canEditMap !== true || isDragLocked()) {
             showToast(t('toast.errorTitle'), t('common.accessDenied'), 'error');
             return;
         }
@@ -111,7 +125,7 @@ export function initLayout(cy) {
             confirmText: t('layout.apply'),
             variant: 'primary'
         });
-        if (confirmed && activeCy === cy && String(window.currentMapId) === String(mapId) && window.canEditMap === true) {
+        if (confirmed && activeCy === cy && String(window.currentMapId) === String(mapId) && window.canEditMap === true && !isDragLocked()) {
             await flushPendingDragSaves();
             const selectedDevices = cy.nodes(':selected').filter(node =>
                 !node.data('isGroup') && !node.data('isShape')
@@ -119,11 +133,14 @@ export function initLayout(cy) {
             applyLayout(layoutName, direction, selectedDevices.length >= 2 ? selectedDevices : null);
         }
     };
+    const onLockChange = event => { if (event.detail?.locked && cancelLayout) cancelLayout(); };
+    window.addEventListener('linkvision:drag-lock-changed', onLockChange);
+    detachLockListener = () => window.removeEventListener('linkvision:drag-lock-changed', onLockChange);
     window.applyLayout = applyLayout;
     window.confirmLayout = confirmLayout;
 }
 
-async function saveAllPositions(cy, mapId, selectedDevices = null) {
+async function saveAllPositions(cy, mapId, selectedDevices = null, originalPositions = []) {
     if (!cy || getCy() !== cy || String(window.currentMapId) !== String(mapId)) return;
     const devices = selectedDevices || cy.nodes().filter(n => !n.data('isGroup') && !n.data('isShape'));
     const updates = devices.map(device => {
@@ -140,12 +157,15 @@ async function saveAllPositions(cy, mapId, selectedDevices = null) {
     const toast = showToast(t('layout.saving'), t('layout.savingPositions'), 'info', { autoHide: false });
     beginSelfUpdate();
     try {
-        const data = await http.put('/api/devices/positions', updates);
+        const data = await http.put('/api/devices/positions', { positions: updates, operation: 'layout' });
         if (getCy() !== cy || String(window.currentMapId) !== String(mapId)) return;
         showToast(t('toast.successTitle'), t('layout.savedPositions', { count: data.updated }), 'success');
         if (typeof window.saveState === 'function') window.saveState('Авто-раскладка');
     } catch (err) {
         console.error(err);
+        if (getCy() === cy && String(window.currentMapId) === String(mapId)) {
+            cy.batch(() => originalPositions.forEach(({ node, position }) => { if (!node.removed()) node.position(position); }));
+        }
         showToast(t('toast.errorTitle'), err.message, 'error');
     } finally {
         endSelfUpdate();
@@ -190,6 +210,9 @@ export function cleanup() {
     const layout = activeLayout;
     activeLayout = null;
     activeCy = null;
+    detachLockListener?.();
+    detachLockListener = null;
+    cancelLayout = null;
     layoutRunning = false;
     if (layout) layout.stop();
     delete window.applyLayout;

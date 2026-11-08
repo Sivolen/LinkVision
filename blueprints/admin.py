@@ -12,6 +12,7 @@ from flask import (
     current_app,
     abort,
     send_file,
+    jsonify,
 )
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
@@ -48,6 +49,19 @@ def check_admin():
         abort(403)
 
     return None
+
+
+@admin_bp.route("/monitor-health")
+def monitor_health():
+    from services.monitor import get_monitor_health
+
+    health = get_monitor_health()
+    current_interval = settings_service.get_monitor_settings()[1]
+    if health["interval"] != current_interval:
+        health["consecutive_overruns"] = 0
+    response = jsonify(health)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 # ============================================================================
@@ -225,8 +239,11 @@ def monitoring_settings():
         monitor_max_workers = request.form.get("monitor_max_workers")
         try:
             settings_service.update_ping_settings(
-                ping_count, ping_interval, ping_timeout,
-                history_retention_days, monitor_max_workers,
+                ping_count,
+                ping_interval,
+                ping_timeout,
+                history_retention_days,
+                monitor_max_workers,
             )
             flash(_("Настройки сохранены"), "success")
         except Exception as e:
@@ -237,8 +254,11 @@ def monitoring_settings():
     values = settings_service.get_monitor_settings()
     return render_template(
         "admin/monitoring_settings.html",
-        count=values[0], interval=values[1], timeout=values[2],
-        history_retention_days=values[3], monitor_max_workers=values[4],
+        count=values[0],
+        interval=values[1],
+        timeout=values[2],
+        history_retention_days=values[3],
+        monitor_max_workers=values[4],
     )
 
 

@@ -16,6 +16,7 @@
     window.currentMapId = {{ map.id if map else 'null' }};
     window.canViewMap = true;
     window.canEditMap = {{ 'true' if can_edit else 'false' }};
+    window.initialMapLocked = {{ 'true' if map.is_locked else 'false' }};
 </script>
 
 <div class="map-view-layout">

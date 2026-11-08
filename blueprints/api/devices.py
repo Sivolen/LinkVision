@@ -28,7 +28,7 @@ from services.notifications import (
     notify_bulk_position_updated,
 )
 from services.permissions import can_edit_map
-from models import Device, db
+from models import Device, Map, db
 from utils.logger import api_logger
 
 devices_bp = Blueprint("devices", __name__)
@@ -444,6 +444,10 @@ def update_devices_positions():
     map_id = map_ids.pop()
     if not can_edit_map(map_id):
         return jsonify({"error": "Доступ запрещён"}), 403
+    if isinstance(payload, dict) and payload.get("operation") == "layout":
+        map_obj = db.session.get(Map, map_id)
+        if not map_obj or map_obj.is_locked:
+            return jsonify({"error": "Карта заблокирована"}), 403
 
     try:
         updated = device_service.update_devices_positions(valid_updates, map_id=map_id)

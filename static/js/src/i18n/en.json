@@ -21,6 +21,14 @@
     "httpErrorShort": "Error {status}"
   },
   "connection": {
+    "interruptedTitle": "Connection interrupted",
+    "interruptedMsg": "The connection to the server was restored after an interruption.",
+    "frequentTitle": "Frequent connection interruptions",
+    "frequentMsg": "The connection was interrupted {count} times in the last 5 minutes. Check the network and server.",
+    "monitorTitle": "Device checks are delayed",
+    "monitorMsg": "The monitoring cycle takes {elapsed} s with an interval of {interval} s. Check monitoring settings.",
+    "monitorSettings": "Open monitoring settings",
+    "dismiss": "Close",
     "serverUp": "Server is available",
     "serverDown": "Server is unavailable",
     "checking": "Checking...",

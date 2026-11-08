@@ -4673,3 +4673,10 @@ polyline.quality-chart-line,
 }
 .toolbar-section-search { position: relative; z-index: 55; }
 .toolbar-section-search .dropdown-menu { z-index: 60; }
+
+/* Independent connection and monitoring notices. */
+.connection-notices { position: fixed; top: 5rem; right: 1rem; z-index: 1101; width: min(24rem, calc(100vw - 2rem)); display: grid; gap: .5rem; }
+.connection-notice { position: relative; padding: .85rem 2.5rem .85rem 1rem; border: 1px solid var(--border-color); border-left: 4px solid #d99524; border-radius: .65rem; background: var(--bg-secondary); color: var(--text-primary); box-shadow: var(--card-shadow); }
+.connection-notice strong { display: block; margin-bottom: .25rem; }
+.connection-notice a { display: inline-block; margin-top: .4rem; }
+.connection-notice-close { position: absolute; right: .6rem; top: .4rem; border: 0; background: transparent; color: inherit; font-size: 1.4rem; line-height: 1; cursor: pointer; }
