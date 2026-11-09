@@ -199,9 +199,10 @@
             <div><span>{{ _('Последняя проверка') }}</span><strong id="inspectorLastCheck">—</strong></div>
         </div>
         <div class="map-inspector-metrics">
-            <div><span>RTT</span><strong id="inspectorLatency">—</strong></div>
+            <div><span>{{ _('Задержка') }}</span><strong id="inspectorLatency">—</strong></div>
             <div><span>{{ _('Потери') }}</span><strong id="inspectorLoss">—</strong></div>
             <div><span>{{ _('Джиттер') }}</span><strong id="inspectorJitter">—</strong></div>
+            <div id="inspectorQualitySummary" class="quality-summary" hidden></div>
         </div>
         <section class="map-inspector-section">
             <h3>{{ _('Качество') }}</h3>

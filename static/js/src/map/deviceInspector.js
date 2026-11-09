@@ -66,6 +66,38 @@ export function initDeviceInspector(cy) {
         return `${new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 1 }).format(number)}${unit === '%' ? '' : ' '}${unit}`;
     };
     const timeUnit = () => getLocale().startsWith('en') ? 'ms' : 'мс';
+    const qualitySummary = field('inspectorQualitySummary');
+    const qualityMetrics = [
+        ['latency', field('inspectorLatency'), 'quality_latency_ms', timeUnit()],
+        ['loss', field('inspectorLoss'), 'quality_loss_percent', '%'],
+        ['jitter', field('inspectorJitter'), 'quality_jitter_ms', timeUnit()],
+    ];
+    let qualityThresholds = null;
+    const qualityReading = node => [
+        node.data('quality_status'),
+        ...qualityMetrics.map(([, , key]) => node.data(key)),
+    ];
+    let lastQualityReading = [];
+    const qualityLabel = status => t(`modal.quality.value.${status}`);
+    const renderQualityMetrics = (read, statuses = {}, overall = 'unknown') => {
+        const problems = [];
+        let hasAssessment = false;
+        for (const [metric, value, key, unit] of qualityMetrics) {
+            const status = statuses[metric] || 'unknown';
+            value.textContent = formatMetric(read(key), unit);
+            value.parentElement.dataset.quality = status;
+            if (status !== 'unknown') hasAssessment = true;
+            if (status === 'bad' || status === 'degraded') {
+                problems.push(`${t(`modal.quality.metric.${metric}`)}: ${qualityLabel(status)}`);
+            }
+        }
+        const heading = document.createElement('strong');
+        heading.textContent = `${t('modal.quality.status')}: ${qualityLabel(overall || 'unknown')}`;
+        const explanation = document.createElement('span');
+        explanation.textContent = problems.join(', ') || (overall === 'good' ? t('modal.quality.noProblems') : '');
+        qualitySummary.replaceChildren(heading, explanation);
+        qualitySummary.hidden = !hasAssessment && (!overall || overall === 'unknown');
+    };
     const statusLabel = status => status === 'up' ? panel.dataset.upLabel : status === 'down' ? panel.dataset.downLabel : status === 'partial' ? panel.dataset.partialLabel : panel.dataset.unknownLabel;
     const formatDate = value => {
         const date = new Date(value);
@@ -184,9 +216,6 @@ export function initDeviceInspector(cy) {
         const displayedStatus = monitoringOff ? 'monitoring-off' : (status || 'unknown');
         field('inspectorStatus').textContent = monitoringOff ? panel.dataset.monitoringOffLabel : status === 'up' ? panel.dataset.upLabel : status === 'down' ? panel.dataset.downLabel : status === 'partial' ? panel.dataset.partialLabel : panel.dataset.unknownLabel;
         field('inspectorStatus').dataset.status = displayedStatus;
-        field('inspectorLatency').textContent = formatMetric(node.data('quality_latency_ms'), timeUnit());
-        field('inspectorLoss').textContent = formatMetric(node.data('quality_loss_percent'), '%');
-        field('inspectorJitter').textContent = formatMetric(node.data('quality_jitter_ms'), timeUnit());
         panel.hidden = false;
     };
     const loadDetails = async node => {
@@ -216,9 +245,8 @@ export function initDeviceInspector(cy) {
             field('inspectorLastCheck').textContent = checkedAt && !Number.isNaN(checkedAt.getTime())
                 ? new Intl.DateTimeFormat(getLocale(), { dateStyle: 'short', timeStyle: 'short' }).format(checkedAt) : '—';
             if (Array.isArray(details.ips)) field('inspectorIp').textContent = details.ips.join(', ');
-            field('inspectorLatency').textContent = formatMetric(details.quality_latency_ms, timeUnit());
-            field('inspectorLoss').textContent = formatMetric(details.quality_loss_percent, '%');
-            field('inspectorJitter').textContent = formatMetric(details.quality_jitter_ms, timeUnit());
+            qualityThresholds = details.quality_history?.thresholds;
+            renderQualityMetrics(key => details[key], details.quality_metric_status || {}, details.quality_status);
             renderQualityPreview(chart, details.quality_history, details);
             populateSettings(details, node, id);
             const events = field('inspectorEvents');
@@ -273,6 +301,9 @@ export function initDeviceInspector(cy) {
         settingsReady = false;
         setSettingsEnabled(false);
         renderNode(node);
+        qualityThresholds = null;
+        lastQualityReading = qualityReading(node);
+        renderQualityMetrics(key => node.data(key));
         loadDetails(node);
         loadHistory(1);
     };
@@ -356,7 +387,26 @@ export function initDeviceInspector(cy) {
         if (event.key === 'Escape' && !panel.hidden && !document.querySelector('.modal.show, .dropdown-menu.show')) hide();
     };
     const onRemove = event => { if (currentNode === event.target) hide(); };
-    const onData = event => { if (currentNode === event.target) renderNode(currentNode); };
+    const onData = event => {
+        if (currentNode !== event.target) return;
+        renderNode(currentNode);
+        const reading = qualityReading(currentNode);
+        if (reading.every((value, index) => value === lastQualityReading[index])) return;
+        lastQualityReading = reading;
+        const statuses = {};
+        if (qualityThresholds) {
+            for (const [metric, , key, unit] of qualityMetrics) {
+                const value = currentNode.data(key);
+                if (value == null) continue;
+                const suffix = unit === '%' ? 'percent' : 'ms';
+                const bad = qualityThresholds[`${metric}_bad_${suffix}`];
+                const degraded = qualityThresholds[`${metric}_degraded_${suffix}`];
+                if (bad == null || degraded == null) continue;
+                statuses[metric] = value >= bad ? 'bad' : value >= degraded ? 'degraded' : 'good';
+            }
+        }
+        renderQualityMetrics(key => currentNode.data(key), statuses, reading[0]);
+    };
     const onModeChange = event => { if (event.detail.mode !== 'pan') hide(); };
     const onLinkModeChange = event => { if (event.detail?.active) hide(); };
     const onEditPermissionChange = event => setSettingsEnabled(event.detail?.canEdit === true && settingsReady && !saving);
