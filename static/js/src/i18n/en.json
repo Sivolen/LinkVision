@@ -256,6 +256,16 @@
     "savedPositions": "Saved positions for {count} devices"
   },
   "layers": {
+    "membership": "Layer assignments",
+    "assigned": "Assigned · keep",
+    "mixed": "Partially assigned · keep",
+    "unassigned": "Not assigned · keep",
+    "addMembership": "Add to layer",
+    "removeMembership": "Remove from layer",
+    "moveUp": "Move layer up",
+    "moveDown": "Move layer down",
+    "invalidName": "Enter a name from 1 to 64 characters",
+    "duplicateName": "A layer with this name already exists",
     "title": "Map layers", "showAll": "Show all", "create": "New layer", "empty": "No layers yet", "namePrompt": "Layer name", "renamePrompt": "New layer name", "descriptionPrompt": "Layer description (optional)", "deleteQuestion": "Delete layer “{name}”?", "assignSelection": "Assign selected elements to this layer", "selectElements": "Select devices or links on the map", "elementCount": "Devices: {devices}; links: {links}", "loadFailed": "Failed to load layers", "saveFailed": "Failed to save layer visibility", "createFailed": "Failed to create layer"
   },
   "search": {

@@ -181,6 +181,7 @@ function syncProxyEdges(cy) {
                 source: bucket.source.id(),
                 target: bucket.target.id(),
                 isCollapseProxy: true,
+                originalEdgeIds: bucket.edges.map(edge => edge.id()),
                 // Одна связь — показываем её подпись; несколько схлопнутых —
                 // показываем их количество, иначе подпись врёт.
                 label: count === 1 ? first.data('label') : `× ${count}`,

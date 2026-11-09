@@ -9,9 +9,9 @@ import { getCsrfToken } from './csrf.js';
 /**
  * Базовая функция запроса
  */
-async function request(method, url, body) {
+async function request(method, url, body, signal) {
     const opts = {
-        method,
+        method, signal,
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
     };
     if (body !== undefined) opts.body = JSON.stringify(body);
@@ -55,8 +55,8 @@ export async function httpPost(url, body) {
 /**
  * PUT запрос с телом
  */
-export async function httpPut(url, body) {
-    return request('PUT', url, body);
+export async function httpPut(url, body, signal) {
+    return request('PUT', url, body, signal);
 }
 
 /**

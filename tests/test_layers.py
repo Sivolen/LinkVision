@@ -29,6 +29,21 @@ def test_layer_crud_assignments_and_personal_visibility(app, client):
     listed = client.get(f'/api/map/{map_id}/layers').get_json()['layers']
     assert listed[0]['device_ids'] == [device_id]
     assert listed[0]['link_ids'] == [link_id]
+    second = client.post(f'/api/map/{map_id}/layers', json={'name': 'Backup'}).get_json()['id']
+    assignments = f'/api/map/{map_id}/layers/assignments'
+    assert client.put(assignments, json={
+        'mode': 'add', 'layer_ids': [second], 'device_ids': [device_id],
+    }).status_code == 200
+    assert client.put(assignments, json={
+        'mode': 'patch', 'remove_layer_ids': [layer_id], 'device_ids': [device_id],
+    }).status_code == 200
+    order = [second, layer_id]
+    assert client.put(f'/api/map/{map_id}/layers/order', json={'layer_ids': order}).status_code == 200
+    listed = client.get(f'/api/map/{map_id}/layers').get_json()['layers']
+    assert [layer['id'] for layer in listed] == order
+    assert listed[0]['device_ids'] == [device_id]
+    assert listed[1]['device_ids'] == []
+    assert listed[1]['link_ids'] == [link_id]
     visibility = client.put(f'/api/map/{map_id}/layer-visibility', json={'visible_layer_ids': []})
     assert visibility.status_code == 200
     assert visibility.get_json()['visible_layer_ids'] == []

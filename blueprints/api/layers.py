@@ -148,21 +148,29 @@ def replace_assignments(map_id):
     payload = request.get_json(silent=True) or {}
     try:
         layer_ids = _valid_ids(payload.get("layer_ids", []))
+        remove_ids = _valid_ids(payload.get("remove_layer_ids", []))
         device_ids = _valid_ids(payload.get("device_ids", []))
         link_ids = _valid_ids(payload.get("link_ids", []))
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
-    layers = MapLayer.query.filter(MapLayer.map_id == map_id, MapLayer.id.in_(layer_ids)).all() if layer_ids else []
+    mode = payload.get("mode", "replace")
+    if mode not in ("replace", "add", "patch") or (remove_ids and mode != "patch"):
+        return jsonify({"error": "Unknown assignment mode"}), 400
+    selected_ids = set(layer_ids)
+    removed_ids = set(remove_ids)
+    if selected_ids & removed_ids:
+        return jsonify({"error": "Conflicting layer changes"}), 400
+    all_ids = selected_ids | removed_ids
+    layers = MapLayer.query.filter(MapLayer.map_id == map_id, MapLayer.id.in_(all_ids)).all() if all_ids else []
     devices = Device.query.filter(Device.map_id == map_id, Device.id.in_(device_ids)).all() if device_ids else []
     links = Link.query.filter(Link.map_id == map_id, Link.id.in_(link_ids)).all() if link_ids else []
-    if len(layers) != len(layer_ids) or len(devices) != len(device_ids) or len(links) != len(link_ids):
+    if len(layers) != len(all_ids) or len(devices) != len(device_ids) or len(links) != len(link_ids):
         return jsonify({"error": "Layer or element belongs to another map"}), 400
-    selected_layers = set(layers)
-    mode = payload.get("mode", "replace")
-    if mode not in ("replace", "add"):
-        return jsonify({"error": "Unknown assignment mode"}), 400
+    selected_layers = {layer for layer in layers if layer.id in selected_ids}
+    removed_layers = {layer for layer in layers if layer.id in removed_ids}
     for item in [*devices, *links]:
-        item.map_layers = list((set(item.map_layers) | selected_layers) if mode == "add" else selected_layers)
+        memberships = selected_layers if mode == "replace" else (set(item.map_layers) | selected_layers) - removed_layers
+        item.map_layers = list(memberships)
     db.session.commit()
     notify_layers_updated(map_id, "assignments")
     return jsonify({"ok": True})
@@ -190,7 +198,4 @@ def layer_visibility(map_id):
         return jsonify({"visible_layer_ids": visible})
     visible = settings.visible_layer_ids if settings and isinstance(settings.visible_layer_ids, list) else sorted(all_ids)
     cleaned = [item for item in visible if item in all_ids]
-    if settings and cleaned != visible:
-        settings.visible_layer_ids = cleaned
-        db.session.commit()
     return jsonify({"visible_layer_ids": cleaned})

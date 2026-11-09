@@ -1,5 +1,6 @@
 // interactions.js – перетаскивание узлов, клики, групповое перемещение
 import { getCy } from './core.js';
+import { openLayerMembership } from './layers.js';
 import { t } from '../i18n/i18n.js';
 import { boundNodePosition, getBgDimensions } from './background.js';
 import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes.js';
@@ -840,6 +841,9 @@ export function initInteractions(cy) {
                 }
             }});
         }
+        if (window.canEditMap === true && window.dragLocked !== true) {
+            items.push({ icon: 'fa-layer-group', label: t('layers.membership'), action: () => openLayerMembership(node) });
+        }
         items.push({ icon: 'fa-history', label: t('contextMenu.history'), action: () => window.dispatchEvent(new CustomEvent('linkvision:inspect-device', { detail: { node, tab: 'history' } })) });
         showContextMenu(items, x, y);
     });
@@ -849,13 +853,17 @@ export function initInteractions(cy) {
         const edge = evt.target;
         const { x, y } = getAbsoluteMousePosition(evt);
         const linkId = edge.id();
-        showContextMenu([
+        const items = [
             { icon: 'fa-edit', label: t('contextMenu.editLink'), action: () => {
                 if (typeof window.openLinkModalForEdit === 'function') window.openLinkModalForEdit(edge);
             }},
             { icon: 'fa-trash', label: t('contextMenu.deleteLink'), action: () => {
                 if (typeof window.deleteLink === 'function') window.deleteLink(linkId);
             }}
-        ], x, y);
+        ];
+        if (window.canEditMap === true && window.dragLocked !== true && !edge.data('isCollapseProxy')) {
+            items.push({ icon: 'fa-layer-group', label: t('layers.membership'), action: () => openLayerMembership(edge) });
+        }
+        showContextMenu(items, x, y);
     });
 }

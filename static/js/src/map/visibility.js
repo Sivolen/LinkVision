@@ -13,6 +13,8 @@ const statusMatches = node => statusFilter === 'all'
     || node.data('status') === statusFilter;
 
 const belongsToVisibleLayer = ids => !ids?.length || ids.some(id => layerState.visible?.has(id));
+const edgeAllowed = edge => belongsToVisibleLayer(layerState.linkLayers.get(Number(edge.id().replace(/^link_/, ''))))
+    && deviceVisibleByRules(edge.source()) && deviceVisibleByRules(edge.target());
 const deviceVisibleByRules = node => {
     const ids = layerState.deviceLayers.get(Number(node.id())) || [];
     return statusMatches(node) && belongsToVisibleLayer(ids);
@@ -31,7 +33,7 @@ export function setLayerVisibility({ deviceLayers, linkLayers, visibleLayerIds }
 }
 
 export function applyMapVisibility() {
-    if (!cy) return;
+    if (!cy || cy.destroyed()) return;
     const populatedGroups = new Set();
     const visibleGroups = new Set();
     // Walk each device's ancestor chain once. Avoid descendants() scans for
@@ -57,14 +59,22 @@ export function applyMapVisibility() {
             (deviceVisibleByRules(node) && !isInsideCollapsedGroup(node) ? node.show() : node.hide());
         });
         cy.edges().forEach(edge => {
-            const rawId = Number(String(edge.id()).replace(/^link_/, ''));
-            const ids = layerState.linkLayers.get(rawId) || [];
-            // Keep the project's native edge lifecycle intact. In particular,
-            // compound groups can temporarily report a child as invisible
-            // during their post-load resize pass even though it is rendered.
-            // Hiding a source/target node is already handled by Cytoscape;
-            // layers only decide whether this edge itself is enabled.
-            (belongsToVisibleLayer(ids) && !edge.data('_hiddenByCollapse') ? edge.show() : edge.hide());
+            if (edge.data('isCollapseProxy')) {
+                const allowed = (edge.data('originalEdgeIds') || [])
+                    .map(id => cy.getElementById(id))
+                    .filter(original => original.length && edgeAllowed(original));
+                const first = allowed[0];
+                if (first) {
+                    const label = allowed.length === 1 ? first.data('label') : `× ${allowed.length}`;
+                    if (edge.data('label') !== label) edge.data('label', label);
+                    edge.show();
+                } else {
+                    edge.hide();
+                }
+                return;
+            }
+            // Evaluate the rules, since rendered visibility can be stale inside the batch.
+            (edgeAllowed(edge) && !edge.data('_hiddenByCollapse') ? edge.show() : edge.hide());
         });
     });
     syncDeviceLabelVisibility();

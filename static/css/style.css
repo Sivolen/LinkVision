@@ -4719,6 +4719,20 @@ polyline.quality-chart-line,
 .map-layer-count { display:inline-flex; align-items:center; gap:4px; margin-left:auto; padding:2px 6px; border:1px solid var(--border-color); border-radius:999px; color:var(--text-secondary); background:var(--bg-secondary); font-size:11px; white-space:nowrap; }
 .map-layer-count .fa-link { margin-left:3px; }
 .map-layer-controls { display:flex; align-items:center; gap:2px; }
+.map-layers-actions { flex-wrap: wrap; }
+.map-layer-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: 80vh;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  box-shadow: var(--card-shadow);
+}
+.map-layer-dialog::backdrop { background: rgb(0 0 0 / .45); }
+.map-layer-dialog h3 { font-size: 1.1rem; }
+.map-layer-field { display: grid; gap: 4px; margin-bottom: 12px; }
 .map-layer-controls .btn-link { min-height:26px; padding:0 5px; color:var(--text-muted); text-decoration:none; }
 .map-layer-controls .btn-link:hover { color:#3b82c4; background:rgba(59,130,196,.10); }
 .map-layer-controls .text-danger:hover { color:#dc3545 !important; background:rgba(220,53,69,.10); }
