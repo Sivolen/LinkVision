@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Локальные административные команды LinkVision."""
 
 import argparse
