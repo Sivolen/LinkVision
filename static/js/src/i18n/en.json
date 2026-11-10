@@ -225,7 +225,18 @@
       "msAxis": "ms",
       "lossChartTitle": "Packet loss",
       "lossChartLabel": "Packet loss chart",
-      "noProblems": "No individual metric problems detected"
+      "noProblems": "No individual metric problems detected",
+      "inspectorSummary": {
+        "good": "Connection quality is normal.",
+        "degraded": "Connection quality is degraded.",
+        "bad": "Connection quality is poor.",
+        "degradedWithIssues": "Connection quality is degraded: {issues}.",
+        "badWithIssues": "Connection quality is poor: {issues}.",
+        "issues": "Issues detected: {issues}.",
+        "latency": { "degraded": "elevated latency", "bad": "high latency" },
+        "loss": { "degraded": "packet loss", "bad": "heavy packet loss" },
+        "jitter": { "degraded": "elevated jitter", "bad": "high jitter" }
+      }
     }
   },
   "modes": {

@@ -78,25 +78,25 @@ export function initDeviceInspector(cy) {
         ...qualityMetrics.map(([, , key]) => node.data(key)),
     ];
     let lastQualityReading = [];
-    const qualityLabel = status => t(`modal.quality.value.${status}`);
+    const qualityList = new Intl.ListFormat(getLocale(), { type: 'conjunction' });
     const renderQualityMetrics = (read, statuses = {}, overall = 'unknown') => {
         const problems = [];
-        let hasAssessment = false;
         for (const [metric, value, key, unit] of qualityMetrics) {
             const status = statuses[metric] || 'unknown';
             value.textContent = formatMetric(read(key), unit);
             value.parentElement.dataset.quality = status;
-            if (status !== 'unknown') hasAssessment = true;
             if (status === 'bad' || status === 'degraded') {
-                problems.push(`${t(`modal.quality.metric.${metric}`)}: ${qualityLabel(status)}`);
+                problems.push(t(`modal.quality.inspectorSummary.${metric}.${status}`));
             }
         }
-        const heading = document.createElement('strong');
-        heading.textContent = `${t('modal.quality.status')}: ${qualityLabel(overall || 'unknown')}`;
-        const explanation = document.createElement('span');
-        explanation.textContent = problems.join(', ') || (overall === 'good' ? t('modal.quality.noProblems') : '');
-        qualitySummary.replaceChildren(heading, explanation);
-        qualitySummary.hidden = !hasAssessment && (!overall || overall === 'unknown');
+        const status = ['good', 'degraded', 'bad'].includes(overall) ? overall : 'unknown';
+        const key = problems.length
+            ? (status === 'bad' || status === 'degraded' ? `${status}WithIssues` : 'issues')
+            : status;
+        qualitySummary.hidden = key === 'unknown';
+        qualitySummary.textContent = qualitySummary.hidden ? '' : t(`modal.quality.inspectorSummary.${key}`, {
+            issues: qualityList.format(problems),
+        });
     };
     const statusLabel = status => status === 'up' ? panel.dataset.upLabel : status === 'down' ? panel.dataset.downLabel : status === 'partial' ? panel.dataset.partialLabel : panel.dataset.unknownLabel;
     const formatDate = value => {
