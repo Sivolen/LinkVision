@@ -7,14 +7,17 @@ let linkModeActive = false;
 let sourceNode = null;
 let wheelZoomHandler = null;
 let wheelGestureTimer = null;
+let wheelFrame = null;
 
 export function isWheelZoomActive() {
-    return wheelGestureTimer !== null;
+    return wheelFrame !== null || wheelGestureTimer !== null;
 }
 
 function cleanupWheelZoom() {
     if (wheelZoomHandler) document.removeEventListener('wheel', wheelZoomHandler, true);
     if (wheelGestureTimer !== null) clearTimeout(wheelGestureTimer);
+    if (wheelFrame !== null) cancelAnimationFrame(wheelFrame);
+    wheelFrame = null;
     wheelZoomHandler = null;
     wheelGestureTimer = null;
     cy = null;
@@ -35,6 +38,8 @@ export function withTemporaryPanning(instance, callback) {
 export function initModes(instance) {
     cleanupWheelZoom();
     cy = instance;
+    let pendingDelta = 0;
+    let cursorX, cursorY;
     wheelZoomHandler = event => {
         const activeCy = cy;
         const container = activeCy?.container();
@@ -47,10 +52,9 @@ export function initModes(instance) {
             || !container?.contains(event.target)
         ) return;
 
-        const rect = container.getBoundingClientRect();
         let delta = event.deltaY;
         if (event.deltaMode === 1) delta *= 33;
-        else if (event.deltaMode === 2) delta *= Math.max(rect.height, 100);
+        else if (event.deltaMode === 2) delta *= Math.max(container.getBoundingClientRect().height, 100);
         if (!Number.isFinite(delta) || delta === 0) return;
 
         // Use one predictable response in both modes. Cytoscape's wheel
@@ -61,14 +65,25 @@ export function initModes(instance) {
         markUserInteracted();
         if (wheelGestureTimer !== null) clearTimeout(wheelGestureTimer);
         wheelGestureTimer = setTimeout(() => { wheelGestureTimer = null; }, 150);
-        const level = activeCy.zoom() * Math.pow(10, -delta * 0.00012);
-        withTemporaryPanning(activeCy, () => {
-            activeCy.zoom({
-                level,
-                renderedPosition: {
-                    x: event.clientX - rect.left,
-                    y: event.clientY - rect.top
-                }
+        pendingDelta += delta;
+        cursorX = event.clientX;
+        cursorY = event.clientY;
+        if (wheelFrame !== null) return;
+        wheelFrame = requestAnimationFrame(() => {
+            wheelFrame = null;
+            const frameDelta = pendingDelta;
+            pendingDelta = 0;
+            if (!frameDelta || activeCy.destroyed?.() || !container.isConnected
+                || !['pan', 'select'].includes(window.currentMode)
+                || !activeCy.zoomingEnabled() || !activeCy.userZoomingEnabled()) return;
+
+            const rect = container.getBoundingClientRect();
+            const level = activeCy.zoom() * Math.pow(10, -frameDelta * 0.00012);
+            withTemporaryPanning(activeCy, () => {
+                activeCy.zoom({
+                    level,
+                    renderedPosition: { x: cursorX - rect.left, y: cursorY - rect.top }
+                });
             });
         });
     };
