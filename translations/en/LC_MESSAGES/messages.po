@@ -38,6 +38,9 @@ msgstr "partial"
 msgid "недоступны"
 msgstr "offline"
 
+msgid "отключены"
+msgstr "disabled"
+
 msgid "Доступно"
 msgstr "Online"
 

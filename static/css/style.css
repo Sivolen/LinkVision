@@ -3187,14 +3187,14 @@ polyline.quality-chart-line,
   min-height: 0;
 }
 
-.map-device-summary { display: flex; align-items: center; gap: 16px; min-width: 0; white-space: nowrap; }
-.map-summary-stat { display: inline-flex; align-items: center; gap: 6px; }
+.map-device-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; min-width: 0; }
+.map-summary-stat { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .map-summary-total { font-weight: 700; }
 .map-summary-stat i { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--text-secondary); }
 .map-summary-up i { background: #249557; }
 .map-summary-partial i { background: #d18b09; }
 .map-summary-down i { background: #d7444d; }
-.map-bottom-zoom { display: flex; align-items: center; gap: 3px; border-left: 1px solid var(--border-color); padding-left: 8px; }
+.map-bottom-zoom { display: flex; flex-shrink: 0; align-items: center; gap: 3px; border-left: 1px solid var(--border-color); padding-left: 8px; }
 .map-bottom-zoom button { min-width: 28px; height: 28px; color: inherit; background: transparent; border: 0; border-radius: 6px; }
 .map-bottom-zoom button:hover, .map-bottom-zoom button:focus-visible { background: var(--sidebar-hover); }
 #mapZoomValue { min-width: 42px; text-align: center; }
@@ -3358,7 +3358,6 @@ polyline.quality-chart-line,
 
 @media (max-width: 900px) {
   .map-bottom-bar { font-size: 11px; }
-  .map-device-summary { white-space: normal; }
 }
 
 @media (min-width: 761px) {

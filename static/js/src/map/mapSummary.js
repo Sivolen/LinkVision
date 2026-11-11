@@ -13,13 +13,19 @@ export function initMapSummary(cy) {
         let up = 0;
         let partial = 0;
         let down = 0;
+        let disabled = 0;
         devices.forEach(node => {
+            const monitoring = node.data('monitoring_enabled');
+            if (monitoring === false || monitoring === 'false') {
+                disabled++;
+                return;
+            }
             const status = node.data('status');
             if (status === 'up') up++;
             else if (status === 'partial') partial++;
             else if (status === 'down') down++;
         });
-        const { totalLabel, filteredLabel, upLabel, partialLabel, downLabel } = summary.dataset;
+        const { totalLabel, filteredLabel, upLabel, partialLabel, downLabel, disabledLabel } = summary.dataset;
         const makeStat = (count, label, status) => {
             const item = document.createElement('span');
             item.className = `map-summary-stat map-summary-${status}`;
@@ -35,7 +41,8 @@ export function initMapSummary(cy) {
             makeStat(devices.length, filtered ? filteredLabel : totalLabel, 'total'),
             makeStat(up, upLabel, 'up'),
             makeStat(partial, partialLabel, 'partial'),
-            makeStat(down, downLabel, 'down')
+            makeStat(down, downLabel, 'down'),
+            makeStat(disabled, disabledLabel, 'disabled')
         );
     };
     const schedule = () => {
