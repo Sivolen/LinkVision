@@ -288,6 +288,9 @@
     "nothingRedo": "Нет действий для повтора"
   },
   "contextMenu": {
+    "acknowledgeDevice": "Отметить как известную проблему",
+    "clearAcknowledgment": "Снять отметку",
+    "acknowledgmentFailed": "Не удалось обновить отметку. Возможно, состояние устройства изменилось.",
     "createDevice": "Создать устройство",
     "copyDevice": "Копировать устройство",
     "pasteDevice": "Вставить устройство",

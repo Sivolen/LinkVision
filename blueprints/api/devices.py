@@ -22,6 +22,7 @@ from services.quality_service import (
 )
 from services.notifications import (
     notify_device_created,
+    notify_device_acknowledged,
     notify_device_updated,
     notify_device_deleted,
     notify_device_position_updated,
@@ -55,6 +56,7 @@ def get_device(device_id):
             "pos_y": device.pos_y,
             "status": device.status,
             "monitoring_enabled": device.monitoring_enabled,
+            "acknowledged": device.acknowledged,
         }
     )
 
@@ -298,6 +300,7 @@ def update_device(device_id):
             "status": device.status,
             "monitoring_enabled": device.monitoring_enabled,
             "group_id": device.group_id,
+            "acknowledged": device.acknowledged,
             "iconUrl": icon_url,
             "width": width,
             "height": height,
@@ -331,6 +334,30 @@ def update_device(device_id):
     except Exception:
         api_logger.exception(f"Error updating device {device_id}")
         return jsonify({"error": "Internal server error"}), 500
+
+
+@devices_bp.route("/device/<int:device_id>/acknowledgment", methods=["PUT"])
+@login_required
+@require_device_edit
+def set_device_acknowledgment(device_id):
+    """Mark an active availability incident as known or clear the mark."""
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or type(data.get("acknowledged")) is not bool:
+        return jsonify({"error": "acknowledged must be a boolean"}), 400
+
+    device = db.session.get(Device, device_id)
+    if device is None:
+        return jsonify({"error": "Device not found"}), 404
+    map_id = device.map_id
+    acknowledged = data["acknowledged"]
+    query = Device.query.filter_by(id=device_id)
+    if acknowledged:
+        query = query.filter(Device.monitoring_enabled.is_(True), Device.status.in_(("down", "partial")))
+    if not query.update({Device.acknowledged: acknowledged}, synchronize_session=False):
+        return jsonify({"error": "Device has no active availability incident"}), 409
+    db.session.commit()
+    notify_device_acknowledged(map_id, device_id, acknowledged)
+    return jsonify({"id": device_id, "acknowledged": acknowledged})
 
 
 @devices_bp.route("/device/<int:device_id>", methods=["DELETE"])

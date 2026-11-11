@@ -4,6 +4,7 @@ import { renderQualityPreview } from '../modal/quality.js';
 import { t, getLocale } from '../i18n/i18n.js';
 import { http } from '../utils/http.js';
 import { showToast } from '../utils/toast.js';
+import { canAcknowledge, toggleAcknowledgment } from './deviceAck.js';
 
 export function initDeviceInspector(cy) {
     const panel = document.getElementById('mapDeviceInspector');
@@ -11,6 +12,7 @@ export function initDeviceInspector(cy) {
     const field = id => document.getElementById(id);
     const close = field('inspectorClose');
     const copyIp = field('inspectorCopyIp');
+    const ackButton = field('inspectorAcknowledge');
     const settingsForm = field('inspectorSettingsForm');
     const ipFields = field('inspectorEditIps');
     const addIp = field('inspectorAddIp');
@@ -213,9 +215,12 @@ export function initDeviceInspector(cy) {
         field('inspectorIp').textContent = node.data('ip') || '';
         const status = node.data('status');
         const monitoringOff = node.data('monitoring_enabled') === false || node.data('monitoring_enabled') === 'false';
-        const displayedStatus = monitoringOff ? 'monitoring-off' : (status || 'unknown');
-        field('inspectorStatus').textContent = monitoringOff ? panel.dataset.monitoringOffLabel : status === 'up' ? panel.dataset.upLabel : status === 'down' ? panel.dataset.downLabel : status === 'partial' ? panel.dataset.partialLabel : panel.dataset.unknownLabel;
+        const acknowledged = node.data('acknowledged') === true;
+        const displayedStatus = monitoringOff ? 'monitoring-off' : acknowledged ? 'acknowledged' : (status || 'unknown');
+        field('inspectorStatus').textContent = monitoringOff ? panel.dataset.monitoringOffLabel : acknowledged ? panel.dataset.acknowledgedLabel : statusLabel(status);
         field('inspectorStatus').dataset.status = displayedStatus;
+        ackButton.hidden = window.canEditMap !== true || !canAcknowledge(node);
+        ackButton.textContent = t(acknowledged ? 'contextMenu.clearAcknowledgment' : 'contextMenu.acknowledgeDevice');
         panel.hidden = false;
     };
     const loadDetails = async node => {
@@ -409,7 +414,13 @@ export function initDeviceInspector(cy) {
     };
     const onModeChange = event => { if (event.detail.mode !== 'pan') hide(); };
     const onLinkModeChange = event => { if (event.detail?.active) hide(); };
-    const onEditPermissionChange = event => setSettingsEnabled(event.detail?.canEdit === true && settingsReady && !saving);
+    const onEditPermissionChange = event => {
+        setSettingsEnabled(event.detail?.canEdit === true && settingsReady && !saving);
+        if (currentNode) renderNode(currentNode);
+    };
+    const onAcknowledge = () => {
+        if (currentNode) toggleAcknowledgment(cy, currentNode);
+    };
     const onInspectRequest = event => {
         const node = event.detail?.node;
         if (!node?.nonempty?.()) return;
@@ -429,6 +440,7 @@ export function initDeviceInspector(cy) {
     historyPrevious?.addEventListener('click', () => loadHistory(historyState.page - 1));
     historyNext?.addEventListener('click', () => loadHistory(historyState.page + 1));
     copyIp.addEventListener('click', copyAddress);
+    ackButton.addEventListener('click', onAcknowledge);
     document.addEventListener('keydown', onKey);
     window.addEventListener('linkvision:mode-changed', onModeChange);
     window.addEventListener('linkvision:link-mode-changed', onLinkModeChange);
@@ -443,6 +455,7 @@ export function initDeviceInspector(cy) {
         settingsForm?.removeEventListener('submit', saveSettings);
         addIp?.removeEventListener('click', onAddIp);
         copyIp.removeEventListener('click', copyAddress);
+        ackButton.removeEventListener('click', onAcknowledge);
         tabs.forEach(tab => tab.removeEventListener('click', onTabClick));
         document.removeEventListener('keydown', onKey);
         window.removeEventListener('linkvision:mode-changed', onModeChange);

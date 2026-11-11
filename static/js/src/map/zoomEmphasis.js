@@ -38,7 +38,7 @@ function isMonitoringOff(n) {
 
 function isStatusTarget(n) {
     const s = n.data('status');
-    return (s === 'down' || s === 'partial') && !isMonitoringOff(n);
+    return (s === 'down' || s === 'partial') && !isMonitoringOff(n) && n.data('acknowledged') !== true;
 }
 
 function isHealthyUpTarget(n) {

@@ -18,6 +18,8 @@ from models import Device, Settings, DeviceHistory, DeviceQualityHistory
 from utils.logger import monitor_logger
 from cachetools import TTLCache
 from sqlalchemy.orm import joinedload
+from sqlalchemy.orm.attributes import flag_modified
+from services.map_service import invalidate_map_elements_cache
 from services.quality_service import calculate_quality, get_device_thresholds_map
 
 try:
@@ -839,7 +841,7 @@ def monitor_loop():
                             quality_changed,
                         ) = values
                         device = devices_by_id.get(dev_id)
-                        if not device:
+                        if not device or not device.monitoring_enabled:
                             continue
 
                         if quality is not None:
@@ -858,6 +860,11 @@ def monitor_loop():
                                 )
                             )
                             device.status = new_status
+                            if new_status == "up":
+                                device.acknowledged = False
+                                # Write the reset even if an acknowledgment was set
+                                # after this session loaded the device.
+                                flag_modified(device, "acknowledged")
                             device.last_check = datetime.datetime.now()
                             monitor_logger.info(
                                 f"Device {dev_id} status change -> {new_status}"
@@ -878,6 +885,7 @@ def monitor_loop():
                                     "quality_jitter_ms": device.quality_jitter_ms,
                                     "quality_loss_percent": device.quality_loss_percent,
                                     "map_id": device.map_id,
+                                    **({"acknowledged": False} if status_changed and new_status == "up" else {}),
                                 }
                             )
 
@@ -887,6 +895,7 @@ def monitor_loop():
 
             # Emit ОДНИМ сообщением на комнату
             for room, statuses in emits_by_room.items():
+                invalidate_map_elements_cache(statuses[0]["map_id"])
                 socketio.emit("device_status_batch", statuses, room=room)
 
             if not emits_by_room:

@@ -38,7 +38,7 @@ export function addPulsingNode(cy, node, type = 'down') {
     // На общем плане status-аура из zoomEmphasis.js — устойчивый индикатор
     // проблемы. Короткая пульсация не должна каждую 100 мс перетирать её
     // opacity и визуально «сбрасывать» ореол сразу после F5.
-    if (isOverviewZoom(node)) return;
+    if (node.data('acknowledged') === true || isOverviewZoom(node)) return;
     const id = node.id();
     const existing = pulsingNodes.get(id);
 

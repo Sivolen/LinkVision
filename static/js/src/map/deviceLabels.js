@@ -157,7 +157,7 @@ export function initDeviceLabels(cy) {
         const fontSize = Math.max(MIN_NAME_FONT, Math.round(baseFont * FONT_BOOST * 10) / 10);
         const name = String(node.data('name') ?? '');
         const ips = parseIps(node.data('ip'));
-        const status = String(node.data('status') || '');
+        const status = node.data('acknowledged') === true ? 'acknowledged' : String(node.data('status') || '');
         const monitoringOff = ['false', false].includes(node.data('monitoring_enabled'));
         const selected = node.selected() || Boolean(node.data('selected'));
         const highlighted = node.hasClass('cy-node-highlight');

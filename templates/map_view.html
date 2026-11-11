@@ -87,6 +87,7 @@
                 <li><button type="button" class="dropdown-item" data-filter-value="all" onclick="filterByStatus('all')">{{ _('Все устройства') }}</button></li>
                 <li><button type="button" class="dropdown-item" data-filter-value="up" onclick="filterByStatus('up')">{{ _('Только UP') }}</button></li>
                 <li><button type="button" class="dropdown-item" data-filter-value="down" onclick="filterByStatus('down')">{{ _('Только DOWN') }}</button></li>
+                <li><button type="button" class="dropdown-item" data-filter-value="acknowledged" onclick="filterByStatus('acknowledged')">{{ _('Известные проблемы') }}</button></li>
                 <li><button type="button" class="dropdown-item" data-filter-value="quality" onclick="filterByStatus('quality')">{{ _('Проблемы качества') }}</button></li>
                 <li><button type="button" class="dropdown-item" data-filter-value="unmonitored" onclick="filterByStatus('unmonitored')">{{ _('Мониторинг отключён') }}</button></li>
                 <li><hr class="dropdown-divider"></li>
@@ -180,12 +181,14 @@
            data-up-label="{{ _('Доступно') }}" data-down-label="{{ _('Недоступно') }}"
            data-partial-label="{{ _('Частично доступно') }}" data-unknown-label="{{ _('Неизвестно') }}"
            data-monitoring-off-label="{{ _('Мониторинг отключён') }}"
+           data-acknowledged-label="{{ _('Известная проблема') }}"
            data-can-edit="{{ 'true' if can_edit else 'false' }}" hidden>
         <div class="map-inspector-heading">
             <div><strong id="inspectorName"></strong><span id="inspectorStatus" class="map-inspector-status"></span></div>
             <button type="button" id="inspectorClose" aria-label="{{ _('Закрыть') }}"><i class="fas fa-times" aria-hidden="true"></i></button>
         </div>
         <div class="map-inspector-ip"><span id="inspectorIp"></span><button type="button" id="inspectorCopyIp" title="{{ _('Копировать IP') }}" aria-label="{{ _('Копировать IP') }}"><i class="fas fa-copy" aria-hidden="true"></i></button></div>
+        <button type="button" id="inspectorAcknowledge" class="map-inspector-ack btn btn-outline-secondary btn-sm" hidden></button>
         <div class="map-inspector-tabs" role="tablist" aria-label="{{ _('Устройство') }}">
             <button type="button" class="active" data-inspector-tab="overview" role="tab" aria-selected="true">{{ _('Обзор') }}</button>
             <button type="button" data-inspector-tab="links" role="tab" aria-selected="false">{{ _('Связи') }}</button>
@@ -247,6 +250,7 @@
           data-total-label="{{ _('всего') }}" data-up-label="{{ _('доступны') }}"
           data-partial-label="{{ _('частично') }}" data-down-label="{{ _('недоступны') }}"
           data-disabled-label="{{ _('отключены') }}"
+          data-acknowledged-label="{{ _('известные проблемы') }}"
           data-filtered-label="{{ _('показано') }}"></span>
     <div class="map-bottom-zoom">
         <button type="button" onclick="zoomOut()" aria-label="{{ _('Уменьшить масштаб') }}">−</button>

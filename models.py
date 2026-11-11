@@ -103,6 +103,7 @@ class Device(db.Model):
     last_check = db.Column(db.DateTime, default=datetime.now)
     group_id = db.Column(db.Integer, db.ForeignKey("group.id"), index=True)
     monitoring_enabled = db.Column(db.Boolean, default=True)
+    acknowledged = db.Column(db.Boolean, nullable=False, server_default=db.false())
     # Последнее рассчитанное качество ICMP для быстрого отображения на карте.
     quality_status = db.Column(db.String(12), default="unknown", nullable=False)
     quality_latency_ms = db.Column(db.Float, nullable=True)

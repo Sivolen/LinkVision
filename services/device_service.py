@@ -180,6 +180,7 @@ def get_device_details(device_id: int) -> Dict[str, Any]:
         "group_id": device.group_id,
         "group_name": group.name if group else None,
         "monitoring_enabled": device.monitoring_enabled,
+        "acknowledged": device.acknowledged,
         "quality_profile_id": device.quality_profile_id,
         **get_device_quality_snapshot(device),
         "quality_history": get_device_quality_history(device_id),
@@ -316,12 +317,16 @@ def update_device(device_id: int, **kwargs: Any) -> Device:
             raise ValueError(f"Профиль качества с id {qp_id} не найден")
         kwargs["quality_profile_id"] = qp_id
 
+    monitoring_changed = (
+        "monitoring_enabled" in kwargs
+        and kwargs["monitoring_enabled"] != device.monitoring_enabled
+    )
     for key, value in kwargs.items():
         if key in allowed_fields:
             setattr(device, key, value)
 
     # Мониторинг был выключен, а теперь включён — сбрасываем статус на 'up'
-    if "monitoring_enabled" in kwargs and kwargs["monitoring_enabled"] is True:
+    if monitoring_changed and device.monitoring_enabled:
         device.status = "up"
         device.last_check = datetime.datetime.now()
 
@@ -332,8 +337,9 @@ def update_device(device_id: int, **kwargs: Any) -> Device:
     # сама не обновится. При следующей загрузке страницы (или у другого
     # пользователя) устройство продолжало считаться алярмом везде, где
     # проверяется просто status, хотя оно явно отключено из мониторинга.
-    if "monitoring_enabled" in kwargs and kwargs["monitoring_enabled"] is False:
+    if monitoring_changed:
         device.status = "up"
+        device.acknowledged = False
 
     if "ips" in kwargs:
         new_ips = kwargs["ips"]

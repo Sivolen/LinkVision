@@ -211,6 +211,7 @@ export function loadElements(mapId, force = false, attempt = 0) {
             // клиент был отключён.
             const problemCount = cy.nodes().filter(n =>
                 !n.data('isGroup') && !n.data('isShape') &&
+                n.data('acknowledged') !== true &&
                 (n.data('monitoring_enabled') === true || n.data('monitoring_enabled') === 'true') &&
                 (n.data('status') === 'down' || n.data('status') === 'partial')
             ).length;
@@ -314,6 +315,7 @@ export async function addDeviceToGraph(device) {
                 parent: groupParent, // Теперь это строка или undefined
                 monitoring_enabled: device.monitoring_enabled ? 'true' : 'false',
                 status: device.status || 'up',
+                acknowledged: device.acknowledged === true,
                 quality_status: device.quality_status || 'unknown',
                 quality_latency_ms: device.quality_latency_ms ?? null,
                 quality_jitter_ms: device.quality_jitter_ms ?? null,
@@ -375,12 +377,14 @@ export function updateDevice(device) {
 
     const wasMonitoringOn = node.data('monitoring_enabled') === true || node.data('monitoring_enabled') === 'true';
     const previousStatus = node.data('status');
+    const wasAcknowledged = node.data('acknowledged') === true;
 
     node.data({
         name: device.name,
         type_id: device.type_id,
         group_id: device.group_id,
         monitoring_enabled: monitoringOn ? 'true' : 'false',
+        ...(has('acknowledged') ? { acknowledged: device.acknowledged === true } : {}),
         // Обновляем только пришедшие поля (из сокета приходят iconUrl/ips/размеры,
         // из модалки — нет; так смена типа/IP отражается у других клиентов без F5,
         // а частичный вызов не затирает прежние значения).
@@ -402,9 +406,10 @@ export function updateDevice(device) {
     // в усилении при отдалении (zoomEmphasis.js) и в счётчике сайдбара,
     // хотя визуально узел уже показывался серым как отключённый.
     if (wasMonitoringOn && !monitoringOn) {
-        const wasAlarm = previousStatus === 'down' || previousStatus === 'partial';
+        const wasAlarm = !wasAcknowledged && (previousStatus === 'down' || previousStatus === 'partial');
         node.data({
             status: 'up',
+            acknowledged: false,
             quality_status: 'unknown',
             quality_latency_ms: null,
             quality_jitter_ms: null,

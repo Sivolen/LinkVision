@@ -10,7 +10,7 @@ let layerState = { deviceLayers: new Map(), linkLayers: new Map(), visible: null
 const statusMatches = node => statusFilter === 'all'
     || (statusFilter === 'quality' && ['bad', 'degraded'].includes(node.data('quality_status')))
     || (statusFilter === 'unmonitored' && node.data('monitoring_enabled') === 'false')
-    || node.data('status') === statusFilter;
+    || (node.data('acknowledged') === true ? statusFilter === 'acknowledged' : node.data('status') === statusFilter);
 
 const belongsToVisibleLayer = ids => !ids?.length || ids.some(id => layerState.visible?.has(id));
 const edgeAllowed = edge => belongsToVisibleLayer(layerState.linkLayers.get(Number(edge.id().replace(/^link_/, ''))))

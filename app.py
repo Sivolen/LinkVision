@@ -342,6 +342,7 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
                     "id": d.id,
                     "status": d.status if d.monitoring_enabled else "up",
                     "monitoring_enabled": d.monitoring_enabled,
+                    "acknowledged": d.acknowledged,
                     "quality_status": (
                         d.quality_status if d.monitoring_enabled else "unknown"
                     ),

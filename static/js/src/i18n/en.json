@@ -288,6 +288,9 @@
     "nothingRedo": "Nothing to redo"
   },
   "contextMenu": {
+    "acknowledgeDevice": "Mark as a known issue",
+    "clearAcknowledgment": "Clear acknowledgment",
+    "acknowledgmentFailed": "Could not update the acknowledgment. The device status may have changed.",
     "createDevice": "Create device",
     "copyDevice": "Copy device",
     "pasteDevice": "Paste device",

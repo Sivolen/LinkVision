@@ -54,6 +54,79 @@ class TestDeviceUpdatedEvent:
         assert r.status_code == 201
         return r.get_json()["id"]
 
+    def test_acknowledgment_preserves_monitoring_and_notifies_map(
+        self, app, client, login, map_ids, router_type_id, emit_recorder, monkeypatch
+    ):
+        from concurrent.futures import Future
+        from threading import Event
+
+        from models import Device, db
+        from services import monitor
+
+        login("testuser")
+        map_id = map_ids["Own Map"]
+        device_id = self._create(client, map_id, router_type_id)
+        url = f"/api/device/{device_id}/acknowledgment"
+        assert client.put(url, json={"acknowledged": "true"}).status_code == 400
+        assert client.put(url, json={"acknowledged": True}).status_code == 409
+        with app.app_context():
+            device = db.session.get(Device, device_id)
+            device.status = "down"
+            db.session.commit()
+
+        for acknowledged in (True, False, True):
+            assert client.put(url, json={"acknowledged": acknowledged}).status_code == 200
+            payload = client.get(f"/api/device/{device_id}").get_json()
+            assert payload["acknowledged"] is acknowledged
+            assert payload["status"] == "down"
+            assert payload["monitoring_enabled"] is True
+            assert emit_recorder[-1]["event"] == "device_acknowledged"
+            assert emit_recorder[-1]["room"] == f"map_{map_id}"
+            assert emit_recorder[-1]["payload"] == {
+                "map_id": map_id, "id": device_id, "acknowledged": acknowledged
+            }
+
+        assert client.put(
+            f"/api/device/{device_id}", json={"monitoring_enabled": True}
+        ).status_code == 200
+        assert client.get(f"/api/device/{device_id}").get_json()["acknowledged"] is True
+
+        # Exercise two real monitor cycles with deterministic probe results.
+        stop = Event()
+        probe_status = "up"
+
+        class ProbeExecutor:
+            def submit(self, check, dev_id, ips, count):
+                result = Future()
+                result.set_result((dev_id, probe_status, None))
+                return result
+
+        monkeypatch.setattr(monitor, "app_instance", app)
+        monkeypatch.setattr(monitor, "_executor", ProbeExecutor())
+        monkeypatch.setattr(monitor, "_executor_worker_count", 1)
+        monkeypatch.setattr(monitor, "_compute_max_workers", lambda: 1)
+        monkeypatch.setattr(monitor, "_monitor_stop_event", stop)
+        monkeypatch.setattr(monitor, "_monitor_stop_flag", False)
+        monkeypatch.setattr(monitor, "_record_monitor_health", lambda *_: stop.set())
+
+        monitor.monitor_loop()
+        payload = client.get(f"/api/device/{device_id}").get_json()
+        assert (payload["status"], payload["acknowledged"]) == ("up", False)
+        recovery = next(item for item in emit_recorder[-1]["payload"] if item["id"] == device_id)
+        assert (recovery["status"], recovery["acknowledged"]) == ("up", False)
+
+        probe_status = "down"
+        stop.clear()
+        monitor.monitor_loop()
+        payload = client.get(f"/api/device/{device_id}").get_json()
+        assert (payload["status"], payload["acknowledged"]) == ("down", False)
+        assert client.put(url, json={"acknowledged": True}).status_code == 200
+
+        assert client.put(
+            f"/api/device/{device_id}", json={"monitoring_enabled": False}
+        ).status_code == 200
+        assert client.get(f"/api/device/{device_id}").get_json()["acknowledged"] is False
+
     def test_updated_event_carries_icon_and_ips(
         self, client, login, map_ids, router_type_id, emit_recorder
     ):

@@ -1,6 +1,6 @@
 // styles.js – стили Cytoscape.
 // Цвета подписей/групп зависят от темы и заданы ФУНКЦИЯМИ: они заново
-// вычисляются при cy.style().update(), который core.js вызывает при смене
+// вычисляются при updateStyle(), который core.js вызывает при смене
 // data-theme. Статических значений вида `isDarkTheme() ? a : b` (они
 // вычислялись один раз при создании карты и не менялись при переключении
 // темы) здесь быть не должно.
@@ -18,11 +18,11 @@ const PALETTE = {
         edgeText: '#52627a',
         edgeBg: '#ffffff',
         edgeBorder: '#d5deea',
+        edgeSelected: '#007bff',
         edgeSelectedBg: '#e7f3ff',
         shapeBorder: '#94a3b8',
-        groupMixTarget: null,        // цвет группы берём как есть
-        groupMixRatio: 1,
         groupFillOpacity: 0.14,
+        collapsedGroupFillOpacity: 0.22,
         groupBorderOpacity: 0.5
     },
     dark: {
@@ -32,16 +32,17 @@ const PALETTE = {
         edgeText: '#c4d0e0',
         edgeBg: '#1d2634',
         edgeBorder: '#3a4a61',
+        edgeSelected: '#60a5fa',
         edgeSelectedBg: '#243b52',
         shapeBorder: '#64748b',
-        groupMixTarget: [148, 163, 184], // нейтральный серо-голубой
-        groupMixRatio: 0.4,              // доля исходного цвета группы
-        groupFillOpacity: 0.12,
-        groupBorderOpacity: 0.6
+        groupFillOpacity: 0.19,
+        collapsedGroupFillOpacity: 0.27,
+        groupBorderOpacity: 0.9
     }
 };
 const themed = key => () => (isDarkTheme() ? PALETTE.dark : PALETTE.light)[key];
-const palette = () => (isDarkTheme() ? PALETTE.dark : PALETTE.light);
+const darkColorCache = new Map();
+const DARK_COLOR_BRIGHTNESS = 0.68;
 
 function parseColor(value) {
     const text = String(value || '').trim();
@@ -54,28 +55,33 @@ function parseColor(value) {
     return null;
 }
 
-// Keep saved link colors intact while making dark links visible on the dark canvas.
-function edgeColor(edge) {
-    const original = edge.data('color') || '#6c757d';
-    if (!isDarkTheme()) return original;
+// Mixing with white raises brightness without shifting the hue towards blue.
+function darkColor(original) {
+    if (darkColorCache.has(original)) return darkColorCache.get(original);
     const rgb = parseColor(original);
-    if (!rgb) return original;
-    const brightness = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
-    const mix = Math.max(0, Math.min(0.55, (0.62 - brightness) / (1 - brightness)));
-    return `rgb(${rgb.map(channel => Math.round(channel + (255 - channel) * mix)).join(', ')})`;
+    let color = original;
+    if (rgb) {
+        const brightness = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+        const mix = brightness < DARK_COLOR_BRIGHTNESS
+            ? (DARK_COLOR_BRIGHTNESS - brightness) / (1 - brightness)
+            : 0;
+        color = `rgb(${rgb.map(channel => Math.round(channel + (255 - channel) * mix)).join(',')})`;
+    }
+    if (darkColorCache.size >= 256) darkColorCache.clear();
+    darkColorCache.set(original, color);
+    return color;
 }
 
-// Цвет группы с учётом темы. В тёмной теме пользовательский цвет подмешивается
-// к нейтральному серо-голубому — без этого жёлтый/оранжевый цвет группы при
-// малой прозрачности даёт грязно-коричневую заливку на графитовом фоне.
+function edgeColor(edge) {
+    const original = edge.data('color') || '#6c757d';
+    return isDarkTheme() ? darkColor(original) : original;
+}
+
 function groupColor(node) {
-    const raw = node.data('color');
-    const rgb = parseColor(raw);
-    const p = palette();
-    if (!rgb) return raw || '#3498db';
-    if (!p.groupMixTarget) return `rgb(${rgb.join(',')})`;
-    const mixed = rgb.map((c, i) => Math.round(c * p.groupMixRatio + p.groupMixTarget[i] * (1 - p.groupMixRatio)));
-    return `rgb(${mixed.join(',')})`;
+    const original = node.data('color') || '#3498db';
+    if (isDarkTheme()) return darkColor(original);
+    const rgb = parseColor(original);
+    return rgb ? `rgb(${rgb.join(',')})` : original;
 }
 
 const deviceLabelMaxWidth = node => {
@@ -360,7 +366,7 @@ export const CY_STYLE = [
             'text-margin-y': -10,
             'padding': 12,
             'background-color': groupColor,
-            'background-opacity': 0.22
+            'background-opacity': themed('collapsedGroupFillOpacity')
         }
     },
     {
@@ -373,6 +379,12 @@ export const CY_STYLE = [
         selector: 'node[isGroup][?collapsed][bubbleStatus="partial"]',
         style: {
             'border-color': '#ffc107'
+        }
+    },
+    {
+        selector: 'node[isGroup][?collapsed][bubbleStatus="acknowledged"]',
+        style: {
+            'border-color': '#8060bf'
         }
     },
     {
@@ -422,9 +434,18 @@ export const CY_STYLE = [
         selector: 'edge:selected',
         style: {
             'width': 4,
-            'line-color': '#007bff',
+            'line-color': themed('edgeSelected'),
             'text-background-color': themed('edgeSelectedBg'),
             'color': themed('text')
+        }
+    },
+    {
+        selector: 'node[?acknowledged]',
+        style: {
+            'border-color': '#8060bf',
+            'border-style': 'solid',
+            'opacity': 1,
+            'overlay-opacity': 0
         }
     },
     {

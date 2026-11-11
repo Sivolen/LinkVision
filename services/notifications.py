@@ -1,5 +1,5 @@
 from extensions import socketio
-from services.map_service import invalidate_map_elements_cache
+from services.map_service import invalidate_all_sidebar_caches, invalidate_map_elements_cache
 
 
 def notify_map_updated(map_id, skip_sid=None):
@@ -49,6 +49,14 @@ def notify_device_created(map_id, device_data, skip_sid=None):
 def notify_device_updated(map_id, device_data, skip_sid=None):
     """Уведомление об обновлении устройства."""
     _notify(map_id, "device_updated", {"device": device_data}, skip_sid)
+
+
+def notify_device_acknowledged(map_id, device_id, acknowledged):
+    invalidate_map_elements_cache(map_id)
+    invalidate_all_sidebar_caches()
+    _notify(map_id, "device_acknowledged", {
+        "id": device_id, "acknowledged": acknowledged,
+    })
 
 
 def notify_device_deleted(map_id, device_id, skip_sid=None):

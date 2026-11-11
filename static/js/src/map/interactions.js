@@ -1,6 +1,7 @@
 // interactions.js – перетаскивание узлов, клики, групповое перемещение
 import { getCy } from './core.js';
 import { openLayerMembership } from './layers.js';
+import { canAcknowledge, toggleAcknowledgment } from './deviceAck.js';
 import { t } from '../i18n/i18n.js';
 import { boundNodePosition, getBgDimensions } from './background.js';
 import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes.js';
@@ -845,6 +846,13 @@ export function initInteractions(cy) {
             items.push({ icon: 'fa-layer-group', label: t('layers.membership'), action: () => openLayerMembership(node) });
         }
         items.push({ icon: 'fa-history', label: t('contextMenu.history'), action: () => window.dispatchEvent(new CustomEvent('linkvision:inspect-device', { detail: { node, tab: 'history' } })) });
+        if (window.canEditMap === true && canAcknowledge(node)) {
+            items.push({
+                icon: 'fa-flag',
+                label: t(node.data('acknowledged') ? 'contextMenu.clearAcknowledgment' : 'contextMenu.acknowledgeDevice'),
+                action: () => toggleAcknowledgment(cy, node),
+            });
+        }
         showContextMenu(items, x, y);
     });
 

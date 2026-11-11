@@ -41,6 +41,15 @@ msgstr "offline"
 msgid "отключены"
 msgstr "disabled"
 
+msgid "Известная проблема"
+msgstr "Acknowledged"
+
+msgid "Известные проблемы"
+msgstr "Known issues"
+
+msgid "известные проблемы"
+msgstr "acknowledged"
+
 msgid "Доступно"
 msgstr "Online"
 

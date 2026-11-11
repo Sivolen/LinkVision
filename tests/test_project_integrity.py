@@ -403,8 +403,8 @@ def test_map_theme_has_single_styling_mechanism():
 
     styles = (ROOT / "static/js/src/map/styles.js").read_text(encoding="utf-8")
     # Тема читается только внутри функций-хелперов палитры, а не в значениях стилей.
-    assert styles.count("isDarkTheme() ? PALETTE.dark") == 2
-    assert "': isDarkTheme()" not in styles
+    stylesheet = styles.split("export const CY_STYLE = [", 1)[1]
+    assert "isDarkTheme()" not in stylesheet
     assert "node.lv-html-label" in styles
 
     core = (ROOT / "static/js/src/map/core.js").read_text(encoding="utf-8")

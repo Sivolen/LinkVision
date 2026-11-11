@@ -194,6 +194,10 @@ function syncProxyEdges(cy) {
     });
 }
 
+const groupStatusRank = { up: 0, acknowledged: 1, partial: 2, down: 3 };
+const deviceGroupStatus = node => node.data('acknowledged') === true ? 'acknowledged' : node.data('status');
+const isWorseGroupStatus = (status, current) => groupStatusRank[status] > groupStatusRank[current];
+
 /** Агрегированный статус группы: худший среди её устройств с мониторингом. */
 export function aggregateGroupStatus(groupNode) {
     if (!groupNode || !groupNode.length) return 'up';
@@ -204,9 +208,8 @@ export function aggregateGroupStatus(groupNode) {
         const raw = node.data('monitoring_enabled');
         if (raw === false || raw === 'false') return;
 
-        const status = node.data('status');
-        if (status === 'down') worst = 'down';
-        else if (status === 'partial' && worst !== 'down') worst = 'partial';
+        const status = deviceGroupStatus(node);
+        if (isWorseGroupStatus(status, worst)) worst = status;
     });
     return worst;
 }
@@ -230,9 +233,9 @@ function syncBubbleStatus(cy) {
         const parent = node.parent();
         if (!parent.length || !statusByGroup.has(parent.id())) return;
 
-        const status = node.data('status');
+        const status = deviceGroupStatus(node);
         const current = statusByGroup.get(parent.id());
-        if (status === 'down' || (status === 'partial' && current !== 'down')) {
+        if (isWorseGroupStatus(status, current)) {
             statusByGroup.set(parent.id(), status);
         }
     });
@@ -251,7 +254,7 @@ function syncBubbleStatus(cy) {
         const parent = group.parent();
         if (!parent.length || !statusByGroup.has(parent.id())) return;
         const parentStatus = statusByGroup.get(parent.id());
-        if (status === 'down' || (status === 'partial' && parentStatus !== 'down')) {
+        if (isWorseGroupStatus(status, parentStatus)) {
             statusByGroup.set(parent.id(), status);
         }
     });

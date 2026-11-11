@@ -230,6 +230,7 @@ def get_sidebar_maps_data(user) -> List[Dict[str, Any]]:
         .filter(
             Device.map_id.in_(map_ids),
             Device.monitoring_enabled,
+            Device.acknowledged.is_(False),
             Device.status != "up",
         )
         .group_by(Device.map_id)
@@ -370,6 +371,7 @@ def get_sidebar_tree_data(user) -> Dict[str, Any]:
             .filter(
                 Device.map_id.in_(list(visible_map_ids)),
                 Device.monitoring_enabled,
+                Device.acknowledged.is_(False),
                 Device.status != "up",
             )
             .group_by(Device.map_id)
@@ -615,6 +617,7 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
                     "label": f"{dev.name}\n{ip_label}",
                     "status": dev.status,
                     "monitoring_enabled": "true" if dev.monitoring_enabled else "false",
+                    "acknowledged": dev.acknowledged,
                     "quality_status": dev.quality_status,
                     "quality_latency_ms": dev.quality_latency_ms,
                     "quality_jitter_ms": dev.quality_jitter_ms,

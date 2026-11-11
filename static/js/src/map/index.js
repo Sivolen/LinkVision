@@ -8,7 +8,7 @@ import { initResync, scheduleResync, isMapBusy } from './resync.js';
 import { initViewport, saveViewportToServer, withViewportRestore } from './viewport.js';
 import { initLayout } from './layout.js';
 import { initSearch } from './search.js';
-import { initVisibility, applyMapVisibility } from './visibility.js';
+import { initVisibility, applyMapVisibility, getStatusFilter } from './visibility.js';
 import { initLayers, refreshLayers } from './layers.js';
 import { initLock } from './lock.js';
 import { initFullscreen } from './fullscreen.js';
@@ -17,6 +17,7 @@ import { initBulk } from './bulk.js';
 import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
 import { initMinimap } from './minimap.js';
 import { initMapSummary } from './mapSummary.js';
+import { applyAcknowledgment } from './deviceAck.js';
 import { initDeviceInspector } from './deviceInspector.js';
 import { initUndoRedo } from './undoRedo.js';
 import { beginSelfUpdate, endSelfUpdate, isSelfUpdating, getPendingCount, isLocalOperation } from '../utils/state.js';
@@ -255,6 +256,9 @@ export function initMap(id) {
         registerMapCleanup(() => window.socket.off(event, handler));
     };
     onMapEvent(window.socket, mapId, 'layers_updated', () => refreshLayers().catch(() => {}));
+    onMapEvent(window.socket, mapId, 'device_acknowledged', data => {
+        applyAcknowledgment(cy, cy.getElementById(String(data.id)), data.acknowledged);
+    });
 
     listenSocket('device_status', (data) => {
         const node = cy.getElementById(String(data.id));
@@ -268,6 +272,7 @@ export function initMap(id) {
             if (typeof removePulsingNode === 'function') removePulsingNode(cy, node);
             node.data({
                 status: 'up',
+                acknowledged: false,
                 quality_status: 'unknown',
                 quality_latency_ms: null,
                 quality_jitter_ms: null,
@@ -300,14 +305,16 @@ export function initMap(id) {
         statusBatchTimeout = setTimeout(() => {
             cy.batch(() => {
                 statusBatch.forEach(({ node, newStatus }) => {
-                    node.data('status', newStatus);
+                    const wasAlarm = node.data('acknowledged') !== true && ['down', 'partial'].includes(node.data('status'));
+                    node.data({ status: newStatus, ...(newStatus === 'up' ? { acknowledged: false } : {}) });
                     removePulsingNode(cy, node);
                     if (newStatus === 'down') {
                         addPulsingNode(cy, node, 'down');
                     } else if (newStatus === 'partial') {
                         addPulsingNode(cy, node, 'partial');
                     }
-                    updateSidebarCounter(mapId, (newStatus === 'down' || newStatus === 'partial'));
+                    const isAlarm = node.data('acknowledged') !== true && ['down', 'partial'].includes(newStatus);
+                    if (wasAlarm !== isAlarm) updateSidebarCounter(mapId, isAlarm);
                 });
             });
             refreshZoomEmphasis();
@@ -318,6 +325,7 @@ export function initMap(id) {
     });
     listenSocket('device_status_batch', (statuses) => {
         if (!cy) return;
+        let acknowledgmentChanged = false;
         cy.batch(() => {
             statuses.forEach(item => {
                 const node = cy.getElementById(String(item.id));
@@ -338,6 +346,10 @@ export function initMap(id) {
                 }
                 if (!monitoringEnabled) {
                     if (node.data('status') !== 'up') node.data('status', 'up');
+                    if (node.data('acknowledged')) {
+                        node.data('acknowledged', false);
+                        acknowledgmentChanged = true;
+                    }
                     node.data('quality_status', 'unknown');
                     node.data('quality_latency_ms', null);
                     node.data('quality_jitter_ms', null);
@@ -359,9 +371,12 @@ export function initMap(id) {
                     });
                 }
 
-                if (node.data('status') !== item.status) {
+                const oldAck = node.data('acknowledged') === true;
+                const nextAck = item.status === 'up' ? false : item.acknowledged ?? oldAck;
+                if (oldAck !== nextAck) acknowledgmentChanged = true;
+                if (node.data('status') !== item.status || oldAck !== nextAck) {
                     const oldStatus = node.data('status');
-                    node.data('status', item.status);
+                    node.data({ status: item.status, acknowledged: nextAck });
                     // Остановить старую пульсацию, если была
                     if (typeof removePulsingNode === 'function') {
                         removePulsingNode(cy, node);
@@ -378,11 +393,9 @@ export function initMap(id) {
                     }
                     // Обновить счётчик проблемных устройств в сайдбаре
                     if (typeof updateSidebarCounter === 'function') {
-                        // Если статус изменился с up на down/partial – увеличиваем счётчик
-                        const becameDown = (item.status === 'down' || item.status === 'partial') && (oldStatus === 'up');
-                        const becameUp = item.status === 'up' && (oldStatus === 'down' || oldStatus === 'partial');
-                        if (becameDown) updateSidebarCounter(mapId, true);
-                        if (becameUp) updateSidebarCounter(mapId, false);
+                        const wasAlarm = !oldAck && ['down', 'partial'].includes(oldStatus);
+                        const isAlarm = !nextAck && ['down', 'partial'].includes(item.status);
+                        if (wasAlarm !== isAlarm) updateSidebarCounter(mapId, isAlarm);
                     }
                 }
             });
@@ -390,6 +403,7 @@ export function initMap(id) {
         // Cytoscape обновляет стили изменённых узлов при записи data внутри batch.
         refreshZoomEmphasis();
         if (typeof refreshAllCollapsedStatuses === 'function') refreshAllCollapsedStatuses();
+        if (acknowledgmentChanged && getStatusFilter() !== 'all') applyMapVisibility();
     });
 
     // ─── Точечные события ─────────────────────────────────────────────────────────

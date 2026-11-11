@@ -259,6 +259,8 @@ def _ensure_supported_schema_objects(conn):
     _migrate_nested_groups(conn)
     _ensure_permission_tables(conn)
     _ensure_map_layers(conn)
+    if "acknowledged" not in _columns(conn, "device"):
+        conn.execute(text("ALTER TABLE device ADD COLUMN acknowledged BOOLEAN NOT NULL DEFAULT 0"))
 
 
 def _require_base_tables(conn):
