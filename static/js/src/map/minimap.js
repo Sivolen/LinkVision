@@ -1,6 +1,7 @@
 // minimap.js — мини-карта (обзор) с фоном-планом, элементами и рамкой вьюпорта
 import { getBgDimensions } from './background.js';
 import { registerCleanup } from './moduleRegistry.js';
+import { isViewportGesture } from './labelScale.js';
 
 let cy = null;
 let panel = null, inner = null, bgEl = null, imgEl = null, rectEl = null;
@@ -16,6 +17,7 @@ let lastSnapshotAt = 0;
 const SNAPSHOT_MIN_INTERVAL_MS = 1500;
 let world = null;  // {x, y, w, h} — «мир» превью в модельных координатах
 let scale = 1;     // px мини-карты на единицу модели
+let innerWidth = 0, innerHeight = 0;
 const KEY = 'minimapVisible';
 
 // Минимальный «мир», когда фона нет — чтобы одиночный элемент не занимал всё
@@ -37,7 +39,7 @@ export function initMinimap(instance) {
     visible = saved === null ? true : saved === 'true';
     applyVisibility();
 
-    cy.on('pan zoom', updateViewportRect);
+    cy.on('viewport', updateViewportRect);
     // Снимок зависит от элементов, их данных и положения. Не слушаем событие
     // style: пульсация аварийных узлов меняет стиль каждые 100 мс и постоянно
     // сбрасывала debounce, из-за чего первый снимок откладывался до 30 секунд.
@@ -199,7 +201,7 @@ function refresh() {
     // Cytoscape шлёт частые события position; откладываем снимок до отпускания
     // узла, иначе мини-карта будет многократно растрировать весь граф во время
     // движения группы.
-    if (cy.nodes(':grabbed').length) {
+    if (isViewportGesture(cy) || cy.nodes(':grabbed').length) {
         scheduleRefresh();
         return;
     }
@@ -216,6 +218,10 @@ function refresh() {
     const ih = Math.max(1, Math.round(world.h * scale));
     inner.style.width = iw + 'px';
     inner.style.height = ih + 'px';
+    // Размеры меняются при обновлении снимка или панели. При навигации
+    // используем кэш, чтобы не читать layout после записи стилей рамки.
+    innerWidth = inner.clientWidth;
+    innerHeight = inner.clientHeight;
 
     // Слой фона-плана
     if (bgEl) {
@@ -255,16 +261,15 @@ function refresh() {
 function updateViewportRect() {
     if (!cy || !visible || !world || !rectEl) return;
     const ext = cy.extent();
-    const iw = inner.clientWidth, ih = inner.clientHeight;
     const rawL = (ext.x1 - world.x) * scale;
     const rawT = (ext.y1 - world.y) * scale;
     const rawR = (ext.x2 - world.x) * scale;
     const rawB = (ext.y2 - world.y) * scale;
     // Обрезаем каждую границу независимо — рамка корректно сжимается с любой стороны
-    const l = Math.max(0, Math.min(rawL, iw));
-    const t = Math.max(0, Math.min(rawT, ih));
-    const r = Math.max(0, Math.min(rawR, iw));
-    const b = Math.max(0, Math.min(rawB, ih));
+    const l = Math.max(0, Math.min(rawL, innerWidth));
+    const t = Math.max(0, Math.min(rawT, innerHeight));
+    const r = Math.max(0, Math.min(rawR, innerWidth));
+    const b = Math.max(0, Math.min(rawB, innerHeight));
     rectEl.style.left = l + 'px';
     rectEl.style.top = t + 'px';
     rectEl.style.width = Math.max(0, r - l) + 'px';
@@ -273,7 +278,7 @@ function updateViewportRect() {
 
 export function cleanup() {
     if (cy) {
-        cy.off('pan zoom', updateViewportRect);
+        cy.off('viewport', updateViewportRect);
         cy.off('add remove position data move free dragfree layoutstop', scheduleRefresh);
     }
     window.removeEventListener('elements:loaded', scheduleRefresh);

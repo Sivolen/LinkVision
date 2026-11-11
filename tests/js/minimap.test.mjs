@@ -11,19 +11,33 @@ const { initMinimap, cleanup } = await import('../../static/js/src/map/minimap.j
 const handlers = {};
 const bounds = { x1: 0, y1: 0, x2: 100, y2: 100, w: 100, h: 100 };
 let snapshots = 0;
+let gesture = false;
+let viewportReads = 0;
+let viewportBounds = bounds;
 const cy = {
   on(events, fn) { events.split(' ').forEach(event => handlers[event] = fn); }, off() {},
   nodes: () => ({ length: 0 }), elements: () => ({ length: 1, boundingBox: () => bounds }),
   forceRender() {}, png() { snapshots++; return 'data:image/png;base64,AA=='; },
-  extent: () => bounds,
+  extent: () => { viewportReads++; return viewportBounds; },
+  renderer: () => ({ data: { wheelZooming: gesture } }),
 };
 initMinimap(cy);
 await sleep(350);
 assert.equal(snapshots, 1, 'initial snapshot should not wait for the throttle interval');
+const readsBefore = viewportReads;
+const leftBefore = parseFloat(rect.style.left);
+viewportBounds = { ...bounds, x1: 50 };
+handlers.viewport();
+assert.equal(viewportReads, readsBefore + 1);
+assert.ok(parseFloat(rect.style.left) > leftBefore);
+gesture = true;
 handlers.data();
 await sleep(400);
 assert.equal(snapshots, 1, 'repeated updates should be throttled');
 await sleep(1200);
+assert.equal(snapshots, 1, 'do not capture a snapshot during a viewport gesture');
+gesture = false;
+await sleep(350);
 assert.equal(snapshots, 2, 'latest update should eventually be shown');
 cleanup();
 console.log('minimap initial rendering and throttled update passed');
