@@ -8,6 +8,7 @@ let sourceNode = null;
 let wheelZoomHandler = null;
 let wheelGestureTimer = null;
 let wheelFrame = null;
+const WHEEL_ZOOM_SPEED = 1.5;
 
 export function isWheelZoomActive() {
     return wheelFrame !== null || wheelGestureTimer !== null;
@@ -78,7 +79,7 @@ export function initModes(instance) {
                 || !activeCy.zoomingEnabled() || !activeCy.userZoomingEnabled()) return;
 
             const rect = container.getBoundingClientRect();
-            const level = activeCy.zoom() * Math.pow(10, -frameDelta * 0.00012);
+            const level = activeCy.zoom() * Math.pow(10, -frameDelta * 0.00012 * WHEEL_ZOOM_SPEED);
             withTemporaryPanning(activeCy, () => {
                 activeCy.zoom({
                     level,
