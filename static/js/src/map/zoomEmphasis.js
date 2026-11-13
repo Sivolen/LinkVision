@@ -54,7 +54,7 @@ function isSearchTarget(n) {
 // node[quality_status="bad"/"degraded"][status="up"]) — устройство отвечает
 // на пинг, поэтому status у него не down/partial, но качество (потери,
 // задержка, джиттер) деградировало. У этих правил в styles.js тоже
-// border-width:4/3 и overlay-padding:4px/3px в единицах графа — та же
+// border-width и overlay-padding в единицах графа — та же
 // проблема отдаления, что и у status-аварий.
 function isQualityTarget(n) {
     const q = n.data('quality_status');
@@ -83,14 +83,14 @@ const EMPHASIS_GROUPS = [
     {
         dataKey: '_zoomEmphasisStatus',
         isTarget: isStatusTarget,
-        minBorderPx: 5,          // минимальная толщина рамки НА ЭКРАНЕ, px
-        baseBorder: 3,           // базовое значение из styles.js (единицы графа)
-        maxBorderGraphUnits: 16, // потолок в единицах графа — чтобы рамка не "взрывалась" на экстремальном отдалении
-        minOverlayPaddingPx: 10, // минимальная толщина гало НА ЭКРАНЕ, px
-        baseOverlayPadding: 4,   // базовое значение из styles.js (единицы графа)
-        maxOverlayPaddingGraphUnits: 40,
-        minOverlayOpacity: 0.2,
-        maxOverlayOpacity: 0.42, // на тёмном графите плотное красное пятно выглядит тяжелее, чем помогает
+        minBorderPx: 2.5,
+        baseBorder: 3,
+        maxBorderGraphUnits: 14,
+        minOverlayPaddingPx: 3.5,
+        baseOverlayPadding: 3,
+        maxOverlayPaddingGraphUnits: 22,
+        minOverlayOpacity: 0.14,
+        maxOverlayOpacity: 0.24,
     },
     {
         // Подсветка результатов поиска (.cy-node-highlight в styles.js) — та же
@@ -111,14 +111,14 @@ const EMPHASIS_GROUPS = [
     {
         dataKey: '_zoomEmphasisQuality',
         isTarget: isQualityTarget,
-        minBorderPx: 5,
+        minBorderPx: 2,
         baseBorder: 3,           // ориентируемся на degraded (3 в styles.js); bad (4) чуть плотнее, но это тот же минимум группы
-        maxBorderGraphUnits: 16,
-        minOverlayPaddingPx: 9,
-        baseOverlayPadding: 3,
-        maxOverlayPaddingGraphUnits: 36,
-        minOverlayOpacity: 0.12, // деградация — менее критично, чем down/partial, поэтому гало заметно бледнее
-        maxOverlayOpacity: 0.4,
+        maxBorderGraphUnits: 12,
+        minOverlayPaddingPx: 2.5,
+        baseOverlayPadding: 2,
+        maxOverlayPaddingGraphUnits: 18,
+        minOverlayOpacity: 0.1,
+        maxOverlayOpacity: 0.18,
     },
 ];
 

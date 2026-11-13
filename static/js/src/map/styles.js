@@ -176,8 +176,8 @@ export const CY_STYLE = [
             'border-width': 3,
             'opacity': 0.85,
             'overlay-color': '#dc3545',
-            'overlay-opacity': 0.15,
-            'overlay-padding': '4px'
+            'overlay-opacity': 0.12,
+            'overlay-padding': '3px'
         }
     },
     // Узлы с иконкой: статус PARTIAL
@@ -189,8 +189,8 @@ export const CY_STYLE = [
             'border-width': 3,
             'opacity': 1,
             'overlay-color': '#ffc107',
-            'overlay-opacity': 0.2,
-            'overlay-padding': '4px'
+            'overlay-opacity': 0.14,
+            'overlay-padding': '3px'
         }
     },
     // Узлы БЕЗ иконки: статус UP
@@ -229,8 +229,8 @@ export const CY_STYLE = [
             'text-halign': 'center',
             'opacity': 0.9,
             'overlay-color': '#dc3545',
-            'overlay-opacity': 0.15,
-            'overlay-padding': '4px'
+            'overlay-opacity': 0.12,
+            'overlay-padding': '3px'
         }
     },
     // Узлы БЕЗ иконки: статус PARTIAL
@@ -251,18 +251,18 @@ export const CY_STYLE = [
             'text-halign': 'center',
             'opacity': 0.9,
             'overlay-color': '#ffc107',
-            'overlay-opacity': 0.2,
-            'overlay-padding': '4px'
+            'overlay-opacity': 0.14,
+            'overlay-padding': '3px'
         }
     },
     // Плохое качество ICMP: down/partial имеют приоритет.
     { selector: 'node[quality_status="bad"][status="up"]', style: {
         'border-color': '#6f42c1', 'border-style': 'solid', 'border-width': 4,
-        'overlay-color': '#6f42c1', 'overlay-opacity': 0.18, 'overlay-padding': '4px'
+        'overlay-color': '#6f42c1', 'overlay-opacity': 0.10, 'overlay-padding': '2px'
     } },
     { selector: 'node[quality_status="degraded"][status="up"]', style: {
         'border-color': '#fd7e14', 'border-style': 'solid', 'border-width': 3,
-        'overlay-color': '#fd7e14', 'overlay-opacity': 0.12, 'overlay-padding': '3px'
+        'overlay-color': '#fd7e14', 'overlay-opacity': 0.10, 'overlay-padding': '2px'
     } },
     // Temporary underlay leaves status borders, monitoring overlays, and selection intact.
     {
