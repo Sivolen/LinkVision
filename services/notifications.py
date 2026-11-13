@@ -2,13 +2,15 @@ from extensions import socketio
 from services.map_service import invalidate_all_sidebar_caches, invalidate_map_elements_cache
 
 
-def notify_map_updated(map_id, skip_sid=None):
+def notify_map_updated(map_id, skip_sid=None, *, bulk_device_edit=False, operation_id=None):
     """Отправить всем в комнату карты (кроме skip_sid) сигнал об обновлении и инвалидировать кэш."""
     invalidate_map_elements_cache(map_id)
 
-    socketio.emit(
-        "map_updated", {"map_id": map_id}, room=f"map_{map_id}", skip_sid=skip_sid
-    )
+    payload = {"map_id": map_id}
+    if bulk_device_edit:
+        payload["bulk_device_edit"] = True
+        payload["operation_id"] = operation_id
+    socketio.emit("map_updated", payload, room=f"map_{map_id}", skip_sid=skip_sid)
 
 
 def notify_map_lock(map_id, is_locked, user_id=None, username=None):

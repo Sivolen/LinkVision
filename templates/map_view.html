@@ -681,13 +681,14 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">{{ _('Тип устройства') }}</label>
+                    <p id="bulk_device_names" class="small text-break overflow-auto" style="max-height: 5rem"></p>
+                    <label class="form-label" for="bulk_type">{{ _('Тип устройства') }}</label>
                     <select id="bulk_type" class="form-select">
                         <option value="">{{ _('-- Не изменять --') }}</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">{{ _('Мониторинг') }}</label>
+                    <label class="form-label" for="bulk_monitoring">{{ _('Мониторинг') }}</label>
                     <select id="bulk_monitoring" class="form-select">
                         <option value="">{{ _('-- Не изменять --') }}</option>
                         <option value="true">{{ _('Включено') }}</option>
@@ -695,8 +696,14 @@
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">{{ _('Группа') }}</label>
+                    <label class="form-label" for="bulk_group">{{ _('Группа') }}</label>
                     <select id="bulk_group" class="form-select">
+                        <option value="">{{ _('-- Не изменять --') }}</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="bulk_quality_profile">{{ _('Профиль качества связи') }}</label>
+                    <select id="bulk_quality_profile" class="form-select">
                         <option value="">{{ _('-- Не изменять --') }}</option>
                     </select>
                 </div>
@@ -708,7 +715,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
                 {% if can_toggle_lock or can_edit %}
-                <button type="button" class="btn btn-primary" onclick="applyBulkEdit()">{{ _('Применить') }}</button>
+                <button type="button" class="btn btn-primary" id="bulk_apply" onclick="applyBulkEdit()">{{ _('Применить') }}</button>
                 {% endif %}
             </div>
         </div>

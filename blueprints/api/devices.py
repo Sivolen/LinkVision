@@ -15,6 +15,7 @@ from services import (
     validate_ip_list,
     validate_name,
     log_device_action,
+    log_map_action,
 )
 from services.quality_service import (
     get_device_quality_history,
@@ -27,6 +28,7 @@ from services.notifications import (
     notify_device_deleted,
     notify_device_position_updated,
     notify_bulk_position_updated,
+    notify_map_updated,
 )
 from services.permissions import can_edit_map
 from models import Device, Map, db
@@ -410,6 +412,80 @@ def update_position(device_id):
     except Exception:
         api_logger.exception("Error updating position")
         return jsonify({"error": "Internal server error"}), 500
+
+
+@devices_bp.route("/map/<int:map_id>/devices/bulk", methods=["PUT"])
+@login_required
+def bulk_edit_devices(map_id):
+    """Изменить только явно перечисленные устройства этой карты."""
+    map_obj = db.session.get(Map, map_id)
+    if not map_obj or not can_edit_map(map_id):
+        return jsonify({"error": "Access denied"}), 403
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Invalid bulk edit"}), 400
+    ids = payload.get("device_ids")
+    fields = payload.get("fields", {})
+    center = payload.get("center")
+    operation_id = payload.get("operation_id")
+    if (
+        not isinstance(ids, list) or not 1 <= len(ids) <= 5000
+        or any(type(value) is not int or not 0 < value < 2**63 for value in ids)
+        or len(set(ids)) != len(ids)
+        or not isinstance(fields, dict)
+        or not fields.keys() <= {"type_id", "group_id", "monitoring_enabled", "quality_profile_id"}
+        or (not fields and center is None)
+        or (operation_id is not None and (not isinstance(operation_id, str) or len(operation_id) > 64))
+    ):
+        return jsonify({"error": "Invalid device selection or fields"}), 400
+    for key in fields.keys() & {"type_id", "group_id", "quality_profile_id"}:
+        value = fields[key]
+        if key != "type_id" and value is None:
+            continue
+        if type(value) is not int or not 0 < value < 2**63:
+            return jsonify({"error": f"Invalid {key}"}), 400
+    if "monitoring_enabled" in fields and type(fields["monitoring_enabled"]) is not bool:
+        return jsonify({"error": "Invalid monitoring setting"}), 400
+    if center is not None:
+        if (
+            not isinstance(center, list) or len(center) != 2
+            or any(type(value) not in (int, float) or not -1e9 <= value <= 1e9 for value in center)
+        ):
+            return jsonify({"error": "Invalid center"}), 400
+        if map_obj.is_locked:
+            return jsonify({"error": "Map is locked"}), 403
+
+    devices = []
+    for start in range(0, len(ids), 500):
+        devices.extend(Device.query.filter_by(map_id=map_id)
+                       .filter(Device.id.in_(ids[start:start + 500])).all())
+    if len(devices) != len(ids):
+        return jsonify({"error": "One or more devices do not belong to this map"}), 404
+
+    map_name = map_obj.name
+    try:
+        if "type_id" in fields:
+            device_service.validate_device_type(fields["type_id"])
+        if "group_id" in fields:
+            device_service.validate_group_for_map(fields["group_id"], map_id)
+        if "quality_profile_id" in fields:
+            device_service.validate_quality_profile(fields["quality_profile_id"])
+        device_service.bulk_update_devices(devices, fields, tuple(center) if center is not None else None)
+    except ValueError as error:
+        db.session.rollback()
+        return jsonify({"error": str(error)}), 400
+    except Exception:
+        db.session.rollback()
+        api_logger.exception("Bulk device update failed for map %s", map_id)
+        return jsonify({"error": "Internal server error"}), 500
+
+    map_service.invalidate_all_sidebar_caches()
+    notify_map_updated(map_id, bulk_device_edit=True, operation_id=operation_id)
+    log_map_action("bulk_update_devices", map_id, map_name, new_values={
+        "device_ids": ids, "fields": fields, "center": center,
+    })
+    return jsonify({"status": "ok", "updated": len(devices)})
 
 
 @devices_bp.route("/devices/positions", methods=["PUT"])

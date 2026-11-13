@@ -87,7 +87,12 @@
     "operatorForbidden": "Operator cannot edit devices",
     "noneSelected": "No devices selected",
     "noChanges": "No changes",
-    "keepUnchanged": "-- Keep unchanged --"
+    "keepUnchanged": "-- Keep unchanged --",
+    "noGroup": "Remove from group",
+    "selectionChanged": "The selection changed. Select the devices and try again.",
+    "loadFailed": "Could not load editing options.",
+    "saveFailed": "Could not confirm the save. Check the map before trying again.",
+    "saved": "Devices updated: {count}"
   },
   "modal": {
     "permissions": {

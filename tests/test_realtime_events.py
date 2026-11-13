@@ -54,6 +54,91 @@ class TestDeviceUpdatedEvent:
         assert r.status_code == 201
         return r.get_json()["id"]
 
+    def test_bulk_edit_moves_devices_together_and_sends_one_map_update(
+        self, client, login, map_ids, router_type_id, emit_recorder
+    ):
+        login("testuser")
+        map_id = map_ids["Own Map"]
+        first = self._create(client, map_id, router_type_id)
+        second = self._create(client, map_id, router_type_id)
+        assert client.put(f"/api/device/{second}", json={"pos_x": 30, "pos_y": 60}).status_code == 200
+        emit_recorder.clear()
+        response = client.put(f"/api/map/{map_id}/devices/bulk", json={
+            "device_ids": [first, second],
+            "fields": {"monitoring_enabled": False, "group_id": None},
+            "center": [100, 200],
+            "operation_id": "bulk-test",
+        })
+        assert response.status_code == 200
+        assert response.get_json()["updated"] == 2
+        for device_id, position in [(first, (90, 180)), (second, (110, 220))]:
+            device = client.get(f"/api/device/{device_id}").get_json()
+            assert (device["pos_x"], device["pos_y"]) == position
+            assert device["monitoring_enabled"] is False
+        events = [event for event in emit_recorder if event["event"] in ("map_updated", "device_updated")]
+        assert [event["event"] for event in events] == ["map_updated"]
+        assert events[0]["payload"] == {
+            "map_id": map_id, "bulk_device_edit": True, "operation_id": "bulk-test",
+        }
+
+    def test_bulk_edit_rejects_foreign_device_without_changing_any_target(
+        self, app, client, login, map_ids, router_type_id, emit_recorder
+    ):
+        from models import Device, db
+
+        login("testuser")
+        map_id = map_ids["Own Map"]
+        first = self._create(client, map_id, router_type_id)
+        with app.app_context():
+            other = Device(map_id=next(value for value in map_ids.values() if value != map_id),
+                           type_id=router_type_id, name="Foreign")
+            db.session.add(other)
+            db.session.commit()
+            other_id = other.id
+        emit_recorder.clear()
+        response = client.put(f"/api/map/{map_id}/devices/bulk", json={
+            "device_ids": [first, other_id], "fields": {"monitoring_enabled": False},
+        })
+        assert response.status_code == 404
+        assert client.get(f"/api/device/{first}").get_json()["monitoring_enabled"] is True
+        assert not [event for event in emit_recorder if event["event"] == "map_updated"]
+
+    def test_bulk_quality_profile_assignment_reset_and_invalid_profile(
+        self, app, client, login, map_ids, router_type_id
+    ):
+        from models import Device, QualityProfile, db
+
+        login("testuser")
+        map_id = map_ids["Own Map"]
+        selected = [self._create(client, map_id, router_type_id) for _ in range(2)]
+        untouched = self._create(client, map_id, router_type_id)
+        with app.app_context():
+            profile = QualityProfile(name="Bulk quality profile")
+            db.session.add(profile)
+            db.session.commit()
+            profile_id = profile.id
+
+        url = f"/api/map/{map_id}/devices/bulk"
+        assert client.put(url, json={
+            "device_ids": selected, "fields": {"quality_profile_id": profile_id},
+        }).status_code == 200
+        assert client.put(url, json={
+            "device_ids": selected,
+            "fields": {"quality_profile_id": profile_id + 10000, "monitoring_enabled": False},
+        }).status_code == 400
+        with app.app_context():
+            for device_id in selected:
+                device = db.session.get(Device, device_id)
+                assert device.quality_profile_id == profile_id
+                assert device.monitoring_enabled is True
+            assert db.session.get(Device, untouched).quality_profile_id is None
+
+        assert client.put(url, json={
+            "device_ids": selected, "fields": {"quality_profile_id": None},
+        }).status_code == 200
+        with app.app_context():
+            assert all(db.session.get(Device, device_id).quality_profile_id is None for device_id in selected)
+
     def test_acknowledgment_preserves_monitoring_and_notifies_map(
         self, app, client, login, map_ids, router_type_id, emit_recorder, monkeypatch
     ):

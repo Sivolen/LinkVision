@@ -1,7 +1,7 @@
 import { initCy } from './core.js';
 import { loadBackground, setElementsLoaded, setBackgroundLoaded, markUserInteracted, resetUserInteracted, fitImageToView, updateMapBackground } from './background.js';
 import { loadElements } from './elements.js';
-import { initInteractions } from './interactions.js';
+import { initInteractions, flushPendingDragSaves } from './interactions.js';
 import { initNewNodeFeedback } from './newNodeFeedback.js';
 import { initModes, setMode, isLinkMode, withTemporaryPanning } from './modes.js';
 import { initResync, scheduleResync, isMapBusy } from './resync.js';
@@ -13,7 +13,7 @@ import { initLayers, refreshLayers } from './layers.js';
 import { initLock } from './lock.js';
 import { initFullscreen } from './fullscreen.js';
 import { initPulse, addPulsingNode, removePulsingNode } from './pulse.js';
-import { initBulk } from './bulk.js';
+import { initBulk, updateBulkEditButton } from './bulk.js';
 import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
 import { initMinimap } from './minimap.js';
 import { initMapSummary } from './mapSummary.js';
@@ -188,7 +188,9 @@ export function initMap(id) {
     initFullscreen();
     initZoomEmphasis(cy);
     initPulse(cy);
-    initBulk(cy);
+    initBulk(cy, flushPendingDragSaves);
+    window.addEventListener('linkvision:map-filter-changed', updateBulkEditButton);
+    registerMapCleanup(() => window.removeEventListener('linkvision:map-filter-changed', updateBulkEditButton));
     initSidebarCounter(cy);
     initMinimap(cy);
     registerMapCleanup(initMapSummary(cy));
@@ -516,17 +518,18 @@ export function initMap(id) {
 
     // Полная перезагрузка карты (крупные изменения: импорт, массовое редактирование)
     listenSocket('map_updated', (data) => {
+        if (Number(data.map_id) !== mapId) return;
+        if (data.bulk_device_edit) {
+            if (!isLocalOperation(data.operation_id)) {
+                scheduleResync(() => window.withViewportRestore(() => window.reloadMapElements(true)));
+            }
+            return;
+        }
         if (isSelfUpdating()) {
             console.log('⏭️ Skipping map reload (self change, pending:', getPendingCount(), ')');
             return;
         }
-        if (Number(data.map_id) === mapId) {
-            console.log('🔄 Reloading map from other client:', data);
-            window.withViewportRestore(() => {
-                console.log('🔄 Calling reloadMapElements(force=true)');
-                window.reloadMapElements(true); // force=true чтобы обойти кэш
-            });
-        }
+        window.withViewportRestore(() => window.reloadMapElements(true));
     });
 }
 

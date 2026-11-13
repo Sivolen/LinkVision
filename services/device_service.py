@@ -50,6 +50,11 @@ def validate_device_type(type_id: int) -> DeviceType:
     return dtype
 
 
+def validate_quality_profile(profile_id: int | None) -> None:
+    if profile_id is not None and not db.session.get(QualityProfile, profile_id):
+        raise ValueError(f"Профиль качества с id {profile_id} не найден")
+
+
 def validate_group_for_map(group_id: Optional[int], map_id: int) -> Optional[Group]:
     """
     Проверить принадлежность группы к карте.
@@ -231,8 +236,7 @@ def create_device(
     if not type_obj:
         raise ValueError(f"Тип устройства с id {type_id} не найден")
 
-    if quality_profile_id and not db.session.get(QualityProfile, quality_profile_id):
-        raise ValueError(f"Профиль качества с id {quality_profile_id} не найден")
+    validate_quality_profile(quality_profile_id or None)
 
     try:
         device = Device(
@@ -287,6 +291,37 @@ def create_device(
         raise
 
 
+def _apply_device_fields(device: Device, fields: dict) -> None:
+    monitoring_changed = (
+        "monitoring_enabled" in fields
+        and fields["monitoring_enabled"] != device.monitoring_enabled
+    )
+    for key, value in fields.items():
+        setattr(device, key, value)
+
+    if monitoring_changed:
+        device.status = "up"
+        device.acknowledged = False
+        if device.monitoring_enabled:
+            device.last_check = datetime.datetime.now()
+
+
+def bulk_update_devices(devices: list[Device], fields: dict, center: tuple | None) -> None:
+    """Применить проверенные изменения в одной транзакции."""
+    if center is not None:
+        xs = [device.pos_x or 0 for device in devices]
+        ys = [device.pos_y or 0 for device in devices]
+        dx = center[0] - (min(xs) + max(xs)) / 2
+        dy = center[1] - (min(ys) + max(ys)) / 2
+
+    for device in devices:
+        _apply_device_fields(device, fields)
+        if center is not None:
+            device.pos_x = (device.pos_x or 0) + dx
+            device.pos_y = (device.pos_y or 0) + dy
+    db.session.commit()
+
+
 def update_device(device_id: int, **kwargs: Any) -> Device:
     """
     Обновить устройство.
@@ -311,35 +346,10 @@ def update_device(device_id: int, **kwargs: Any) -> Device:
     ]
 
     if "quality_profile_id" in kwargs:
-        qp_id = kwargs["quality_profile_id"]
-        qp_id = qp_id if qp_id else None
-        if qp_id and not db.session.get(QualityProfile, qp_id):
-            raise ValueError(f"Профиль качества с id {qp_id} не найден")
-        kwargs["quality_profile_id"] = qp_id
+        kwargs["quality_profile_id"] = kwargs["quality_profile_id"] or None
+        validate_quality_profile(kwargs["quality_profile_id"])
 
-    monitoring_changed = (
-        "monitoring_enabled" in kwargs
-        and kwargs["monitoring_enabled"] != device.monitoring_enabled
-    )
-    for key, value in kwargs.items():
-        if key in allowed_fields:
-            setattr(device, key, value)
-
-    # Мониторинг был выключен, а теперь включён — сбрасываем статус на 'up'
-    if monitoring_changed and device.monitoring_enabled:
-        device.status = "up"
-        device.last_check = datetime.datetime.now()
-
-    # Мониторинг только что ВЫКЛЮЧИЛИ — тоже сбрасываем статус на 'up'.
-    # Раньше это не делалось, и в БД навсегда оставался последний статус
-    # ДО отключения (например 'down'): цикл мониторинга больше не трогает
-    # устройство с monitoring_enabled=False, поэтому строка в БД никогда
-    # сама не обновится. При следующей загрузке страницы (или у другого
-    # пользователя) устройство продолжало считаться алярмом везде, где
-    # проверяется просто status, хотя оно явно отключено из мониторинга.
-    if monitoring_changed:
-        device.status = "up"
-        device.acknowledged = False
+    _apply_device_fields(device, {key: value for key, value in kwargs.items() if key in allowed_fields})
 
     if "ips" in kwargs:
         new_ips = kwargs["ips"]

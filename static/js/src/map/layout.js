@@ -8,6 +8,7 @@ import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 import { registerCleanup } from './moduleRegistry.js';
 import { flushPendingDragSaves } from './interactions.js';
 import { isDragLocked } from './lock.js';
+import { selectedVisibleDevices } from './bulk.js';
 
 let layoutRunning = false;
 let activeCy = null;
@@ -100,10 +101,8 @@ export function initLayout(cy) {
             cose: t('layout.force')
         };
         let msg = t('layout.applyPrompt', { name: names[layoutName] || layoutName });
-        const currentSelection = cy.nodes(':selected').filter(node =>
-            !node.data('isGroup') && !node.data('isShape')
-        );
-        if (currentSelection.length === 1) {
+        const currentSelection = selectedVisibleDevices(cy);
+        if (cy.$(':selected').length && currentSelection.length < 2) {
             showToast(t('toast.infoTitle'), t('layout.selectAtLeastTwo'), 'info');
             return;
         }
@@ -125,13 +124,16 @@ export function initLayout(cy) {
             confirmText: t('layout.apply'),
             variant: 'primary'
         });
-        if (confirmed && activeCy === cy && String(window.currentMapId) === String(mapId) && window.canEditMap === true && !isDragLocked()) {
-            await flushPendingDragSaves();
-            const selectedDevices = cy.nodes(':selected').filter(node =>
-                !node.data('isGroup') && !node.data('isShape')
-            );
-            applyLayout(layoutName, direction, selectedDevices.length >= 2 ? selectedDevices : null);
+        if (!confirmed) return;
+        await flushPendingDragSaves();
+        if (activeCy !== cy || String(window.currentMapId) !== String(mapId)) return;
+        const confirmedSelection = selectedVisibleDevices(cy);
+        if (currentSelection.length !== confirmedSelection.length
+            || currentSelection.some(node => node.removed() || !confirmedSelection.has(node))) {
+            showToast(t('toast.infoTitle'), t('bulk.selectionChanged'), 'info');
+            return;
         }
+        applyLayout(layoutName, direction, currentSelection.length ? currentSelection : null);
     };
     const onLockChange = event => { if (event.detail?.locked && cancelLayout) cancelLayout(); };
     window.addEventListener('linkvision:drag-lock-changed', onLockChange);
