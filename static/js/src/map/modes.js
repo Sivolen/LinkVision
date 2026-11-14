@@ -8,17 +8,27 @@ let sourceNode = null;
 let wheelZoomHandler = null;
 let wheelGestureTimer = null;
 let wheelFrame = null;
+let pendingDelta = 0;
 const WHEEL_ZOOM_SPEED = 1.5;
+// Preserve up to three typical Firefox mouse steps per paint. Drop excess
+// input after a stalled frame so it cannot jump or keep moving on its own.
+const MAX_WHEEL_DELTA_PER_FRAME = 306;
 
 export function isWheelZoomActive() {
     return wheelFrame !== null || wheelGestureTimer !== null;
 }
 
-function cleanupWheelZoom() {
-    if (wheelZoomHandler) document.removeEventListener('wheel', wheelZoomHandler, true);
-    if (wheelGestureTimer !== null) clearTimeout(wheelGestureTimer);
+function cancelPendingWheelZoom() {
     if (wheelFrame !== null) cancelAnimationFrame(wheelFrame);
     wheelFrame = null;
+    pendingDelta = 0;
+}
+
+function cleanupWheelZoom() {
+    if (wheelZoomHandler) document.removeEventListener('wheel', wheelZoomHandler, true);
+    cy?.container()?.removeEventListener('pointerdown', cancelPendingWheelZoom, true);
+    if (wheelGestureTimer !== null) clearTimeout(wheelGestureTimer);
+    cancelPendingWheelZoom();
     wheelZoomHandler = null;
     wheelGestureTimer = null;
     cy = null;
@@ -39,7 +49,6 @@ export function withTemporaryPanning(instance, callback) {
 export function initModes(instance) {
     cleanupWheelZoom();
     cy = instance;
-    let pendingDelta = 0;
     let cursorX, cursorY;
     wheelZoomHandler = event => {
         const activeCy = cy;
@@ -66,7 +75,8 @@ export function initModes(instance) {
         markUserInteracted();
         if (wheelGestureTimer !== null) clearTimeout(wheelGestureTimer);
         wheelGestureTimer = setTimeout(() => { wheelGestureTimer = null; }, 150);
-        pendingDelta += delta;
+        if (Math.sign(delta) !== Math.sign(pendingDelta)) pendingDelta = 0;
+        pendingDelta = Math.max(-MAX_WHEEL_DELTA_PER_FRAME, Math.min(MAX_WHEEL_DELTA_PER_FRAME, pendingDelta + delta));
         cursorX = event.clientX;
         cursorY = event.clientY;
         if (wheelFrame !== null) return;
@@ -78,8 +88,12 @@ export function initModes(instance) {
                 || !['pan', 'select'].includes(window.currentMode)
                 || !activeCy.zoomingEnabled() || !activeCy.userZoomingEnabled()) return;
 
+            const currentZoom = activeCy.zoom();
+            const targetZoom = currentZoom * Math.pow(10, -frameDelta * 0.00012 * WHEEL_ZOOM_SPEED);
+            const level = Math.max(activeCy.minZoom(), Math.min(activeCy.maxZoom(), targetZoom));
+            if (level === currentZoom) return;
+
             const rect = container.getBoundingClientRect();
-            const level = activeCy.zoom() * Math.pow(10, -frameDelta * 0.00012 * WHEEL_ZOOM_SPEED);
             withTemporaryPanning(activeCy, () => {
                 activeCy.zoom({
                     level,
@@ -89,6 +103,7 @@ export function initModes(instance) {
         });
     };
     document.addEventListener('wheel', wheelZoomHandler, { capture: true, passive: false });
+    cy.container()?.addEventListener('pointerdown', cancelPendingWheelZoom, true);
     setMode('pan');
 }
 
@@ -97,6 +112,7 @@ export function getSourceNode() { return sourceNode; }
 
 export function setMode(mode) {
     if (!cy) return;
+    if (mode !== window.currentMode) cancelPendingWheelZoom();
     const panBtn = document.getElementById('panMode');
     const selectBtn = document.getElementById('selectMode');
     if (panBtn) panBtn.classList.toggle('active', mode === 'pan');

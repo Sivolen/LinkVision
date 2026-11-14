@@ -13,7 +13,6 @@
 // тоньше заданного минимума в px, независимо от того, насколько отдалена
 // карта. Здоровые/неподсвеченные узлы не трогаем — их не обязательно
 // "видеть" издалека.
-import { getCy } from './core.js';
 import { registerCleanup } from './moduleRegistry.js';
 import { isViewportGesture } from './labelScale.js';
 
@@ -146,6 +145,7 @@ const GESTURE_RECHECK_MS = 100;
 const HEALTHY_ZOOM_STEP = Math.log(1.2);
 const ZOOM_EPSILON = 0.02;      // изменение масштаба меньше 2% — стили те же
 const NODES_PER_FRAME = 48;
+const STYLE_BUDGET_MS = 3;
 
 function groupStyles(zoom) {
     const t = clamp(1 - zoom / ZOOM_THRESHOLD, 0, 1);
@@ -207,10 +207,6 @@ function syncNode(node, styles, dark, restoreOverlay = false) {
     applyToNode(node, entry, styles, dark, restoreOverlay);
 }
 
-/**
- * full=true — полный проход по узлам (смена статусов/поиска, порог зума,
- * загрузка карты). full=false — только пересчёт значений у уже усиленных узлов.
- */
 function cancelZoomFrame() {
     if (zoomFrame === null) return;
     cancelAnimationFrame(zoomFrame);
@@ -218,16 +214,15 @@ function cancelZoomFrame() {
     zoomInterrupted = true;
 }
 
-function recompute(full = true, spread = false) {
-    const cy = activeCy || getCy();
+function recompute() {
+    const cy = activeCy;
     if (!cy || (cy.destroyed && cy.destroyed())) return;
-    cancelZoomFrame();
 
     const zoom = cy.zoom();
     const shouldEmphasize = zoom < ZOOM_THRESHOLD;
 
     // Переход через порог меняет набор целей, а быстрый путь знает только прежних.
-    const needFull = full || zoomInterrupted || shouldEmphasize !== wasEmphasizing;
+    const needFull = zoomInterrupted || shouldEmphasize !== wasEmphasizing;
     zoomInterrupted = false;
     if (!needFull) {
         if (!shouldEmphasize || !emphasized.size) { appliedZoom = zoom; return; }
@@ -249,14 +244,15 @@ function recompute(full = true, spread = false) {
     const applyBatch = () => {
         zoomFrame = null;
         if (cy.destroyed?.()) return;
-        if (spread && isViewportGesture(cy)) {
+        if (isViewportGesture(cy)) {
             zoomFrame = requestAnimationFrame(applyBatch);
             return;
         }
-        const end = spread ? Math.min(index + NODES_PER_FRAME, nodes.length) : nodes.length;
+        const end = Math.min(index + NODES_PER_FRAME, nodes.length);
+        const deadline = performance.now() + STYLE_BUDGET_MS;
         cy.batch(() => {
-            for (; index < end; index++) {
-                const node = nodes[index];
+            do {
+                const node = nodes[index++];
                 const id = node.id();
                 if (cy.getElementById(id) !== node) continue;
                 const entry = emphasized.get(id);
@@ -268,11 +264,34 @@ function recompute(full = true, spread = false) {
                 } else if (entry) {
                     applyToNode(node, entry, styles, dark);
                 }
-            }
+            } while (index < end && performance.now() < deadline);
         });
         if (index < nodes.length) zoomFrame = requestAnimationFrame(applyBatch);
     };
-    applyBatch();
+    if (nodes.length) applyBatch();
+}
+
+function scheduleRecompute(full = false) {
+    if (!activeCy) return;
+    if (full) {
+        cancelZoomFrame();
+        zoomInterrupted = true;
+    }
+    clearTimeout(runTimer);
+    runTimer = 0;
+    if (zoomFrame !== null) return;
+    const run = () => {
+        runTimer = 0;
+        if (activeCy && isViewportGesture(activeCy)) {
+            runTimer = setTimeout(run, GESTURE_RECHECK_MS);
+            return;
+        }
+        recompute();
+    };
+    zoomFrame = requestAnimationFrame(() => {
+        zoomFrame = null;
+        run();
+    });
 }
 
 export function initZoomEmphasis(cy) {
@@ -281,46 +300,34 @@ export function initZoomEmphasis(cy) {
     zoomHandler = () => {
         cancelZoomFrame();
         clearTimeout(runTimer);
-        const run = () => {
-            runTimer = 0;
-            // Не пишем стили узлов посреди жеста — дождёмся его конца.
-            if (activeCy && isViewportGesture(activeCy)) { runTimer = setTimeout(run, GESTURE_RECHECK_MS); return; }
-            recompute(false, true);
-        };
-        runTimer = setTimeout(run, ZOOM_IDLE_MS);
+        runTimer = setTimeout(() => scheduleRecompute(), ZOOM_IDLE_MS);
     };
     destroyHandler = () => cleanup(true);
     cy.on('zoom', zoomHandler);
     cy.on('destroy', destroyHandler);
-    // loadElements() сначала заполняет пустой граф, а затем может выполнить
-    // автоматический fit. Первый recompute в init в этот момент не видит
-    // устройств или видит старый zoom; два кадра после elements:loaded дают
-    // Cytoscape завершить fit и сразу рисуют ауры без ручного wheel-zoom.
-    elementsLoadedHandler = () => recompute(true);
+    // После загрузки берём актуальный масштаб в начале следующего кадра.
+    elementsLoadedHandler = refreshZoomEmphasis;
     window.addEventListener('elements:loaded', elementsLoadedHandler);
     // Для карт с фоновой подложкой final fit может состояться после
     // elements:loaded. background.js сообщает об этом отдельным событием.
-    viewportReadyHandler = () => recompute(false);
+    viewportReadyHandler = () => scheduleRecompute();
     window.addEventListener('linkvision:viewport-ready', viewportReadyHandler);
     // Theme is a DOM attribute, so Cytoscape does not emit a zoom/data event
     // when it changes. Reapply the overview aura without touching viewport.
     if (document.documentElement && typeof MutationObserver !== 'undefined') {
         themeObserver = new MutationObserver(records => {
-            if (records.some(record => record.attributeName === 'data-theme')) recompute(true);
+            if (records.some(record => record.attributeName === 'data-theme')) refreshZoomEmphasis();
         });
         themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     }
-    recompute(true);
+    refreshZoomEmphasis();
 }
 
 /**
- * Вызывать сразу при смене статуса устройства (device_status/device_status_batch),
- * при первичной загрузке карты и при каждом обновлении подсветки поиска —
- * чтобы новый "красный"/"жёлтый"/найденный узел получил усиление немедленно,
- * не дожидаясь следующего события zoom.
+ * Массовая сверка после загрузки, поиска или изменения темы.
  */
 export function refreshZoomEmphasis() {
-    recompute(true);
+    scheduleRecompute(true);
 }
 
 export function refreshNodeZoomEmphasis(nodes) {
@@ -328,17 +335,17 @@ export function refreshNodeZoomEmphasis(nodes) {
     if (!cy || (nodes.size ?? nodes.length) === 0) return;
     // Keep untouched nodes at the last applied zoom until the zoom handler
     // settles the viewport. Status changes on these nodes are immediate.
-    if (!wasEmphasizing) {
+    const zoom = cy.zoom();
+    if (zoom >= ZOOM_THRESHOLD) {
         // A zoom toward the map may still be clearing old bypass styles.
         cy.batch(() => nodes.forEach(node => {
             if (emphasized.get(node.id())?.node !== node) return;
             if (cy.getElementById(node.id()) === node) clearNode(node);
             emphasized.delete(node.id());
         }));
-        if (cy.zoom() < ZOOM_THRESHOLD) recompute(true);
         return;
     }
-    const styles = groupStyles(appliedZoom);
+    const styles = groupStyles(wasEmphasizing ? appliedZoom : zoom);
     const dark = isDarkTheme();
     cy.batch(() => {
         nodes.forEach(node => {

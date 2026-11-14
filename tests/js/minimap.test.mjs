@@ -12,6 +12,7 @@ const { initMinimap, cleanup } = await import('../../static/js/src/map/minimap.j
 const handlers = {};
 const bounds = { x1: 0, y1: 0, x2: 100, y2: 100, w: 100, h: 100 };
 let snapshots = 0;
+let finishSnapshot;
 let boundsReads = 0;
 let gesture = false;
 let viewportReads = 0;
@@ -23,6 +24,11 @@ const cy = {
   png(options) {
     assert.equal(options.output, 'blob-promise');
     snapshots++;
+    if (snapshots === 1) {
+      return new Promise(resolve => {
+        finishSnapshot = () => resolve(new Blob(['png'], { type: 'image/png' }));
+      });
+    }
     return Promise.resolve(new Blob(['png'], { type: 'image/png' }));
   },
   extent: () => { viewportReads++; return viewportBounds; },
@@ -32,6 +38,10 @@ initMinimap(cy);
 await sleep(350);
 assert.equal(snapshots, 1, 'initial snapshot should not wait for the throttle interval');
 assert.equal(boundsReads, 1, 'world and snapshot share the same bounds');
+handlers.data();
+finishSnapshot();
+await sleep(350);
+assert.equal(snapshots, 1, 'timer set during encoding must recheck the snapshot interval');
 const readsBefore = viewportReads;
 const leftBefore = parseFloat(rect.style.left);
 viewportBounds = { ...bounds, x1: 50 };

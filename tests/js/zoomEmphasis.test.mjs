@@ -18,7 +18,9 @@ globalThis.window = {
     }
 };
 globalThis.document = { getElementById: () => null };
-globalThis.requestAnimationFrame = callback => { callback(); return 0; };
+globalThis.requestAnimationFrame = callback => setTimeout(callback, 0);
+globalThis.cancelAnimationFrame = clearTimeout;
+const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
 const emitWindow = event => (windowHandlers.get(event) || []).slice().forEach(handler => handler());
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -51,11 +53,8 @@ function makeCy(nodes) {
     return cy;
 }
 
-// zoomEmphasis импортирует getCy из core.js (тянет весь графовый код) — подменяем модуль.
-const { initZoomEmphasis, refreshZoomEmphasis, refreshNodeZoomEmphasis, cleanup } = await import('../../static/js/src/map/zoomEmphasis.js').catch(e => {
-    console.log('skip: zoomEmphasis.js не импортируется без браузера:', e.message.split('\n')[0]);
-    process.exit(0);
-});
+const { initZoomEmphasis, refreshZoomEmphasis, refreshNodeZoomEmphasis, cleanup } =
+    await import('../../static/js/src/map/zoomEmphasis.js');
 
 let passed = 0;
 const ok = name => { passed++; console.log(`ok - ${name}`); };
@@ -69,6 +68,7 @@ const nodes = [
 ];
 const cy = makeCy(nodes);
 initZoomEmphasis(cy);
+await nextFrame();
 assert.equal(cy.nodeWalks, 1, 'инициализация — один полный проход');
 assert.ok(nodes[1].styles['border-width'] >= 3 && nodes[1].styles['overlay-padding']);
 assert.ok(nodes[0].styles['border-width'] >= 3, 'здоровый UP получает различимую рамку');
@@ -99,6 +99,7 @@ nodes[0]._removeData = true;
 nodes[0].data().status = 'down';
 nodes[1].data().status = 'up';
 refreshZoomEmphasis();
+await nextFrame();
 assert.ok(nodes[0].styles['border-width']);
 assert.ok(nodes[1].styles['border-width'], 'восстановившийся узел сохраняет тонкую UP-рамку');
 ok('refreshZoomEmphasis меняет усиление статуса и сохраняет рамку UP');
@@ -121,13 +122,16 @@ ok('флаги состояния не пишутся в data (нет событ
     const cyB = makeCy([both]);
     cleanup();
     initZoomEmphasis(cyB);
+    await nextFrame();
     assert.ok(both.styles['border-width'] >= 5 && both._writes === 1);
     both.data().status = 'up';              // авария ушла, поиск остался
     refreshZoomEmphasis();
+    await nextFrame();
     assert.ok(both.styles['border-width'], 'подсветка поиска сохранилась');
     assert.equal(both._removed || 0, 0, 'стиль не снимался');
     both.hasClass = () => false;            // поиск сброшен
     refreshZoomEmphasis();
+    await nextFrame();
 assert.ok(both.styles['border-width'], 'после поиска остаётся рамка UP');
     ok('статус и поиск на одном узле не конфликтуют');
 }
@@ -138,9 +142,11 @@ assert.ok(both.styles['border-width'], 'после поиска остаётся
     const cyR = makeCy([n]);
     cleanup();
     initZoomEmphasis(cyR);
+    await nextFrame();
     assert.ok(n.styles['border-width']);
     n.data().status = 'up';                 // изменилось, пока Map ещё помнит узел
     initZoomEmphasis(cyR);                  // повторная инициализация
+    await nextFrame();
     assert.equal(cyR.handlerCount(), 2, 'один zoom и один destroy, без дублей');
     assert.ok(n.styles['border-width'], 'после восстановления остаётся рамка UP');
     ok('повторная инициализация очищает состояние и не дублирует обработчики');
@@ -152,6 +158,7 @@ assert.ok(both.styles['border-width'], 'после поиска остаётся
     const cyD = makeCy([n]);
     cleanup();
     initZoomEmphasis(cyD);
+    await nextFrame();
     const writesBefore = n._writes, removedBefore = n._removed || 0;
     cyD.emit('destroy');
     assert.equal(cyD.handlerCount(), 0);
@@ -169,12 +176,15 @@ assert.ok(both.styles['border-width'], 'после поиска остаётся
     const graph = makeCy(replacementNodes);
     cleanup();
     initZoomEmphasis(graph);
+    await nextFrame();
     const replacement = makeNode('same-id', { status: 'down' });
     replacementNodes[0] = replacement;
     refreshZoomEmphasis();
+    await nextFrame();
     assert.ok(replacement.styles['overlay-padding'], 'новый узел получает ауру без изменения zoom');
     assert.equal(replacement._writes, 1);
     refreshZoomEmphasis();
+    await nextFrame();
     assert.equal(replacement._writes, 1, 'неизменный узел повторно не стилизуется');
     ok('замена узла с тем же ID восстанавливает ауру');
 }
@@ -194,6 +204,7 @@ assert.ok(both.styles['border-width'], 'после поиска остаётся
     assert.equal(lateDown._writes || 0, 0, 'до final fit при zoom=1 аура не применяется');
     lateCy._zoom = 0.2;
     emitWindow('linkvision:viewport-ready');
+    await nextFrame();
     assert.ok(lateDown.styles['border-width'], 'поздно загруженный DOWN получает рамку');
     assert.ok(lateDown.styles['overlay-padding'], 'поздно загруженный DOWN получает ауру');
     ok('final viewport применяет ауры после асинхронной загрузки карты');
@@ -204,6 +215,7 @@ assert.ok(both.styles['border-width'], 'после поиска остаётся
     const up = makeNode('up', { status: 'up' });
     const graph = makeCy([down, up]);
     initZoomEmphasis(graph);
+    await nextFrame();
     const walks = graph.nodeWalks;
     const upWrites = up._writes;
     down.data().acknowledged = true;
@@ -230,9 +242,22 @@ ok('cleanup снимает обработчик');
     const many = Array.from({ length: 120 }, (_, i) => makeNode(String(i), { status: 'up' }));
     const graph = makeCy(many);
     initZoomEmphasis(graph);
+    const flush = () => {
+        const [id, callback] = frames.entries().next().value;
+        frames.delete(id);
+        callback();
+    };
+    refreshZoomEmphasis();
+    assert.equal(frames.size, 1, 'full refresh replaces pending work');
+    assert.ok(many.every(node => !node.styles['border-width']), 'full refresh waits for a frame');
+    flush();
+    assert.ok(many.some(node => node.styles['border-width']));
+    assert.ok(many.some(node => !node.styles['border-width']), 'full refresh spans frames');
+    while (frames.size) flush();
     graph._zoom = 0.8;
     graph.emit('zoom');
     await sleep(540);
+    flush();
     const cleared = many.filter(node => !node.styles['border-width']).length;
     assert.ok(cleared > 0 && cleared < many.length, 'mass update spans multiple frames');
     assert.equal(frames.size, 1);
@@ -241,11 +266,7 @@ ok('cleanup снимает обработчик');
     graph.emit('zoom');
     assert.equal(frames.size, 0, 'a fresh zoom cancels stale updates');
     await sleep(540);
-    while (frames.size) {
-        const [id, callback] = frames.entries().next().value;
-        frames.delete(id);
-        callback();
-    }
+    while (frames.size) flush();
     assert.ok(many.every(node => node.styles['border-width']), 'interrupted zoom restores all frames');
     cleanup();
     ok('массовый пересчёт распределён по кадрам и отменяется новым зумом');

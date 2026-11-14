@@ -146,6 +146,14 @@ function applyVisibility() {
     if (btn) btn.classList.toggle('active', visible);
 }
 
+function snapshotWait() {
+    const now = Date.now();
+    return Math.max(
+        lastSnapshotAt + SNAPSHOT_MIN_INTERVAL_MS - now,
+        lastViewportChangeAt + VIEWPORT_IDLE_MS - now
+    );
+}
+
 function scheduleRefresh() {
     if (!visible || refreshTimer || refreshFrame || refreshInnerFrame) return;
     refreshTimer = setTimeout(() => {
@@ -162,15 +170,12 @@ function scheduleRefresh() {
                 if (cy === scheduledCy) refresh();
             });
         });
-    }, Math.max(
-        250,
-        lastSnapshotAt + SNAPSHOT_MIN_INTERVAL_MS - Date.now(),
-        lastViewportChangeAt + VIEWPORT_IDLE_MS - Date.now()
-    ));
+    }, Math.max(250, snapshotWait()));
 }
 
 function retrySnapshot() {
     if (!visible || !cy || snapshotRetryCount >= 4) return;
+    if (refreshTimer || refreshFrame || refreshInnerFrame) return;
     snapshotRetryCount += 1;
     refreshTimer = setTimeout(() => {
         refreshTimer = null;
@@ -212,7 +217,7 @@ async function refresh() {
     // Cytoscape шлёт частые события position; откладываем снимок до отпускания
     // узла, иначе мини-карта будет многократно растрировать весь граф во время
     // движения группы.
-    if (pendingSnapshot || Date.now() - lastViewportChangeAt < VIEWPORT_IDLE_MS
+    if (pendingSnapshot || snapshotWait() > 0
         || isViewportGesture(cy) || cy.nodes(':grabbed').length) {
         scheduleRefresh();
         return;
