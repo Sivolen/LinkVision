@@ -7,6 +7,7 @@ import { boundNodePosition, getBgDimensions } from './background.js';
 import { startLinkMode, resetLinkMode, isLinkMode, getSourceNode } from './modes.js';
 import { updateEdgeLabelsForNode, updateEdgeLabelsForNodes } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
+import { isViewportGesture } from './labelScale.js';
 import { updateGroupsForNode, updateGroupsForNodes } from './groupResize.js';
 import { isDragLocked } from './lock.js';
 import { showToast } from '../utils/toast.js';
@@ -142,6 +143,7 @@ function fallbackCopy(text) {
 //     полу-очищенное состояние.
 //  4. mouseout очищает только если уходим с того узла, который активен.
 const HL_FILL_MS = 350;
+const HL_VIEWPORT_IDLE_MS = 250;
 const HL_GOLD = '#f59e0b';
 const HL_LIGHT = '#fde68a';
 const HL_ANIM_KEYS = ['line-fill', 'line-gradient-stop-colors',
@@ -249,8 +251,12 @@ function startHover(node) {
     const tick = () => {
         const now = performance.now();   // не rAF-метка: она может быть раньше startedAt
         if (hoverState !== st) return;           // нас уже заменили/остановили
+        if (isViewportGesture(cy)) {
+            stopHover();
+            return;
+        }
         let done = true;
-        try { done = paintFill(st, now); }
+        try { cy.batch(() => { done = paintFill(st, now); }); }
         catch (e) {
             console.warn('hover paint', e);
             // Градиент не применился — всё равно показываем итоговое золото
@@ -565,20 +571,35 @@ export function initInteractions(cy) {
         if (event.target === cy && isLinkMode()) resetLinkMode();
     });
 
-    // Подсветка связей при наведении
-    cy.on('mouseover', 'node', evt => startHover(evt.target));
+    // Во время навигации градиент инвалидирует стили рёбер в тех же кадрах,
+    // в которых Cytoscape уже перерисовывает viewport.
+    let lastViewportMove = -Infinity;
+    cy.on('viewport', () => {
+        lastViewportMove = performance.now();
+        stopHover();
+    });
+    cy.on('tapstart', stopHover);
+    const tryStartHover = evt => {
+        if (evt.originalEvent?.buttons || performance.now() - lastViewportMove < HL_VIEWPORT_IDLE_MS) return;
+        if (isViewportGesture(cy)) return;
+        startHover(evt.target);
+    };
+    cy.on('mouseover', 'node', tryStartHover);
 
     // Подсветка держится, пока курсор остаётся на устройстве или на его
     // собственных рёбрах. mouseout узла НЕ гасит её: Cytoscape шлёт его и тогда,
     // когда курсор заходит на ребро/подпись поверх того же узла.
     cy.on('mousemove', evt => {
-        if (!hoverState) return;
         if (evt.originalEvent && evt.originalEvent.buttons) return; // drag
         const target = evt.target;
+        if (!hoverState) {
+            if (target !== cy && target.isNode()) tryStartHover(evt);
+            return;
+        }
         if (target === cy) { stopHover(); return; }
         if (target.isNode()) {
             if (target.id() === hoverState.nodeId) return;
-            if (isPlainDevice(target)) startHover(target);   // переход на другое устройство
+            if (isPlainDevice(target)) tryStartHover(evt);   // переход на другое устройство
             else stopHover();                                // группа/фигура
             return;
         }
