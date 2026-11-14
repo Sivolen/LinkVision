@@ -6,17 +6,20 @@ panel.querySelector = selector => ({ '.minimap-inner': inner, '.minimap-img': im
 globalThis.document = { getElementById: id => id === 'minimap' ? panel : null };
 globalThis.window = { addEventListener() {}, removeEventListener() {} };
 globalThis.localStorage = { getItem: () => null, setItem() {} };
-globalThis.requestAnimationFrame = callback => { callback(); return 1; };
+globalThis.requestAnimationFrame = callback => setTimeout(callback, 0);
+globalThis.cancelAnimationFrame = clearTimeout;
 const { initMinimap, cleanup } = await import('../../static/js/src/map/minimap.js');
 const handlers = {};
 const bounds = { x1: 0, y1: 0, x2: 100, y2: 100, w: 100, h: 100 };
 let snapshots = 0;
+let boundsReads = 0;
 let gesture = false;
 let viewportReads = 0;
 let viewportBounds = bounds;
 const cy = {
   on(events, fn) { events.split(' ').forEach(event => handlers[event] = fn); }, off() {},
-  nodes: () => ({ length: 0 }), elements: () => ({ length: 1, boundingBox: () => bounds }),
+  nodes: () => ({ length: 0 }),
+  elements: () => ({ length: 1, boundingBox: () => { boundsReads++; return bounds; } }),
   png(options) {
     assert.equal(options.output, 'blob-promise');
     snapshots++;
@@ -28,6 +31,7 @@ const cy = {
 initMinimap(cy);
 await sleep(350);
 assert.equal(snapshots, 1, 'initial snapshot should not wait for the throttle interval');
+assert.equal(boundsReads, 1, 'world and snapshot share the same bounds');
 const readsBefore = viewportReads;
 const leftBefore = parseFloat(rect.style.left);
 viewportBounds = { ...bounds, x1: 50 };

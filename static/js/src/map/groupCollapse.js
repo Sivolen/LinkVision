@@ -246,7 +246,7 @@ function syncBubbleStatus(cy) {
     groups.forEach(group => {
         const status = statusByGroup.get(group.id());
         if (isCollapsed(group)) {
-            group.data('bubbleStatus', status);
+            if (group.data('bubbleStatus') !== status) group.data('bubbleStatus', status);
         } else if (group.data('bubbleStatus') !== undefined) {
             group.removeData('bubbleStatus');
         }

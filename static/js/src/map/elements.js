@@ -201,7 +201,6 @@ export function loadElements(mapId, force = false, attempt = 0) {
             updateAllEdgeLabels();
             updateEdgeCurves();
             updateAllGroups();
-            refreshZoomEmphasis();
 
             // Пересчитываем счётчик проблемных устройств в сайдбаре "от истины"
             // (по факту загруженных данных), а не полагаемся на накопленную
@@ -544,7 +543,6 @@ export function updateLinkInGraph(linkData) {
         style: linkData.line_style || edge.data('style'),
         font_size: linkData.font_size || edge.data('font_size'),
     });
-    cy.style().update();
 }
 
 export function updateDevicePositionInGraph(deviceId, x, y) {

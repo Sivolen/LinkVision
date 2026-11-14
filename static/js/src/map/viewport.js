@@ -1,15 +1,15 @@
 // viewport.js – сохранение/восстановление панорамирования и зума
 import { getCy } from './core.js';
-import { updateBackgroundTransform, scheduleBackgroundTransform, enforcePanBounds, isElementsLoaded } from './background.js';
+import { updateBackgroundTransform, enforcePanBounds, isElementsLoaded } from './background.js';
 import { http } from '../utils/http.js';
 import { registerCleanup } from './moduleRegistry.js';
 
 let viewportTimeout = null;
 
 export function initViewport(cy) {
-    cy.on('pan zoom', () => {
-        scheduleBackgroundTransform();
+    cy.on('viewport', () => {
         enforcePanBounds();
+        updateBackgroundTransform();
         saveViewportToServer();
     });
 }
@@ -54,7 +54,6 @@ export function withViewportRestore(callback, skipAutoFit = true) {
         const restore = () => {
             cy.viewport({ pan: savedViewport.pan, zoom: savedViewport.zoom });
             cy.resize();         // принудительно пересчитать размеры
-            cy.style().update();
             updateBackgroundTransform();
             enforcePanBounds();
             // Сбрасываем флаг ТОЛЬКО после восстановления

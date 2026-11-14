@@ -117,7 +117,6 @@ export function setMode(mode) {
         cy.userPanningEnabled(true);
         document.body.style.cursor = 'default';
     }
-    cy.style().update();
     window.currentMode = mode; // для внешних проверок
     window.dispatchEvent(new CustomEvent('linkvision:mode-changed', { detail: { mode } }));
 }
@@ -157,15 +156,9 @@ export function resetLinkMode() {
     const info = document.getElementById('linkInfo');
     if (info) info.remove();
 
-    // Возвращаем индикатор в режим просмотра
-    const currentMode = window.currentMode || 'pan';
-    if (cy) {
-        cy.elements().deselect();
-        cy.nodes().forEach(node => {
-            node.style('border-color', null);
-            node.style('border-width', null);
-        });
-    }
+    // The link source uses its own class. Global border resets would also
+    // erase the overview emphasis applied by zoomEmphasis.js.
+    if (cy) cy.elements(':selected').deselect();
 }
 
 function createInfoDiv(text) {

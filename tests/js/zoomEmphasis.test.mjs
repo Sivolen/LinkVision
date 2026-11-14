@@ -52,7 +52,7 @@ function makeCy(nodes) {
 }
 
 // zoomEmphasis импортирует getCy из core.js (тянет весь графовый код) — подменяем модуль.
-const { initZoomEmphasis, refreshZoomEmphasis, cleanup } = await import('../../static/js/src/map/zoomEmphasis.js').catch(e => {
+const { initZoomEmphasis, refreshZoomEmphasis, refreshNodeZoomEmphasis, cleanup } = await import('../../static/js/src/map/zoomEmphasis.js').catch(e => {
     console.log('skip: zoomEmphasis.js не импортируется без браузера:', e.message.split('\n')[0]);
     process.exit(0);
 });
@@ -199,6 +199,23 @@ assert.ok(both.styles['border-width'], 'после поиска остаётся
     ok('final viewport применяет ауры после асинхронной загрузки карты');
 }
 
+{
+    const down = makeNode('down', { status: 'down' });
+    const up = makeNode('up', { status: 'up' });
+    const graph = makeCy([down, up]);
+    initZoomEmphasis(graph);
+    const walks = graph.nodeWalks;
+    const upWrites = up._writes;
+    down.data().acknowledged = true;
+    refreshNodeZoomEmphasis([down]);
+    assert.equal(down.styles['overlay-padding'], undefined);
+    down.data().acknowledged = false;
+    refreshNodeZoomEmphasis([down]);
+    assert.ok(parseFloat(down.styles['overlay-padding']) > 0);
+    assert.equal(graph.nodeWalks, walks);
+    assert.equal(up._writes, upWrites);
+    ok('подтверждение и снятие отметки обновляют только изменившийся узел');
+}
 cleanup();
 assert.equal(cy.handlerCount(), 0);
 ok('cleanup снимает обработчик');

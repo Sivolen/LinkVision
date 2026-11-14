@@ -395,7 +395,9 @@ export function initDeviceLabels(cy) {
         schedule();
     }
 
-    const onViewport = () => { if (disposed) return; viewportDirty = true; schedule(); };
+    // Viewport notifications can arrive inside the wheel's animation frame.
+    // Move the layer now so it reaches the same paint as the canvas.
+    const onViewport = () => { if (usable()) applyViewport(); };
     const onAdd = evt => {
         if (disposed) return;
         const node = evt.target;

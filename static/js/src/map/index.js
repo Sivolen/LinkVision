@@ -44,7 +44,7 @@ import {
 // Импорт для обновления меток и групп
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
-import { initZoomEmphasis, refreshZoomEmphasis } from './zoomEmphasis.js';
+import { initZoomEmphasis, refreshNodeZoomEmphasis } from './zoomEmphasis.js';
 import { initDeviceLabels } from './deviceLabels.js';
 import { updateAllGroups } from './groupResize.js';
 
@@ -262,6 +262,13 @@ export function initMap(id) {
         applyAcknowledgment(cy, cy.getElementById(String(data.id)), data.acknowledged);
     });
 
+    function writeChangedData(node, values) {
+        const changed = Object.fromEntries(
+            Object.entries(values).filter(([key, value]) => node.data(key) !== value)
+        );
+        if (Object.keys(changed).length) node.data(changed);
+    }
+
     listenSocket('device_status', (data) => {
         const node = cy.getElementById(String(data.id));
         if (!node.length) return;
@@ -272,7 +279,7 @@ export function initMap(id) {
 
         if (!monitoringEnabled) {
             if (typeof removePulsingNode === 'function') removePulsingNode(cy, node);
-            node.data({
+            writeChangedData(node, {
                 status: 'up',
                 acknowledged: false,
                 quality_status: 'unknown',
@@ -280,6 +287,7 @@ export function initMap(id) {
                 quality_jitter_ms: null,
                 quality_loss_percent: null,
             });
+            refreshNodeZoomEmphasis([node]);
             return;
         }
 
@@ -288,8 +296,9 @@ export function initMap(id) {
         // должна оставить старый цвет качества. Основной монитор сейчас
         // использует device_status_batch, но оба пути должны иметь одинаковую
         // семантику.
+        const oldQuality = node.data('quality_status');
         if (Object.prototype.hasOwnProperty.call(data, 'quality_status')) {
-            node.data({
+            writeChangedData(node, {
                 quality_status: data.quality_status || 'unknown',
                 quality_latency_ms: data.quality_latency_ms ?? null,
                 quality_jitter_ms: data.quality_jitter_ms ?? null,
@@ -298,15 +307,18 @@ export function initMap(id) {
         }
 
         if (node.data('status') === newStatus) {
-            refreshZoomEmphasis();
+            if (oldQuality !== node.data('quality_status')) refreshNodeZoomEmphasis([node]);
             return;
         }
 
         statusBatch.push({ node, newStatus });
         if (statusBatchTimeout) clearTimeout(statusBatchTimeout);
         statusBatchTimeout = setTimeout(() => {
+            const changedNodes = new Set();
             cy.batch(() => {
                 statusBatch.forEach(({ node, newStatus }) => {
+                    if (node.removed()) return;
+                    changedNodes.add(node);
                     const wasAlarm = node.data('acknowledged') !== true && ['down', 'partial'].includes(node.data('status'));
                     node.data({ status: newStatus, ...(newStatus === 'up' ? { acknowledged: false } : {}) });
                     removePulsingNode(cy, node);
@@ -319,7 +331,7 @@ export function initMap(id) {
                     if (wasAlarm !== isAlarm) updateSidebarCounter(mapId, isAlarm);
                 });
             });
-            refreshZoomEmphasis();
+            refreshNodeZoomEmphasis(changedNodes);
             if (typeof refreshAllCollapsedStatuses === 'function') refreshAllCollapsedStatuses();
             statusBatch = [];
             statusBatchTimeout = null;
@@ -328,6 +340,8 @@ export function initMap(id) {
     listenSocket('device_status_batch', (statuses) => {
         if (!cy) return;
         let acknowledgmentChanged = false;
+        let groupStatusChanged = false;
+        const changedNodes = new Set();
         cy.batch(() => {
             statuses.forEach(item => {
                 const node = cy.getElementById(String(item.id));
@@ -343,19 +357,30 @@ export function initMap(id) {
                     ? item.monitoring_enabled
                     : node.data('monitoring_enabled');
                 const monitoringEnabled = (monitoringRaw === true || monitoringRaw === 'true');
+                const oldMonitoring = node.data('monitoring_enabled');
+                const oldQuality = node.data('quality_status');
                 if (Object.prototype.hasOwnProperty.call(item, 'monitoring_enabled')) {
-                    node.data('monitoring_enabled', monitoringEnabled ? 'true' : 'false');
+                    writeChangedData(node, { monitoring_enabled: monitoringEnabled ? 'true' : 'false' });
+                }
+                if (oldMonitoring !== node.data('monitoring_enabled')) {
+                    changedNodes.add(node);
+                    groupStatusChanged = true;
                 }
                 if (!monitoringEnabled) {
+                    const statusChanged = node.data('status') !== 'up' || Boolean(node.data('acknowledged'));
+                    groupStatusChanged ||= statusChanged;
+                    if (statusChanged || oldQuality !== 'unknown') changedNodes.add(node);
                     if (node.data('status') !== 'up') node.data('status', 'up');
                     if (node.data('acknowledged')) {
                         node.data('acknowledged', false);
                         acknowledgmentChanged = true;
                     }
-                    node.data('quality_status', 'unknown');
-                    node.data('quality_latency_ms', null);
-                    node.data('quality_jitter_ms', null);
-                    node.data('quality_loss_percent', null);
+                    writeChangedData(node, {
+                        quality_status: 'unknown',
+                        quality_latency_ms: null,
+                        quality_jitter_ms: null,
+                        quality_loss_percent: null
+                    });
                     removePulsingNode(cy, node);
                     return;
                 }
@@ -365,18 +390,21 @@ export function initMap(id) {
                 // status transition; otherwise a bad -> good recovery is sent by
                 // the backend but silently ignored until the next page refresh.
                 if (Object.prototype.hasOwnProperty.call(item, 'quality_status')) {
-                    node.data({
+                    writeChangedData(node, {
                         quality_status: item.quality_status || 'unknown',
                         quality_latency_ms: item.quality_latency_ms ?? null,
                         quality_jitter_ms: item.quality_jitter_ms ?? null,
                         quality_loss_percent: item.quality_loss_percent ?? null,
                     });
                 }
+                if (oldQuality !== node.data('quality_status')) changedNodes.add(node);
 
                 const oldAck = node.data('acknowledged') === true;
                 const nextAck = item.status === 'up' ? false : item.acknowledged ?? oldAck;
                 if (oldAck !== nextAck) acknowledgmentChanged = true;
                 if (node.data('status') !== item.status || oldAck !== nextAck) {
+                    changedNodes.add(node);
+                    groupStatusChanged = true;
                     const oldStatus = node.data('status');
                     node.data({ status: item.status, acknowledged: nextAck });
                     // Остановить старую пульсацию, если была
@@ -403,8 +431,8 @@ export function initMap(id) {
             });
         });
         // Cytoscape обновляет стили изменённых узлов при записи data внутри batch.
-        refreshZoomEmphasis();
-        if (typeof refreshAllCollapsedStatuses === 'function') refreshAllCollapsedStatuses();
+        refreshNodeZoomEmphasis(changedNodes);
+        if (groupStatusChanged) refreshAllCollapsedStatuses();
         if (acknowledgmentChanged && getStatusFilter() !== 'all') applyMapVisibility();
     });
 

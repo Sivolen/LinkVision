@@ -42,6 +42,7 @@ const PALETTE = {
 };
 const themed = key => () => (isDarkTheme() ? PALETTE.dark : PALETTE.light)[key];
 const darkColorCache = new Map();
+const lightGroupColorCache = new Map();
 const DARK_COLOR_BRIGHTNESS = 0.68;
 
 function parseColor(value) {
@@ -80,8 +81,12 @@ function edgeColor(edge) {
 function groupColor(node) {
     const original = node.data('color') || '#3498db';
     if (isDarkTheme()) return darkColor(original);
+    if (lightGroupColorCache.has(original)) return lightGroupColorCache.get(original);
     const rgb = parseColor(original);
-    return rgb ? `rgb(${rgb.join(',')})` : original;
+    const color = rgb ? `rgb(${rgb.join(',')})` : original;
+    if (lightGroupColorCache.size >= 256) lightGroupColorCache.clear();
+    lightGroupColorCache.set(original, color);
+    return color;
 }
 
 const deviceLabelMaxWidth = node => {
@@ -308,8 +313,6 @@ export const CY_STYLE = [
             'border-style': 'solid',
             'label': 'data(name)',
             // Название зоны остаётся читаемым и на общем масштабе карты.
-            // labelScale.js обновляет стиль групп только при смене корзины zoom,
-            // поэтому это не создаёт работы на каждом кадре pan/zoom.
             'font-size': node => {
                 // Group labels must recede on the overview.  Keeping a fixed
                 // screen size at low zoom makes them cover devices on dense

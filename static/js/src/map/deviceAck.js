@@ -2,7 +2,7 @@ import { http } from '../utils/http.js';
 import { showToast } from '../utils/toast.js';
 import { t } from '../i18n/i18n.js';
 import { addPulsingNode, removePulsingNode } from './pulse.js';
-import { refreshZoomEmphasis } from './zoomEmphasis.js';
+import { refreshNodeZoomEmphasis } from './zoomEmphasis.js';
 import { refreshAllCollapsedStatuses } from './groupCollapse.js';
 import { applyMapVisibility, getStatusFilter } from './visibility.js';
 import { updateSidebarCounter } from './sidebar.js';
@@ -23,7 +23,7 @@ export function applyAcknowledgment(cy, node, acknowledged) {
         node.data('acknowledged', value);
         removePulsingNode(cy, node);
     });
-    refreshZoomEmphasis();
+    refreshNodeZoomEmphasis([node]);
     updateSidebarCounter(window.currentMapId, !value);
     if (!value && canAcknowledge(node)) addPulsingNode(cy, node, node.data('status'));
     refreshAllCollapsedStatuses();

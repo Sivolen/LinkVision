@@ -179,7 +179,7 @@ test('pan+zoom — один transform слоя; карточки при этом
     let writes = 0;
     const style = card.style;
     card.style = new Proxy(style, { set(t, k, v) { writes++; t[k] = v; return true; } });
-    cy._pan = { x: 10, y: 20 }; cy.emit('viewport'); runFrames();
+    cy._pan = { x: 10, y: 20 }; cy.emit('viewport');
     assert.equal(layer.style.transform, 'translate(10px, 20px) scale(1)');
     cy._zoom = 0.3; cy.emit('viewport'); runFrames();
     assert.equal(layer.style.transform, 'translate(10px, 20px) scale(0.3)');

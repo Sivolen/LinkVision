@@ -138,7 +138,6 @@ let destroyHandler = null;
 let themeObserver = null;
 let elementsLoadedHandler = null;
 let viewportReadyHandler = null;
-let postLoadTimers = [];
 
 const ZOOM_IDLE_MS = 500;      // короткие паузы между сериями колеса — ещё навигация
 const GESTURE_RECHECK_MS = 100;
@@ -161,7 +160,7 @@ function groupStyles(zoom) {
 // Несколько видов подсветки одного узла объединяются (берём максимум), чтобы они
 // не снимали друг друга. Стиль пишем только если значения изменились: каждая
 // запись n.style() — событие 'style' для всех подписчиков и перерисовка.
-function applyToNode(n, entry, styles) {
+function applyToNode(n, entry, styles, dark) {
     const active = entry.groups.map(i => styles[i]);
     const borderWidth = Math.max(...active.map(s => s.borderWidth));
     const overlayPadding = Math.max(...active.map(s => s.overlayPadding));
@@ -169,7 +168,7 @@ function applyToNode(n, entry, styles) {
     // На графите обычный #dc3545 даёт слишком жёсткие красные пятна при
     // overview-zoom. Меняем только down-ауру, не жёлтый partial и не
     // рабочий контур устройства на обычном масштабе.
-    const overlayColor = isDarkTheme() && n.data('status') === 'down' ? DARK_DOWN_AURA : null;
+    const overlayColor = dark && n.data('status') === 'down' ? DARK_DOWN_AURA : null;
     const sig = `${borderWidth.toFixed(2)}|${overlayPadding.toFixed(2)}|${overlayOpacity.toFixed(3)}|${overlayColor || ''}`;
     if (entry.sig === sig) return;
     entry.sig = sig;
@@ -185,36 +184,22 @@ function clearNode(n) {
     n.removeStyle('border-width overlay-padding overlay-opacity overlay-color');
 }
 
-// Начальная карта собирается из нескольких независимых асинхронных частей:
-// элементов, фоновой подложки, resize Cytoscape и сохранённого viewport.
-// На реальных больших картах их порядок зависит от кеша браузера. Повторяем
-// дешёвый полный проход только в стартовом окне, чтобы итоговый zoom точно
-// получил ауры без участия пользователя.
-function refreshAfterInitialLoad(cy) {
-    postLoadTimers.forEach(clearTimeout);
-    postLoadTimers = [];
-    const run = () => {
-        if (activeCy === cy) recompute(true);
-    };
-    run();
-    [180, 800].forEach(delay => {
-        postLoadTimers.push(setTimeout(run, delay));
-    });
-}
-
-// Сигналы elements:loaded и viewport-ready нужны, но в реальном приложении
-// после них ещё могут завершиться восстановление групп, socket-resync или
-// отложенное применение статусов. Любой из этих старых обработчиков умеет
-// записать bypass-стиль узла и тем самым снять только что рассчитанную ауру.
-// Поэтому у нового графа есть короткое окно финальной синхронизации,
-// независимое от порядка асинхронной загрузки. Это не интервал: всего четыре
-// полных прохода в первые секунды и затем никаких лишних обходов 400+ узлов.
-function scheduleStartupRefreshes(cy) {
-    [120, 500, 1500, 3500].forEach(delay => {
-        postLoadTimers.push(setTimeout(() => {
-            if (activeCy === cy) recompute(true);
-        }, delay));
-    });
+function syncNode(node, styles, dark, force = false) {
+    const id = node.id();
+    const previous = emphasized.get(id);
+    const groups = [];
+    EMPHASIS_GROUPS.forEach((group, i) => { if (group.isTarget(node)) groups.push(i); });
+    if (!groups.length) {
+        if (previous?.node === node) clearNode(node);
+        emphasized.delete(id);
+        return;
+    }
+    const entry = previous?.node === node ? previous : { node, sig: '' };
+    entry.groups = groups;
+    // A status transition may have removed a pulse bypass from this node.
+    if (force) entry.sig = '';
+    emphasized.set(id, entry);
+    applyToNode(node, entry, styles, dark);
 }
 
 /**
@@ -237,13 +222,14 @@ function recompute(full = true) {
     appliedZoom = zoom;
     wasEmphasizing = shouldEmphasize;
     const styles = shouldEmphasize ? groupStyles(zoom) : null;
+    const dark = isDarkTheme();
 
     cy.batch(() => {
         if (!needFull) {
             emphasized.forEach((entry, id) => {
                 const n = cy.getElementById(id);
-                if (!n.length) { emphasized.delete(id); return; }
-                applyToNode(n, entry, styles);
+                if (!n.length || n !== entry.node) { emphasized.delete(id); return; }
+                applyToNode(n, entry, styles, dark);
             });
             return;
         }
@@ -251,24 +237,13 @@ function recompute(full = true) {
         // Один проход вместо отдельного полного прохода для каждой группы.
         // Флаги состояния хранятся в Map, а не в data узла: запись data даёт
         // событие 'data' (его слушают мини-карта и подписи) на каждом узле.
-        const seen = new Set();
         if (shouldEmphasize) {
-            cy.nodes().forEach(n => {
-                const groups = [];
-                EMPHASIS_GROUPS.forEach((group, i) => { if (group.isTarget(n)) groups.push(i); });
-                if (!groups.length) return;
-                const id = n.id();
-                seen.add(id);
-                let entry = emphasized.get(id);
-                if (!entry || entry.node !== n) { entry = { node: n, groups, sig: '' }; emphasized.set(id, entry); }
-                else if (entry.groups.join() !== groups.join()) { entry.groups = groups; entry.sig = ''; }
-                applyToNode(n, entry, styles);
-            });
+            cy.nodes().forEach(node => syncNode(node, styles, dark));
         }
-        emphasized.forEach((entry, id) => {
-            if (seen.has(id)) return;
+        emphasized.forEach(({ node }, id) => {
             const n = cy.getElementById(id);
-            if (n.length) clearNode(n);
+            if (shouldEmphasize && n === node && n.length) return;
+            if (n === node && n.length) clearNode(n);
             emphasized.delete(id);
         });
     });
@@ -294,31 +269,12 @@ export function initZoomEmphasis(cy) {
     // автоматический fit. Первый recompute в init в этот момент не видит
     // устройств или видит старый zoom; два кадра после elements:loaded дают
     // Cytoscape завершить fit и сразу рисуют ауры без ручного wheel-zoom.
-    elementsLoadedHandler = () => {
-        const loadedCy = cy;
-        const afterFrame = typeof requestAnimationFrame === 'function'
-            ? requestAnimationFrame
-            : callback => setTimeout(callback, 0);
-        afterFrame(() => afterFrame(() => {
-            if (activeCy === loadedCy) refreshAfterInitialLoad(loadedCy);
-        }));
-    };
+    elementsLoadedHandler = () => recompute(true);
     window.addEventListener('elements:loaded', elementsLoadedHandler);
     // Для карт с фоновой подложкой final fit может состояться после
     // elements:loaded. background.js сообщает об этом отдельным событием.
-    viewportReadyHandler = () => {
-        const readyCy = cy;
-        const afterFrame = typeof requestAnimationFrame === 'function'
-            ? requestAnimationFrame
-            : callback => setTimeout(callback, 0);
-        afterFrame(() => afterFrame(() => {
-            if (activeCy === readyCy) refreshAfterInitialLoad(readyCy);
-        }));
-    };
+    viewportReadyHandler = () => recompute(false);
     window.addEventListener('linkvision:viewport-ready', viewportReadyHandler);
-    // В unit-тесте граф создаётся без DOM-контейнера: там стартовая
-    // асинхронная цепочка отсутствует и нужны только явные события.
-    if (document.getElementById('cy')) scheduleStartupRefreshes(cy);
     // Theme is a DOM attribute, so Cytoscape does not emit a zoom/data event
     // when it changes. Reapply the overview aura without touching viewport.
     if (document.documentElement && typeof MutationObserver !== 'undefined') {
@@ -340,6 +296,24 @@ export function refreshZoomEmphasis() {
     recompute(true);
 }
 
+export function refreshNodeZoomEmphasis(nodes) {
+    const cy = activeCy;
+    if (!cy || (nodes.size ?? nodes.length) === 0) return;
+    // Keep untouched nodes at the last applied zoom until the zoom handler
+    // settles the viewport. Status changes on these nodes are immediate.
+    if (!wasEmphasizing) {
+        if (cy.zoom() < ZOOM_THRESHOLD) recompute(true);
+        return;
+    }
+    const styles = groupStyles(appliedZoom);
+    const dark = isDarkTheme();
+    cy.batch(() => {
+        nodes.forEach(node => {
+            if (cy.getElementById(node.id()) === node) syncNode(node, styles, dark, true);
+        });
+    });
+}
+
 /**
  * Снимает обработчики, таймер и ВСЁ временное состояние усиления. Если граф ещё
  * жив (повторный initZoomEmphasis на том же cy), заодно убирает bypass-стили с
@@ -349,8 +323,6 @@ export function refreshZoomEmphasis() {
 export function cleanup(destroying = false) {
     clearTimeout(runTimer);
     runTimer = 0;
-    postLoadTimers.forEach(clearTimeout);
-    postLoadTimers = [];
     const cy = activeCy;
     if (cy) {
         try {

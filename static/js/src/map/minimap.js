@@ -147,8 +147,7 @@ function applyVisibility() {
 }
 
 function scheduleRefresh() {
-    if (!visible) return;
-    clearTimeout(refreshTimer);
+    if (!visible || refreshTimer || refreshFrame || refreshInnerFrame) return;
     refreshTimer = setTimeout(() => {
         refreshTimer = null;
         // Даём Cytoscape закончить текущий кадр после загрузки/изменения графа.
@@ -191,12 +190,11 @@ function getBgUrl() {
 
 // «Мир» превью: приоритет — размеры фона-плана; иначе габариты элементов,
 // но не меньше минимального мира (чтобы один элемент не занимал всё)
-function computeWorld() {
+function computeWorld(bounds) {
     const { width: bgW, height: bgH } = getBgDimensions();
     if (bgW && bgH) return { x: 0, y: 0, w: bgW, h: bgH };
-    const els = cy.elements();
-    if (els.length === 0) return null;
-    const bb = els.boundingBox();
+    if (!bounds) return null;
+    const bb = bounds;
     const w = Math.max(bb.w, MIN_WORLD_W);
     const h = Math.max(bb.h, MIN_WORLD_H);
     const cx = (bb.x1 + bb.x2) / 2, cyc = (bb.y1 + bb.y2) / 2;
@@ -219,7 +217,9 @@ async function refresh() {
         scheduleRefresh();
         return;
     }
-    world = computeWorld();
+    const elements = cy.elements();
+    const bounds = elements.length ? elements.boundingBox() : null;
+    world = computeWorld(bounds);
     const bgUrl = getBgUrl();
     if (!world) { // ни фона, ни элементов
         inner.style.width = inner.style.height = '0px';
@@ -248,9 +248,9 @@ async function refresh() {
 
     // Cytoscape всё ещё рисует граф синхронно, но кодирование PNG можно
     // вынести из текущего кадра через canvas.toBlob().
-    const els = cy.elements();
-    if (els.length) {
-        const eb = els.boundingBox();
+    if (bounds) {
+        const { x, y } = world;
+        const snapshotScale = scale;
         const snapshot = {};
         pendingSnapshot = snapshot;
         try {
@@ -264,10 +264,10 @@ async function refresh() {
             snapshotUrl = url;
             imgEl.src = url;
             imgEl.style.display = 'block';
-            imgEl.style.left = ((eb.x1 - world.x) * scale) + 'px';
-            imgEl.style.top = ((eb.y1 - world.y) * scale) + 'px';
-            imgEl.style.width = (eb.w * scale) + 'px';
-            imgEl.style.height = (eb.h * scale) + 'px';
+            imgEl.style.left = ((bounds.x1 - x) * snapshotScale) + 'px';
+            imgEl.style.top = ((bounds.y1 - y) * snapshotScale) + 'px';
+            imgEl.style.width = (bounds.w * snapshotScale) + 'px';
+            imgEl.style.height = (bounds.h * snapshotScale) + 'px';
             snapshotRetryCount = 0;
             lastSnapshotAt = Date.now();
         } catch (error) {

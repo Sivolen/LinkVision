@@ -11,7 +11,6 @@ let skipAutoFit = false;
 // Пользователь начал взаимодействовать с картой (скролл/зум/перетаскивание) —
 // значит начальный авто-фит применять уже нельзя, иначе будет «телепортация».
 let userInteracted = false;
-let transformFrame = 0;
 let lastGridSize = null;
 let lastGridPosition = null;
 let lastGridImage = null;
@@ -65,18 +64,6 @@ function resetTransformCache() {
     lastGridPosition = null;
     lastGridImage = null;
     lastBackgroundTransform = null;
-}
-
-/**
- * Pan/zoom может приходить десятки раз за кадр. Сетка следует за картой в
- * следующем кадре браузера, а серия событий схлопывается в одну запись CSS.
- */
-export function scheduleBackgroundTransform() {
-    if (transformFrame) return;
-    transformFrame = requestAnimationFrame(() => {
-        transformFrame = 0;
-        updateBackgroundTransform();
-    });
 }
 
 export function updateBackgroundTransform() {
@@ -135,8 +122,6 @@ export function updateBackgroundTransform() {
 }
 
 export function cleanupBackgroundTransform() {
-    if (transformFrame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(transformFrame);
-    transformFrame = 0;
     resetTransformCache();
 }
 
