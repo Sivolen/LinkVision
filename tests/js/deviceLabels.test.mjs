@@ -11,6 +11,7 @@ class El {
         this.tag = tag; this.children = []; this.parent = null; this.dataset = {};
         this.style = { setProperty(k, v) { this[k] = v; } };
         this.hidden = false; this.className = ''; this._text = '';
+        this.listeners = new Map();
         const set = new Set();
         this.classList = {
             add: c => set.add(c), remove: c => set.delete(c),
@@ -23,6 +24,8 @@ class El {
     appendChild(c) { c.parent = this; this.children.push(c); return c; }
     remove() { if (this.parent) this.parent.children = this.parent.children.filter(c => c !== this); this.parent = null; }
     setAttribute() {}
+    addEventListener(type, handler) { this.listeners.set(type, handler); }
+    removeEventListener(type) { this.listeners.delete(type); }
     set textContent(v) { this._text = String(v); }
     get textContent() { return this._text; }
 }
@@ -190,6 +193,25 @@ test('pan+zoom — один transform слоя; карточки при этом
     assert.equal(container.children[0].classList.contains('is-moving'), true);
     dispose();
 });
+
+{
+    const container = new El('div'); const cy = makeCy(container);
+    const dispose = initDeviceLabels(cy);
+    runFrames();
+    await sleep(165);
+    const viewport = container.children[0];
+    assert.equal(viewport.classList.contains('is-moving'), false);
+    container.listeners.get('pointerdown')({ button: 0, pointerType: 'mouse' });
+    assert.equal(viewport.classList.contains('is-moving'), true, 'слой готов до первого движения');
+    await sleep(165);
+    assert.equal(viewport.classList.contains('is-moving'), true, 'слой сохраняется пока зажата кнопка');
+    winListeners.get('pointerup')();
+    await sleep(165);
+    assert.equal(viewport.classList.contains('is-moving'), false);
+    dispose();
+    assert.equal(container.listeners.size, 0);
+    passed++; console.log('ok - подготовка слоя до перетаскивания и освобождение после отпускания');
+}
 
 test('ниже ZOOM_OFF карточки скрываются классом слоя (раскладка не меняется)', () => {
     const container = new El('div'); const cy = makeCy(container);

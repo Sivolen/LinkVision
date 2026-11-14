@@ -14,6 +14,7 @@
 //     независимо от числа карточек). На zoom/pan карточки не пересчитываются;
 //   • на время жеста слою включается will-change (GPU-композитинг), после паузы
 //     снимается — текст перерисовывается чётко в итоговом масштабе;
+//     при нажатии мыши подготавливаем слой до первого перемещения.
 //   • позиция/содержимое/видимость обновляются только у «грязных» узлов, пачкой
 //     в одном requestAnimationFrame; DOM пишется только при реальном изменении;
 //   • размеры карточек измеряются (offsetWidth/Height) один раз и кэшируются в
@@ -103,6 +104,7 @@ export function initDeviceLabels(cy) {
     let cullTimer = 0;
     let moveTimer = 0;
     let lastMoveAt = 0;
+    let pointerHeld = false;
     let isOff = false;
     let disposed = false;
     let destroying = false; // пришло событие destroy: граф умирает, его узлы не трогаем
@@ -220,9 +222,7 @@ export function initDeviceLabels(cy) {
         if (transform !== layerTransform) {
             layerTransform = transform;
             layer.style.transform = transform;
-            lastMoveAt = now();
-            if (!viewport.classList.contains('is-moving')) viewport.classList.add('is-moving');
-            if (!moveTimer) moveTimer = setTimeout(checkMoveIdle, MOVE_IDLE_MS);
+            prepareMovingLayer();
         }
         const off = zoom < ZOOM_OFF;
         if (off !== isOff) {
@@ -232,9 +232,15 @@ export function initDeviceLabels(cy) {
         }
     }
 
+    function prepareMovingLayer() {
+        lastMoveAt = now();
+        if (!viewport.classList.contains('is-moving')) viewport.classList.add('is-moving');
+        if (!moveTimer) moveTimer = setTimeout(checkMoveIdle, MOVE_IDLE_MS);
+    }
+
     function checkMoveIdle() {
         moveTimer = 0;
-        if (disposed) return;
+        if (disposed || pointerHeld) return;
         const left = MOVE_IDLE_MS - (now() - lastMoveAt);
         if (left > 5) {
             moveTimer = setTimeout(checkMoveIdle, left);
@@ -422,6 +428,16 @@ export function initDeviceLabels(cy) {
         scheduleCull();
     };
     const onDestroy = () => { destroying = true; dispose(); };
+    const onPointerDown = event => {
+        if (event.button !== 0 || event.pointerType !== 'mouse' || !usable() || isOff) return;
+        pointerHeld = true;
+        prepareMovingLayer();
+    };
+    const onPointerEnd = () => {
+        if (!pointerHeld) return;
+        pointerHeld = false;
+        prepareMovingLayer();
+    };
 
     const nodeEvents = 'position data move select unselect class';
     cy.on('viewport', onViewport);
@@ -429,6 +445,10 @@ export function initDeviceLabels(cy) {
     cy.on('remove', 'node', onRemove);
     cy.on(nodeEvents, 'node', onNodeChange);
     cy.on('destroy', onDestroy);
+    container.addEventListener('pointerdown', onPointerDown, true);
+    window.addEventListener('pointerup', onPointerEnd, true);
+    window.addEventListener('pointercancel', onPointerEnd, true);
+    window.addEventListener('blur', onPointerEnd);
     window.addEventListener('elements:loaded', onElementsLoaded);
     const fonts = typeof document !== 'undefined' ? document.fonts : null;
     if (fonts && typeof fonts.addEventListener === 'function') fonts.addEventListener('loadingdone', onFontsLoaded);
@@ -443,6 +463,10 @@ export function initDeviceLabels(cy) {
         cullTimer = 0;
         moveTimer = 0;
         window.removeEventListener('elements:loaded', onElementsLoaded);
+        container.removeEventListener('pointerdown', onPointerDown, true);
+        window.removeEventListener('pointerup', onPointerEnd, true);
+        window.removeEventListener('pointercancel', onPointerEnd, true);
+        window.removeEventListener('blur', onPointerEnd);
         if (fonts && typeof fonts.removeEventListener === 'function') fonts.removeEventListener('loadingdone', onFontsLoaded);
         // Обработчики снимаем всегда (на уничтоженном графе off безвреден).
         try {

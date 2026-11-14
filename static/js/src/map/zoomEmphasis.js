@@ -134,6 +134,8 @@ let appliedZoom = NaN;
 let activeCy = null;
 let zoomHandler = null;
 let runTimer = 0;
+let zoomFrame = null;
+let zoomInterrupted = false;
 let destroyHandler = null;
 let themeObserver = null;
 let elementsLoadedHandler = null;
@@ -143,6 +145,7 @@ const ZOOM_IDLE_MS = 500;      // короткие паузы между сер�
 const GESTURE_RECHECK_MS = 100;
 const HEALTHY_ZOOM_STEP = Math.log(1.2);
 const ZOOM_EPSILON = 0.02;      // изменение масштаба меньше 2% — стили те же
+const NODES_PER_FRAME = 48;
 
 function groupStyles(zoom) {
     const t = clamp(1 - zoom / ZOOM_THRESHOLD, 0, 1);
@@ -208,15 +211,24 @@ function syncNode(node, styles, dark, restoreOverlay = false) {
  * full=true — полный проход по узлам (смена статусов/поиска, порог зума,
  * загрузка карты). full=false — только пересчёт значений у уже усиленных узлов.
  */
-function recompute(full = true) {
+function cancelZoomFrame() {
+    if (zoomFrame === null) return;
+    cancelAnimationFrame(zoomFrame);
+    zoomFrame = null;
+    zoomInterrupted = true;
+}
+
+function recompute(full = true, spread = false) {
     const cy = activeCy || getCy();
     if (!cy || (cy.destroyed && cy.destroyed())) return;
+    cancelZoomFrame();
 
     const zoom = cy.zoom();
     const shouldEmphasize = zoom < ZOOM_THRESHOLD;
 
     // Переход через порог меняет набор целей, а быстрый путь знает только прежних.
-    const needFull = full || shouldEmphasize !== wasEmphasizing;
+    const needFull = full || zoomInterrupted || shouldEmphasize !== wasEmphasizing;
+    zoomInterrupted = false;
     if (!needFull) {
         if (!shouldEmphasize || !emphasized.size) { appliedZoom = zoom; return; }
         if (Math.abs(zoom - appliedZoom) / appliedZoom < ZOOM_EPSILON) return;
@@ -226,41 +238,54 @@ function recompute(full = true) {
     const styles = shouldEmphasize ? groupStyles(zoom) : null;
     const dark = isDarkTheme();
 
-    cy.batch(() => {
-        if (!needFull) {
-            emphasized.forEach((entry, id) => {
-                const n = cy.getElementById(id);
-                if (!n.length || n !== entry.node) { emphasized.delete(id); return; }
-                applyToNode(n, entry, styles, dark);
-            });
+    const nodes = [];
+    emphasized.forEach(({ node }, id) => {
+        if (cy.getElementById(id) !== node) emphasized.delete(id);
+        else if (!shouldEmphasize || !needFull) nodes.push(node);
+    });
+    if (shouldEmphasize && needFull) cy.nodes().forEach(node => nodes.push(node));
+
+    let index = 0;
+    const applyBatch = () => {
+        zoomFrame = null;
+        if (cy.destroyed?.()) return;
+        if (spread && isViewportGesture(cy)) {
+            zoomFrame = requestAnimationFrame(applyBatch);
             return;
         }
-
-        // Один проход вместо отдельного полного прохода для каждой группы.
-        // Флаги состояния хранятся в Map, а не в data узла: запись data даёт
-        // событие 'data' (его слушают мини-карта и подписи) на каждом узле.
-        if (shouldEmphasize) {
-            cy.nodes().forEach(node => syncNode(node, styles, dark));
-        }
-        emphasized.forEach(({ node }, id) => {
-            const n = cy.getElementById(id);
-            if (shouldEmphasize && n === node && n.length) return;
-            if (n === node && n.length) clearNode(n);
-            emphasized.delete(id);
+        const end = spread ? Math.min(index + NODES_PER_FRAME, nodes.length) : nodes.length;
+        cy.batch(() => {
+            for (; index < end; index++) {
+                const node = nodes[index];
+                const id = node.id();
+                if (cy.getElementById(id) !== node) continue;
+                const entry = emphasized.get(id);
+                if (!shouldEmphasize) {
+                    if (entry) clearNode(node);
+                    emphasized.delete(id);
+                } else if (needFull) {
+                    syncNode(node, styles, dark);
+                } else if (entry) {
+                    applyToNode(node, entry, styles, dark);
+                }
+            }
         });
-    });
+        if (index < nodes.length) zoomFrame = requestAnimationFrame(applyBatch);
+    };
+    applyBatch();
 }
 
 export function initZoomEmphasis(cy) {
     cleanup();
     activeCy = cy;
     zoomHandler = () => {
+        cancelZoomFrame();
         clearTimeout(runTimer);
         const run = () => {
             runTimer = 0;
             // Не пишем стили узлов посреди жеста — дождёмся его конца.
             if (activeCy && isViewportGesture(activeCy)) { runTimer = setTimeout(run, GESTURE_RECHECK_MS); return; }
-            recompute(false);
+            recompute(false, true);
         };
         runTimer = setTimeout(run, ZOOM_IDLE_MS);
     };
@@ -304,6 +329,12 @@ export function refreshNodeZoomEmphasis(nodes) {
     // Keep untouched nodes at the last applied zoom until the zoom handler
     // settles the viewport. Status changes on these nodes are immediate.
     if (!wasEmphasizing) {
+        // A zoom toward the map may still be clearing old bypass styles.
+        cy.batch(() => nodes.forEach(node => {
+            if (emphasized.get(node.id())?.node !== node) return;
+            if (cy.getElementById(node.id()) === node) clearNode(node);
+            emphasized.delete(node.id());
+        }));
         if (cy.zoom() < ZOOM_THRESHOLD) recompute(true);
         return;
     }
@@ -323,6 +354,8 @@ export function refreshNodeZoomEmphasis(nodes) {
  * destroying=true — граф уничтожается, его узлы не трогаем.
  */
 export function cleanup(destroying = false) {
+    cancelZoomFrame();
+    zoomInterrupted = false;
     clearTimeout(runTimer);
     runTimer = 0;
     const cy = activeCy;

@@ -219,4 +219,35 @@ assert.ok(both.styles['border-width'], 'после поиска остаётся
 cleanup();
 assert.equal(cy.handlerCount(), 0);
 ok('cleanup снимает обработчик');
+{
+    const frames = new Map();
+    let frameId = 0;
+    globalThis.requestAnimationFrame = callback => {
+        frames.set(++frameId, callback);
+        return frameId;
+    };
+    globalThis.cancelAnimationFrame = id => frames.delete(id);
+    const many = Array.from({ length: 120 }, (_, i) => makeNode(String(i), { status: 'up' }));
+    const graph = makeCy(many);
+    initZoomEmphasis(graph);
+    graph._zoom = 0.8;
+    graph.emit('zoom');
+    await sleep(540);
+    const cleared = many.filter(node => !node.styles['border-width']).length;
+    assert.ok(cleared > 0 && cleared < many.length, 'mass update spans multiple frames');
+    assert.equal(frames.size, 1);
+
+    graph._zoom = 0.2;
+    graph.emit('zoom');
+    assert.equal(frames.size, 0, 'a fresh zoom cancels stale updates');
+    await sleep(540);
+    while (frames.size) {
+        const [id, callback] = frames.entries().next().value;
+        frames.delete(id);
+        callback();
+    }
+    assert.ok(many.every(node => node.styles['border-width']), 'interrupted zoom restores all frames');
+    cleanup();
+    ok('массовый пересчёт распределён по кадрам и отменяется новым зумом');
+}
 console.log(`${passed} zoomEmphasis tests passed`);
