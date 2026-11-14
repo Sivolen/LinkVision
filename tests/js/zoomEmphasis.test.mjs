@@ -5,7 +5,6 @@
  */
 import assert from 'node:assert/strict';
 
-const timers = [];
 const windowHandlers = new Map();
 globalThis.window = {
     addEventListener(event, handler) {
@@ -78,12 +77,22 @@ assert.ok(nodes[2]._writes === 1 && nodes[3]._writes === 1);
 ok('статусы, качество и результаты поиска получают нужное усиление');
 
 // Зум: быстрый путь — без обхода всех узлов и без data-записей
-cy._zoom = 0.12; cy.emit('zoom'); await sleep(200);
+cy._zoom = 0.12; cy.emit('zoom'); await sleep(300);
+cy._zoom = 0.125; cy.emit('zoom'); await sleep(300);
+assert.equal(nodes[1]._writes, 1, 'пауза внутри серии зума не пересчитывает рамки');
+await sleep(240);
 assert.equal(cy.nodeWalks, 1, 'зум внутри диапазона не обходит все узлы');
 assert.ok(nodes[1].styles['border-width'] > 0);
-cy._zoom = 0.121; cy.emit('zoom'); await sleep(200);
+cy._zoom = 0.126; cy.emit('zoom'); await sleep(540);
 assert.equal(nodes[1]._writes, 2, 'изменение масштаба меньше 2% не пишет стиль');
 ok('зум пересчитывает значения только у подсвеченных узлов');
+
+cy._zoom = 0.31; cy.emit('zoom'); await sleep(540);
+const healthyWrites = nodes[0]._writes;
+const downWrites = nodes[1]._writes;
+cy._zoom = 0.32; cy.emit('zoom'); await sleep(540);
+assert.equal(nodes[0]._writes, healthyWrites, 'UP-рамка сохраняется в том же диапазоне');
+assert.ok(nodes[1]._writes > downWrites, 'аварийная рамка обновляется точнее');
 
 // Смена статуса -> refresh -> новый узел получает усиление, прежний теряет
 nodes[0]._removeData = true;
@@ -95,9 +104,9 @@ assert.ok(nodes[1].styles['border-width'], 'восстановившийся у�
 ok('refreshZoomEmphasis меняет усиление статуса и сохраняет рамку UP');
 
 // Переход через порог 0.5 — полный проход и снятие усиления
-cy._zoom = 0.8; cy.emit('zoom'); await sleep(200);
+cy._zoom = 0.8; cy.emit('zoom'); await sleep(540);
 assert.equal(Object.keys(nodes[0].styles).length, 0, 'при приближении усиление снимается');
-cy._zoom = 0.2; cy.emit('zoom'); await sleep(200);
+cy._zoom = 0.2; cy.emit('zoom'); await sleep(540);
 assert.ok(nodes[0].styles['border-width'], 'при отдалении усиление возвращается');
 ok('переход через порог зума снимает и возвращает усиление');
 

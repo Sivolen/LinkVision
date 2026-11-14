@@ -14,7 +14,11 @@ let toggleHandler = null;
 let resizeObserver = null;
 let snapshotRetryCount = 0;
 let lastSnapshotAt = 0;
+let lastViewportChangeAt = 0;
+let pendingSnapshot = null;
+let snapshotUrl = null;
 const SNAPSHOT_MIN_INTERVAL_MS = 1500;
+const VIEWPORT_IDLE_MS = 500;
 let world = null;  // {x, y, w, h} — «мир» превью в модельных координатах
 let scale = 1;     // px мини-карты на единицу модели
 let innerWidth = 0, innerHeight = 0;
@@ -39,7 +43,7 @@ export function initMinimap(instance) {
     visible = saved === null ? true : saved === 'true';
     applyVisibility();
 
-    cy.on('viewport', updateViewportRect);
+    cy.on('viewport', onViewportChange);
     // Снимок зависит от элементов, их данных и положения. Не слушаем событие
     // style: пульсация аварийных узлов меняет стиль каждые 100 мс и постоянно
     // сбрасывала debounce, из-за чего первый снимок откладывался до 30 секунд.
@@ -159,7 +163,11 @@ function scheduleRefresh() {
                 if (cy === scheduledCy) refresh();
             });
         });
-    }, Math.max(250, lastSnapshotAt ? SNAPSHOT_MIN_INTERVAL_MS - (Date.now() - lastSnapshotAt) : 0));
+    }, Math.max(
+        250,
+        lastSnapshotAt + SNAPSHOT_MIN_INTERVAL_MS - Date.now(),
+        lastViewportChangeAt + VIEWPORT_IDLE_MS - Date.now()
+    ));
 }
 
 function retrySnapshot() {
@@ -195,13 +203,19 @@ function computeWorld() {
     return { x: cx - w / 2, y: cyc - h / 2, w, h };
 }
 
-function refresh() {
+function releaseSnapshotUrl() {
+    if (snapshotUrl) URL.revokeObjectURL(snapshotUrl);
+    snapshotUrl = null;
+}
+
+async function refresh() {
     if (!cy || !visible || !panel) return;
     // Полный снимок cy.png() дорог на больших картах. При перетаскивании
     // Cytoscape шлёт частые события position; откладываем снимок до отпускания
     // узла, иначе мини-карта будет многократно растрировать весь граф во время
     // движения группы.
-    if (isViewportGesture(cy) || cy.nodes(':grabbed').length) {
+    if (pendingSnapshot || Date.now() - lastViewportChangeAt < VIEWPORT_IDLE_MS
+        || isViewportGesture(cy) || cy.nodes(':grabbed').length) {
         scheduleRefresh();
         return;
     }
@@ -229,32 +243,51 @@ function refresh() {
         else { bgEl.removeAttribute('src'); bgEl.style.display = 'none'; }
     }
 
-    // Слой элементов (снимок cy.png) — позиционируем по мировым координатам
+    rectEl.style.display = 'block';
+    updateViewportRect();
+
+    // Cytoscape всё ещё рисует граф синхронно, но кодирование PNG можно
+    // вынести из текущего кадра через canvas.toBlob().
     const els = cy.elements();
     if (els.length) {
         const eb = els.boundingBox();
+        const snapshot = {};
+        pendingSnapshot = snapshot;
         try {
-            cy.forceRender();
-            imgEl.src = cy.png({ full: true, bg: 'transparent', maxWidth: iw * 2, maxHeight: ih * 2 });
+            const blob = await cy.png({
+                output: 'blob-promise', full: true, bg: 'transparent',
+                maxWidth: iw * 2, maxHeight: ih * 2
+            });
+            if (pendingSnapshot !== snapshot || !visible) return;
+            const url = URL.createObjectURL(blob);
+            releaseSnapshotUrl();
+            snapshotUrl = url;
+            imgEl.src = url;
+            imgEl.style.display = 'block';
+            imgEl.style.left = ((eb.x1 - world.x) * scale) + 'px';
+            imgEl.style.top = ((eb.y1 - world.y) * scale) + 'px';
+            imgEl.style.width = (eb.w * scale) + 'px';
+            imgEl.style.height = (eb.h * scale) + 'px';
             snapshotRetryCount = 0;
             lastSnapshotAt = Date.now();
         } catch (error) {
+            if (pendingSnapshot !== snapshot || !visible) return;
             // На первом кадре рендерер/иконки ещё могут быть не готовы.
             // Повторяем автоматически, вместо ожидания ручного toggle.
             console.warn('Minimap snapshot failed; retrying.', error);
             retrySnapshot();
+        } finally {
+            if (pendingSnapshot === snapshot) pendingSnapshot = null;
         }
-        imgEl.style.display = 'block';
-        imgEl.style.left = ((eb.x1 - world.x) * scale) + 'px';
-        imgEl.style.top = ((eb.y1 - world.y) * scale) + 'px';
-        imgEl.style.width = (eb.w * scale) + 'px';
-        imgEl.style.height = (eb.h * scale) + 'px';
     } else {
+        releaseSnapshotUrl();
         imgEl.removeAttribute('src');
         imgEl.style.display = 'none';
     }
+}
 
-    rectEl.style.display = 'block';
+function onViewportChange() {
+    lastViewportChangeAt = Date.now();
     updateViewportRect();
 }
 
@@ -278,7 +311,7 @@ function updateViewportRect() {
 
 export function cleanup() {
     if (cy) {
-        cy.off('viewport', updateViewportRect);
+        cy.off('viewport', onViewportChange);
         cy.off('add remove position data move free dragfree layoutstop', scheduleRefresh);
     }
     window.removeEventListener('elements:loaded', scheduleRefresh);
@@ -302,6 +335,9 @@ export function cleanup() {
     refreshInnerFrame = 0;
     snapshotRetryCount = 0;
     lastSnapshotAt = 0;
+    lastViewportChangeAt = 0;
+    pendingSnapshot = null;
+    releaseSnapshotUrl();
     cy = null;
     panel = inner = bgEl = imgEl = rectEl = null;
     world = null;

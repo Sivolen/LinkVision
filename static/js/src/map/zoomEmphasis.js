@@ -71,6 +71,7 @@ const EMPHASIS_GROUPS = [
         // рамка, чтобы устройства без иконки не выглядели серыми.
         dataKey: '_zoomEmphasisUp',
         isTarget: isHealthyUpTarget,
+        quantizeZoom: true,
         minBorderPx: 1.75,
         baseBorder: 3,
         maxBorderGraphUnits: 10,
@@ -139,13 +140,18 @@ let elementsLoadedHandler = null;
 let viewportReadyHandler = null;
 let postLoadTimers = [];
 
-const RUN_INTERVAL_MS = 100;    // не чаще раза в 100 мс во время жеста зума
+const ZOOM_IDLE_MS = 500;      // короткие паузы между сериями колеса — ещё навигация
+const GESTURE_RECHECK_MS = 100;
+const HEALTHY_ZOOM_STEP = Math.log(1.2);
 const ZOOM_EPSILON = 0.02;      // изменение масштаба меньше 2% — стили те же
 
 function groupStyles(zoom) {
     const t = clamp(1 - zoom / ZOOM_THRESHOLD, 0, 1);
+    // UP-рамка есть почти у каждого устройства. Фиксируем её ширину в
+    // диапазоне масштабов, чтобы небольшие шаги зума не инвалидировали рёбра.
+    const healthyZoom = Math.exp(Math.round(Math.log(zoom) / HEALTHY_ZOOM_STEP) * HEALTHY_ZOOM_STEP);
     return EMPHASIS_GROUPS.map(group => ({
-        borderWidth: clamp(group.minBorderPx / zoom, group.baseBorder, group.maxBorderGraphUnits),
+        borderWidth: clamp(group.minBorderPx / (group.quantizeZoom ? healthyZoom : zoom), group.baseBorder, group.maxBorderGraphUnits),
         overlayPadding: clamp(group.minOverlayPaddingPx / zoom, group.baseOverlayPadding, group.maxOverlayPaddingGraphUnits),
         // Чем дальше отдалились от порога — тем плотнее гало.
         overlayOpacity: group.minOverlayOpacity + t * (group.maxOverlayOpacity - group.minOverlayOpacity)
@@ -272,15 +278,14 @@ export function initZoomEmphasis(cy) {
     cleanup();
     activeCy = cy;
     zoomHandler = () => {
-        // Первый вызов — сразу, дальше не чаще RUN_INTERVAL_MS, последний — после остановки.
-        if (runTimer) return;
+        clearTimeout(runTimer);
         const run = () => {
             runTimer = 0;
             // Не пишем стили узлов посреди жеста — дождёмся его конца.
-            if (activeCy && isViewportGesture(activeCy)) { runTimer = setTimeout(run, RUN_INTERVAL_MS); return; }
+            if (activeCy && isViewportGesture(activeCy)) { runTimer = setTimeout(run, GESTURE_RECHECK_MS); return; }
             recompute(false);
         };
-        runTimer = setTimeout(run, RUN_INTERVAL_MS);
+        runTimer = setTimeout(run, ZOOM_IDLE_MS);
     };
     destroyHandler = () => cleanup(true);
     cy.on('zoom', zoomHandler);

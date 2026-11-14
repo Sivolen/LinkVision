@@ -17,7 +17,11 @@ let viewportBounds = bounds;
 const cy = {
   on(events, fn) { events.split(' ').forEach(event => handlers[event] = fn); }, off() {},
   nodes: () => ({ length: 0 }), elements: () => ({ length: 1, boundingBox: () => bounds }),
-  forceRender() {}, png() { snapshots++; return 'data:image/png;base64,AA=='; },
+  png(options) {
+    assert.equal(options.output, 'blob-promise');
+    snapshots++;
+    return Promise.resolve(new Blob(['png'], { type: 'image/png' }));
+  },
   extent: () => { viewportReads++; return viewportBounds; },
   renderer: () => ({ data: { wheelZooming: gesture } }),
 };
@@ -37,7 +41,13 @@ assert.equal(snapshots, 1, 'repeated updates should be throttled');
 await sleep(1200);
 assert.equal(snapshots, 1, 'do not capture a snapshot during a viewport gesture');
 gesture = false;
+handlers.viewport();
 await sleep(350);
+assert.equal(snapshots, 1, 'short pause after viewport motion should not start capture');
+await sleep(450);
 assert.equal(snapshots, 2, 'latest update should eventually be shown');
+const url = img.src;
+assert.ok(url.startsWith('blob:'));
 cleanup();
+await assert.rejects(fetch(url), 'cleanup releases the snapshot URL');
 console.log('minimap initial rendering and throttled update passed');
