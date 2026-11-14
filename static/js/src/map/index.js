@@ -45,6 +45,7 @@ import {
 import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
 import { initZoomEmphasis, refreshNodeZoomEmphasis } from './zoomEmphasis.js';
+import { updateQualityMeasurements } from './qualityMeasurements.js';
 import { initDeviceLabels } from './deviceLabels.js';
 import { updateAllGroups } from './groupResize.js';
 
@@ -283,10 +284,8 @@ export function initMap(id) {
                 status: 'up',
                 acknowledged: false,
                 quality_status: 'unknown',
-                quality_latency_ms: null,
-                quality_jitter_ms: null,
-                quality_loss_percent: null,
             });
+            updateQualityMeasurements(node);
             refreshNodeZoomEmphasis([node]);
             return;
         }
@@ -300,10 +299,8 @@ export function initMap(id) {
         if (Object.prototype.hasOwnProperty.call(data, 'quality_status')) {
             writeChangedData(node, {
                 quality_status: data.quality_status || 'unknown',
-                quality_latency_ms: data.quality_latency_ms ?? null,
-                quality_jitter_ms: data.quality_jitter_ms ?? null,
-                quality_loss_percent: data.quality_loss_percent ?? null,
             });
+            updateQualityMeasurements(node, data);
         }
 
         if (node.data('status') === newStatus) {
@@ -376,11 +373,9 @@ export function initMap(id) {
                         acknowledgmentChanged = true;
                     }
                     writeChangedData(node, {
-                        quality_status: 'unknown',
-                        quality_latency_ms: null,
-                        quality_jitter_ms: null,
-                        quality_loss_percent: null
+                        quality_status: 'unknown'
                     });
+                    updateQualityMeasurements(node);
                     removePulsingNode(cy, node);
                     return;
                 }
@@ -392,10 +387,8 @@ export function initMap(id) {
                 if (Object.prototype.hasOwnProperty.call(item, 'quality_status')) {
                     writeChangedData(node, {
                         quality_status: item.quality_status || 'unknown',
-                        quality_latency_ms: item.quality_latency_ms ?? null,
-                        quality_jitter_ms: item.quality_jitter_ms ?? null,
-                        quality_loss_percent: item.quality_loss_percent ?? null,
                     });
+                    updateQualityMeasurements(node, item);
                 }
                 if (oldQuality !== node.data('quality_status')) changedNodes.add(node);
 

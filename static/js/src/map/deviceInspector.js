@@ -5,6 +5,7 @@ import { t, getLocale } from '../i18n/i18n.js';
 import { http } from '../utils/http.js';
 import { showToast } from '../utils/toast.js';
 import { canAcknowledge, toggleAcknowledgment } from './deviceAck.js';
+import { QUALITY_MEASUREMENTS_EVENT } from './qualityMeasurements.js';
 
 export function initDeviceInspector(cy) {
     const panel = document.getElementById('mapDeviceInspector');
@@ -392,9 +393,8 @@ export function initDeviceInspector(cy) {
         if (event.key === 'Escape' && !panel.hidden && !document.querySelector('.modal.show, .dropdown-menu.show')) hide();
     };
     const onRemove = event => { if (currentNode === event.target) hide(); };
-    const onData = event => {
+    const onQualityMeasurements = event => {
         if (currentNode !== event.target) return;
-        renderNode(currentNode);
         const reading = qualityReading(currentNode);
         if (reading.every((value, index) => value === lastQualityReading[index])) return;
         lastQualityReading = reading;
@@ -411,6 +411,11 @@ export function initDeviceInspector(cy) {
             }
         }
         renderQualityMetrics(key => currentNode.data(key), statuses, reading[0]);
+    };
+    const onData = event => {
+        if (currentNode !== event.target) return;
+        renderNode(currentNode);
+        onQualityMeasurements(event);
     };
     const onModeChange = event => { if (event.detail.mode !== 'pan') hide(); };
     const onLinkModeChange = event => { if (event.detail?.active) hide(); };
@@ -433,6 +438,7 @@ export function initDeviceInspector(cy) {
     cy.on('tap', 'node', show);
     cy.on('tap', onCanvasTap);
     cy.on('data', 'node', onData);
+    cy.on(QUALITY_MEASUREMENTS_EVENT, 'node', onQualityMeasurements);
     cy.on('remove', 'node', onRemove);
     close.addEventListener('click', hide);
     settingsForm?.addEventListener('submit', saveSettings);
@@ -450,6 +456,7 @@ export function initDeviceInspector(cy) {
         cy.off('tap', 'node', show);
         cy.off('tap', onCanvasTap);
         cy.off('data', 'node', onData);
+        cy.off(QUALITY_MEASUREMENTS_EVENT, 'node', onQualityMeasurements);
         cy.off('remove', 'node', onRemove);
         close.removeEventListener('click', hide);
         settingsForm?.removeEventListener('submit', saveSettings);

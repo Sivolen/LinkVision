@@ -124,7 +124,7 @@ const EMPHASIS_GROUPS = [
 ];
 
 // ── Состояние ────────────────────────────────────────────────────────────────
-// Узлы, к которым сейчас применено усиление: id -> { groups: [индексы групп], sig }.
+// Узлы, к которым сейчас применено усиление: id -> { node, groups, style }.
 // Нужно, чтобы при зуме обходить только их, а не все узлы карты. Новые цели
 // появляются при смене статуса/результатов поиска — тогда вызывается
 // refreshZoomEmphasis() (полный проход).
@@ -160,7 +160,7 @@ function groupStyles(zoom) {
 // Несколько видов подсветки одного узла объединяются (берём максимум), чтобы они
 // не снимали друг друга. Стиль пишем только если значения изменились: каждая
 // запись n.style() — событие 'style' для всех подписчиков и перерисовка.
-function applyToNode(n, entry, styles, dark) {
+function applyToNode(n, entry, styles, dark, restoreOverlay = false) {
     const active = entry.groups.map(i => styles[i]);
     const borderWidth = Math.max(...active.map(s => s.borderWidth));
     const overlayPadding = Math.max(...active.map(s => s.overlayPadding));
@@ -169,22 +169,25 @@ function applyToNode(n, entry, styles, dark) {
     // overview-zoom. Меняем только down-ауру, не жёлтый partial и не
     // рабочий контур устройства на обычном масштабе.
     const overlayColor = dark && n.data('status') === 'down' ? DARK_DOWN_AURA : null;
-    const sig = `${borderWidth.toFixed(2)}|${overlayPadding.toFixed(2)}|${overlayOpacity.toFixed(3)}|${overlayColor || ''}`;
-    if (entry.sig === sig) return;
-    entry.sig = sig;
-    n.style({
-        'border-width': borderWidth,
-        'overlay-padding': `${overlayPadding}px`,
-        'overlay-opacity': overlayOpacity,
+    const next = {
+        'border-width': Number(borderWidth.toFixed(2)),
+        'overlay-padding': `${overlayPadding.toFixed(2)}px`,
+        'overlay-opacity': Number(overlayOpacity.toFixed(3)),
         'overlay-color': overlayColor
-    });
+    };
+    const changed = Object.fromEntries(Object.entries(next).filter(([key, value]) =>
+        value !== entry.style?.[key] || (restoreOverlay && (key === 'overlay-color' || key === 'overlay-opacity'))
+    ));
+    if (!Object.keys(changed).length) return;
+    entry.style = next;
+    n.style(changed);
 }
 
 function clearNode(n) {
     n.removeStyle('border-width overlay-padding overlay-opacity overlay-color');
 }
 
-function syncNode(node, styles, dark, force = false) {
+function syncNode(node, styles, dark, restoreOverlay = false) {
     const id = node.id();
     const previous = emphasized.get(id);
     const groups = [];
@@ -194,12 +197,11 @@ function syncNode(node, styles, dark, force = false) {
         emphasized.delete(id);
         return;
     }
-    const entry = previous?.node === node ? previous : { node, sig: '' };
+    const entry = previous?.node === node ? previous : { node };
     entry.groups = groups;
     // A status transition may have removed a pulse bypass from this node.
-    if (force) entry.sig = '';
     emphasized.set(id, entry);
-    applyToNode(node, entry, styles, dark);
+    applyToNode(node, entry, styles, dark, restoreOverlay);
 }
 
 /**
