@@ -11,14 +11,26 @@ def test_batch_reads_fping_output_and_deduplicates_targets(monkeypatch):
     popen = subprocess.Popen
     commands = []
 
+    class PatchedTimeoutExpired(Exception):
+        pass
+
+    def patched_communicate(timeout=None):
+        if timeout is not None:
+            raise PatchedTimeoutExpired
+        return None, None
+
     def launch(command, **kwargs):
         commands.append(command)
         script = (
-            "import sys; print('10.255.100.202 : 0.180 0.197 0.221 0.195"
+            "import sys, time; time.sleep(0.65);"
+            " print('10.255.100.202 : 0.180 0.197 0.221 0.195"
             " 0.110 0.182 0.199 0.187\\n192.0.2.1 : - - - - - - - -',"
             " file=sys.stderr); sys.exit(1)"
         )
-        return popen([sys.executable, "-c", script], **kwargs)
+        process = popen([sys.executable, "-c", script], **kwargs)
+        # Simulate the exception identity mismatch seen under Eventlet.
+        process.communicate = patched_communicate
+        return process
 
     monkeypatch.setattr(fping_probe.subprocess, "Popen", launch)
     results = fping_probe.probe_addresses(

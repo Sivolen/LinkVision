@@ -4,6 +4,7 @@ import ipaddress
 import math
 import os
 import subprocess
+import tempfile
 import time
 
 SEND_INTERVAL_MS = 10
@@ -64,31 +65,28 @@ def _probe_batch(executable, family, targets, count, timeout, stop_event):
     ]
     budget = count * max(len(targets) * SEND_INTERVAL_MS, period_ms) / 1000 + 5
     deadline = time.monotonic() + budget
-    with subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        env={**os.environ, "LC_ALL": "C"},
-    ) as process:
-        try:
-            while True:
-                if stop_event.is_set():
-                    return None
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    raise FpingError("fping exceeded its batch deadline")
-                try:
-                    output, _ = process.communicate(timeout=min(0.5, remaining))
-                    break
-                except subprocess.TimeoutExpired:
-                    continue
-        finally:
-            if process.poll() is None:
-                process.kill()
-                process.communicate()
+    # A file lets the child write freely while we wait through the monitor's
+    # stop event. Eventlet's timed communicate() can raise a TimeoutExpired
+    # from a different subprocess module, aborting a healthy batch.
+    with tempfile.TemporaryFile() as capture:
+        with subprocess.Popen(
+            command,
+            stdout=capture,
+            stderr=subprocess.STDOUT,
+            env={**os.environ, "LC_ALL": "C"},
+        ) as process:
+            try:
+                while process.poll() is None:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise FpingError("fping exceeded its batch deadline")
+                    if stop_event.wait(min(0.25, remaining)):
+                        return None
+            finally:
+                if process.poll() is None:
+                    process.kill()
+        capture.seek(0)
+        output = capture.read().decode("utf-8", errors="replace")
 
     # Exit code 1 is a normal result when one or more targets are down.
     if process.returncode not in (0, 1):
