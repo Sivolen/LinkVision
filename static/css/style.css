@@ -3,30 +3,31 @@ LinkVision - Современный дизайн (финальная верси�
 ============================================================================ */
 :root {
   /* Светлая тема */
-  --bg-primary: #f1f5f9;
-  --bg-secondary: #ffffff;
+  --bg-primary: #f2f5f8;
+  --bg-secondary: #e7edf5;
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-sidebar: #1e293b;
-  --border-color: #e2e8f0;
-  --accent-color: #4682b4;
-  --accent-hover: #5a9bd4;
+  --border-color: #cbd7e6;
+  --accent-color: #4656cb;
+  --accent-hover: #3445b5;
+  --accent-on: #ffffff;
   --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
   /* Нейтральное поле карты и заметная, но ненавязчивая сетка. */
-  --cy-background: #f8fafc;
-  --cy-grid: #cbd5e1;
+  --cy-background: #f2f5f8;
+  --cy-grid: #d4deea;
   /* Карточки подписей устройств (deviceLabels.js) */
   --lv-card-bg: #ffffff;
   --lv-card-border: #cfd8e4;
   --lv-card-name: #0f172a;
   --lv-card-ip: #55657c;
   --lv-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.1), 0 4px 10px -2px rgba(15, 23, 42, 0.16);
-  --sidebar-surface: #f8fafc;
-  --sidebar-panel: #f1f6fb;
-  --sidebar-hover: #eef5fb;
-  --sidebar-active-bg: #e3f1fc;
-  --sidebar-active-text: #235f91;
-  --sidebar-border: #dce5ef;
+  --sidebar-surface: #dfe8f3;
+  --sidebar-panel: #e9f0f8;
+  --sidebar-hover: #d4e0f0;
+  --sidebar-active-bg: #ccd8fa;
+  --sidebar-active-text: #263aa5;
+  --sidebar-border: #c5d3e4;
   --sidebar-muted: #738197;
   --sidebar-shadow: 0 12px 32px rgba(15, 35, 60, 0.12);
   --sidebar-width: 280px;
@@ -40,28 +41,29 @@ LinkVision - Современный дизайн (финальная верси�
 ============================================================================ */
 [data-theme="dark"] {
   /* Графитовые поверхности с мягким контрастом между слоями. */
-  --bg-primary: #242528;
-  --bg-secondary: #303236;
+  --bg-primary: #191d24;
+  --bg-secondary: #253347;
   --text-primary: #f0f0f1;
   --text-secondary: #c0c2c6;
   --text-sidebar: #f0f0f0;
-  --border-color: #494c51;
-  --accent-color: #6c8ebf;      /* приглушённый синий */
-  --accent-hover: #7e9ec9;
+  --border-color: #3b4b60;
+  --accent-color: #9ba7ff;
+  --accent-hover: #b3bcff;
+  --accent-on: #17213b;
   --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-  --cy-background: #292b2e;
-  --cy-grid: #4a4d52;
-  --lv-card-bg: #34373c;
-  --lv-card-border: #5b6068;
+  --cy-background: #191d24;
+  --cy-grid: #344154;
+  --lv-card-bg: #253347;
+  --lv-card-border: #4b5d75;
   --lv-card-name: #f8fafc;
   --lv-card-ip: #a9b8cd;
   --lv-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 5px 12px -2px rgba(0, 0, 0, 0.6);
-  --sidebar-surface: #2c2e32;
-  --sidebar-panel: #34373b;
-  --sidebar-hover: #3a3e43;
-  --sidebar-active-bg: #3b5268;
-  --sidebar-active-text: #d8edff;
-  --sidebar-border: #484c52;
+  --sidebar-surface: #253347;
+  --sidebar-panel: #2b3b51;
+  --sidebar-hover: #344760;
+  --sidebar-active-bg: #354776;
+  --sidebar-active-text: #e1e5ff;
+  --sidebar-border: #3b4b60;
   --sidebar-muted: #b0b4ba;
   --sidebar-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
 }
@@ -79,7 +81,7 @@ LinkVision - Современный дизайн (финальная верси�
 [data-theme="dark"] .toolbar-btn:hover,
 [data-theme="dark"] .toolbar-btn.active {
   background: var(--accent-color);
-  color: #fff;
+  color: var(--accent-on);
 }
 
 [data-theme="dark"] .search-filter-bar .input-group-text,
@@ -477,7 +479,7 @@ body.resizing-sidebar .main-content { transition: none; }
   font-weight: 600;
 }
 .map-item.active .map-item-icon { color: var(--accent-color); }
-[data-theme="dark"] .map-item.active .map-item-icon { color: #8fc8f5; }
+[data-theme="dark"] .map-item.active .map-item-icon { color: var(--accent-color); }
 .map-item-icon {
   flex: 0 0 20px;
   width: 20px;
@@ -637,7 +639,7 @@ body.resizing-sidebar .main-content { transition: none; }
   font-weight: 600;
 }
 .admin-menu-item.active i { color: var(--accent-color); }
-[data-theme="dark"] .admin-menu-item.active i { color: #8fc8f5; }
+[data-theme="dark"] .admin-menu-item.active i { color: var(--accent-color); }
 
 .sidebar-footer {
   display: grid;
@@ -4662,7 +4664,7 @@ polyline.quality-chart-line,
 .map-view-layout .toolbar-section-lock .toolbar-btn.active {
   background: var(--accent-color);
   border-color: var(--accent-color);
-  color: #fff;
+  color: var(--accent-on);
   box-shadow: 0 2px 5px rgba(45, 105, 170, .18);
 }
 
