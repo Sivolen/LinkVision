@@ -8,7 +8,7 @@ import { addIpRow, getIpsFromForm, setIpsInForm } from './ipManager.js';
 import { t } from '../i18n/i18n.js';
 import { showToast } from '../utils/toast.js';
 import { getErrorMessage, escapeHtml } from './utils.js';
-import { withViewportRestore, reloadMapWithViewportRestore } from './mapIntegration.js';
+import { reloadMapWithViewportRestore } from './mapIntegration.js';
 import { http } from '../utils/http.js';
 import { beginSelfUpdate, endSelfUpdate } from '../utils/state.js';
 import { loadDeviceQuality, clearDeviceQuality } from './quality.js';

@@ -37,26 +37,17 @@ export function restoreViewport(viewport) {
 }
 
 /**
- * Выполнить действие с восстановлением viewport
- * Переиспользует каноническую событийную реализацию из map/viewport.js.
- * Раньше здесь была собственная "грубая" версия с setTimeout-гаданием,
- * которая дублировала window.withViewportRestore и конфликтовала с
- * правильной реализацией — какая из них реально работала, зависело от
- * порядка загрузки бандлов. Модалки всегда импортировали именно эту
- * версию напрямую, игнорируя глобальную переменную.
- */
-import { withViewportRestore as canonicalWithViewportRestore } from '../map/viewport.js';
-export const withViewportRestore = canonicalWithViewportRestore;
-
-/**
- * Перезагрузить элементы карты с восстановлением viewport
+ * The map bundle owns Cytoscape and its viewport state. Call its public
+ * handler so the modal bundle never creates a second copy of that state.
  */
 export async function reloadMapWithViewportRestore() {
-    await withViewportRestore(() => {
-        if (typeof window.reloadMapElements === 'function') {
-            window.reloadMapElements();
-        }
-    });
+    if (typeof window.reloadMapElements !== 'function') return;
+    const reload = () => window.reloadMapElements();
+    if (typeof window.withViewportRestore === 'function') {
+        await window.withViewportRestore(reload);
+    } else {
+        await reload();
+    }
 }
 
 /**
@@ -65,6 +56,5 @@ export async function reloadMapWithViewportRestore() {
 export function initMapIntegration() {
     window.saveViewport = saveViewport;
     window.restoreViewport = restoreViewport;
-    window.withViewportRestore = withViewportRestore;
     Logger.info('Map integration инициализирован');
 }

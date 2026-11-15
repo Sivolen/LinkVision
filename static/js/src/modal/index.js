@@ -12,7 +12,7 @@ import { initHistoryModal, loadHistory, historyPrev, historyNext } from './histo
 import { initIpManagement, addIpRow, getIpsFromForm, setIpsInForm } from './ipManager.js';
 import { showToast, initToast } from '../utils/toast.js';
 import { initUtils, escapeHtml, getErrorMessage, formatDateTime, getStatusBadgeClass } from './utils.js';
-import { initMapIntegration, withViewportRestore, reloadMapWithViewportRestore } from './mapIntegration.js';
+import { initMapIntegration } from './mapIntegration.js';
 import { initLinkModal, openLinkModal, openLinkModalForEdit, confirmCreateLink, deleteLink } from './link.js';
 import { openPermissionsModal, addPermission, addRolePermission } from './permissions.js';
 import { http } from '../utils/http.js';
