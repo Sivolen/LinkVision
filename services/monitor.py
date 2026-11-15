@@ -5,6 +5,7 @@ import concurrent.futures
 import re
 import errno
 import sys
+import shutil
 from itertools import count as counter
 
 # Раньше были условными (только в except ImportError). Если ping3
@@ -22,11 +23,15 @@ from cachetools import TTLCache
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.attributes import flag_modified
 from services.map_service import invalidate_map_elements_cache
+from services.fping_probe import FpingError, probe_addresses
 from services.quality_service import calculate_quality, get_device_thresholds_map
+from services.windows_icmp import WindowsIcmpError
 
 try:
     if sys.platform == "linux":
         from services.linux_icmp import ping
+    elif sys.platform == "win32":
+        from services.windows_icmp import ping
     else:
         from ping3 import ping
 
@@ -204,6 +209,8 @@ def ping_host(ip, count=1, timeout_seconds=1.0):
                 # A numeric 0.0 is a valid RTT, but float(False) is not.
                 if response_time is not None and response_time is not False:
                     latencies.append(float(response_time) * 1000.0)
+            except WindowsIcmpError:
+                raise  # The worker skips this device instead of recording false packet loss.
             except OSError as e:
                 # Windows can reject ping3's raw sendto with WSAEINVAL
                 # even for loopback while the system ping still works.
@@ -429,6 +436,10 @@ def _build_device_checks(devices, device_ips, ping_count):
     return [(dev.id, device_ips[dev.id], ping_count) for dev in devices]
 
 
+def _find_fping():
+    return shutil.which("fping") if sys.platform == "linux" else None
+
+
 def _sync_executor_size(desired_workers):
     """Создать или пересобрать пул под желаемое число воркеров.
 
@@ -463,16 +474,123 @@ def _sync_executor_size(desired_workers):
     return _executor_worker_count
 
 
+def _poll_individual_checks(all_device_checks, check_device):
+    """Bound the pending work for the individual ICMP fallback."""
+    global _executor, _executor_worker_count
+
+    def _tracked_check(dev_id, ips, pcnt):
+        """_check_device с учётом фактической параллельности.
+
+        peak_active_checks показывает, сколько проверок шло одновременно.
+        Если пик заметно ниже числа воркеров, узкое место не в размере
+        пула, а в том, что все потоки ждут одни и те же недоступные
+        хосты.
+        """
+        global _active_checks, _peak_active_checks
+        with _active_checks_lock:
+            _active_checks += 1
+            if _active_checks > _peak_active_checks:
+                _peak_active_checks = _active_checks
+        try:
+            return check_device(dev_id, ips, pcnt)
+        finally:
+            with _active_checks_lock:
+                _active_checks -= 1
+
+    results = []
+    futures = {}
+    # Snapshot the executor for this cycle. stop_monitor() may clear the
+    # global reference after its join timeout, but already-started loop
+    # code must not suddenly dereference None or recreate a pool while
+    # shutdown is in progress.
+    with _lock:
+        executor = _executor
+    if executor is None:
+        monitor_logger.error("Monitor executor disappeared before submit")
+        return results
+
+    next_check = 0
+    max_pending = max(1, _executor_worker_count)
+    while next_check < len(all_device_checks) or futures:
+        while (
+            next_check < len(all_device_checks)
+            and len(futures) < max_pending
+            and not _monitor_stop_event.is_set()
+        ):
+            dev_id, ips, pcnt = all_device_checks[next_check]
+            next_check += 1
+            try:
+                future = executor.submit(_tracked_check, dev_id, ips, pcnt)
+                futures[future] = dev_id
+            except RuntimeError as e:
+                monitor_logger.error(
+                    f"Failed to submit check for device {dev_id}: {e}"
+                )
+                if _monitor_stop_event.is_set():
+                    break
+                # Executor failure unrelated to shutdown: recreate it
+                # and continue with the remaining devices.
+                max_workers = _compute_max_workers()
+                with _lock:
+                    try:
+                        if _executor is not None:
+                            _executor.shutdown(wait=False)
+                    except Exception:
+                        pass
+                    _executor = concurrent.futures.ThreadPoolExecutor(
+                        max_workers=max_workers
+                    )
+                    _executor_worker_count = max_workers
+                    executor = _executor
+                    max_pending = max_workers
+                    monitor_logger.info(
+                        f"Executor recreated after error with {max_workers} workers"
+                    )
+
+        if not futures:
+            if (
+                next_check < len(all_device_checks)
+                and not _monitor_stop_event.is_set()
+            ):
+                continue
+            break
+
+        completed, _ = concurrent.futures.wait(
+            futures, return_when=concurrent.futures.FIRST_COMPLETED
+        )
+        for future in completed:
+            dev_id = futures.pop(future)
+            try:
+                result_id, new_status, metrics = future.result()
+                results.append((result_id, new_status, metrics))
+            except concurrent.futures.CancelledError:
+                # Stop/restart cancellation is not a failed device check.
+                continue
+            except Exception as e:
+                monitor_logger.error(f"Error checking device {dev_id}: {e}")
+                # Ошибка worker — это ошибка измерения, а не доказательство
+                # недоступности устройства. Пропускаем его в этом цикле,
+                # чтобы не записать ложный down и не создать outage event.
+                continue
+
+    return results
+
+
 def monitor_loop():
     # _peak_active_checks обязателен в этом списке: он читается и тут же
     # обнуляется ниже (блок телеметрии), причём ВНЕ try/except. Присваивание
     # без global делает имя локальным на всю функцию ещё на этапе компиляции,
     # поэтому чтение падает UnboundLocalError до присваивания — и daemon-поток
     # монитора умирает после первого же цикла, молча и без перезапуска.
-    global _monitor_stop_flag, _executor, _executor_worker_count, _peak_active_checks
+    global _peak_active_checks
     monitor_logger.debug("Monitor loop started")
     cycle_count = 0
     ping_interval = 10
+    fping_path = _find_fping()
+    if fping_path:
+        monitor_logger.info("Using fping for batch ICMP monitoring")
+    elif sys.platform == "linux":
+        monitor_logger.warning("fping is unavailable; using individual ICMP probes")
     while not _monitor_stop_event.is_set() and not _monitor_stop_flag:
         cycle_count += 1
         start_time = time.time()
@@ -531,7 +649,7 @@ def monitor_loop():
                 )
 
             # ---- ФУНКЦИЯ ПРОВЕРКИ ----
-            def _check_device(dev_id, ips, pcnt):
+            def _check_device(dev_id, ips, pcnt, samples=None):
                 if not ips:
                     return (
                         dev_id,
@@ -547,7 +665,10 @@ def monitor_loop():
 
                 address_results = []
                 for ip in ips:
-                    latencies, sent = ping_host(ip, pcnt, ping_timeout)
+                    if samples is None:
+                        latencies, sent = ping_host(ip, pcnt, ping_timeout)
+                    else:
+                        latencies, sent = samples[ip]
                     address_results.append(
                         {"ip": ip, "latencies": latencies, "sent": sent}
                     )
@@ -597,112 +718,28 @@ def monitor_loop():
                     },
                 )
 
-            # ---- ОТПРАВКА ПРОВЕРОК В ПУЛ С ОГРАНИЧЕННОЙ ОЧЕРЕДЬЮ ----
-            # Поддерживаем окно незавершённых задач размером с пул: свободные
-            # потоки сразу получают следующую проверку, но для тысяч устройств
-            # не создаются тысячи Future и не заполняется неограниченная очередь.
-            all_device_checks = _build_device_checks(devices, device_ips, ping_count)
-
-            # _compute_max_workers() может сходить в БД (промах 2-секундного
-            # TTL-кэша settings_cache) — аргумент вычисляется ДО взятия _lock
-            # внутри _sync_executor_size, чтобы не держать лок, за который
-            # также борется stop_monitor(), на время запроса к БД.
-            _sync_executor_size(_compute_max_workers())
-
-            def _tracked_check(dev_id, ips, pcnt):
-                """_check_device с учётом фактической параллельности.
-
-                peak_active_checks показывает, сколько проверок шло одновременно.
-                Если пик заметно ниже числа воркеров, узкое место не в размере
-                пула, а в том, что все потоки ждут одни и те же недоступные
-                хосты.
-                """
-                global _active_checks, _peak_active_checks
-                with _active_checks_lock:
-                    _active_checks += 1
-                    if _active_checks > _peak_active_checks:
-                        _peak_active_checks = _active_checks
-                try:
-                    return _check_device(dev_id, ips, pcnt)
-                finally:
-                    with _active_checks_lock:
-                        _active_checks -= 1
-
-            results = []
-            futures = {}
-            # Snapshot the executor for this cycle. stop_monitor() may clear the
-            # global reference after its join timeout, but already-started loop
-            # code must not suddenly dereference None or recreate a pool while
-            # shutdown is in progress.
-            with _lock:
-                executor = _executor
-            if executor is None:
-                monitor_logger.error("Monitor executor disappeared before submit")
-                break
-
-            next_check = 0
-            max_pending = max(1, _executor_worker_count)
-            while next_check < len(all_device_checks) or futures:
-                while (
-                    next_check < len(all_device_checks)
-                    and len(futures) < max_pending
-                    and not _monitor_stop_event.is_set()
-                ):
-                    dev_id, ips, pcnt = all_device_checks[next_check]
-                    next_check += 1
-                    try:
-                        future = executor.submit(_tracked_check, dev_id, ips, pcnt)
-                        futures[future] = dev_id
-                    except RuntimeError as e:
-                        monitor_logger.error(
-                            f"Failed to submit check for device {dev_id}: {e}"
-                        )
-                        if _monitor_stop_event.is_set():
-                            break
-                        # Executor failure unrelated to shutdown: recreate it
-                        # and continue with the remaining devices.
-                        max_workers = _compute_max_workers()
-                        with _lock:
-                            try:
-                                if _executor is not None:
-                                    _executor.shutdown(wait=False)
-                            except Exception:
-                                pass
-                            _executor = concurrent.futures.ThreadPoolExecutor(
-                                max_workers=max_workers
-                            )
-                            _executor_worker_count = max_workers
-                            executor = _executor
-                            max_pending = max_workers
-                            monitor_logger.info(
-                                f"Executor recreated after error with {max_workers} workers"
-                            )
-
-                if not futures:
-                    if (
-                        next_check < len(all_device_checks)
-                        and not _monitor_stop_event.is_set()
-                    ):
-                        continue
-                    break
-
-                completed, _ = concurrent.futures.wait(
-                    futures, return_when=concurrent.futures.FIRST_COMPLETED
+            if fping_path:
+                samples = probe_addresses(
+                    fping_path,
+                    (ip for ips in device_ips.values() for ip in ips),
+                    ping_count,
+                    ping_timeout,
+                    _monitor_stop_event,
                 )
-                for future in completed:
-                    dev_id = futures.pop(future)
-                    try:
-                        result_id, new_status, metrics = future.result()
-                        results.append((result_id, new_status, metrics))
-                    except concurrent.futures.CancelledError:
-                        # Stop/restart cancellation is not a failed device check.
-                        continue
-                    except Exception as e:
-                        monitor_logger.error(f"Error checking device {dev_id}: {e}")
-                        # Ошибка worker — это ошибка измерения, а не доказательство
-                        # недоступности устройства. Пропускаем его в этом цикле,
-                        # чтобы не записать ложный down и не создать outage event.
-                        continue
+                if samples is None:
+                    break
+                results = [
+                    _check_device(dev_id, ips, ping_count, samples)
+                    for dev_id, ips in device_ips.items()
+                ]
+            else:
+                _sync_executor_size(_compute_max_workers())
+                results = _poll_individual_checks(
+                    _build_device_checks(devices, device_ips, ping_count),
+                    _check_device,
+                )
+            if _monitor_stop_event.is_set():
+                break
 
             # ---- ОБРАБОТКА ИЗМЕНЕНИЙ ----
             current_time = time.time()
@@ -767,6 +804,7 @@ def monitor_loop():
                     quality = q_latency = q_jitter = q_loss = None
                     quality_changed = False
                     history_persisted = False
+                    first_quality_sample = False
                     if metrics:
                         if new_status == "down":
                             # Full outage is an availability state, not a quality
@@ -777,6 +815,7 @@ def monitor_loop():
                             q_latency = q_jitter = q_loss = None
                             history_persisted = False
                         else:
+                            first_quality_sample = dev_id not in _quality_windows
                             # Calculate before _record_quality_sample() because that
                             # function resets the window when it persists the 5-minute
                             # aggregate. This keeps live classification and persisted
@@ -815,6 +854,7 @@ def monitor_loop():
                                     quality = prev_quality_by_id.get(dev_id, "unknown")
                                     q_latency = q_jitter = q_loss = None
                         quality_changed = prev_quality_by_id.get(dev_id) != quality
+                        first_quality_sample = first_quality_sample and q_loss is not None
 
                     # Пишем в саму Device (не в историю — та копится выше
                     # независимо), только когда есть реальный повод:
@@ -830,7 +870,8 @@ def monitor_loop():
                     # раньше квалити-поля (в т.ч. quality_last_check) писались в
                     # Device на КАЖДОМ цикле для любого устройства с metrics,
                     # то есть по факту на каждом цикле для всех живых устройств.
-                    if status_changed or quality_changed or history_persisted:
+                    publish_update = status_changed or quality_changed or first_quality_sample
+                    if publish_update or history_persisted:
                         needs_db_update.add(dev_id)
                         computed[dev_id] = (
                             new_status,
@@ -839,7 +880,7 @@ def monitor_loop():
                             q_jitter,
                             q_loss,
                             status_changed,
-                            quality_changed,
+                            publish_update,
                         )
 
                 if needs_db_update:
@@ -859,7 +900,7 @@ def monitor_loop():
                             q_jitter,
                             q_loss,
                             status_changed,
-                            quality_changed,
+                            publish_update,
                         ) = values
                         device = devices_by_id.get(dev_id)
                         if not device or not device.monitoring_enabled:
@@ -891,11 +932,9 @@ def monitor_loop():
                                 f"Device {dev_id} status change -> {new_status}"
                             )
 
-                        # Emit клиентам — только при реальном изменении статуса
-                        # или категории качества (не при простом периодическом
-                        # обновлении чисел на закрытие окна без флипа), чтобы не
-                        # плодить socket-трафик там, где карте нечего перерисовывать.
-                        if status_changed or quality_changed:
+                        # Publish the first measurement after startup and any
+                        # changes in availability or quality class.
+                        if publish_update:
                             room = f"map_{device.map_id}"
                             emits_by_room.setdefault(room, []).append(
                                 {
@@ -922,6 +961,9 @@ def monitor_loop():
             if not emits_by_room:
                 monitor_logger.debug("No status changes this cycle")
 
+        except (FpingError, OSError) as e:
+            cycle_successful = False
+            monitor_logger.error(f"Monitor cycle failed: {e}")
         except Exception as e:
             cycle_successful = False
             monitor_logger.error(f"Monitor error: {e}")

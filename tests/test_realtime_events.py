@@ -190,6 +190,7 @@ class TestDeviceUpdatedEvent:
         monkeypatch.setattr(monitor, "_executor", ProbeExecutor())
         monkeypatch.setattr(monitor, "_executor_worker_count", 1)
         monkeypatch.setattr(monitor, "_compute_max_workers", lambda: 1)
+        monkeypatch.setattr(monitor, "_find_fping", lambda: None)
         monkeypatch.setattr(monitor, "_monitor_stop_event", stop)
         monkeypatch.setattr(monitor, "_monitor_stop_flag", False)
         monkeypatch.setattr(monitor, "_record_monitor_health", lambda *_: stop.set())

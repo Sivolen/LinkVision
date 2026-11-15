@@ -106,7 +106,7 @@ info "Python $PY_VERSION found."
 
 info "Installing system build dependencies..."
 "$SUDO" apt-get update
-"$SUDO" apt-get install -y git build-essential libssl-dev libffi-dev python3-dev
+"$SUDO" apt-get install -y git build-essential libssl-dev libffi-dev python3-dev fping
 
 info "Creating/updating Python virtual environment..."
 if [[ ! -x "$SCRIPT_DIR/venv/bin/python" ]]; then
