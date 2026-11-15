@@ -4,6 +4,7 @@ import threading
 import concurrent.futures
 import re
 import errno
+from itertools import count as counter
 
 # Раньше были условными (только в except ImportError). Если ping3
 # ИМПОРТИРУЕТСЯ успешно, но потом на этом хосте выясняется, что ICMP-сокет
@@ -39,13 +40,13 @@ _lock = threading.Lock()
 _active_checks = 0
 _peak_active_checks = 0
 _active_checks_lock = threading.Lock()
-# Если на этом хосте раздача ICMP-сокетов запрещена целиком (не отдельный
-# адрес, а бэкенд как таковой — EPERM/EACCES при создании сокета), ping3
-# будет молча "терять" 100% пакетов на КАЖДОМ устройстве. Это отказ
-# механизма проверки, а не сети — переключаем процесс на системный ping и
-# логируем один раз, а не проваливаем в тишину все карты сразу.
+# If the ICMP socket backend fails on this host, switch to system ping once.
 _ping3_unusable = False
 _ping3_unusable_lock = threading.Lock()
+_ping_sequences = counter()
+_ping_sequences_in_use = set()
+_ping_sequences_lock = threading.Lock()
+_WSAEINVAL = 10022
 settings_cache = TTLCache(maxsize=10, ttl=2)
 MONITOR_MAX_WORKERS_HARD_CAP = 300
 MONITOR_MAX_WORKERS_DEFAULT = 150
@@ -167,6 +168,23 @@ def stop_monitor():
         monitor_logger.info("Monitor stopped")
 
 
+def _ping_one(ip, timeout_seconds):
+    # ping3 matches raw replies by (id, seq) without checking the sender.
+    # Eventlet green threads share a native thread ID and thus the same ICMP
+    # id. Lease distinct sequences across targets, including at wraparound.
+    with _ping_sequences_lock:
+        while True:
+            seq = next(_ping_sequences) & 0xFFFF
+            if seq not in _ping_sequences_in_use:
+                _ping_sequences_in_use.add(seq)
+                break
+    try:
+        return ping(ip, timeout=timeout_seconds, seq=seq)
+    finally:
+        with _ping_sequences_lock:
+            _ping_sequences_in_use.remove(seq)
+
+
 def ping_host(ip, count=1, timeout_seconds=1.0):
     """Выполнить ICMP-проверку и вернуть RTT каждого успешного пакета в мс."""
     global _ping3_unusable
@@ -175,22 +193,19 @@ def ping_host(ip, count=1, timeout_seconds=1.0):
         # Не делаем искусственную паузу между ICMP-пакетами: при большом
         # количестве устройств это заметно увеличивает длительность цикла.
         # Последовательные RTT по-прежнему используются для расчёта jitter.
-        for i in range(count):
+        for _ in range(count):
             try:
-                # seq=i: ping3 по умолчанию шлёт seq=0 в КАЖДОМ пакете.
-                # icmp_id у ping3 берётся из PID+TID процесса — под root
-                # (сервис работает от root) через SOCK_RAW процесс видит ВСЕ
-                # ICMP-ответы хоста с этим id, и матчинг идёт по (id, seq).
-                # С константным seq=0 опоздавший ответ на пакет №1 может
-                # быть засчитан как ответ на пакет №2 → неверные RTT и,
-                # как следствие, неверный jitter.
-                response_time = ping(ip, timeout=timeout_seconds, seq=i)
+                response_time = _ping_one(ip, timeout_seconds)
                 # ping3 returns False on errors and None on timeout.
                 # A numeric 0.0 is a valid RTT, but float(False) is not.
                 if response_time is not None and response_time is not False:
                     latencies.append(float(response_time) * 1000.0)
             except OSError as e:
-                if e.errno in (errno.EPERM, errno.EACCES):
+                # Windows can reject ping3's raw sendto with WSAEINVAL
+                # even for loopback while the system ping still works.
+                if e.errno in (errno.EPERM, errno.EACCES) or (
+                    getattr(e, "winerror", None) == _WSAEINVAL
+                ):
                     # Не потеря конкретного пакета, а отказ самого механизма
                     # проверки (raw- и dgram-ICMP сокеты запрещены на этом
                     # хосте целиком). Если продолжать звать ping3 как ни в
@@ -201,7 +216,7 @@ def ping_host(ip, count=1, timeout_seconds=1.0):
                         if not _ping3_unusable:
                             _ping3_unusable = True
                             monitor_logger.error(
-                                f"ping3 unusable on this host (OSError errno={e.errno}: {e}); "
+                                f"ping3 unusable on this host ({e}); "
                                 f"falling back to system ping for ALL devices until restart"
                             )
                     return _ping_host_subprocess(ip, count, timeout_seconds)

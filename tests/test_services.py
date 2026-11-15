@@ -372,6 +372,24 @@ class TestPingHostBackend:
         assert calls[-1] == ("10.0.0.2", 2, 0.5)
 
     @pytest.mark.unit
+    def test_windows_raw_socket_rejection_uses_system_ping(self, monitor_mod, monkeypatch):
+        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monkeypatch.setattr(monitor_mod, "_ping3_unusable", False)
+
+        def rejected(*args, **kwargs):
+            error = OSError(errno.EINVAL, "Raw send rejected")
+            error.winerror = 10022
+            raise error
+
+        monkeypatch.setattr(monitor_mod, "ping", rejected)
+        monkeypatch.setattr(
+            monitor_mod, "_ping_host_subprocess", lambda ip, count, timeout: ([1.0], count)
+        )
+
+        assert monitor_mod.ping_host("127.0.0.1", 4) == ([1.0], 4)
+        assert monitor_mod._ping3_unusable
+
+    @pytest.mark.unit
     def test_network_oserror_is_packet_loss_not_backend_switch(
         self, monitor_mod, monkeypatch
     ):
@@ -487,9 +505,28 @@ class TestPingHostBackend:
             return 0.001
 
         monkeypatch.setattr(monitor_mod, "ping", fake_ping)
-        monitor_mod.ping_host("127.0.0.1", 4, 0.7)
-        assert seqs == [0, 1, 2, 3]
-        assert timeouts == [0.7] * 4, "timeout передаётся на каждый пакет"
+        monitor_mod.ping_host("192.0.2.1", 4, 0.7)
+        monitor_mod.ping_host("192.0.2.2", 4, 0.7)
+        assert len(set(seqs)) == len(seqs) == 8
+        assert timeouts == [0.7] * 8
+
+    @pytest.mark.unit
+    def test_sequence_wrap_does_not_reuse_in_flight_number(self, monitor_mod, monkeypatch):
+        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monkeypatch.setattr(monitor_mod, "_ping3_unusable", False)
+        monkeypatch.setattr(monitor_mod, "_ping_sequences", iter((0, 65536, 65537)))
+        seqs = []
+
+        def overlapping_ping(ip, timeout, seq):
+            seqs.append(seq)
+            if ip == "192.0.2.1":
+                assert monitor_mod.ping_host("192.0.2.2") == ([1.0], 1)
+            return 0.001
+
+        monkeypatch.setattr(monitor_mod, "ping", overlapping_ping)
+
+        assert monitor_mod.ping_host("192.0.2.1") == ([1.0], 1)
+        assert seqs == [0, 1]
 
 
 class TestMonitorLifecycle:
