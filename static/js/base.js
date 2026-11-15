@@ -1189,6 +1189,7 @@ let wasDisconnected = false;
             let disconnectTimes = [];
             let lastFrequentNotice = 0;
             let lastMonitorNotice = 0;
+            let lastMonitorFailureNotice = 0;
 
             // Separate notices do not share the global toast used by other actions.
             const showConnectionNotice = (title, message, { persistent = false, settings = false, kind = 'connection' } = {}) => {
@@ -1232,13 +1233,21 @@ let wasDisconnected = false;
                     if (!response.ok || response.redirected) return;
                     const health = await response.json();
                     const now = Date.now();
-                    if (health.consecutive_overruns < 3) {
-                        document.querySelectorAll('#connection-notices .connection-notice').forEach(item => { if (item.dataset.kind === 'monitor') item.remove(); });
-                        lastMonitorNotice = 0;
+                    const stale = health.age_seconds != null &&
+                        health.age_seconds >= Math.max(300, health.interval * 3, health.elapsed * 3);
+                    const failed = health.consecutive_failures >= 2 || stale;
+                    if (!failed) {
+                        document.querySelector('#connection-notices [data-kind="monitor-failure"]')?.remove();
+                        lastMonitorFailureNotice = 0;
+                    } else if (now - lastMonitorFailureNotice >= 300000) {
+                        lastMonitorFailureNotice = now;
+                        showConnectionNotice(t('connection.monitorFailureTitle'), t('connection.monitorFailureMsg'),
+                            { persistent: true, settings: true, kind: 'monitor-failure' });
                     }
-                    if (health.consecutive_overruns >= 3 && health.age_seconds != null &&
-                        health.age_seconds < Math.max(300, health.interval * 3) &&
-                        now - lastMonitorNotice >= 300000) {
+                    if (failed || health.consecutive_overruns < 3) {
+                        document.querySelector('#connection-notices [data-kind="monitor"]')?.remove();
+                        lastMonitorNotice = 0;
+                    } else if (now - lastMonitorNotice >= 300000) {
                         lastMonitorNotice = now;
                         showConnectionNotice(t('connection.monitorTitle'), t('connection.monitorMsg', {
                             elapsed: Number(health.elapsed).toFixed(1), interval: health.interval

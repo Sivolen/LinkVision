@@ -30,9 +30,20 @@ class _EchoReplyV4(ct.Structure):
     ]
 
 
+class _ReplyAddressV6(ct.Structure):
+    # IPV6_ADDRESS_EX is packed and omits sockaddr_in6's family field.
+    _pack_ = 1
+    _fields_ = [
+        ("port", ct.c_uint16),
+        ("flowinfo", ct.c_uint32),
+        ("address", ct.c_ubyte * 16),
+        ("scope_id", ct.c_uint32),
+    ]
+
+
 class _EchoReplyV6(ct.Structure):
     _fields_ = [
-        ("address", _SocketAddressV6),
+        ("address", _ReplyAddressV6),
         ("status", ct.c_uint32),
         ("rtt_ms", ct.c_uint32),
     ]

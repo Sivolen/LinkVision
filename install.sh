@@ -104,9 +104,15 @@ if [[ "$PY_MAJOR" -lt 3 || ( "$PY_MAJOR" -eq 3 && "$PY_MINOR" -lt 10 ) ]]; then
 fi
 info "Python $PY_VERSION found."
 
-info "Installing system build dependencies..."
+info "Installing system build and ICMP monitoring dependencies..."
 "$SUDO" apt-get update
-"$SUDO" apt-get install -y git build-essential libssl-dev libffi-dev python3-dev fping
+"$SUDO" apt-get install -y git build-essential libssl-dev libffi-dev python3-dev python3-venv fping iputils-ping
+
+if LC_ALL=C fping -4 -q -C 1 -p 1000 -t 1000 127.0.0.1; then
+    info "fping can run ICMP probes. LinkVision will use it for batch monitoring."
+else
+    warn "fping loopback check failed. Check ICMP access for the account that will run LinkVision."
+fi
 
 info "Creating/updating Python virtual environment..."
 if [[ ! -x "$SCRIPT_DIR/venv/bin/python" ]]; then

@@ -321,9 +321,9 @@ class TestPingHostBackend:
     def monitor_mod(self):
         from services import monitor
 
-        prev = monitor._ping3_unusable
+        prev = monitor._python_icmp_unusable
         yield monitor
-        monitor._ping3_unusable = prev
+        monitor._python_icmp_unusable = prev
 
     @pytest.mark.unit
     def test_subprocess_helpers_imported_even_with_ping3(self, monitor_mod):
@@ -347,8 +347,8 @@ class TestPingHostBackend:
 
         Иначе ping3 молча терял бы все пакеты, и вся сеть стала бы DOWN.
         """
-        monitor_mod._ping3_unusable = False
-        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monitor_mod._python_icmp_unusable = False
+        monkeypatch.setattr(monitor_mod, "PYTHON_ICMP_AVAILABLE", True)
 
         def denied(*a, **k):
             raise PermissionError(errno.EPERM, "Operation not permitted")
@@ -363,7 +363,7 @@ class TestPingHostBackend:
         monkeypatch.setattr(monitor_mod, "_ping_host_subprocess", fake_subprocess)
 
         assert monitor_mod.ping_host("10.0.0.1", 4, 1.0) == ([1.0, 2.0], 4)
-        assert monitor_mod._ping3_unusable is True
+        assert monitor_mod._python_icmp_unusable is True
         assert calls == [("10.0.0.1", 4, 1.0)]
 
         # Дальше ping3 уже не дёргаем — флаг снимает его с пути всего процесса
@@ -373,8 +373,8 @@ class TestPingHostBackend:
 
     @pytest.mark.unit
     def test_windows_raw_socket_rejection_uses_system_ping(self, monitor_mod, monkeypatch):
-        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
-        monkeypatch.setattr(monitor_mod, "_ping3_unusable", False)
+        monkeypatch.setattr(monitor_mod, "PYTHON_ICMP_AVAILABLE", True)
+        monkeypatch.setattr(monitor_mod, "_python_icmp_unusable", False)
 
         def rejected(*args, **kwargs):
             error = OSError(errno.EINVAL, "Raw send rejected")
@@ -387,27 +387,27 @@ class TestPingHostBackend:
         )
 
         assert monitor_mod.ping_host("127.0.0.1", 4) == ([1.0], 4)
-        assert monitor_mod._ping3_unusable
+        assert monitor_mod._python_icmp_unusable
 
     @pytest.mark.unit
     def test_network_oserror_is_packet_loss_not_backend_switch(
         self, monitor_mod, monkeypatch
     ):
         """Ошибка конкретного адреса не должна отключать ping3 глобально."""
-        monitor_mod._ping3_unusable = False
-        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monitor_mod._python_icmp_unusable = False
+        monkeypatch.setattr(monitor_mod, "PYTHON_ICMP_AVAILABLE", True)
 
         def unreachable(*a, **k):
             raise OSError(errno.ENETUNREACH, "Network is unreachable")
 
         monkeypatch.setattr(monitor_mod, "ping", unreachable)
         assert monitor_mod.ping_host("10.255.255.1", 4, 1.0) == ([], 4)
-        assert monitor_mod._ping3_unusable is False
+        assert monitor_mod._python_icmp_unusable is False
 
     @pytest.mark.unit
     def test_timeout_returns_none_counts_as_loss(self, monitor_mod, monkeypatch):
         """ping3 при таймауте возвращает None (не бросает) — это потеря пакета."""
-        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monkeypatch.setattr(monitor_mod, "PYTHON_ICMP_AVAILABLE", True)
         monkeypatch.setattr(monitor_mod, "ping", lambda *a, **k: None)
         assert monitor_mod.ping_host("192.0.2.1", 4, 1.0) == ([], 4)
 
@@ -415,7 +415,7 @@ class TestPingHostBackend:
     def test_ping_error_is_not_a_successful_zero_latency_reply(
         self, monitor_mod, monkeypatch
     ):
-        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monkeypatch.setattr(monitor_mod, "PYTHON_ICMP_AVAILABLE", True)
         replies = iter([False, None, 0.0, 0.0125])
         monkeypatch.setattr(monitor_mod, "ping", lambda *a, **k: next(replies))
         assert monitor_mod.ping_host("192.0.2.1", 2) == ([], 2)
@@ -423,7 +423,7 @@ class TestPingHostBackend:
 
     @pytest.mark.unit
     def test_latency_converted_to_milliseconds(self, monitor_mod, monkeypatch):
-        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monkeypatch.setattr(monitor_mod, "PYTHON_ICMP_AVAILABLE", True)
         monkeypatch.setattr(monitor_mod, "ping", lambda *a, **k: 0.0125)
         assert monitor_mod.ping_host("127.0.0.1", 3, 1.0) == ([12.5] * 3, 3)
 
@@ -454,14 +454,14 @@ class TestPingHostBackend:
     ):
         """При гонке воркеров сообщение пишется один раз, а не по разу на поток.
 
-        Пул мониторинга — это ~150 потоков; без _ping3_unusable_lock все они,
+        Пул мониторинга — это ~150 потоков; без _python_icmp_unusable_lock все они,
         поймавшие EPERM в одном цикле, написали бы в лог 150 одинаковых
         ошибок и залили его на каждом цикле.
         """
         import threading as th
 
-        monitor_mod._ping3_unusable = False
-        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monitor_mod._python_icmp_unusable = False
+        monkeypatch.setattr(monitor_mod, "PYTHON_ICMP_AVAILABLE", True)
 
         barrier = th.Barrier(8)
 
@@ -495,7 +495,7 @@ class TestPingHostBackend:
     @pytest.mark.unit
     def test_seq_unique_per_packet(self, monitor_mod, monkeypatch):
         """Каждому пакету свой seq — иначе через SOCK_RAW считается чужой RTT."""
-        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        monkeypatch.setattr(monitor_mod, "PYTHON_ICMP_AVAILABLE", True)
         seqs = []
         timeouts = []
 
@@ -512,8 +512,8 @@ class TestPingHostBackend:
 
     @pytest.mark.unit
     def test_sequence_wrap_does_not_reuse_in_flight_number(self, monitor_mod, monkeypatch):
-        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
-        monkeypatch.setattr(monitor_mod, "_ping3_unusable", False)
+        monkeypatch.setattr(monitor_mod, "PYTHON_ICMP_AVAILABLE", True)
+        monkeypatch.setattr(monitor_mod, "_python_icmp_unusable", False)
         monkeypatch.setattr(monitor_mod, "_ping_sequences", iter((0, 65536, 65537)))
         seqs = []
 

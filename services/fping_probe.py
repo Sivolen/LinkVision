@@ -6,6 +6,7 @@ import os
 import subprocess
 import tempfile
 import time
+from dataclasses import dataclass, field
 
 SEND_INTERVAL_MS = 10
 MAX_BATCH_SIZE = 256
@@ -13,6 +14,14 @@ MAX_BATCH_SIZE = 256
 
 class FpingError(RuntimeError):
     """The probe did not produce a complete measurement."""
+
+
+@dataclass
+class BatchMeasurements:
+    samples: dict = field(default_factory=dict)
+    errors: list[str] = field(default_factory=list)
+    target_count: int = 0
+    send_seconds: float = 0.0
 
 
 def _parse_results(output, targets, count):
@@ -96,30 +105,42 @@ def _probe_batch(executable, family, targets, count, timeout, stop_event):
 
 
 def probe_addresses(executable, addresses, count, timeout, stop_event):
-    """Return per-address (successful RTTs in ms, sent count), or None on stop."""
+    """Collect valid batches independently, or return None on stop."""
+    measurements = BatchMeasurements()
     families = {4: {}, 6: {}}
     aliases = {}
     for address in addresses:
-        ip = ipaddress.ip_address(address)
+        try:
+            ip = ipaddress.ip_address(address)
+        except ValueError:
+            measurements.errors.append(f"Invalid ICMP target: {address!r}")
+            continue
         canonical = str(ip)
         families[ip.version][canonical] = None
         aliases[address] = canonical
 
+    measurements.target_count = sum(map(len, families.values()))
+    measurements.send_seconds = measurements.target_count * count * SEND_INTERVAL_MS / 1000
     results = {}
     for family, unique in families.items():
         targets = list(unique)
         for start in range(0, len(targets), MAX_BATCH_SIZE):
             if stop_event.is_set():
                 return None
-            batch = _probe_batch(
-                executable,
-                family,
-                targets[start : start + MAX_BATCH_SIZE],
-                count,
-                timeout,
-                stop_event,
-            )
+            chunk = targets[start : start + MAX_BATCH_SIZE]
+            try:
+                batch = _probe_batch(executable, family, chunk, count, timeout, stop_event)
+            except (FpingError, OSError) as exc:
+                measurements.errors.append(f"IPv{family} batch of {len(chunk)} targets: {exc}")
+                continue
             if batch is None:
                 return None
             results.update(batch)
-    return {address: results[canonical] for address, canonical in aliases.items()}
+    if stop_event.is_set():
+        return None
+    measurements.samples = {
+        address: results[canonical]
+        for address, canonical in aliases.items()
+        if canonical in results
+    }
+    return measurements

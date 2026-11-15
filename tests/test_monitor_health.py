@@ -1,6 +1,19 @@
 from services import monitor
 
 
+def test_monitor_health_keeps_last_success_on_failure(monkeypatch):
+    monkeypatch.setattr(monitor, "_monitor_health", monitor._MONITOR_HEALTH_DEFAULTS.copy())
+    monitor._record_monitor_health(7, 30)
+    last_success = monitor.get_monitor_health()["last_success_at"]
+    monitor._record_monitor_health(7, 30, successful=False)
+    monitor._record_monitor_health(7, 30, successful=False)
+    health = monitor.get_monitor_health()
+    assert health["last_success_at"] == last_success
+    assert health["consecutive_failures"] == 2
+    monitor._record_monitor_health(8, 30)
+    assert monitor.get_monitor_health()["consecutive_failures"] == 0
+
+
 def test_monitor_overload_requires_consecutive_cycles():
     old = monitor.get_monitor_health()
     old.pop("age_seconds", None)

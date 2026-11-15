@@ -10,7 +10,7 @@ from itertools import count as counter
 
 # Раньше были условными (только в except ImportError). Если ping3
 # ИМПОРТИРУЕТСЯ успешно, но потом на этом хосте выясняется, что ICMP-сокет
-# запрещён целиком (EPERM/EACCES — см. _ping3_unusable ниже), нужен переход
+# запрещён целиком (EPERM/EACCES — см. _python_icmp_unusable ниже), нужен переход
 # на системный ping прямо в рантайме — а platform/subprocess в этом случае
 # никогда не импортировались, и переход падал NameError. Импорт теперь
 # безусловный, стоит копейки при старте процесса.
@@ -23,7 +23,7 @@ from cachetools import TTLCache
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.attributes import flag_modified
 from services.map_service import invalidate_map_elements_cache
-from services.fping_probe import FpingError, probe_addresses
+from services.fping_probe import probe_addresses
 from services.quality_service import calculate_quality, get_device_thresholds_map
 from services.windows_icmp import WindowsIcmpError
 
@@ -35,9 +35,9 @@ try:
     else:
         from ping3 import ping
 
-    PING3_AVAILABLE = True
+    PYTHON_ICMP_AVAILABLE = True
 except ImportError:
-    PING3_AVAILABLE = False
+    PYTHON_ICMP_AVAILABLE = False
 
 app_instance = None
 _monitor_thread = None
@@ -50,8 +50,8 @@ _active_checks = 0
 _peak_active_checks = 0
 _active_checks_lock = threading.Lock()
 # If the ICMP socket backend fails on this host, switch to system ping once.
-_ping3_unusable = False
-_ping3_unusable_lock = threading.Lock()
+_python_icmp_unusable = False
+_python_icmp_unusable_lock = threading.Lock()
 _ping_sequences = counter()
 _ping_sequences_in_use = set()
 _ping_sequences_lock = threading.Lock()
@@ -66,12 +66,16 @@ QUALITY_RETENTION_DAYS = 7
 _last_history_cleanup = 0
 QUALITY_LIVE_MIN_SAMPLES = 8
 _monitor_health_lock = threading.Lock()
-_monitor_health = {
+_MONITOR_HEALTH_DEFAULTS = {
     "consecutive_overruns": 0,
+    "consecutive_failures": 0,
+    "last_success_at": None,
     "elapsed": None,
     "interval": None,
     "updated_at": None,
+    "probe": None,
 }
+_monitor_health = _MONITOR_HEALTH_DEFAULTS.copy()
 
 
 def get_monitor_health():
@@ -84,7 +88,8 @@ def get_monitor_health():
     return result
 
 
-def _record_monitor_health(elapsed, interval, successful=True):
+def _record_monitor_health(elapsed, interval, successful=True, probe=None):
+    now = time.time()
     with _monitor_health_lock:
         previous = (
             _monitor_health["consecutive_overruns"]
@@ -94,9 +99,12 @@ def _record_monitor_health(elapsed, interval, successful=True):
         _monitor_health["consecutive_overruns"] = (
             previous + 1 if successful and interval > 0 and elapsed > interval else 0
         )
-        _monitor_health.update(
-            elapsed=elapsed, interval=interval, updated_at=time.time()
-        )
+        if successful:
+            _monitor_health["last_success_at"] = now
+            _monitor_health["consecutive_failures"] = 0
+        else:
+            _monitor_health["consecutive_failures"] += 1
+        _monitor_health.update(elapsed=elapsed, interval=interval, updated_at=now, probe=probe)
 
 
 def init_monitor(app):
@@ -125,10 +133,8 @@ def init_monitor(app):
         _monitor_stop_event.clear()
         _monitor_stop_flag = False
         with _monitor_health_lock:
-            _monitor_health.update(
-                consecutive_overruns=0, elapsed=None, interval=None, updated_at=None
-            )
-        monitor_logger.info(f"Monitor initialized with {max_workers} workers")
+            _monitor_health.update(_MONITOR_HEALTH_DEFAULTS)
+        monitor_logger.info("Monitor initialized")
 
 
 def start_monitor():
@@ -196,8 +202,8 @@ def _ping_one(ip, timeout_seconds):
 
 def ping_host(ip, count=1, timeout_seconds=1.0):
     """Выполнить ICMP-проверку и вернуть RTT каждого успешного пакета в мс."""
-    global _ping3_unusable
-    if PING3_AVAILABLE and not _ping3_unusable:
+    global _python_icmp_unusable
+    if PYTHON_ICMP_AVAILABLE and not _python_icmp_unusable:
         latencies = []
         # Не делаем искусственную паузу между ICMP-пакетами: при большом
         # количестве устройств это заметно увеличивает длительность цикла.
@@ -223,11 +229,11 @@ def ping_host(ip, count=1, timeout_seconds=1.0):
                     # чём не бывало, ВСЕ устройства на ВСЕХ картах тихо
                     # станут 100%-down. Переключаем процесс на системный
                     # ping один раз и громко логируем это.
-                    with _ping3_unusable_lock:
-                        if not _ping3_unusable:
-                            _ping3_unusable = True
+                    with _python_icmp_unusable_lock:
+                        if not _python_icmp_unusable:
+                            _python_icmp_unusable = True
                             monitor_logger.error(
-                                f"ping3 unusable on this host ({e}); "
+                                f"Python ICMP probe unusable on this host ({e}); "
                                 f"falling back to system ping for ALL devices until restart"
                             )
                     return _ping_host_subprocess(ip, count, timeout_seconds)
@@ -593,8 +599,9 @@ def monitor_loop():
         monitor_logger.warning("fping is unavailable; using individual ICMP probes")
     while not _monitor_stop_event.is_set() and not _monitor_stop_flag:
         cycle_count += 1
-        start_time = time.time()
+        start_time = time.monotonic()
         cycle_successful = True
+        probe_stats = None
         monitor_logger.debug(f"Monitor cycle {cycle_count} starting")
         try:
             if app_instance is None or _executor is None:
@@ -613,6 +620,8 @@ def monitor_loop():
                     f"Found {len(devices)} devices with monitoring enabled"
                 )
                 if not devices:
+                    with _monitor_health_lock:
+                        _monitor_health.update(_MONITOR_HEALTH_DEFAULTS)
                     _monitor_stop_event.wait(5)
                     continue
 
@@ -719,18 +728,34 @@ def monitor_loop():
                 )
 
             if fping_path:
-                samples = probe_addresses(
+                probe_started = time.monotonic()
+                measurements = probe_addresses(
                     fping_path,
                     (ip for ips in device_ips.values() for ip in ips),
                     ping_count,
                     ping_timeout,
                     _monitor_stop_event,
                 )
-                if samples is None:
+                if measurements is None:
                     break
+                samples = measurements.samples
+                probe_stats = {
+                    "backend": "fping",
+                    "targets": measurements.target_count,
+                    "packets": ping_count,
+                    "send_seconds": measurements.send_seconds,
+                    "elapsed": round(time.monotonic() - probe_started, 2),
+                }
+                if measurements.errors:
+                    cycle_successful = False
+                    examples = "; ".join(measurements.errors[:3])
+                    monitor_logger.error(
+                        f"fping reported {len(measurements.errors)} errors: {examples}"
+                    )
                 results = [
                     _check_device(dev_id, ips, ping_count, samples)
                     for dev_id, ips in device_ips.items()
+                    if all(ip in samples for ip in ips)
                 ]
             else:
                 _sync_executor_size(_compute_max_workers())
@@ -738,6 +763,7 @@ def monitor_loop():
                     _build_device_checks(devices, device_ips, ping_count),
                     _check_device,
                 )
+                cycle_successful = len(results) == len(device_ips)
             if _monitor_stop_event.is_set():
                 break
 
@@ -961,7 +987,7 @@ def monitor_loop():
             if not emits_by_room:
                 monitor_logger.debug("No status changes this cycle")
 
-        except (FpingError, OSError) as e:
+        except OSError as e:
             cycle_successful = False
             monitor_logger.error(f"Monitor cycle failed: {e}")
         except Exception as e:
@@ -969,8 +995,8 @@ def monitor_loop():
             monitor_logger.error(f"Monitor error: {e}")
             monitor_logger.exception("Monitor error")
 
-        elapsed = time.time() - start_time
-        _record_monitor_health(elapsed, ping_interval, cycle_successful)
+        elapsed = time.monotonic() - start_time
+        _record_monitor_health(elapsed, ping_interval, cycle_successful, probe_stats)
         interval_ratio = (elapsed / ping_interval * 100.0) if ping_interval > 0 else 0.0
         with _active_checks_lock:
             peak_active_checks = _peak_active_checks
@@ -978,32 +1004,43 @@ def monitor_loop():
             _peak_active_checks = 0
 
         monitored_count = len(devices) if "devices" in locals() and devices else 0
-        workers_now = _executor_worker_count or _compute_max_workers()
+        if fping_path:
+            if probe_stats:
+                detail = (
+                    f"backend=fping, targets={probe_stats['targets']}, "
+                    f"packets_per_target={probe_stats['packets']}, "
+                    f"probe_seconds={probe_stats['elapsed']:.2f}"
+                )
+            else:
+                detail = "backend=fping"
+        else:
+            detail = (
+                f"backend=individual, workers={_executor_worker_count}, "
+                f"peak_active_checks={peak_active_checks}, active_now={active_checks_now}"
+            )
         if interval_ratio > 100.0:
             monitor_logger.warning(
                 f"Monitor cycle {cycle_count} exceeded interval: "
                 f"{elapsed:.2f}s > {ping_interval}s ({interval_ratio:.0f}%); "
-                f"devices={monitored_count}, workers={workers_now}, "
-                f"peak_active_checks={peak_active_checks}, active_now={active_checks_now}"
+                f"devices={monitored_count}, {detail}"
             )
         elif interval_ratio >= 80.0:
             monitor_logger.warning(
                 f"Monitor cycle {cycle_count} is near interval limit: "
                 f"{elapsed:.2f}s / {ping_interval}s ({interval_ratio:.0f}%); "
-                f"devices={monitored_count}, workers={workers_now}, "
-                f"peak_active_checks={peak_active_checks}"
+                f"devices={monitored_count}, {detail}"
             )
         elif interval_ratio >= 50.0:
             monitor_logger.warning(
                 f"Monitor cycle {cycle_count} took {elapsed:.2f}s / "
                 f"{ping_interval}s ({interval_ratio:.0f}%); devices={monitored_count}, "
-                f"workers={workers_now}, peak_active_checks={peak_active_checks}"
+                f"{detail}"
             )
         else:
             monitor_logger.debug(
                 f"Cycle completed in {elapsed:.2f}s / {ping_interval}s "
                 f"({interval_ratio:.0f}%), devices={monitored_count}, "
-                f"workers={workers_now}, peak_active_checks={peak_active_checks}, "
+                f"{detail}, "
                 f"sleeping {max(0, ping_interval - elapsed):.2f}s"
             )
 

@@ -28,6 +28,8 @@
     "frequentTitle": "Frequent connection interruptions",
     "frequentMsg": "The connection was interrupted {count} times in the last 5 minutes. Check the network and server.",
     "monitorTitle": "Device checks are delayed",
+    "monitorFailureTitle": "Monitoring data is incomplete",
+    "monitorFailureMsg": "The map may show last known statuses. Check the service logs and monitoring settings.",
     "monitorMsg": "The monitoring cycle takes {elapsed} s with an interval of {interval} s. Check monitoring settings.",
     "monitorSettings": "Open monitoring settings",
     "dismiss": "Close",

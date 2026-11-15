@@ -16,6 +16,9 @@
                 <label class="form-label">{{ _('Интервал опроса (секунды)') }}</label>
                 <input type="number" name="ping_interval" class="form-control" value="{{ interval }}" min="5" max="300">
                 <small class="text-muted">{{ _('Как часто проверять доступность устройств') }}</small>
+                {% if probe and probe.targets %}
+                <small class="text-muted d-block">{{ _('Последний опрос через fping: %(targets)s адресов, %(packets)s пакетов на адрес, %(elapsed)s с. Оценка времени отправки: %(sending)s с, без ожидания ответов. Если опрос не укладывается в интервал, увеличьте его или уменьшите число пакетов.', targets=probe.targets, packets=probe.packets, elapsed=probe.elapsed, sending=probe.send_seconds) }}</small>
+                {% endif %}
             </div>
             <div class="settings-field">
                 <label class="form-label">{{ _('Timeout ICMP (секунды)') }}</label>
@@ -25,7 +28,7 @@
             <div class="settings-field">
                 <label class="form-label">{{ _('Потоки мониторинга') }}</label>
                 <input type="number" name="monitor_max_workers" class="form-control" value="{{ monitor_max_workers }}" min="10" max="300">
-                <small class="text-muted">{{ _('Количество параллельных проверок устройств. Применяется со следующего цикла. По умолчанию — 150, максимум — 300.') }}</small>
+                <small class="text-muted">{{ _('Количество параллельных проверок при поадресном опросе. На fping не влияет. По умолчанию — 150, максимум — 300.') }}</small>
             </div>
             <div class="settings-field">
                 <label class="form-label">{{ _('Хранить историю мониторинга (дни)') }}</label>

@@ -1944,3 +1944,8 @@ msgstr "Error renaming map"
 #~ msgid "Удалить тип?"
 #~ msgstr "Delete type?"
 
+msgid "Последний опрос через fping: %(targets)s адресов, %(packets)s пакетов на адрес, %(elapsed)s с. Оценка времени отправки: %(sending)s с, без ожидания ответов. Если опрос не укладывается в интервал, увеличьте его или уменьшите число пакетов."
+msgstr "Last fping run: %(targets)s addresses, %(packets)s packets per address, %(elapsed)s s. Estimated send time: %(sending)s s, excluding reply wait time. If polling exceeds the interval, increase it or reduce the packet count."
+
+msgid "Количество параллельных проверок при поадресном опросе. На fping не влияет. По умолчанию — 150, максимум — 300."
+msgstr "Concurrent checks when polling devices individually. Does not affect fping. Default: 150, maximum: 300."

@@ -25,6 +25,7 @@ from services import (
     quality_service,
 )
 from services.db.schema_service import validate_sqlite_database
+from services.monitor import get_monitor_health
 from services.security_service import rate_limiter
 from services.device_type_service import invalidate_types_cache
 from utils.logger import admin_logger
@@ -53,8 +54,6 @@ def check_admin():
 
 @admin_bp.route("/monitor-health")
 def monitor_health():
-    from services.monitor import get_monitor_health
-
     health = get_monitor_health()
     current_interval = settings_service.get_monitor_settings()[1]
     if health["interval"] != current_interval:
@@ -259,6 +258,7 @@ def monitoring_settings():
         timeout=values[2],
         history_retention_days=values[3],
         monitor_max_workers=values[4],
+        probe=get_monitor_health()["probe"],
     )
 
 
