@@ -4,6 +4,7 @@ import threading
 import concurrent.futures
 import re
 import errno
+import sys
 from itertools import count as counter
 
 # Раньше были условными (только в except ImportError). Если ping3
@@ -24,7 +25,10 @@ from services.map_service import invalidate_map_elements_cache
 from services.quality_service import calculate_quality, get_device_thresholds_map
 
 try:
-    from ping3 import ping
+    if sys.platform == "linux":
+        from services.linux_icmp import ping
+    else:
+        from ping3 import ping
 
     PING3_AVAILABLE = True
 except ImportError:
