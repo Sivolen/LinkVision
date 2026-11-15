@@ -394,6 +394,16 @@ class TestPingHostBackend:
         assert monitor_mod.ping_host("192.0.2.1", 4, 1.0) == ([], 4)
 
     @pytest.mark.unit
+    def test_ping_error_is_not_a_successful_zero_latency_reply(
+        self, monitor_mod, monkeypatch
+    ):
+        monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
+        replies = iter([False, None, 0.0, 0.0125])
+        monkeypatch.setattr(monitor_mod, "ping", lambda *a, **k: next(replies))
+        assert monitor_mod.ping_host("192.0.2.1", 2) == ([], 2)
+        assert monitor_mod.ping_host("127.0.0.1", 2) == ([0.0, 12.5], 2)
+
+    @pytest.mark.unit
     def test_latency_converted_to_milliseconds(self, monitor_mod, monkeypatch):
         monkeypatch.setattr(monitor_mod, "PING3_AVAILABLE", True)
         monkeypatch.setattr(monitor_mod, "ping", lambda *a, **k: 0.0125)

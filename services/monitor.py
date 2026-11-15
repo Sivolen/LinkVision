@@ -185,7 +185,9 @@ def ping_host(ip, count=1, timeout_seconds=1.0):
                 # быть засчитан как ответ на пакет №2 → неверные RTT и,
                 # как следствие, неверный jitter.
                 response_time = ping(ip, timeout=timeout_seconds, seq=i)
-                if response_time is not None:
+                # ping3 returns False on errors and None on timeout.
+                # A numeric 0.0 is a valid RTT, but float(False) is not.
+                if response_time is not None and response_time is not False:
                     latencies.append(float(response_time) * 1000.0)
             except OSError as e:
                 if e.errno in (errno.EPERM, errno.EACCES):
