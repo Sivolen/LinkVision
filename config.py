@@ -6,10 +6,15 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
 _BUILD_ID_FILES = (
+    "static/js/bootstrap.bundle.min.js",
+    "static/js/cytoscape.min.js",
+    "static/js/socket.io.js",
     "static/js/dist/common.min.js",
     "static/js/dist/base.min.js",
     "static/js/dist/map.min.js",
     "static/js/dist/modal.min.js",
+    "static/css/bootstrap.min.css",
+    "static/css/all.min.css",
     "static/css/style.css",
 )
 

@@ -49,10 +49,13 @@ def test_run_tests_does_not_reference_missing_test_modules():
 
 def test_realtime_status_batch_applies_quality_even_when_status_is_unchanged():
     source = (ROOT / "static/js/src/map/index.js").read_text(encoding="utf-8")
-    assert "quality_status: item.quality_status || 'unknown'" in source
-    assert "quality_latency_ms: item.quality_latency_ms ?? null" in source
-    assert "quality_jitter_ms: item.quality_jitter_ms ?? null" in source
-    assert "quality_loss_percent: item.quality_loss_percent ?? null" in source
+    batch = source.split("listenSocket('device_status_batch'", 1)[1]
+    before_status_change = batch.split(
+        "if (node.data('status') !== item.status || oldAck !== nextAck)", 1
+    )[0]
+    assert "quality_status: item.quality_status || 'unknown'" in before_status_change
+    # The JS regression test covers the actual metric values and update events.
+    assert "updateQualityMeasurements(node, item)" in before_status_change
 
 
 def test_monitor_uses_rolling_quality_window_before_live_classification():
