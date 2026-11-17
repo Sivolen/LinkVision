@@ -3,6 +3,7 @@ import os
 from datetime import timedelta
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
 
 
 _BUILD_ID_FILES = (

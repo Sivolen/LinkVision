@@ -9,17 +9,20 @@ import sys
 import shutil
 from datetime import datetime
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import make_url
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from config import Config
+from config import Config, INSTANCE_DIR
 
 
-def _db_path():
-    uri = Config.SQLALCHEMY_DATABASE_URI
-    if not uri.startswith("sqlite:///"):
-        raise RuntimeError("Этот скрипт поддерживает только SQLite DATABASE_URL.")
-    path = uri.replace("sqlite:///", "", 1)
-    return path if os.path.isabs(path) else os.path.join(Config.BASE_DIR, path)
+def _sqlite_url():
+    url = make_url(Config.SQLALCHEMY_DATABASE_URI)
+    if url.get_backend_name() != "sqlite" or not url.database or url.database == ":memory:":
+        raise RuntimeError("Миграции требуют файловую SQLite-базу.")
+    if os.path.isabs(url.database):
+        return url
+    os.makedirs(INSTANCE_DIR, exist_ok=True)
+    return url.set(database=os.path.join(INSTANCE_DIR, url.database))
 
 
 def _table_names(conn):
@@ -442,9 +445,10 @@ def _sqlite_has_application_tables(engine):
 
 
 def run_migration():
-    db_path = _db_path()
+    url = _sqlite_url()
+    db_path = url.database
     database_exists = os.path.exists(db_path)
-    engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+    engine = create_engine(url)
 
     if not database_exists or not _sqlite_has_application_tables(engine):
         _create_empty_schema(engine)
@@ -579,7 +583,7 @@ def run_migration():
 
 def run_full_migration():
     """Run SQLite migrations, validate the resulting schema, and update its marker."""
-    db_path = _db_path()
+    db_path = _sqlite_url().database
     run_migration()
 
     from models import db
@@ -597,7 +601,7 @@ def run_full_migration():
 
 def add_indexes():
     """Совместимый режим: добавить индексы без повторного применения миграций."""
-    engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+    engine = create_engine(_sqlite_url())
     with engine.begin() as conn:
         _migrate_indexes(conn)
     print("Index migration completed successfully!")

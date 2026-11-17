@@ -123,6 +123,8 @@ def init_monitor(app):
     app_instance = app
     max_workers = _compute_max_workers()
     with _lock:
+        if _monitor_thread and _monitor_thread.is_alive():
+            raise RuntimeError("Monitor is running; stop it before reinitializing")
         if _executor is not None:
             try:
                 _executor.shutdown(wait=False)
@@ -167,8 +169,11 @@ def stop_monitor():
         monitor_thread.join(timeout=5)
 
     with _lock:
+        if _monitor_thread is not monitor_thread:
+            return
+        still_running = bool(monitor_thread and monitor_thread.is_alive())
         if _executor:
-            if monitor_thread and monitor_thread.is_alive():
+            if still_running:
                 # A check may still be blocked in an external ping command. Do
                 # not block application shutdown/restart indefinitely on it.
                 _executor.shutdown(wait=False, cancel_futures=True)
@@ -179,8 +184,9 @@ def stop_monitor():
                 _executor.shutdown(wait=True)
             _executor = None
             _executor_worker_count = 0
-        _monitor_thread = None
-        monitor_logger.info("Monitor stopped")
+        if not still_running:
+            _monitor_thread = None
+            monitor_logger.info("Monitor stopped")
 
 
 def _ping_one(ip, timeout_seconds):
@@ -461,6 +467,8 @@ def _sync_executor_size(desired_workers):
     """
     global _executor, _executor_worker_count
     with _lock:
+        if _monitor_stop_event.is_set():
+            return _executor_worker_count
         if _executor is None:
             _executor = concurrent.futures.ThreadPoolExecutor(
                 max_workers=desired_workers
@@ -588,7 +596,7 @@ def monitor_loop():
     # без global делает имя локальным на всю функцию ещё на этапе компиляции,
     # поэтому чтение падает UnboundLocalError до присваивания — и daemon-поток
     # монитора умирает после первого же цикла, молча и без перезапуска.
-    global _peak_active_checks
+    global _peak_active_checks, _last_history_cleanup
     monitor_logger.debug("Monitor loop started")
     cycle_count = 0
     ping_interval = 10
@@ -611,6 +619,27 @@ def monitor_loop():
 
             # ---- ПОДГОТОВКА ДАННЫХ ДО ПОТОКОВ (ОДИН РАЗ ЗА ЦИКЛ) ----
             with app_instance.app_context():
+                current_time = time.time()
+                if current_time - _last_history_cleanup >= 3600:
+                    configured_retention = get_setting(
+                        "history_retention_days", QUALITY_RETENTION_DAYS
+                    )
+                    retention_days = max(1, min(configured_retention, 3650))
+                    cutoff = datetime.datetime.now() - datetime.timedelta(
+                        days=retention_days
+                    )
+                    db.session.query(DeviceHistory).filter(
+                        DeviceHistory.timestamp < cutoff
+                    ).delete(synchronize_session=False)
+                    db.session.query(DeviceQualityHistory).filter(
+                        DeviceQualityHistory.timestamp < cutoff
+                    ).delete(synchronize_session=False)
+                    db.session.commit()
+                    _last_history_cleanup = current_time
+                    monitor_logger.info(
+                        f"History cleanup completed: retention={retention_days} days"
+                    )
+
                 devices = (
                     Device.query.options(joinedload(Device.ips))
                     .filter_by(monitoring_enabled=True)
@@ -653,9 +682,6 @@ def monitor_loop():
                 ping_count = get_setting("ping_count", 4)
                 ping_interval = get_setting("ping_interval", 10)
                 ping_timeout = get_float_setting("ping_timeout", 1.0)
-                history_retention_days = get_setting(
-                    "history_retention_days", QUALITY_RETENTION_DAYS
-                )
 
             # ---- ФУНКЦИЯ ПРОВЕРКИ ----
             def _check_device(dev_id, ips, pcnt, samples=None):
@@ -773,23 +799,6 @@ def monitor_loop():
             emits_by_room = {}
 
             with _lock, app_instance.app_context():
-                global _last_history_cleanup
-                if current_time - _last_history_cleanup >= 3600:
-                    retention_days = max(1, min(int(history_retention_days), 3650))
-                    cutoff = datetime.datetime.now() - datetime.timedelta(
-                        days=retention_days
-                    )
-                    db.session.query(DeviceHistory).filter(
-                        DeviceHistory.timestamp < cutoff
-                    ).delete(synchronize_session=False)
-                    db.session.query(DeviceQualityHistory).filter(
-                        DeviceQualityHistory.timestamp < cutoff
-                    ).delete(synchronize_session=False)
-                    _last_history_cleanup = current_time
-                    monitor_logger.info(
-                        f"History cleanup completed: retention={retention_days} days"
-                    )
-
                 # Сначала считаем, кому вообще нужна запись в БД — БЕЗ единого
                 # похода в БД, сравнивая с prev_status_by_id/prev_quality_by_id,
                 # снятыми в начале ЭТОГО ЖЕ цикла. Раньше вместо этого

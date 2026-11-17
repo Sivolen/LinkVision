@@ -186,3 +186,44 @@ assert len(result.samples["127.0.0.1"][0]) == 2, result.samples
         check=True,
         timeout=15,
     )
+
+
+def test_stable_monitor_cycle_commits_history_cleanup(app, map_ids, monkeypatch):
+    from datetime import datetime, timedelta
+
+    from models import Device, DeviceHistory, db
+
+    with app.app_context():
+        for device in Device.query.all():
+            device.status = "down"
+            device.quality_status = "unknown"
+            device.monitoring_enabled = True
+        device = Device.query.filter_by(map_id=map_ids["Own Map"]).first()
+        db.session.add(
+            DeviceHistory(
+                device_id=device.id,
+                old_status="up",
+                new_status="down",
+                timestamp=datetime.now() - timedelta(days=30),
+            )
+        )
+        db.session.commit()
+
+    stop = Event()
+    monkeypatch.setattr(monitor, "_find_fping", lambda: "fping")
+    monkeypatch.setattr(
+        monitor, "probe_addresses", lambda *args: fping_probe.BatchMeasurements()
+    )
+    monkeypatch.setattr(monitor, "app_instance", app)
+    monkeypatch.setattr(monitor, "_executor", object())
+    monkeypatch.setattr(monitor, "_monitor_stop_event", stop)
+    monkeypatch.setattr(monitor, "_monitor_stop_flag", False)
+    monkeypatch.setattr(monitor, "_last_history_cleanup", 0)
+    monkeypatch.setattr(monitor, "_quality_windows", {})
+    monkeypatch.setattr(monitor, "_quality_last_persist", {})
+    monkeypatch.setattr(monitor, "_record_monitor_health", lambda *args: stop.set())
+
+    monitor.monitor_loop()
+
+    with app.app_context():
+        assert DeviceHistory.query.count() == 0

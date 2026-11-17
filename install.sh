@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # LinkVision — installer for Ubuntu/Debian
-# Usage: sudo ./install.sh
+# Usage: sudo bash install.sh
 # Optional environment variables:
 #   LINKVISION_INSTALL_SERVICE=true|false
 #   LINKVISION_PORT=8005
-#   LINKVISION_HTTPS=true|false
-#   LINKVISION_BEHIND_PROXY=true|false
+#   LINKVISION_HTTPS=True|False
+#   LINKVISION_BEHIND_PROXY=True|False
 #   LINKVISION_PYTHON=/usr/bin/python3
 #   http/https proxy: use -p http://proxy:port
 
@@ -27,8 +27,8 @@ Usage: $0 [-p http://proxy:port]
 Environment variables:
   LINKVISION_INSTALL_SERVICE=true|false  Install/start systemd service (root only)
   LINKVISION_PORT=8005                   Production HTTP port
-  LINKVISION_HTTPS=true|false            Set Secure cookies for HTTPS
-  LINKVISION_BEHIND_PROXY=true|false     Trust X-Forwarded-* from reverse proxy
+  LINKVISION_HTTPS=True|False            Set Secure cookies for HTTPS
+  LINKVISION_BEHIND_PROXY=True|False     Trust X-Forwarded-* from reverse proxy
   LINKVISION_PYTHON=/path/to/python3     Python interpreter (default: python3)
 USAGE
 }
@@ -56,13 +56,13 @@ if [[ ! -f "$SCRIPT_DIR/requirements.txt" || ! -f "$SCRIPT_DIR/app.py" ]]; then
 fi
 
 if [[ $EUID -eq 0 ]]; then
-    SUDO=""
+    SUDO=()
     INSTALL_SERVICE_DEFAULT="true"
 else
     if command -v sudo >/dev/null 2>&1; then
-        SUDO="sudo"
+        SUDO=(sudo)
     else
-        SUDO=""
+        SUDO=()
     fi
     INSTALL_SERVICE_DEFAULT="false"
 fi
@@ -72,7 +72,7 @@ if ! command -v apt-get >/dev/null 2>&1; then
     exit 1
 fi
 
-if [[ -n "$SUDO" ]]; then
+if ((${#SUDO[@]})); then
     # Fail early with a useful message instead of halfway through installation.
     if ! sudo -v; then
         error "Administrator privileges are required to install system packages."
@@ -83,15 +83,15 @@ elif [[ $EUID -ne 0 ]]; then
 fi
 
 LINKVISION_PORT="${LINKVISION_PORT:-8005}"
-LINKVISION_HTTPS="${LINKVISION_HTTPS:-false}"
-LINKVISION_BEHIND_PROXY="${LINKVISION_BEHIND_PROXY:-false}"
+LINKVISION_HTTPS="${LINKVISION_HTTPS:-False}"
+LINKVISION_BEHIND_PROXY="${LINKVISION_BEHIND_PROXY:-False}"
 INSTALL_SERVICE="${LINKVISION_INSTALL_SERVICE:-$INSTALL_SERVICE_DEFAULT}"
 PYTHON_BIN="${LINKVISION_PYTHON:-python3}"
 
 if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
     info "Python interpreter not found; installing Python 3 and venv support..."
-    "$SUDO" apt-get update
-    "$SUDO" apt-get install -y python3 python3-pip python3-venv
+    "${SUDO[@]}" apt-get update
+    "${SUDO[@]}" apt-get install -y python3 python3-pip python3-venv
 fi
 
 PY_VERSION="$($PYTHON_BIN -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")')"
@@ -105,8 +105,8 @@ fi
 info "Python $PY_VERSION found."
 
 info "Installing system build and ICMP monitoring dependencies..."
-"$SUDO" apt-get update
-"$SUDO" apt-get install -y git build-essential libssl-dev libffi-dev python3-dev python3-venv fping iputils-ping
+"${SUDO[@]}" apt-get update
+"${SUDO[@]}" apt-get install -y git build-essential libssl-dev libffi-dev python3-dev python3-venv fping iputils-ping
 
 if LC_ALL=C fping -4 -q -C 1 -p 1000 -t 1000 127.0.0.1; then
     info "fping can run ICMP probes. LinkVision will use it for batch monitoring."
@@ -125,12 +125,12 @@ VENV_PYTHON="$SCRIPT_DIR/venv/bin/python"
 VENV_PIP="$SCRIPT_DIR/venv/bin/pip"
 
 info "Installing Python dependencies..."
-"$VENV_PIP" install --upgrade pip setuptools wheel
+PIP_PROXY=()
 if [[ -n "$PROXY_ARG" ]]; then
-    "$VENV_PIP" install --proxy "$PROXY_ARG" -r requirements.txt
-else
-    "$VENV_PIP" install -r requirements.txt
+    PIP_PROXY=(--proxy "$PROXY_ARG")
 fi
+"$VENV_PIP" install "${PIP_PROXY[@]}" --upgrade pip setuptools wheel
+"$VENV_PIP" install "${PIP_PROXY[@]}" -r requirements.txt
 
 # Create .env before the first migration/startup. This fixes the common
 # standalone-install problem where Secure cookies are enabled on plain HTTP.

@@ -723,6 +723,37 @@ class TestMonitorProductionSafety:
                 monitor._monitor_stop_event.clear()
 
 
+def test_monitor_cannot_restart_while_previous_loop_is_stopping(monkeypatch):
+    from threading import Event
+    from unittest.mock import Mock
+
+    from services import monitor
+
+    thread = Mock()
+    thread.is_alive.return_value = True
+    executor = Mock()
+    stop_event = Event()
+    monkeypatch.setattr(monitor, "_monitor_thread", thread)
+    monkeypatch.setattr(monitor, "_executor", executor)
+    monkeypatch.setattr(monitor, "_executor_worker_count", 10)
+    monkeypatch.setattr(monitor, "_monitor_stop_flag", False)
+    monkeypatch.setattr(monitor, "_monitor_stop_event", stop_event)
+
+    monitor.stop_monitor()
+
+    executor.shutdown.assert_called_once_with(wait=False, cancel_futures=True)
+    assert monitor._monitor_thread is thread
+    assert stop_event.is_set()
+    with pytest.raises(RuntimeError, match="Monitor is running"):
+        monitor.init_monitor(object())
+    monitor.start_monitor()
+    assert stop_event.is_set()
+
+    thread.is_alive.return_value = False
+    monitor.stop_monitor()
+    assert monitor._monitor_thread is None
+
+
 class TestExecutorPoolSizing:
     """_sync_executor_size: создание, пересборка по настройке, без простоя."""
 

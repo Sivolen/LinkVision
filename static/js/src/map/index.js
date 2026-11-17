@@ -287,6 +287,7 @@ export function initMap(id) {
             });
             updateQualityMeasurements(node);
             refreshNodeZoomEmphasis([node]);
+            if (getStatusFilter() !== 'all') applyMapVisibility();
             return;
         }
 
@@ -304,7 +305,10 @@ export function initMap(id) {
         }
 
         if (node.data('status') === newStatus) {
-            if (oldQuality !== node.data('quality_status')) refreshNodeZoomEmphasis([node]);
+            if (oldQuality !== node.data('quality_status')) {
+                refreshNodeZoomEmphasis([node]);
+                if (getStatusFilter() !== 'all') applyMapVisibility();
+            }
             return;
         }
 
@@ -330,13 +334,13 @@ export function initMap(id) {
             });
             refreshNodeZoomEmphasis(changedNodes);
             if (typeof refreshAllCollapsedStatuses === 'function') refreshAllCollapsedStatuses();
+            if (changedNodes.size && getStatusFilter() !== 'all') applyMapVisibility();
             statusBatch = [];
             statusBatchTimeout = null;
         }, STATUS_BATCH_DELAY);
     });
     listenSocket('device_status_batch', (statuses) => {
         if (!cy) return;
-        let acknowledgmentChanged = false;
         let groupStatusChanged = false;
         const changedNodes = new Set();
         cy.batch(() => {
@@ -370,7 +374,6 @@ export function initMap(id) {
                     if (node.data('status') !== 'up') node.data('status', 'up');
                     if (node.data('acknowledged')) {
                         node.data('acknowledged', false);
-                        acknowledgmentChanged = true;
                     }
                     writeChangedData(node, {
                         quality_status: 'unknown'
@@ -394,7 +397,6 @@ export function initMap(id) {
 
                 const oldAck = node.data('acknowledged') === true;
                 const nextAck = item.status === 'up' ? false : item.acknowledged ?? oldAck;
-                if (oldAck !== nextAck) acknowledgmentChanged = true;
                 if (node.data('status') !== item.status || oldAck !== nextAck) {
                     changedNodes.add(node);
                     groupStatusChanged = true;
@@ -426,7 +428,7 @@ export function initMap(id) {
         // Cytoscape обновляет стили изменённых узлов при записи data внутри batch.
         refreshNodeZoomEmphasis(changedNodes);
         if (groupStatusChanged) refreshAllCollapsedStatuses();
-        if (acknowledgmentChanged && getStatusFilter() !== 'all') applyMapVisibility();
+        if (changedNodes.size && getStatusFilter() !== 'all') applyMapVisibility();
     });
 
     // ─── Точечные события ─────────────────────────────────────────────────────────

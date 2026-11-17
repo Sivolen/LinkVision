@@ -1,2 +1,3 @@
 manage.py text eol=lf
 apply_migrations.sh text eol=lf
+install.sh text eol=lf

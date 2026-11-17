@@ -243,3 +243,29 @@ def test_sqlite_migration_is_idempotent(tmp_path, monkeypatch):
     second = db_path.read_bytes()
 
     assert first == second
+
+
+def test_relative_sqlite_url_migrates_the_database_used_by_app(tmp_path, monkeypatch):
+    import app as application
+
+    instance_dir = tmp_path / "instance"
+    path = instance_dir / "actual.db"
+    instance_dir.mkdir()
+    _create_legacy_database(path)
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    monkeypatch.chdir(other_dir)
+    monkeypatch.setattr(application, "INSTANCE_DIR", str(instance_dir))
+    monkeypatch.setattr(migrate_db, "INSTANCE_DIR", str(instance_dir))
+    monkeypatch.setattr(
+        migrate_db.Config, "SQLALCHEMY_DATABASE_URI", "sqlite:///actual.db?timeout=5"
+    )
+
+    migrate_db.run_full_migration()
+    app = application.create_app(
+        start_background_services=False, allow_unconfigured_admin=True
+    )
+    with app.app_context():
+        assert db.engine.url.database == str(path)
+    assert list(instance_dir.glob("actual.db.migration_backup_*"))
+    assert not (other_dir / "actual.db").exists()

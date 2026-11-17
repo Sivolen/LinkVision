@@ -53,7 +53,7 @@ from sqlalchemy import event, inspect as sa_inspect
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.exceptions import HTTPException
 
-from config import Config
+from config import Config, INSTANCE_DIR
 from extensions import db, socketio, init_extensions
 from models import User, DeviceType, Settings, Device
 from blueprints.auth import auth_bp
@@ -75,7 +75,7 @@ from services.session_security import socket_user_allowed, SocketSessionWatcher
 
 
 def create_app(*, start_background_services=True, allow_unconfigured_admin=False):
-    app = Flask(__name__)
+    app = Flask(__name__, instance_path=INSTANCE_DIR)
     app.config.from_object(Config)
     if (
         os.environ.get("FLASK_ENV") == "production"
@@ -109,7 +109,7 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
 
     with app.app_context():
         # db.create_all()
-        if "sqlite" in app.config["SQLALCHEMY_DATABASE_URI"]:
+        if db.engine.dialect.name == "sqlite":
 
             @event.listens_for(db.engine, "connect")
             def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -121,14 +121,13 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
         # Для существующей БД запрещаем тихое создание недостающих таблиц:
         # это могло скрыть несовместимое восстановление/старую версию.
         # Чистая БД создаётся из текущих моделей.
-        database_uri = app.config["SQLALCHEMY_DATABASE_URI"]
         sqlite_path = None
-        if database_uri.startswith("sqlite:///"):
-            sqlite_path = database_uri.replace("sqlite:///", "", 1)
-            if not os.path.isabs(sqlite_path):
-                sqlite_path = os.path.join(app.root_path, sqlite_path)
+        if db.engine.dialect.name == "sqlite":
+            database = db.engine.url.database
+            if database and database != ":memory:":
+                sqlite_path = database
 
-            if sqlite_database_is_empty(sqlite_path):
+            if sqlite_path is None or sqlite_database_is_empty(sqlite_path):
                 db.create_all()
             else:
                 schema_result = validate_sqlite_database(
@@ -169,7 +168,7 @@ def create_app(*, start_background_services=True, allow_unconfigured_admin=False
 
         # После успешной проверки/создания фиксируем версию схемы SQLite.
         # Это не версия выпуска: она меняется только вместе с миграцией БД.
-        if database_uri.startswith("sqlite:///") and sqlite_path:
+        if sqlite_path:
             mark_sqlite_schema(sqlite_path, Config.DB_SCHEMA_VERSION)
 
         # Не создаём учётную запись с паролем, который можно потерять в выводе
