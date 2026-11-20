@@ -20,7 +20,7 @@
 //   • размеры карточек измеряются (offsetWidth/Height) один раз и кэшируются в
 //     координатах графа; кэш сбрасывается при смене названия/IP/шрифта и при
 //     загрузке веб-шрифтов. Размер в координатах графа от zoom не зависит;
-//   • разгрузка наложений (cull) — чистая математика по кэшу, без чтения DOM, и
+//   • раскладка при наложении использует размеры из кэша и
 //     запускается с debounce только после изменения позиций/содержимого, а не
 //     при zoom/pan (наложение в координатах графа от масштаба не зависит);
 //   • видимость узла (hide/show) в Cytoscape событий не порождает, а подписка на
@@ -44,10 +44,9 @@ const FONT_BOOST = 1.1;         // относительно font_size устро
 const DEFAULT_FONT = 11;
 const ZOOM_OFF = 0.2;           // ниже — название < ~2.5px, подписи не рисуем
 const MOVE_IDLE_MS = 140;       // пауза без pan/zoom, после которой слой «успокаивается»
-const CULL_DELAY_MS = 120;      // debounce расчёта наложений после изменений
-const CULL_PAD = 3;             // зазор между карточками, ед. графа
-const CULL_TOLERANCE = 0.12;    // допустимая доля наложения краёв
-const CULL_CELL = 120;          // ячейка сетки для поиска пересечений, ед. графа
+const LABEL_LAYOUT_DELAY_MS = 120;      // debounce расчёта наложений после изменений
+const LABEL_PAD = 3;             // зазор между карточками, ед. графа
+const LABEL_CELL = 120;          // ячейка сетки для поиска пересечений, ед. графа
 
 let current = null;
 
@@ -77,8 +76,8 @@ function createCard() {
     el.appendChild(nameEl);
     return {
         el, nameEl, ipEl: null, sig: '', transform: '', hidden: null,
-        culled: false, compact: false, anchorCenter: false, priority: 1,
-        x: 0, y: 0, w: 0, h: 0, ipH: 0, sizeStale: true
+        anchorCenter: false, iconWidth: 0, iconHeight: 0,
+        x: 0, y: 0, offsetX: 0, offsetY: 0, w: 0, h: 0, sizeStale: true
     };
 }
 
@@ -97,11 +96,12 @@ export function initDeviceLabels(cy) {
     container.appendChild(viewport);
 
     const cards = new Map();        // id узла -> card
+    const edgeLabels = new WeakMap();
     const dirty = new Set();        // id узлов, требующих пересчёта
     let viewportDirty = true;
     let layerTransform = '';
     let rafId = 0;
-    let cullTimer = 0;
+    let layoutTimer = 0;
     let moveTimer = 0;
     let lastMoveAt = 0;
     let pointerHeld = false;
@@ -190,28 +190,38 @@ export function initDeviceLabels(cy) {
             card.el.classList.toggle('is-highlight', highlighted);
             card.el.classList.toggle('is-anchor-center', !iconNode);
             card.anchorCenter = !iconNode;
-            card.priority = (selected || highlighted) ? 3 : (status === 'down' || status === 'partial') && !monitoringOff ? 2 : 1;
             // Размер зависит только от названия/IP/шрифта; выделение и статус его не меняют.
             if (card.sizeSig !== `${name}\u0001${ipText}\u0001${fontSize}`) {
                 card.sizeSig = `${name}\u0001${ipText}\u0001${fontSize}`;
                 card.sizeStale = true;
+                changed = true;
             }
-            changed = true;
         }
 
         // Координаты и габариты — в единицах графа; масштаб даёт transform слоя.
         const pos = node.position();
-        const x = pos.x;
-        const y = iconNode ? pos.y + node.outerHeight() / 2 + LABEL_GAP : pos.y;
-        const transform = `translate(${round(x)}px, ${round(y)}px)`;
-        if (transform !== card.transform) {
-            card.x = x;
+        const iconHeight = iconNode ? node.outerHeight() : 0;
+        const iconWidth = iconNode ? node.outerWidth() : 0;
+        const y = iconNode ? pos.y + iconHeight / 2 + LABEL_GAP : pos.y;
+        if (card.x !== pos.x || card.y !== y || card.iconWidth !== iconWidth || card.iconHeight !== iconHeight) {
+            card.x = pos.x;
             card.y = y;
-            card.transform = transform;
-            card.el.style.transform = transform;
+            card.iconWidth = iconWidth;
+            card.iconHeight = iconHeight;
             changed = true;
         }
+        placeCard(card, card.offsetX, card.offsetY);
         return changed;
+    }
+
+    function placeCard(card, dx, dy) {
+        card.offsetX = dx;
+        card.offsetY = dy;
+        const transform = `translate(${round(card.x + dx)}px, ${round(card.y + dy)}px)`;
+        if (transform !== card.transform) {
+            card.transform = transform;
+            card.el.style.transform = transform;
+        }
     }
 
     /** pan+zoom одним transform слоя; режим «идёт жест» включает GPU-слой. */
@@ -228,7 +238,6 @@ export function initDeviceLabels(cy) {
         if (off !== isOff) {
             isOff = off;
             viewport.classList.toggle('lv-labels--off', off);
-            if (!off) scheduleCull(); // карточки могли смениться, пока были скрыты
         }
     }
 
@@ -256,7 +265,7 @@ export function initDeviceLabels(cy) {
             viewportDirty = false;
             applyViewport();
         }
-        if (processDirty()) scheduleCull();
+        if (processDirty()) scheduleLabelLayout();
     }
 
     function processDirty() {
@@ -277,103 +286,132 @@ export function initDeviceLabels(cy) {
         return changed;
     }
 
-    function scheduleCull() {
+    function scheduleLabelLayout() {
         // debounce: расчёт один раз после того, как изменения улеглись.
         if (disposed) return;
-        clearTimeout(cullTimer);
-        cullTimer = setTimeout(cull, CULL_DELAY_MS);
+        clearTimeout(layoutTimer);
+        layoutTimer = setTimeout(layoutLabels, LABEL_LAYOUT_DELAY_MS);
     }
 
     /** Измеряет только карточки с устаревшим кэшем: сначала записи, потом одно чтение. */
     function measureStale(items) {
         const stale = items.filter(card => card.sizeStale);
         if (!stale.length) return;
-        stale.forEach(card => card.el.classList.remove('is-compact'));
         stale.forEach(card => {
             card.w = card.el.offsetWidth;
             card.h = card.el.offsetHeight;
-            card.ipH = card.ipEl ? card.ipEl.offsetHeight + 2 : 0;
-            card.sizeStale = false;
-            card.compact = false;
+            card.sizeStale = card.w === 0 || card.h === 0;
         });
     }
 
-    /**
-     * Разгрузка обзора: карточки в порядке приоритета (проблемные/выбранные,
-     * затем остальные сверху вниз) занимают прямоугольники В КООРДИНАТАХ ГРАФА.
-     * Если полная карточка пересекается с уже занятым местом — пробуем компактную
-     * (только название), если и она мешает — скрываем. Карточка масштабируется
-     * вместе с узлом, поэтому результат не зависит от zoom и не «мигает».
-     * Размеры берутся из кэша; DOM читается только для устаревших карточек.
-     */
-    function cull() {
-        cullTimer = 0;
+    function rectFor(card, dx, dy) {
+        const left = card.x + dx - card.w / 2;
+        const top = card.y + dy - (card.anchorCenter ? card.h / 2 : 0);
+        return { l: left, r: left + card.w, t: top, b: top + card.h };
+    }
+
+    function layoutLabels() {
+        layoutTimer = 0;
         if (!usable()) return;
         processDirty();
-        const items = [];
-        cards.forEach(card => { if (!card.hidden) items.push(card); });
-        measureStale(items);
-        const sized = items.filter(card => card.w > 0 && card.h > 0);
-        sized.sort((a, b) => (b.priority - a.priority) || (a.y - b.y) || (a.x - b.x));
+        const visible = [...cards.values()].filter(card => !card.hidden);
+        measureStale(visible);
+        const sized = visible.filter(card => card.w > 0 && card.h > 0);
+        sized.sort((a, b) => Number(b.anchorCenter) - Number(a.anchorCenter)
+            || a.y - b.y || a.x - b.x);
 
         const grid = new Map();
-        // Касание/небольшое наложение краёв (до 12% площади меньшей карточки) не считаем помехой.
-        const hits = (a, b) => {
+        function forEachCell(rect, visit) {
+            for (let x = Math.floor(rect.l / LABEL_CELL); x <= Math.floor(rect.r / LABEL_CELL); x++) {
+                for (let y = Math.floor(rect.t / LABEL_CELL); y <= Math.floor(rect.b / LABEL_CELL); y++) {
+                    visit(x * 100003 + y);
+                }
+            }
+        }
+        function occupy(rect, weight = 1) {
+            const entry = { rect, weight };
+            forEachCell(rect, key => {
+                if (!grid.has(key)) grid.set(key, []);
+                grid.get(key).push(entry);
+            });
+        }
+        function overlapArea(a, b) {
             const w = Math.min(a.r, b.r) - Math.max(a.l, b.l);
             const h = Math.min(a.b, b.b) - Math.max(a.t, b.t);
-            if (w <= 0 || h <= 0) return false;
-            const smaller = Math.min((a.r - a.l) * (a.b - a.t), (b.r - b.l) * (b.b - b.t));
-            return w * h > smaller * CULL_TOLERANCE;
-        };
-        const cells = rect => {
-            const out = [];
-            for (let cx = Math.floor(rect.l / CULL_CELL); cx <= Math.floor(rect.r / CULL_CELL); cx++) {
-                for (let cy2 = Math.floor(rect.t / CULL_CELL); cy2 <= Math.floor(rect.b / CULL_CELL); cy2++) {
-                    out.push(cx * 100003 + cy2);
-                }
-            }
-            return out;
-        };
-        const overlaps = rect => cells(rect).some(key => {
-            const bucket = grid.get(key);
-            return bucket && bucket.some(o => hits(rect, o));
-        });
-        const occupy = rect => cells(rect).forEach(key => {
-            if (!grid.has(key)) grid.set(key, []);
-            grid.get(key).push(rect);
-        });
-        const rectFor = (card, h) => {
-            const sw = card.w + CULL_PAD;
-            const sh = h + CULL_PAD;
-            const top = card.anchorCenter ? card.y - sh / 2 : card.y;
-            return { l: card.x - sw / 2, r: card.x + sw / 2, t: top, b: top + sh };
-        };
+            return w > 0 && h > 0 ? w * h : 0;
+        }
+        function occupiedArea(rect) {
+            const nearby = new Set();
+            forEachCell(rect, key => {
+                grid.get(key)?.forEach(entry => nearby.add(entry));
+            });
+            let area = 0;
+            nearby.forEach(entry => { area += overlapArea(rect, entry.rect) * entry.weight; });
+            return area;
+        }
 
-        sized.forEach(card => {
-            let culled = false;
-            let compact = false;
-            let rect = rectFor(card, card.h);
-            if (overlaps(rect)) {
-                if (card.ipEl) {
-                    compact = true;
-                    rect = rectFor(card, card.h - card.ipH);
+        // Mark icons first, including those whose own labels are placed later.
+        for (const card of visible) {
+            if (card.anchorCenter) continue;
+            const bottom = card.y - LABEL_GAP;
+            occupy({
+                l: card.x - card.iconWidth / 2, r: card.x + card.iconWidth / 2,
+                t: bottom - card.iconHeight, b: bottom,
+            }, 8);
+        }
+
+        const edgeBounds = new Map();
+        function connectedLabelRects(card) {
+            const node = cy.getElementById(card.el.dataset.nodeId);
+            const rectangles = [];
+            node.connectedEdges().forEach(edge => {
+                if (!edgeBounds.has(edge.id())) {
+                    let rect = null;
+                    // Only query nearby port labels when a card needs relocation.
+                    // Excluding the line body avoids treating an entire diagonal edge as occupied.
+                    if (edge.visible() && edge.data('label')) {
+                        const box = edge.boundingBox({
+                            includeNodes: false, includeEdges: false, includeOverlays: false,
+                            includeUnderlays: false, includeOutlines: false, includeLabels: true,
+                        });
+                        if (box.w > 0 && box.h > 0) {
+                            rect = { l: box.x1, r: box.x2, t: box.y1, b: box.y2 };
+                        }
+                    }
+                    edgeBounds.set(edge.id(), rect);
                 }
-                if (!card.ipEl || overlaps(rect)) {
-                    // Выбранные и проблемные никогда не скрываем полностью.
-                    if (card.priority >= 2) compact = true; else culled = true;
+                const rect = edgeBounds.get(edge.id());
+                if (rect) rectangles.push(rect);
+            });
+            return rectangles;
+        }
+
+        for (const card of sized) {
+            let best = rectFor(card, 0, 0);
+            let dx = 0;
+            let dy = 0;
+            if (!card.anchorCenter && occupiedArea(best) > 0) {
+                const portLabels = connectedLabelRects(card);
+                const cost = rect => occupiedArea(rect)
+                    + 4 * portLabels.reduce((sum, label) => sum + overlapArea(rect, label), 0);
+                let bestCost = cost(best);
+                const above = -(card.iconHeight + 2 * LABEL_GAP + card.h);
+                const side = Math.min(30, Math.max(12, card.w / 4));
+                for (const [x, y] of [[0, above], [-side, 0], [side, 0], [-side, above], [side, above]]) {
+                    const candidate = rectFor(card, x, y);
+                    const candidateCost = cost(candidate);
+                    if (candidateCost >= bestCost) continue;
+                    best = candidate;
+                    bestCost = candidateCost;
+                    dx = x;
+                    dy = y;
+                    if (bestCost === 0) break;
                 }
             }
-            if (!culled) occupy(rect);
-            // DOM пишем только при реальной смене состояния.
-            if (card.compact !== compact) {
-                card.compact = compact;
-                card.el.classList.toggle('is-compact', compact);
-            }
-            if (card.culled !== culled) {
-                card.culled = culled;
-                card.el.classList.toggle('is-culled', culled);
-            }
-        });
+            // Even when every candidate overlaps, keep the same card and both fields.
+            occupy({ ...best, r: best.r + LABEL_PAD, b: best.b + LABEL_PAD });
+            placeCard(card, dx, dy);
+        }
     }
 
     function schedule() {
@@ -414,18 +452,30 @@ export function initDeviceLabels(cy) {
     const onRemove = evt => {
         if (disposed) return;
         const node = evt.target;
-        if (node.isNode && node.isNode()) dropCard(node.id());
+        if (node.isNode && node.isNode() && cards.has(node.id())) {
+            dropCard(node.id());
+            scheduleLabelLayout();
+        }
     };
     const onNodeChange = evt => {
         if (disposed) return;
         const node = evt.target;
         if (cards.has(node.id())) markDirty(node);
     };
+    const onEdgeChange = ({ type, target }) => {
+        if (!target.isEdge?.()) return;
+        if (type === 'data') {
+            const label = target.data('label');
+            if (edgeLabels.get(target) === label) return;
+            edgeLabels.set(target, label);
+        }
+        scheduleLabelLayout();
+    };
     const onElementsLoaded = () => fullSync();
     const onFontsLoaded = () => {
         if (disposed) return;
         cards.forEach(card => { card.sizeStale = true; });
-        scheduleCull();
+        scheduleLabelLayout();
     };
     const onDestroy = () => { destroying = true; dispose(); };
     const onPointerDown = event => {
@@ -444,6 +494,7 @@ export function initDeviceLabels(cy) {
     cy.on('add', 'node', onAdd);
     cy.on('remove', 'node', onRemove);
     cy.on(nodeEvents, 'node', onNodeChange);
+    cy.on('add remove data', 'edge', onEdgeChange);
     cy.on('destroy', onDestroy);
     container.addEventListener('pointerdown', onPointerDown, true);
     window.addEventListener('pointerup', onPointerEnd, true);
@@ -458,9 +509,9 @@ export function initDeviceLabels(cy) {
         disposed = true;
         if (rafId) cancelAnimationFrame(rafId);
         rafId = 0;
-        clearTimeout(cullTimer);
+        clearTimeout(layoutTimer);
         clearTimeout(moveTimer);
-        cullTimer = 0;
+        layoutTimer = 0;
         moveTimer = 0;
         window.removeEventListener('elements:loaded', onElementsLoaded);
         container.removeEventListener('pointerdown', onPointerDown, true);
@@ -474,6 +525,7 @@ export function initDeviceLabels(cy) {
             cy.off('add', 'node', onAdd);
             cy.off('remove', 'node', onRemove);
             cy.off(nodeEvents, 'node', onNodeChange);
+            cy.off('add remove data', 'edge', onEdgeChange);
             cy.off('destroy', onDestroy);
         } catch (e) { /* граф уже уничтожен */ }
         // Нативные подписи возвращаем только живому графу: иначе узлы остались бы

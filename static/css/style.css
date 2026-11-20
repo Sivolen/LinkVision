@@ -995,38 +995,6 @@ body.resizing-sidebar .main-content { transition: none; }
   z-index: 5;
 }
 
-.lv-map-focus-label {
-  --focus-width: min(19rem, calc(var(--focus-area-width) - 16px));
-  position: absolute;
-  z-index: 6;
-  pointer-events: none;
-  box-sizing: border-box;
-  width: var(--focus-width);
-  left: clamp(8px, calc(var(--focus-x) - var(--focus-width) / 2), calc(var(--focus-area-width) - var(--focus-width) - 8px));
-  bottom: calc(100% - var(--focus-y) + var(--focus-gap));
-  max-height: max(0px, calc(var(--focus-y) - var(--focus-gap) - 8px));
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  padding: 6px 9px;
-  border: 1px solid var(--accent-color);
-  border-radius: 8px;
-  background: var(--lv-card-bg);
-  color: var(--lv-card-name);
-  box-shadow: var(--lv-card-shadow);
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.lv-map-focus-label.is-below {
-  top: calc(var(--focus-y) + var(--focus-gap));
-  bottom: auto;
-  max-height: max(0px, calc(100% - var(--focus-y) - var(--focus-gap) - 8px));
-}
-
-.lv-map-focus-label > :not([hidden]) {
-  display: block;
-}
-
 .lv-device-labels__layer {
   /* pan+zoom одним transform (deviceLabels.js): карточки лежат в координатах
      графа и масштабируются вместе с узлами без пересчёта каждой карточки. */
@@ -1111,17 +1079,6 @@ body.resizing-sidebar .main-content { transition: none; }
 .lv-dev-label.is-selected {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
-}
-
-/* Разгрузка обзора (deviceLabels.js, cull): мешающая карточка сворачивается до
-   названия, а если и так не помещается — скрывается. */
-.lv-dev-label.is-compact .lv-dev-label__ip {
-  display: none;
-}
-
-.lv-dev-label.is-culled {
-  opacity: 0;
-  visibility: hidden;
 }
 
 .lv-labels--off .lv-dev-label {

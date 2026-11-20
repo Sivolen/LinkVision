@@ -1,7 +1,7 @@
 import { getCy } from './core.js';
 import { boundNodePosition, setElementsLoaded, getBgImageSize } from './background.js';
 import { addPulsingNode, removePulsingNode } from './pulse.js';
-import { updateEdgeLabel, updateAllEdgeLabels, updateEdgeLabelsForNode, updateEdgeLabelsForNodes } from './edgeLabels.js';
+import { updateAllEdgeLabels, updateEdgeLabelsForNode, updateEdgeLabelsForNodes } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
 import { refreshZoomEmphasis } from './zoomEmphasis.js';
 import { updateAllGroups, updateGroupsForNodes } from './groupResize.js';
@@ -169,7 +169,9 @@ export function loadElements(mapId, force = false, attempt = 0) {
                     e.data.target = String(e.data.target);
                     e.data.id = `link_${String(e.data.id)}`;
                     if (e.data.font_size === undefined) e.data.font_size = 8;
-                    Object.assign(e.data, readLinkInterfaces(e.data));
+                    const parts = (e.data.label || 'eth0↔eth0').split('↔');
+                    e.data.srcIface = parts[0].trim();
+                    e.data.tgtIface = parts[1].trim();
                     allElements.push(e);
                 });
             }
@@ -484,15 +486,6 @@ export function removeLinkFromGraph(linkId) {
     if (cy) cy.getElementById(String(linkId)).remove();
 }
 
-// Initial payloads from older servers may only include the combined label.
-function readLinkInterfaces(data) {
-    const [source, target] = (data.label || '').split('↔');
-    return {
-        srcIface: data.source_interface === undefined ? source?.trim() : data.source_interface,
-        tgtIface: data.target_interface === undefined ? target?.trim() : data.target_interface,
-    };
-}
-
 export function addLinkToGraph(linkData) {
     const cy = getCy();
     if (!cy) return;
@@ -511,6 +504,8 @@ export function addLinkToGraph(linkData) {
         return;
     }
 
+    const parts = (linkData.label || `${linkData.source_interface || 'eth0'}↔${linkData.target_interface || 'eth0'}`).split('↔');
+
     cy.batch(() => {
         cy.add({
             group: 'edges',
@@ -524,7 +519,8 @@ export function addLinkToGraph(linkData) {
                 width: linkData.line_width || 2,
                 style: linkData.line_style || 'solid',
                 font_size: linkData.font_size || 8,
-                ...readLinkInterfaces(linkData),
+                srcIface: parts[0].trim(),
+                tgtIface: parts[1].trim(),
             }
         });
     });
@@ -539,17 +535,14 @@ export function updateLinkInGraph(linkData) {
     const edge = cy.getElementById(linkId);
     if (!edge.length) return;
 
-    const interfaces = readLinkInterfaces(linkData);
     edge.data({
-        ...(interfaces.srcIface !== undefined && { srcIface: interfaces.srcIface }),
-        ...(interfaces.tgtIface !== undefined && { tgtIface: interfaces.tgtIface }),
+        label: linkData.label || edge.data('label'),
         link_type: linkData.link_type,
         color: linkData.line_color || edge.data('color'),
         width: linkData.line_width || edge.data('width'),
         style: linkData.line_style || edge.data('style'),
         font_size: linkData.font_size || edge.data('font_size'),
     });
-    updateEdgeLabel(edge);
 }
 
 export function updateDevicePositionInGraph(deviceId, x, y) {

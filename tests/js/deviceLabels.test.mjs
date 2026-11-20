@@ -48,7 +48,7 @@ function makeNode(id, data, pos = { x: 0, y: 0 }) {
     const node = {
         _data: { id, ...data }, _pos: pos, _removed: false, _visible: true, length: 1,
         id: () => id, data: k => node._data[k], position: () => node._pos,
-        outerHeight: () => 60, visible: () => node._visible, removed: () => node._removed,
+        outerHeight: () => 60, outerWidth: () => 60, connectedEdges: () => [], visible: () => node._visible, removed: () => node._removed,
         selected: () => false, isNode: () => true,
         hasClass: c => classes.has(c), addClass: c => classes.add(c), removeClass: c => classes.delete(c),
     };
@@ -238,8 +238,9 @@ await (async () => {
     cy._pan = { x: 5, y: 5 }; cy.emit('viewport'); runFrames();
     await sleep(200);
     assert.equal(El.reads, afterFirstCull, 'zoom/pan не измеряют карточки заново');
-    const states = cards(container).map(c => c.classList.contains('is-culled'));
-    assert.deepEqual(states.sort(), [false, true], 'из двух перекрывающихся карточек одна скрыта');
+    assert.deepEqual(cards(container).map(card => card.style.transform),
+        ['translate(0px, 34px)', 'translate(10px, -74px)'], 'обе плашки видимы по разные стороны иконок');
+    assert.ok(cards(container).every(card => !card.hidden));
     // смена названия инвалидирует кэш размера только у этой карточки
     const node = cy.getElementById('1');
     node._data.name = 'new-name'; cy.emit('data', node); runFrames();
@@ -248,6 +249,31 @@ await (async () => {
     dispose();
     passed++; console.log('ok - cull: кэш размеров, без чтений на zoom/pan, инвалидация по названию');
 })();
+
+{
+    const container = new El('div');
+    const cy = makeCy(container);
+    const dispose = initDeviceLabels(cy);
+    const first = makeNode('1', { name: 'a', iconUrl: '/i.png' });
+    const second = makeNode('2', { name: 'b', ip: '10.0.0.2', iconUrl: '/i.png' }, { x: 78, y: 0 });
+    second.connectedEdges = () => [{
+        id: () => 'edge', visible: () => true, data: () => 'Gi0/1 ↔ Gi0/2',
+        boundingBox: options => {
+            assert.equal(options.includeEdges, false);
+            return { x1: -20, x2: 195, y1: -74, y2: -34, w: 215, h: 40 };
+        },
+    }];
+    cy.add(first); cy.add(second); runFrames();
+    await sleep(200);
+    const [, card] = cards(container);
+    assert.equal(card.style.transform, 'translate(103px, 34px)', 'сдвиг вбок оставляет порты читаемыми');
+    assert.equal(card.children[1].textContent, '10.0.0.2');
+    cy.drop(first); runFrames();
+    await sleep(200);
+    assert.equal(card.style.transform, 'translate(78px, 34px)', 'после удаления соседа плашка возвращается');
+    dispose();
+    passed++; console.log('ok - близкие устройства: видны IP и порты, сдвиг обратим');
+}
 
 test('нет слушателя style: смена стиля узла не читает видимость и не будит слой', () => {
     const container = new El('div'); const cy = makeCy(container);

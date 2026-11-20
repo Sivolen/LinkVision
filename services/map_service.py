@@ -662,8 +662,6 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
                     "source": src_id,
                     "target": tgt_id,
                     "label": f"{link.source_interface or 'eth0'}↔{link.target_interface or 'eth0'}",
-                    "source_interface": link.source_interface,
-                    "target_interface": link.target_interface,
                     "link_type": link.link_type,
                     "color": link.line_color,
                     "width": link.line_width,
