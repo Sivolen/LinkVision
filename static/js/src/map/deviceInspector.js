@@ -432,8 +432,11 @@ export function initDeviceInspector(cy) {
         show({ target: node }, event.detail?.tab === 'settings' && !settingsForm ? 'overview' : (event.detail?.tab || 'overview'), true);
     };
     const onAddIp = () => addIpField();
-    const onCanvasTap = event => {
-        if (event.target === cy && !panel.hidden && window.currentMode === 'pan' && !isLinkMode()) hide();
+    const onCanvasTap = ({ target, originalEvent }) => {
+        if (panel.hidden || window.currentMode !== 'pan' || isLinkMode()) return;
+        const plainTap = !originalEvent?.ctrlKey && !originalEvent?.metaKey && !originalEvent?.shiftKey;
+        const isRealLink = target.isEdge?.() && !target.data('isCollapseProxy');
+        if (target === cy || (plainTap && isRealLink)) hide();
     };
     cy.on('tap', 'node', show);
     cy.on('tap', onCanvasTap);

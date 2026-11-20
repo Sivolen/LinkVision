@@ -46,6 +46,7 @@ import { updateAllEdgeLabels } from './edgeLabels.js';
 import { updateEdgeCurves } from './edgeBundling.js';
 import { initZoomEmphasis, refreshNodeZoomEmphasis } from './zoomEmphasis.js';
 import { updateQualityMeasurements } from './qualityMeasurements.js';
+import { initFocusLabel } from './focusLabel.js';
 import { initDeviceLabels } from './deviceLabels.js';
 import { updateAllGroups } from './groupResize.js';
 
@@ -156,6 +157,7 @@ export function initMap(id) {
     // HTML-подписи устройств: слой создаётся до загрузки элементов, чтобы у
     // добавляемых узлов сразу гасилась нативная подпись (без «мигания»).
     initDeviceLabels(cy);
+    registerMapCleanup(initFocusLabel(cy));
     window.dispatchEvent(new CustomEvent('linkvision:cy-ready', { detail: { cy } }));
 
     // Отмена «телепортации»: если пользователь начал скроллить/зумить/тянуть карту

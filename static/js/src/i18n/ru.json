@@ -1,4 +1,9 @@
 {
+  "focusLabel": {
+    "source": "От:",
+    "target": "К:",
+    "noInterface": "интерфейс не указан"
+  },
   "common": {
     "close": "Закрыть",
     "edit": "Редактировать",

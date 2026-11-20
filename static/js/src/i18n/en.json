@@ -1,4 +1,9 @@
 {
+  "focusLabel": {
+    "source": "From:",
+    "target": "To:",
+    "noInterface": "interface not specified"
+  },
   "common": {
     "close": "Close",
     "edit": "Edit",
