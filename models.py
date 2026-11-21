@@ -437,7 +437,10 @@ class MapShape(db.Model):
     opacity = db.Column(db.Float, nullable=False, default=1.0)
     description = db.Column(db.String(255), nullable=True)
 
-    map = db.relationship("Map", backref="shapes")
+    target_map_id = db.Column(db.Integer, db.ForeignKey("map.id", ondelete="SET NULL"))
+    portal_shape = db.Column(db.String(12), nullable=True)
+
+    map = db.relationship("Map", foreign_keys=[map_id], backref="shapes")
 
 
 class AuditLog(db.Model):

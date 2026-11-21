@@ -17,6 +17,7 @@ import { initBulk, updateBulkEditButton } from './bulk.js';
 import { initSidebarCounter, updateSidebarCounter } from './sidebar.js';
 import { initMinimap } from './minimap.js';
 import { initMapSummary } from './mapSummary.js';
+import { initPortalStatuses } from './portalStatuses.js';
 import { applyAcknowledgment } from './deviceAck.js';
 import { initDeviceInspector } from './deviceInspector.js';
 import { initUndoRedo } from './undoRedo.js';
@@ -32,6 +33,7 @@ import {
     updateLinkInGraph,
     removeLinkFromGraph as _removeLinkFromGraph,
     addShapeToGraph as _addShapeToGraph,
+    shapeLabel,
     removeShapeFromGraph as _removeShapeFromGraph,
     updateDevicePositionInGraph,
     updateDevicePositionsInGraph,
@@ -195,6 +197,7 @@ export function initMap(id) {
     initSidebarCounter(cy);
     initMinimap(cy);
     registerMapCleanup(initMapSummary(cy));
+    registerMapCleanup(initPortalStatuses(cy, mapId, window.socket));
     registerMapCleanup(initDeviceInspector(cy));
 
     const bgEl = document.getElementById('cy-background');
@@ -524,6 +527,10 @@ export function initMap(id) {
             node.position({ x: shape.x, y: shape.y });
             node.data({
                 shape_type: shape.shape_type,
+                target_map_id: shape.target_map_id ?? null,
+                portal_shape: shape.portal_shape ?? null,
+                label: shapeLabel(shape),
+                fontSize: shape.font_size || 12,
                 width: shape.width,
                 height: shape.height,
                 color: shape.color,

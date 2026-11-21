@@ -18,6 +18,7 @@ import { syncDeviceLabelVisibility } from './deviceLabels.js';
 import { applyMapVisibility } from './visibility.js';
 
 const STORAGE_PREFIX = 'groupCollapseState';
+let searchExpanded = new Set();
 
 // ─── Состояние ───────────────────────────────────────────────────────────
 
@@ -36,9 +37,12 @@ export function saveCollapseState(cyArg) {
     if (!cy) return;
     // ВАЖНО: селектор '[?collapsed]' (truthy), а не '[collapsed]' — последний в
     // Cytoscape означает «атрибут определён», т.е. матчит и collapsed:false.
-    const collapsed = cy.nodes('[?isGroup][?collapsed]').map(n => n.id());
+    const collapsed = new Set(cy.nodes('[?isGroup][?collapsed]').map(n => n.id()));
+    searchExpanded.forEach(group => {
+        if (!group.removed() && group.cy() === cy) collapsed.add(group.id());
+    });
     try {
-        localStorage.setItem(storageKey(), JSON.stringify(collapsed));
+        localStorage.setItem(storageKey(), JSON.stringify([...collapsed]));
     } catch (e) { /* приватный режим / переполнение — не критично */ }
 }
 
@@ -287,10 +291,35 @@ export function syncCollapseView(cyArg) {
 
 // ─── Публичные операции ──────────────────────────────────────────────────
 
+// Temporarily reveal only the ancestor chain. Saved state still includes
+// these groups, and a manual collapse takes precedence over the search.
+export function setSearchGroupPath(cy, node) {
+    const next = new Set();
+    node?.ancestors('[?isGroup]').forEach(group => {
+        if (isCollapsed(group) || searchExpanded.has(group)) next.add(group);
+    });
+    let changed = false;
+    cy.batch(() => {
+        for (const group of searchExpanded) {
+            if (next.has(group) || group.removed() || group.cy() !== cy) continue;
+            group.data('collapsed', true);
+            changed = true;
+        }
+        for (const group of next) {
+            if (!isCollapsed(group)) continue;
+            group.removeData('collapsed');
+            changed = true;
+        }
+    });
+    searchExpanded = next;
+    return changed;
+}
+
 export function collapseGroup(groupNode) {
     if (!groupNode || !groupNode.length || isCollapsed(groupNode)) return;
     if (!groupNode.data('isGroup')) return;
 
+    searchExpanded.delete(groupNode);
     groupNode.data('collapsed', true);
     syncCollapseView(groupNode.cy());
     saveCollapseState(groupNode.cy());

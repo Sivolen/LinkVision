@@ -22,6 +22,8 @@ def create_shape(
     opacity: float,
     description: str = None,
     font_size: int = 12,
+    target_map_id: int | None = None,
+    portal_shape: str | None = None,
 ) -> MapShape:
     """Создать фигуру на карте."""
     shape = MapShape(
@@ -35,6 +37,8 @@ def create_shape(
         color=color,
         opacity=opacity,
         description=description,
+        target_map_id=target_map_id,
+        portal_shape=portal_shape,
     )
     db.session.add(shape)
     db.session.commit()
@@ -59,11 +63,10 @@ def update_shape(shape_id: int, **kwargs) -> MapShape:
     """Обновить фигуру."""
     shape = MapShape.query.get_or_404(shape_id)
 
-    if "font_size" in kwargs:
-        shape.font_size = kwargs["font_size"]
-
+    fields = {"shape_type", "x", "y", "width", "height", "font_size",
+              "color", "opacity", "description", "target_map_id", "portal_shape"}
     for key, value in kwargs.items():
-        if hasattr(shape, key) and value is not None:
+        if key in fields and (value is not None or key in {"target_map_id", "portal_shape"}):
             setattr(shape, key, value)
 
     db.session.commit()

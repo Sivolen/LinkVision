@@ -21,6 +21,11 @@ const PALETTE = {
         edgeSelected: '#007bff',
         edgeSelectedBg: '#e7f3ff',
         shapeBorder: '#94a3b8',
+        portalFill: '#e2e8f0',
+        portalDown: '#dc2626',
+        portalDownFill: '#fee2e2',
+        portalClearFill: '#dcfce7',
+        portalClear: '#15803d',
         groupFillOpacity: 0.14,
         collapsedGroupFillOpacity: 0.22,
         groupBorderOpacity: 0.5
@@ -35,6 +40,11 @@ const PALETTE = {
         edgeSelected: '#60a5fa',
         edgeSelectedBg: '#243b52',
         shapeBorder: '#64748b',
+        portalFill: '#334155',
+        portalDown: '#f87171',
+        portalDownFill: '#542c36',
+        portalClearFill: '#203c30',
+        portalClear: '#4ade80',
         groupFillOpacity: 0.19,
         collapsedGroupFillOpacity: 0.27,
         groupBorderOpacity: 0.9
@@ -466,6 +476,12 @@ export const CY_STYLE = [
         style: {
             'shape': function(node) {
                 const shapeType = node.data('shape_type');
+                if (shapeType === 'map_link') {
+                    const appearance = node.data('portal_shape');
+                    if (appearance === 'circle') return 'ellipse';
+                    if (appearance === 'square') return 'rectangle';
+                    return 'roundrectangle';
+                }
                 return shapeType === 'circle' ? 'ellipse' : shapeType;
             },
             'width': 'data(width)',
@@ -499,7 +515,39 @@ export const CY_STYLE = [
         }
     },
     {
-        selector: 'node[isShape]:selected',
+        selector: 'node[shape_type = "map_link"]',
+        style: {
+            'background-color': themed('portalFill'),
+            'border-color': themed('shapeBorder'),
+            'border-opacity': 1
+        }
+    },
+    {
+        selector: 'node.portal-down',
+        style: {
+            'background-color': themed('portalDownFill'),
+            'border-color': themed('portalDown'),
+            'border-width': 3
+        }
+    },
+    {
+        selector: 'node.portal-clear',
+        style: {
+            'background-color': themed('portalClearFill'),
+            'border-color': themed('portalClear'),
+            'border-width': 3
+        }
+    },
+    {
+        selector: 'node[shape_type = "map_link"]:selected',
+        style: {
+            'overlay-color': themed('text'),
+            'overlay-opacity': 0.12,
+            'overlay-padding': '4px'
+        }
+    },
+    {
+        selector: 'node[isShape][shape_type != "map_link"]:selected',
         style: {
             'overlay-color': '#007bff',
             'overlay-opacity': 0.25,

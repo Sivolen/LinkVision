@@ -292,6 +292,22 @@ function cleanupInteractions() {
 
 registerCleanup(cleanupInteractions);
 
+function followMapLink(cy, node) {
+    if (!node.data('target_map_id')) {
+        showToast(t('toast.errorTitle'), t('mapPortal.unavailable'), 'warning');
+        return;
+    }
+    const route = cy.container().dataset.portalUrl;
+    if (!route) return;
+    const id = parseRawId(node.id());
+    const url = new URL(route.replace(/0$/, String(id)), window.location.href);
+    const { x, y } = cy.pan();
+    url.searchParams.set('pan_x', x);
+    url.searchParams.set('pan_y', y);
+    url.searchParams.set('zoom', cy.zoom());
+    window.location.assign(url);
+}
+
 export function initInteractions(cy) {
     cleanupInteractions();
     // Флаг: пользователь тащит compound-узел (группу), а не отдельное устройство.
@@ -526,6 +542,14 @@ export function initInteractions(cy) {
     });
     cy.on('tap', 'node', function(evt) {
         const node = evt.target;
+        if (node.data('shape_type') === 'map_link') {
+            const pointer = evt.originalEvent;
+            if (window.currentMode === 'pan' && !isLinkMode()
+                && !pointer?.shiftKey && !pointer?.ctrlKey && !pointer?.metaKey) {
+                followMapLink(cy, node);
+            }
+            return;
+        }
         if (isLinkMode()) {
             evt.stopPropagation();
             const source = getSourceNode();
@@ -831,11 +855,14 @@ export function initInteractions(cy) {
         }
 
         if (node.data('isShape')) {
+            const mapLink = node.data('shape_type') === 'map_link';
             showContextMenu([
-                { icon: 'fa-edit', label: t('contextMenu.editShape'), action: () => window.openShapeModal(node) },
-                { icon: 'fa-trash', label: t('contextMenu.deleteShape'), action: () => {
+                ...(mapLink ? [{ icon: 'fa-arrow-up-right-from-square', label: t('mapPortal.open'),
+                    action: () => followMapLink(cy, node) }] : []),
+                { icon: 'fa-edit', label: t(mapLink ? 'mapPortal.edit' : 'contextMenu.editShape'), action: () => window.openShapeModal(node) },
+                { icon: 'fa-trash', label: t(mapLink ? 'mapPortal.delete' : 'contextMenu.deleteShape'), action: () => {
                     const id = parseRawId(node.id());
-                    if (typeof window.deleteShape === 'function') window.deleteShape(id);
+                    if (typeof window.deleteShape === 'function') window.deleteShape(id, mapLink);
                 }}
             ], x, y);
             return;

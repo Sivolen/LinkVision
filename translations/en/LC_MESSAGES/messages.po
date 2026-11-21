@@ -1949,3 +1949,28 @@ msgstr "Last fping run: %(targets)s addresses, %(packets)s packets per address, 
 
 msgid "Количество параллельных проверок при поадресном опросе. На fping не влияет. По умолчанию — 150, максимум — 300."
 msgstr "Concurrent checks when polling devices individually. Does not affect fping. Default: 150, maximum: 300."
+
+
+msgid "Ссылка на карту"
+msgstr "Map link"
+
+
+msgid "Назад к исходной карте"
+msgstr "Back to source map"
+
+
+msgid "Целевая карта"
+msgstr "Destination map"
+
+
+msgid "Выберите карту"
+msgstr "Select a map"
+
+msgid "Редактировать ссылку на карту"
+msgstr "Edit map link"
+
+msgid "Подпись на карте"
+msgstr "Label on the map"
+
+msgid "Форма значка"
+msgstr "Marker shape"

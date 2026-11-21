@@ -18,6 +18,12 @@ let shapeEditX = null;
 let shapeEditY = null;
 let setShapeColor = null;
 
+const PORTAL_SIZES = {
+    rectangle: { width: 145, height: 48 },
+    square: { width: 90, height: 90 },
+    circle: { width: 96, height: 96 },
+};
+
 /**
  * Открыть модальное окна фигуры
  */
@@ -30,6 +36,13 @@ export function openShapeModal(shapeNode = null) {
 
     const idField = document.getElementById('shape_id');
     const typeSelect = document.getElementById('shape_type');
+    const targetSelect = document.getElementById('shape_target_map_id');
+    const targetField = document.getElementById('shapeTargetMapField');
+    const appearanceField = document.getElementById('shapePortalAppearanceField');
+    const appearanceSelect = document.getElementById('shape_portal_shape');
+    const currentAppearance = shapeNode?.data('portal_shape') || 'rectangle';
+    appearanceSelect.value = currentAppearance;
+    appearanceSelect.dataset.initial = shapeNode?.data('shape_type') === 'map_link' ? currentAppearance : '';
     const widthInput = document.getElementById('shape_width');
     const heightInput = document.getElementById('shape_height');
     const colorInput = document.getElementById('shape_color');
@@ -46,13 +59,16 @@ export function openShapeModal(shapeNode = null) {
         updateShapePositionFromNode(shapeNode);
 
         typeSelect.value = shapeNode.data('shape_type');
+        targetSelect.value = shapeNode.data('target_map_id') ?? '';
         widthInput.value = shapeNode.data('width');
         heightInput.value = shapeNode.data('height');
         colorInput.value = shapeNode.data('color') || '#3498db';
         opacityInput.value = shapeNode.data('opacity');
         descriptionInput.value = shapeNode.data('description') || '';
-        deleteBtn.style.display = 'inline-block';
-        deleteBtn.onclick = () => deleteShape(currentShapeId);
+        if (deleteBtn) {
+            deleteBtn.style.display = 'inline-block';
+            deleteBtn.onclick = () => deleteShape(currentShapeId, typeSelect.value === 'map_link');
+        }
         fontSizeInput.value = shapeNode.data('fontSize') || 12;
 
         // Обновляем превью цвета
@@ -73,12 +89,13 @@ export function openShapeModal(shapeNode = null) {
         shapeEditX = null;
         shapeEditY = null;
         typeSelect.value = 'square';
+        targetSelect.value = '';
         widthInput.value = 80;
         heightInput.value = 80;
         colorInput.value = '#3498db';
         opacityInput.value = 1;
         descriptionInput.value = '';
-        deleteBtn.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = 'none';
         fontSizeInput.value = 12;
 
         // Сброс превью цвета для новой фигуры
@@ -97,6 +114,26 @@ export function openShapeModal(shapeNode = null) {
     // их при отсутствии прав редактирования именно сейчас (карта
     // заблокирована), а не прячем.
     const canEdit = window.canEditMap === true;
+    const title = document.getElementById('shapeModalTitle');
+    const descriptionLabel = document.getElementById('shapeDescriptionLabel');
+    const shapeSections = document.querySelectorAll('#shapeModal [data-shape-only]');
+    document.getElementById('shapeTypeField').hidden = shapeNode?.data('shape_type') === 'map_link';
+    const updateForm = () => {
+        const isMapLink = typeSelect.value === 'map_link';
+        title.textContent = isMapLink
+            ? (shapeNode ? title.dataset.editLinkTitle : title.dataset.createLinkTitle)
+            : title.dataset.shapeTitle;
+        descriptionLabel.textContent = isMapLink ? descriptionLabel.dataset.linkLabel : descriptionLabel.dataset.shapeLabel;
+        shapeSections.forEach(section => { section.hidden = isMapLink; });
+        targetField.hidden = !isMapLink;
+        appearanceField.hidden = !isMapLink;
+        appearanceSelect.disabled = !canEdit || !isMapLink;
+        targetSelect.disabled = !canEdit || !isMapLink;
+        targetSelect.required = isMapLink;
+        descriptionInput.required = isMapLink;
+    };
+    typeSelect.onchange = updateForm;
+    updateForm();
     [typeSelect, widthInput, heightInput, colorInput, opacityInput, descriptionInput, fontSizeInput].forEach((el) => {
         if (el) el.disabled = !canEdit;
     });
@@ -132,7 +169,9 @@ export async function saveShape() {
     Logger.info('saveShape called');
 
     const id = document.getElementById('shape_id').value;
+    if (window.canEditMap !== true) return;
     const shapeType = document.getElementById('shape_type').value;
+    const destination = Number(document.getElementById('shape_target_map_id').value);
     const width = parseFloat(document.getElementById('shape_width').value);
     const height = parseFloat(document.getElementById('shape_height').value);
     const color = document.getElementById('shape_color').value;
@@ -147,13 +186,28 @@ export async function saveShape() {
         return;
     }
 
+    const isMapLink = shapeType === 'map_link';
+    if (isMapLink && (!destination || !description)) {
+        showToast(t('toast.errorTitle'), t('mapPortal.required'), 'error');
+        return;
+    }
+    const cy = window.cy;
+    const newPosition = isMapLink && cy
+        ? { x: (cy.width() / 2 - cy.pan().x) / cy.zoom(), y: (cy.height() / 2 - cy.pan().y) / cy.zoom() }
+        : { x: 100, y: 100 };
+    const appearanceSelect = document.getElementById('shape_portal_shape');
+    const appearance = appearanceSelect.value;
+    const size = isMapLink && appearance !== appearanceSelect.dataset.initial
+        ? PORTAL_SIZES[appearance] : null;
     const data = {
+        portal_shape: isMapLink ? appearance : null,
+        target_map_id: isMapLink ? destination : null,
         map_id: window.currentMapId,
         shape_type: shapeType,
-        x: id && shapeEditX !== null ? shapeEditX : 100,
-        y: id && shapeEditY !== null ? shapeEditY : 100,
-        width: width,
-        height: height,
+        x: id && shapeEditX !== null ? shapeEditX : newPosition.x,
+        y: id && shapeEditY !== null ? shapeEditY : newPosition.y,
+        width: size?.width ?? width,
+        height: size?.height ?? height,
         color: color,
         opacity: opacity,
         description: description,
@@ -186,6 +240,8 @@ export async function saveShape() {
             const newShape = {
                 id: result.id,
                 shape_type: data.shape_type,
+                target_map_id: data.target_map_id,
+                portal_shape: data.portal_shape,
                 x: data.x,
                 y: data.y,
                 width: data.width,
@@ -199,7 +255,7 @@ export async function saveShape() {
                 await window.addShapeToGraph(newShape);
             }
             Logger.info('Showing toast: Фигура создана');
-            showToast(t('toast.successTitle'), t('modal.shape.created'), 'success');
+            showToast(t('toast.successTitle'), t(isMapLink ? 'mapPortal.created' : 'modal.shape.created'), 'success');
         } else {
             // Для обновления - удаляем старую фигуру и добавляем новую
             Logger.info('Showing toast: Фигура обновлена');
@@ -210,6 +266,8 @@ export async function saveShape() {
             const updatedShape = {
                 id: result.id,
                 shape_type: data.shape_type,
+                target_map_id: data.target_map_id,
+                portal_shape: data.portal_shape,
                 x: data.x,
                 y: data.y,
                 width: data.width,
@@ -222,13 +280,13 @@ export async function saveShape() {
             if (typeof window.addShapeToGraph === 'function') {
                 await window.addShapeToGraph(updatedShape);
             }
-            showToast(t('toast.successTitle'), t('modal.shape.updated'), 'success');
+            showToast(t('toast.successTitle'), t(isMapLink ? 'mapPortal.updated' : 'modal.shape.updated'), 'success');
         }
 
         shapeModal.hide();
     } catch (err) {
         Logger.error('Ошибка сохранения фигуры:', err);
-        showToast(t('toast.errorTitle'), err.message || t('modal.shape.saveFail'), 'error');
+        showToast(t('toast.errorTitle'), err.message || t(isMapLink ? 'mapPortal.saveFail' : 'modal.shape.saveFail'), 'error');
     } finally {
         if (btnText) btnText.classList.remove('d-none');
         if (btnLoader) btnLoader.classList.add('d-none');
@@ -240,8 +298,8 @@ export async function saveShape() {
 /**
  * Удалить фигуру
  */
-export async function deleteShape(shapeId) {
-    window.confirmAction(t('modal.shape.deleteTitle'), t('common.areYouSure'), async () => {
+export async function deleteShape(shapeId, isMapLink = false) {
+    window.confirmAction(t(isMapLink ? 'mapPortal.delete' : 'modal.shape.deleteTitle'), t('common.areYouSure'), async () => {
         beginSelfUpdate();
 
         try {
@@ -252,14 +310,14 @@ export async function deleteShape(shapeId) {
                 window.removeShapeFromGraph(shapeId);
             }
 
-            showToast(t('toast.successTitle'), t('modal.shape.deleted'), 'success');
+            showToast(t('toast.successTitle'), t(isMapLink ? 'mapPortal.deleted' : 'modal.shape.deleted'), 'success');
 
-            shapeModal.hide();
-            
+            shapeModal?.hide();
+
             await reloadMapWithViewportRestore();
         } catch (err) {
             Logger.error('Ошибка удаления фигуры:', err);
-            showToast(t('toast.errorTitle'), err.message || t('modal.shape.deleteFail'), 'error');
+            showToast(t('toast.errorTitle'), err.message || t(isMapLink ? 'mapPortal.deleteFail' : 'modal.shape.deleteFail'), 'error');
         } finally {
             endSelfUpdate();
         }

@@ -286,7 +286,22 @@
     "duplicateName": "A layer with this name already exists",
     "title": "Map layers", "showAll": "Show all", "create": "New layer", "empty": "No layers yet", "namePrompt": "Layer name", "renamePrompt": "New layer name", "descriptionPrompt": "Layer description (optional)", "deleteQuestion": "Delete layer “{name}”?", "assignSelection": "Assign selected elements to this layer", "selectElements": "Select devices or links on the map", "elementCount": "Devices: {devices}; links: {links}", "loadFailed": "Failed to load layers", "saveFailed": "Failed to save layer visibility", "createFailed": "Failed to create layer"
   },
+  "mapPortal": {
+    "edit": "Edit map link",
+    "delete": "Delete map link",
+    "created": "Map link added",
+    "updated": "Map link updated",
+    "deleted": "Map link deleted",
+    "saveFail": "Could not save the map link",
+    "deleteFail": "Could not delete the map link",
+    "open": "Open map",
+    "unavailable": "The destination map is unavailable",
+    "required": "Enter a label and select a destination map."
+  },
   "search": {
+    "results": "Search results",
+    "hiddenOnMap": "Hidden on map",
+    "limited": "Showing {shown} of {count}",
     "notFound": "Nothing found for \"{term}\"",
     "foundCount": "Found results: {count}"
   },

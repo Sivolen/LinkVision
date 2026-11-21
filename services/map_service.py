@@ -33,6 +33,7 @@ from models import (
 )
 from utils.logger import api_logger, main_logger
 from services.db.map_repository import map_repo
+from services.permissions import can_view_map
 from services import (
     link_service,
     group_service,
@@ -442,6 +443,13 @@ def delete_map_and_cleanup(map_id: int, app) -> int:
     # нельзя: иначе могли оставаться фигуры, группы, права и истории.
     UserMapSettings.query.filter_by(map_id=map_id).delete(synchronize_session=False)
     MapPermission.query.filter_by(map_id=map_id).delete(synchronize_session=False)
+    portal_map_ids = {
+        source_id for (source_id,) in db.session.query(MapShape.map_id)
+        .filter_by(target_map_id=map_id).distinct().all()
+    }
+    MapShape.query.filter_by(target_map_id=map_id).update(
+        {MapShape.target_map_id: None}, synchronize_session=False
+    )
     MapShape.query.filter_by(map_id=map_id).delete(synchronize_session=False)
 
     device_ids = [device.id for device in map_obj.devices.all()]
@@ -470,6 +478,8 @@ def delete_map_and_cleanup(map_id: int, app) -> int:
 
     db.session.delete(map_obj)
     db.session.commit()
+    for source_id in portal_map_ids:
+        invalidate_map_elements_cache(source_id)
     return map_id
 
 
@@ -683,6 +693,8 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
             "color": sh.color,
             "opacity": sh.opacity,
             "description": sh.description,
+            "target_map_id": sh.target_map_id,
+            "portal_shape": sh.portal_shape,
             "font_size": sh.font_size,
         }
         for sh in shapes
@@ -713,6 +725,31 @@ def get_map_elements(map_id: int) -> Dict[str, Any]:
     api_logger.debug(f"Map elements cached for map {map_id}")
 
     return result
+
+
+def get_portal_statuses(map_id: int) -> dict[int, str]:
+    """Return the current outage state for viewable destinations of this map."""
+    targets = (
+        db.session.query(Map.id)
+        .join(MapShape, MapShape.target_map_id == Map.id)
+        .filter(MapShape.map_id == map_id, MapShape.shape_type == "map_link")
+        .distinct()
+    )
+    visible_ids = [target_id for (target_id,) in targets if can_view_map(target_id)]
+    if not visible_ids:
+        return {}
+
+    down_ids = {
+        target_id
+        for (target_id,) in db.session.query(Device.map_id)
+        .filter(
+            Device.map_id.in_(visible_ids),
+            Device.monitoring_enabled.is_(True),
+            Device.status == "down",
+        )
+        .distinct()
+    }
+    return {target_id: "down" if target_id in down_ids else "clear" for target_id in visible_ids}
 
 
 def get_map_groups(map_id: int) -> List[Dict[str, Any]]:

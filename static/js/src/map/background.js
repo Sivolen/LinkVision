@@ -186,7 +186,7 @@ function checkReadyAndFit() {
         const panX = parseFloat(cyEl.dataset.panX) || 0;
         const panY = parseFloat(cyEl.dataset.panY) || 0;
         const zoom = parseFloat(cyEl.dataset.zoom) || 1;
-        if (panX !== 0 || panY !== 0 || zoom !== 1) {
+        if (cyEl.dataset.restoreExactView === 'true' || panX !== 0 || panY !== 0 || zoom !== 1) {
             getCy().viewport({ pan: { x: panX, y: panY }, zoom });
         } else {
             fitImageToView();

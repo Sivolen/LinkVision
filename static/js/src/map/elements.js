@@ -11,6 +11,11 @@ import { t } from '../i18n/i18n.js';
 
 const wrapText = window.wrapText || ((text) => text);
 
+export function shapeLabel(shape) {
+    const label = wrapText(shape.description || '', 30);
+    return shape.shape_type === 'map_link' ? '↗ ' + label : label;
+}
+
 // Кэш для оптимизации повторных загрузок
 let elementsCache = {
     groups: null,
@@ -126,12 +131,14 @@ export function loadElements(mapId, force = false, attempt = 0) {
                             id: `shape_${shape.id}`,
                             isShape: true,
                             shape_type: shape.shape_type,
+                            target_map_id: shape.target_map_id ?? null,
+                            portal_shape: shape.portal_shape ?? null,
                             width: shape.width,
                             height: shape.height,
                             color: shape.color,
                             opacity: shape.opacity,
                             description: shape.description,
-                            label: wrapText(shape.description || '', 30),
+                            label: shapeLabel(shape),
                             fontSize: shape.font_size || 12
                         },
                         position: { x: shape.x, y: shape.y }
@@ -459,15 +466,17 @@ export function addShapeToGraph(shape) {
                 id: `shape_${shape.id}`,
                 isShape: true,
                 shape_type: shape.shape_type,
+                target_map_id: shape.target_map_id ?? null,
+                portal_shape: shape.portal_shape ?? null,
                 width: shape.width,
                 height: shape.height,
                 color: shape.color,
                 opacity: shape.opacity,
                 description: shape.description,
-                label: wrapText(shape.description || '', 30),
+                label: shapeLabel(shape),
                 fontSize: shape.font_size || 12
             },
-            position: { x: shape.x || 100, y: shape.y || 100 }
+            position: { x: shape.x ?? 100, y: shape.y ?? 100 }
         });
     });
 }

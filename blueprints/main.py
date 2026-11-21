@@ -1,3 +1,5 @@
+import math
+
 from flask import (
     Blueprint,
     render_template,
@@ -12,7 +14,7 @@ from flask import (
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from extensions import db
-from models import User, Map, Device
+from models import User, Map, Device, MapShape
 from services import map_service, update_last_map_id
 from services.permissions import (
     can_view_map,
@@ -127,6 +129,33 @@ def create_map():
     return redirect(url_for("main.dashboard"))
 
 
+def _portal_viewport():
+    """Read an optional view passed by the map link or its return button."""
+    values = tuple(request.args.get(key, type=float) for key in ("pan_x", "pan_y", "zoom"))
+    if any(value is None or not math.isfinite(value) for value in values):
+        return None
+    x, y, zoom = values
+    if not (-1e9 <= x <= 1e9 and -1e9 <= y <= 1e9 and 0.1 <= zoom <= 5):
+        return None
+    return {"pan_x": x, "pan_y": y, "zoom": zoom}
+
+
+@main_bp.route("/map/portal/<int:shape_id>")
+@login_required
+def follow_map_portal(shape_id):
+    if not 0 < shape_id <= 2147483647:
+        abort(404)
+    portal = db.session.get(MapShape, shape_id)
+    if not portal or portal.shape_type != "map_link" or portal.target_map_id is None:
+        abort(404)
+    if not can_view_map(portal.map_id) or not can_view_map(portal.target_map_id):
+        abort(403)
+    return redirect(url_for(
+        "main.map_view", map_id=portal.target_map_id, via=portal.id,
+        **(_portal_viewport() or {}),
+    ))
+
+
 @main_bp.route("/map/<int:map_id>")
 @login_required
 def map_view(map_id):
@@ -147,15 +176,36 @@ def map_view(map_id):
         f"Rendering map {map_id} for user {current_user.id}: pan=({settings.pan_x}, {settings.pan_y}), zoom={settings.zoom}"
     )
 
+    viewport = None
+    back_url = None
+    portal_id = request.args.get("via", type=int)
+    if portal_id and 0 < portal_id <= 2147483647:
+        portal = db.session.get(MapShape, portal_id)
+        if portal and portal.shape_type == "map_link" and portal.target_map_id == map_id and can_view_map(portal.map_id):
+            back_url = url_for("main.map_view", map_id=portal.map_id, resume=1, **(_portal_viewport() or {}))
+    elif request.args.get("resume") == "1":
+        viewport = _portal_viewport()
+    can_edit = can_edit_map(map_id)
+    destinations = (
+        sorted(
+            (m for m in map_service.get_available_maps(current_user) if m.id != map_id),
+            key=lambda m: (m.name.casefold(), m.id),
+        )
+        if can_edit or can_toggle_map_lock(map_id) else []
+    )
+
     return render_template(
         "map_view.html",
         map=map_obj,
         is_operator=current_user.is_operator,
-        can_edit=can_edit_map(map_id),
+        can_edit=can_edit,
         can_toggle_lock=can_toggle_map_lock(map_id),
-        user_pan_x=settings.pan_x,
-        user_pan_y=settings.pan_y,
-        user_zoom=settings.zoom,
+        user_pan_x=viewport["pan_x"] if viewport else settings.pan_x,
+        user_pan_y=viewport["pan_y"] if viewport else settings.pan_y,
+        user_zoom=viewport["zoom"] if viewport else settings.zoom,
+        portal_back_url=back_url,
+        portal_destinations=destinations,
+        restore_exact_view=viewport is not None,
     )
 
 

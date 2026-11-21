@@ -52,6 +52,15 @@ def get_elements(map_id):
         return jsonify({"error": "Internal server error"}), 500
 
 
+@maps_bp.route("/map/<int:map_id>/portal-statuses")
+@login_required
+@require_map_access
+def get_portal_statuses(map_id):
+    response = jsonify({"statuses": map_service.get_portal_statuses(map_id)})
+    response.cache_control.no_store = True
+    return response
+
+
 @maps_bp.route("/map/<int:map_id>/groups", methods=["GET"])
 @login_required
 @require_map_access

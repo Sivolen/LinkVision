@@ -83,7 +83,10 @@ def export_map_data(map_id: int) -> dict:
     shapes = [
         {
             "id": shape.id,
-            "shape_type": shape.shape_type,
+            "shape_type": (
+                {"circle": "ellipse", "square": "square"}.get(shape.portal_shape, "rectangle")
+                if shape.shape_type == "map_link" else shape.shape_type
+            ),
             "x": shape.x,
             "y": shape.y,
             "width": shape.width,
@@ -317,7 +320,7 @@ def import_map(data: dict, current_user) -> Map:
         db.session.add(
             MapShape(
                 map_id=map_obj.id,
-                shape_type=shape_data["shape_type"],
+                shape_type="rectangle" if shape_data["shape_type"] == "map_link" else shape_data["shape_type"],
                 x=shape_data["x"],
                 y=shape_data["y"],
                 width=shape_data["width"],

@@ -5,6 +5,9 @@ import { registerCleanup } from './moduleRegistry.js';
 
 let cy = null;
 let statusFilter = 'all';
+let searchRevealId = null;
+
+export function setSearchReveal(id) { searchRevealId = id; }
 let layerState = { deviceLayers: new Map(), linkLayers: new Map(), visible: null };
 
 const statusMatches = node => statusFilter === 'all'
@@ -40,7 +43,7 @@ export function applyMapVisibility() {
     // every group, especially expensive with nested compound groups.
     cy.nodes().forEach(node => {
         if (node.data('isGroup') || node.data('isShape')) return;
-        const allowed = deviceVisibleByRules(node);
+        const allowed = node.id() === searchRevealId || deviceVisibleByRules(node);
         node.ancestors().forEach(parent => {
             populatedGroups.add(parent.id());
             if (allowed) visibleGroups.add(parent.id());
@@ -56,7 +59,7 @@ export function applyMapVisibility() {
                 const hasVisibleMember = (!populatedGroups.has(node.id()) || visibleGroups.has(node.id())) && !isInsideCollapsedGroup(node);
                 return hasVisibleMember ? node.show() : node.hide();
             }
-            (deviceVisibleByRules(node) && !isInsideCollapsedGroup(node) ? node.show() : node.hide());
+            ((node.id() === searchRevealId || deviceVisibleByRules(node)) && !isInsideCollapsedGroup(node) ? node.show() : node.hide());
         });
         cy.edges().forEach(edge => {
             if (edge.data('isCollapseProxy')) {
@@ -81,5 +84,5 @@ export function applyMapVisibility() {
     window.dispatchEvent(new CustomEvent('linkvision:map-filter-changed', { detail: { filtered: statusFilter !== 'all' } }));
 }
 
-export function cleanupVisibility() { cy = null; statusFilter = 'all'; layerState = { deviceLayers: new Map(), linkLayers: new Map(), visible: null }; }
+export function cleanupVisibility() { cy = null; statusFilter = 'all'; searchRevealId = null; layerState = { deviceLayers: new Map(), linkLayers: new Map(), visible: null }; }
 registerCleanup(cleanupVisibility);

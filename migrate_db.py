@@ -262,6 +262,14 @@ def _ensure_supported_schema_objects(conn):
     _migrate_nested_groups(conn)
     _ensure_permission_tables(conn)
     _ensure_map_layers(conn)
+    if "map_shape" in _table_names(conn):
+        shape_columns = _columns(conn, "map_shape")
+        if "target_map_id" not in shape_columns:
+            conn.execute(text(
+                "ALTER TABLE map_shape ADD COLUMN target_map_id INTEGER REFERENCES map(id) ON DELETE SET NULL"
+            ))
+        if "portal_shape" not in shape_columns:
+            conn.execute(text("ALTER TABLE map_shape ADD COLUMN portal_shape VARCHAR(12)"))
     if "acknowledged" not in _columns(conn, "device"):
         conn.execute(text("ALTER TABLE device ADD COLUMN acknowledged BOOLEAN NOT NULL DEFAULT 0"))
 

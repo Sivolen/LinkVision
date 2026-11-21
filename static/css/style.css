@@ -4730,6 +4730,45 @@ polyline.quality-chart-line,
 .toolbar-section-search { position: relative; z-index: 55; }
 .toolbar-section-search .dropdown-menu { z-index: 60; }
 
+.map-search-popup {
+  position: fixed;
+  z-index: 1040;
+  max-height: min(330px, 45vh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  border: 1px solid var(--lv-card-border);
+  border-radius: 8px;
+  background: var(--lv-card-bg);
+  color: var(--lv-card-name);
+  box-shadow: var(--lv-card-shadow);
+}
+
+.map-search-result {
+  display: grid;
+  gap: 2px;
+  padding: 6px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.map-search-result:hover,
+.map-search-result[aria-selected="true"] {
+  background: var(--sidebar-hover);
+}
+
+.map-search-result small,
+.map-search-summary {
+  color: var(--lv-card-ip);
+}
+
+.map-search-summary {
+  padding: 4px 9px;
+  font-size: 0.8rem;
+}
+
+
 /* Independent connection and monitoring notices. */
 .connection-notices { position: fixed; top: 5rem; right: 1rem; z-index: 1101; width: min(24rem, calc(100vw - 2rem)); display: grid; gap: .5rem; }
 .connection-notice { position: relative; padding: .85rem 2.5rem .85rem 1rem; border: 1px solid var(--border-color); border-left: 4px solid #d99524; border-radius: .65rem; background: var(--bg-secondary); color: var(--text-primary); box-shadow: var(--card-shadow); }

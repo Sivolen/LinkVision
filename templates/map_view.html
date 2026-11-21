@@ -25,6 +25,13 @@
         <i class="fas fa-chevron-left" aria-hidden="true"></i>
     </button>
     <div class="toolbar">
+    {% if portal_back_url %}
+    <div class="toolbar-group">
+        <a class="toolbar-btn" href="{{ portal_back_url }}">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i> {{ _('Назад к исходной карте') }}
+        </a>
+    </div>
+    {% endif %}
     {% if can_toggle_lock or can_edit %}
     <div class="toolbar-group toolbar-section toolbar-section-edit edit-tools" data-label="{{ _('Редактирование') }}">
         <div class="dropdown map-add-menu">
@@ -80,7 +87,7 @@
                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
                 <i class="fas fa-search" aria-hidden="true"></i>
             </span>
-            <input type="text" id="searchInput" class="form-control" placeholder="{{ _('Поиск по имени, IP или типу...') }}">
+            <input type="text" id="searchInput" class="form-control" autocomplete="off" placeholder="{{ _('Поиск по имени, IP или типу...') }}">
             <button type="button" class="toolbar-search-clear" onclick="clearSearch()" title="{{ _('Сбросить поиск') }}" aria-label="{{ _('Сбросить поиск') }}"><i class="fas fa-times" aria-hidden="true"></i></button>
             <button class="btn btn-outline-secondary dropdown-toggle toolbar-filter-button" type="button" data-bs-toggle="dropdown" data-default-label="{{ _('Фильтр') }}">{{ _('Фильтр') }}</button>
             <ul class="dropdown-menu dropdown-menu-end">
@@ -164,6 +171,8 @@
     <div id="cy-background" class="cy-background"
          data-background="{{ map.background_image or '' }}"></div>
     <div id="cy" class="cy-canvas"
+         data-portal-url="{{ url_for('main.follow_map_portal', shape_id=0) }}"
+         data-restore-exact-view="{{ 'true' if restore_exact_view else 'false' }}"
          data-pan-x="{{ user_pan_x }}"
          data-pan-y="{{ user_pan_y }}"
          data-zoom="{{ user_zoom }}">
@@ -722,25 +731,47 @@
     </div>
 </div>
 <!-- Модальное окно фигуры -->
-<div class="modal fade" id="shapeModal" tabindex="-1">
+<div class="modal fade" id="shapeModal" tabindex="-1" aria-labelledby="shapeModalTitle">
     <div class="modal-dialog modal-md">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ _('Фигура') }}</h5>
+                <h5 class="modal-title" id="shapeModalTitle"
+                    data-shape-title="{{ _('Фигура') }}"
+                    data-create-link-title="{{ _('Ссылка на карту') }}"
+                    data-edit-link-title="{{ _('Редактировать ссылку на карту') }}">{{ _('Фигура') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="shape_id">
-                <div class="mb-3">
-                    <label class="form-label">{{ _('Тип фигуры') }}</label>
+                <div class="mb-3" id="shapeTypeField">
+                    <label class="form-label" for="shape_type">{{ _('Тип фигуры') }}</label>
                     <select id="shape_type" class="form-select">
                         <option value="square">{{ _('Квадрат') }}</option>
                         <option value="rectangle">{{ _('Прямоугольник') }}</option>
                         <option value="triangle">{{ _('Треугольник') }}</option>
                         <option value="diamond">{{ _('Ромб') }}</option>
                         <option value="ellipse">{{ _('Круг') }}</option>
+                        <option value="map_link"{% if not portal_destinations %} disabled hidden{% endif %}>{{ _('Ссылка на карту') }}</option>
                     </select>
                 </div>
+                <div id="shapeTargetMapField" class="mb-3" hidden>
+                    <label class="form-label" for="shape_target_map_id">{{ _('Целевая карта') }}</label>
+                    <select id="shape_target_map_id" class="form-select">
+                        <option value="">{{ _('Выберите карту') }}</option>
+                        {% for destination in portal_destinations %}
+                        <option value="{{ destination.id }}">{{ destination.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="shapePortalAppearanceField" class="mb-3" hidden>
+                    <label class="form-label" for="shape_portal_shape">{{ _('Форма значка') }}</label>
+                    <select id="shape_portal_shape" class="form-select">
+                        <option value="rectangle">{{ _('Прямоугольник') }}</option>
+                        <option value="square">{{ _('Квадрат') }}</option>
+                        <option value="circle">{{ _('Круг') }}</option>
+                    </select>
+                </div>
+                <div data-shape-only>
                 <div class="row g-2">
                     <div class="col-md-6">
                         <label class="form-label">{{ _('Ширина (px)') }}</label>
@@ -789,16 +820,19 @@
                     <label class="form-label">{{ _('Размер шрифта (px)') }}</label>
                     <input type="number" id="shape_font_size" class="form-control" value="12" min="8" max="48" step="1">
                 </div>
+                </div>
                 <div class="mb-3">
-                    <label class="form-label">{{ _('Описание (отображается по центру)') }}</label>
-                    <input type="text" id="shape_description" class="form-control" placeholder="{{ _('Текст') }}">
+                    <label class="form-label" for="shape_description" id="shapeDescriptionLabel"
+                           data-shape-label="{{ _('Описание (отображается по центру)') }}"
+                           data-link-label="{{ _('Подпись на карте') }}">{{ _('Описание (отображается по центру)') }}</label>
+                    <input type="text" id="shape_description" class="form-control" maxlength="255" placeholder="{{ _('Текст') }}">
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Отмена') }}</button>
                 {% if can_toggle_lock or can_edit %}
                 <button type="button" class="btn btn-danger" id="deleteShapeBtn" style="display:none;">{{ _('Удалить') }}</button>
-                <button type="button" class="btn btn-primary" onclick="saveShape()">{{ _('Сохранить') }}</button>
+                <button type="button" class="btn btn-primary" id="saveShapeBtn" onclick="saveShape()">{{ _('Сохранить') }}</button>
                 {% endif %}
             </div>
         </div>
